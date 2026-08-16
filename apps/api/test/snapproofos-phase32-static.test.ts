@@ -93,14 +93,15 @@ test('Phase 32 exposes persisted field workflows, private storage, validated exp
 test('Phase 32 web surface is mobile capture, reconnect, branded report, and source-deep-link ready', () => {
   const shell = read('apps/web/src/components/module-shells/SnapProofWorkspace.tsx');
   const field = read('apps/web/src/components/module-shells/SnapProofFieldWorkspace.tsx');
+  const routeContract = read('apps/web/src/components/module-shells/SnapProofRoute.contract.ts');
   const queue = read('apps/web/src/lib/snapproof-offline-queue.ts');
   const publicReport = read('apps/web/src/app/public/snapproofos/reports/[token]/page.tsx');
   for (const label of [
     'Customers',
     'Jobs',
     'Capture',
-    'Findings & notes',
-    'Parts & labor',
+    'Findings and notes',
+    'Parts and labor',
     'Templates',
     'Reports',
     'Review',
@@ -108,7 +109,7 @@ test('Phase 32 web surface is mobile capture, reconnect, branded report, and sou
     'Activity',
     'Branding',
   ])
-    assert.match(shell, new RegExp(label.replace('&', '\\&')));
+    assert.match(`${shell}\n${routeContract}`, new RegExp(label.replace('&', '\\&')));
   assert.match(field, /capture="environment"/);
   assert.match(field, /PDF/);
   assert.match(field, /DOCX/);

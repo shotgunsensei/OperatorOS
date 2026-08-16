@@ -185,25 +185,28 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/settings': { sectionId: 'brandforgeos-settings', label: 'Settings' },
   },
   snapproofos: {
-    '/dashboard': { sectionId: 'snapproofos-dashboard', label: 'Dashboard' },
+    '/dashboard': { sectionId: 'snapproofos-overview-route', label: 'Overview', redirectPath: '/' },
     '/customers': { sectionId: 'snapproofos-customers', label: 'Customers' },
+    '/projects': { sectionId: 'snapproofos-projects-route', label: 'Projects' },
     '/jobs': { sectionId: 'snapproofos-jobs', label: 'Jobs' },
+    '/jobs/new': { sectionId: 'snapproofos-jobs', label: 'New Job', redirectPath: '/jobs' },
     '/capture': { sectionId: 'snapproofos-capture', label: 'Mobile Capture' },
-    '/files': { sectionId: 'snapproofos-capture', label: 'Files and Photos' },
+    '/files': { sectionId: 'snapproofos-capture', label: 'Files and Photos', redirectPath: '/capture' },
     '/work': { sectionId: 'snapproofos-work', label: 'Findings and Notes' },
     '/costs': { sectionId: 'snapproofos-costs', label: 'Parts and Labor' },
     '/templates': { sectionId: 'snapproofos-templates', label: 'Job Templates' },
     '/team': { sectionId: 'snapproofos-team', label: 'Team' },
     '/activity': { sectionId: 'snapproofos-activity', label: 'Activity' },
     '/branding': { sectionId: 'snapproofos-branding', label: 'Organization Branding' },
-    '/profile': { sectionId: 'snapproofos-branding', label: 'Profile and Organization' },
-    '/billing': { sectionId: 'snapproofos-branding', label: 'Plan and Billing' },
-    '/cases': { sectionId: 'snapproofos-cases', label: 'Evidence Cases' },
+    '/profile': { sectionId: 'snapproofos-settings', label: 'Profile and Organization', redirectPath: '/settings' },
+    '/billing': { sectionId: 'snapproofos-settings', label: 'Plan and Billing', redirectPath: '/settings' },
+    '/cases': { sectionId: 'snapproofos-jobs', label: 'Evidence Cases', redirectPath: '/jobs' },
     '/evidence': { sectionId: 'snapproofos-evidence', label: 'Evidence' },
     '/review': { sectionId: 'snapproofos-review', label: 'Review Queue' },
-    '/findings': { sectionId: 'snapproofos-work', label: 'Findings' },
+    '/findings': { sectionId: 'snapproofos-work', label: 'Findings', redirectPath: '/work' },
     '/reports': { sectionId: 'snapproofos-reports', label: 'Reports' },
-    '/exports': { sectionId: 'snapproofos-reports', label: 'Defensible Exports' },
+    '/share': { sectionId: 'snapproofos-share-route', label: 'Secure Sharing' },
+    '/exports': { sectionId: 'snapproofos-exports-route', label: 'Defensible Exports' },
     '/custody': { sectionId: 'snapproofos-custody', label: 'Chain of Custody' },
     '/retention': { sectionId: 'snapproofos-retention', label: 'Retention' },
     '/settings': { sectionId: 'snapproofos-settings', label: 'Settings' },
@@ -422,8 +425,8 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'workflows') return { sectionId: 'brandforgeos-strategy', label: 'Guided Workflow' };
   }
   if (slug === 'snapproofos' && pathSegments.length === 2) {
-    const [resource] = pathSegments;
-    if (resource === 'cases') return { sectionId: 'snapproofos-cases', label: 'Evidence Case' };
+    const [resource, id] = pathSegments;
+    if (resource === 'cases') return { sectionId: 'snapproofos-jobs', label: 'Evidence Case', redirectPath: `/jobs/${encodeURIComponent(id)}` };
     if (resource === 'evidence') return { sectionId: 'snapproofos-evidence', label: 'Evidence Item' };
     if (resource === 'reports') return { sectionId: 'snapproofos-reports', label: 'Report' };
     if (resource === 'jobs') return { sectionId: 'snapproofos-jobs', label: 'Job' };

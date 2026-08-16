@@ -107,7 +107,7 @@ Each module receives an independent checkpoint only after its focused source/API
 | TechDeck | Complete: 19 canonical owner routes plus record paths and compatibility redirects | 23/23 focused API/static checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | PulseDesk | Complete: 10 canonical owner routes, durable request detail routes, and compatibility redirects | 38/38 focused API/static/domain checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | FaultlineLab | Complete: 9 canonical owner routes, challenge/session record paths, and compatibility redirects | 8/8 focused catalog/domain/import/static/workflow checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
-| SnapProofOS | Pending | Pending | Pending |
+| SnapProofOS | Complete: 19 canonical owner routes, durable job detail routes, and compatibility redirects | 10/10 focused API/static checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | CallCommand AI | Pending | Pending | Pending |
 | OutCall | Pending | Pending | Pending |
 
@@ -215,3 +215,38 @@ node scripts/phase50-business-operations-browser.mjs
 ```
 
 The browser gate exercised nine canonical routes, challenge and session record deep links, four compatibility redirects, a real start-and-action investigation journey, same-tab navigation, refresh/back history, route-active state, zero-API settings loading, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. No FaultlineLab waiver remains open. This is compiled exact-host local evidence; deployment and authenticated public-host acceptance remain separate gates.
+
+## SnapProofOS implementation evidence
+
+- Identity: forensic charcoal evidence workspace with accessible rose control accents and teal integrity signals (`snapproof-forensic-red-teal`). It uses the shared Phase 48 shell while retaining SnapProofOS field-proof, custody, and defensible-delivery language.
+- Route ownership: overview, customers, projects, jobs and job records, capture, findings/notes, costs, templates, team, activity, evidence integrity, review, reports, secure sharing, exports, custody, retention, branding, and settings are URL-owned. The previous in-component tab state, duplicate product header/navigation, `history.pushState`, and `popstate` synchronization were removed.
+- Focused loading: the field workspace now loads only the customers, jobs, templates, team, activity, branding, export history, or offline queue needed by its active route. Settings mounts no SnapProofOS API workload. Job detail is limited to workflows that consume a selected job. The evidence-integrity workspace likewise scopes dashboard, evidence, report, case-detail, and custody calls by route.
+- Preserved capabilities: tenant-scoped customers and jobs, search and filtering, assignments, offline capture/reconciliation, private attachment storage, structured findings and internal notes, parts/labor value, templates, evidence hashes, append-only custody, review decisions, branded immutable report snapshots, validated PDF/DOCX exports, approved JSON/CSV evidence exports, one-time revocable share links, retention/legal hold, audit activity, and branding remain wired to existing persistent APIs.
+- Product-boundary reconciliation: the canonical `/projects` owner route uses the durable job workspace as the existing project record rather than inventing a second data model. Historical case paths redirect to canonical job paths because both active workflows are backed by the same `snapproof_cases` records. Platform identity, membership, entitlement, billing, and profile controls remain in OperatorOS.
+- Access and safety: OperatorOS continues to own identity, tenant, role, entitlement, and audit authority. Evidence remains private by default; raw credentials or public attachment URLs were not introduced; report export and sharing still require approved records; offline capture retains its local queue and server validation behavior.
+- Source corrections: the exact-host suite found and closed an active-navigation contrast defect (4.1:1 before correction) and a server query that requested nonexistent `tenant_users.created_at`; the team endpoint now uses canonical `tenant_users.joined_at` and completed without 500s.
+- Visual evidence: [SnapProofOS reports desktop](./evidence/snapproofos-reports-desktop.png) and [SnapProofOS capture mobile navigation](./evidence/snapproofos-capture-mobile.png).
+
+Verification performed from `C:\Dev\OperatorOS` against the disposable PostgreSQL database on `127.0.0.1:55441`:
+
+```powershell
+corepack pnpm --dir apps/api exec tsx --test `
+  test/snapproofos-phase11b-contract.test.ts `
+  test/snapproofos-phase32-static.test.ts `
+  test/snapproofos-phase50-routes.test.ts
+# 10 passed, 0 failed
+
+corepack pnpm typecheck
+# 4 workspace projects passed
+
+$env:INTERNAL_API_URL='http://localhost:5001'
+corepack pnpm build:production
+# catalog drift gate, API, runner gateway, and Next production build passed
+
+$env:PARITY_DATABASE_IS_DISPOSABLE='1'
+$env:PHASE50_BROWSER_SPEC='snapproofos'
+node scripts/phase50-business-operations-browser.mjs
+# phase50-snapproofos-routes.spec.ts: 1 passed
+```
+
+The browser gate exercised all 19 canonical routes and a durable job record deep link, eight compatibility redirects, a real customer-to-job-to-persisted-report journey, same-tab navigation, refresh/back history, route-active state, zero-API settings loading, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. No SnapProofOS waiver remains open. This is compiled exact-host local evidence; deployment, public-host acceptance, and live-provider acceptance remain separate gates.

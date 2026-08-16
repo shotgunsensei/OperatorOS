@@ -1,28 +1,16 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
-  Activity,
   Archive,
-  BriefcaseBusiness,
   CheckCircle2,
   ClipboardCheck,
   Download,
-  FileCheck2,
   FileClock,
-  FileText,
-  Fingerprint,
-  FolderLock,
-  LayoutDashboard,
-  LayoutTemplate,
-  MessageSquareText,
-  PackageOpen,
   Plus,
-  Settings,
   ShieldCheck,
   Upload,
-  UserRound,
-  Users,
 } from 'lucide-react';
 import {
   moduleShellApi,
@@ -32,31 +20,17 @@ import {
 } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { EmptyState, LoadingState } from '@/components/ExperiencePrimitives';
-import { ShellLiveBadge } from './ShellChrome';
 import SnapProofFieldWorkspace, { type SnapProofFieldTab } from './SnapProofFieldWorkspace';
+import type { SnapProofRouteArea } from './SnapProofRoute.contract';
 
-type Tab = 'dashboard' | 'customers' | 'jobs' | 'capture' | 'work' | 'costs' | 'templates' | 'team' | 'activity' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'custody' | 'retention' | 'branding' | 'settings';
-const tabs: Array<{ id: Tab; label: string; Icon: typeof LayoutDashboard }> = [
-  { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  { id: 'customers', label: 'Customers', Icon: UserRound },
-  { id: 'jobs', label: 'Jobs', Icon: BriefcaseBusiness },
-  { id: 'capture', label: 'Capture', Icon: Upload },
-  { id: 'work', label: 'Findings & notes', Icon: MessageSquareText },
-  { id: 'costs', label: 'Parts & labor', Icon: PackageOpen },
-  { id: 'templates', label: 'Templates', Icon: LayoutTemplate },
-  { id: 'reports', label: 'Reports', Icon: FileText },
-  { id: 'review', label: 'Review', Icon: ClipboardCheck },
-  { id: 'team', label: 'Team', Icon: Users },
-  { id: 'activity', label: 'Activity', Icon: Activity },
-  { id: 'cases', label: 'Proof cases', Icon: FolderLock },
-  { id: 'evidence', label: 'Integrity', Icon: FileCheck2 },
-  { id: 'findings', label: 'Evidence findings', Icon: ShieldCheck },
-  { id: 'custody', label: 'Custody', Icon: Fingerprint },
-  { id: 'retention', label: 'Retention', Icon: Archive },
-  { id: 'branding', label: 'Branding', Icon: Settings },
-  { id: 'settings', label: 'Privacy', Icon: Settings },
-];
-const fieldTabs = new Set<Tab>(['customers', 'jobs', 'capture', 'work', 'costs', 'templates', 'team', 'activity', 'branding']);
+type Tab = 'dashboard' | 'customers' | 'projects' | 'jobs' | 'capture' | 'work' | 'costs' | 'templates' | 'team' | 'activity' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'share' | 'exports' | 'custody' | 'retention' | 'branding' | 'settings';
+const fieldTabs = new Set<Tab>(['customers', 'projects', 'jobs', 'capture', 'work', 'costs', 'templates', 'team', 'activity', 'reports', 'share', 'exports', 'branding']);
+
+interface SnapProofWorkspaceProps {
+  view: SnapProofRouteArea;
+  recordId?: string;
+  hrefFor?: (path: string) => string;
+}
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -116,14 +90,15 @@ function fileBase64(file: File): Promise<string> {
   });
 }
 
-export default function SnapProofWorkspace() {
-  const [tab, setTab] = useState<Tab>('dashboard');
+export default function SnapProofWorkspace({ view, recordId, hrefFor = path => path }: SnapProofWorkspaceProps) {
+  const router = useRouter();
+  const tab: Tab = view === 'overview' ? 'dashboard' : view;
   const [dashboard, setDashboard] = useState<Record<string, any>>({});
   const [cases, setCases] = useState<SnapProofCase[]>([]);
   const [evidence, setEvidence] = useState<SnapProofEvidence[]>([]);
   const [reports, setReports] = useState<SnapProofReport[]>([]);
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const selectedCaseIdRef = useRef<string | null>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(recordId ?? null);
+  const selectedCaseIdRef = useRef<string | null>(recordId ?? null);
   const [detail, setDetail] = useState<any>(null);
   const [custody, setCustody] = useState<Array<Record<string, any>>>([]);
   const [loading, setLoading] = useState(true);
@@ -139,29 +114,26 @@ export default function SnapProofWorkspace() {
     setLoading(true);
     setError(null);
     try {
-      const [dash, caseRows, evidenceRows, reportRows] = await Promise.all([
-        moduleShellApi.snapproofos.dashboard(),
-        moduleShellApi.snapproofos.listCases('limit=100'),
-        moduleShellApi.snapproofos.listEvidence('limit=100'),
-        moduleShellApi.snapproofos.listReports('limit=100'),
-      ]);
-      setDashboard(dash);
-      setCases(caseRows.items);
-      setEvidence(evidenceRows.items);
-      setReports(reportRows.items);
-      const current = selectedCaseIdRef.current;
-      chooseCase(current && caseRows.items.some(item => item.id === current)
-        ? current
-        : caseRows.items[0]?.id ?? null);
+      const needsCases = ['dashboard', 'evidence', 'review', 'reports', 'custody', 'retention'].includes(tab);
+      const tasks: Array<Promise<void>> = [];
+      if (tab === 'dashboard') tasks.push(moduleShellApi.snapproofos.dashboard().then(setDashboard));
+      if (needsCases) tasks.push(moduleShellApi.snapproofos.listCases('limit=100').then(caseRows => {
+        setCases(caseRows.items);
+        const current = selectedCaseIdRef.current;
+        chooseCase(current && caseRows.items.some(item => item.id === current) ? current : caseRows.items[0]?.id ?? null);
+      }));
+      if (['dashboard', 'evidence', 'review'].includes(tab)) tasks.push(moduleShellApi.snapproofos.listEvidence('limit=100').then(rows => setEvidence(rows.items)));
+      if (['dashboard', 'review', 'reports'].includes(tab)) tasks.push(moduleShellApi.snapproofos.listReports('limit=100').then(rows => setReports(rows.items)));
+      await Promise.all(tasks);
     } catch (err) {
       setError(errorText(err));
     } finally {
       setLoading(false);
     }
-  }, [chooseCase]);
+  }, [chooseCase, tab]);
 
   const loadDetail = useCallback(async (caseId: string | null) => {
-    if (!caseId) {
+    if (!caseId || !['cases', 'evidence', 'review', 'findings', 'reports', 'custody', 'retention'].includes(tab)) {
       setDetail(null);
       setCustody([]);
       return;
@@ -169,52 +141,27 @@ export default function SnapProofWorkspace() {
     try {
       const [caseDetail, chain] = await Promise.all([
         moduleShellApi.snapproofos.getCase(caseId),
-        moduleShellApi.snapproofos.custody(caseId),
+        tab === 'custody' ? moduleShellApi.snapproofos.custody(caseId) : Promise.resolve({ events: [] }),
       ]);
       setDetail(caseDetail);
       setCustody(chain.events);
     } catch (err) {
       setError(errorText(err));
     }
-  }, []);
+  }, [tab]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void loadDetail(selectedCaseId); }, [selectedCaseId, loadDetail]);
-  useEffect(() => {
-    const sync = () => {
-      const segments = window.location.pathname.split('/').filter(Boolean);
-      const routeAlias: Record<string, Tab> = {
-        findings: 'work',
-        files: 'capture',
-        profile: 'branding',
-        billing: 'branding',
-        exports: 'reports',
-      };
-      const matched = [...segments].reverse().find(segment => tabs.some(item => item.id === segment) || routeAlias[segment]);
-      const candidate = matched ? (routeAlias[matched] || matched) as Tab : undefined;
-      if (candidate) setTab(candidate);
-      const casesIndex = segments.lastIndexOf('cases');
-      if (casesIndex >= 0 && segments[casesIndex + 1]) {
-        chooseCase(decodeURIComponent(segments[casesIndex + 1]));
-      }
-    };
-    sync();
-    window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
-  }, [chooseCase]);
+  useEffect(() => { if (recordId) chooseCase(recordId); }, [chooseCase, recordId]);
 
   const navigate = (next: Tab) => {
-    setTab(next);
-    const hostRouted = window.location.hostname === 'snapproofos.operatoros.net';
-    window.history.pushState({}, '', hostRouted ? `/${next}` : `/modules/snapproofos/${next}`);
+    const path = next === 'cases' ? '/jobs' : next === 'dashboard' ? '/' : `/${next}`;
+    router.push(hrefFor(path));
   };
 
-  const selectCase = (caseId: string, next: Tab = 'cases') => {
+  const selectCase = (caseId: string) => {
     chooseCase(caseId);
-    setTab(next);
-    const hostRouted = window.location.hostname === 'snapproofos.operatoros.net';
-    const resourcePath = next === 'cases' ? `/cases/${caseId}` : `/${next}`;
-    window.history.pushState({}, '', hostRouted ? resourcePath : `/modules/snapproofos${resourcePath}`);
+    router.push(hrefFor(`/jobs/${caseId}`));
   };
 
   async function mutate(task: () => Promise<unknown>) {
@@ -232,55 +179,42 @@ export default function SnapProofWorkspace() {
   }
 
   const selectedCase = detail?.case as SnapProofCase | undefined;
+  const fieldTab: SnapProofFieldTab | null = fieldTabs.has(tab)
+    ? (tab === 'projects' ? 'jobs' : tab as SnapProofFieldTab)
+    : null;
+
   return (
-    <main
+    <section
       id="snapproofos-workspace"
-      data-testid="snapproofos-workspace"
+      data-testid={`snapproofos-${view}-route`}
+      data-workspace-view={view}
       data-evidence="persisted-field-proof-and-private-evidence"
       data-private-evidence-contract="persisted-private-evidence-only"
-      data-phase="32"
+      data-phase="50"
       tabIndex={-1}
       style={{
-        minHeight: '100vh',
-        background: 'radial-gradient(circle at 85% 0%,#3a1115 0,transparent 34%),#111317',
+        minHeight: 0,
+        minWidth: 0,
+        background: 'transparent',
         color: semantic.text,
         colorScheme: 'dark',
-        padding: `0 ${space.xxl}px ${space.xxl}px`,
+        padding: 0,
       }}
     >
-      <header style={{ display: 'flex', justifyContent: 'space-between', gap: space.lg, alignItems: 'flex-end', flexWrap: 'wrap', padding: `${space.xl}px 0` }}>
-        <div>
-          <div style={{ color: '#f87171', fontSize: fontSize.xs, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase' }}>Field proof · reports · customer trust</div>
-          <h1 style={{ margin: '6px 0', fontSize: 30 }}>SnapProofOS</h1>
-          <p style={{ margin: 0, color: '#a6a9b0', maxWidth: 820 }}>Run customer field jobs from mobile capture through findings, costs, approval, branded PDF/DOCX delivery, and revocable proof sharing.</p>
-        </div>
-        <ShellLiveBadge />
-      </header>
-
-      <nav aria-label="SnapProofOS workspace" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: space.lg }}>
-        {tabs.map(({ id, label, Icon }) => (
-          <button key={id} onClick={() => navigate(id)} aria-current={tab === id ? 'page' : undefined} style={{ ...subtleButton, display: 'inline-flex', gap: 7, alignItems: 'center', whiteSpace: 'nowrap', borderColor: tab === id ? '#dc2626' : '#393d45', color: tab === id ? '#fecaca' : '#a6a9b0', background: tab === id ? '#3a1115' : '#202329' }}>
-            <Icon size={15} /> {label}
-          </button>
-        ))}
-      </nav>
-
       {error && <div role="alert" style={{ ...cardStyle, background: '#1f0a12', borderColor: '#be123c', color: '#fda4af', marginBottom: space.lg }}>{error}</div>}
       {loading ? <div style={{ ...cardStyle, background: '#0f172a', color: '#94a3b8' }}>Loading your evidence workspace…</div> : (
         <>
           {tab === 'dashboard' && <Dashboard counts={dashboard.counts || {}} cases={cases} onOpen={selectCase} navigate={navigate} />}
-          {fieldTabs.has(tab) && <SnapProofFieldWorkspace tab={tab as SnapProofFieldTab} selectedJobId={selectedCaseId} onSelectJob={chooseCase} />}
-          {tab === 'cases' && <CasesPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelect={selectCase} mutate={mutate} />}
+          {fieldTab && <SnapProofFieldWorkspace tab={fieldTab} selectedJobId={selectedCaseId} onSelectJob={chooseCase} onOpenJob={selectCase} />}
           {tab === 'evidence' && <EvidencePanel cases={cases} evidence={evidence} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'review' && <ReviewPanel caseDetail={detail} evidence={evidence} reports={reports} saving={saving} mutate={mutate} />}
-          {tab === 'findings' && <FindingsPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'reports' && <ReportsPanel cases={cases} reports={reports} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'custody' && <CustodyPanel cases={cases} selectedCaseId={selectedCaseId} events={custody} onSelectCase={chooseCase} />}
           {tab === 'retention' && <RetentionPanel cases={cases} selectedCase={selectedCase} onSelectCase={chooseCase} saving={saving} mutate={mutate} />}
           {tab === 'settings' && <SettingsPanel />}
         </>
       )}
-    </main>
+    </section>
   );
 }
 
@@ -308,7 +242,7 @@ function Dashboard({ counts, cases, onOpen, navigate }: { counts: Record<string,
       ].map(([label, value]) => <div key={String(label)} style={{ ...cardStyle, background: '#0f172a', borderColor: '#1e3a4f' }}><div style={{ color: '#94a3b8', fontSize: 12 }}>{label}</div><div style={{ fontSize: 28, fontWeight: 800, marginTop: 5 }}>{String(value)}</div></div>)}
     </div>
     <div style={{ ...cardStyle, background: '#0f172a', marginTop: space.lg }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}><h3 style={{ margin: 0 }}>Recently updated cases</h3><button style={buttonStyle} onClick={() => navigate('cases')}><Plus size={15} /> New case</button></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}><h3 style={{ margin: 0 }}>Recently updated jobs</h3><button style={buttonStyle} onClick={() => navigate('jobs')}><Plus size={15} /> New job</button></div>
       {cases.length ? cases.slice(0, 6).map(item => <button key={item.id} onClick={() => onOpen(item.id)} style={{ width: '100%', textAlign: 'left', padding: '12px 0', border: 0, borderTop: '1px solid #1e293b', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}><strong>{item.reference} · {item.title}</strong><span style={{ float: 'right', color: '#5eead4' }}>{item.status.replaceAll('_', ' ')}</span></button>) : <Empty text="No evidence cases yet. Create your first case to begin collecting proof." />}
     </div>
   </Panel>;

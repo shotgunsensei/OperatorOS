@@ -25,7 +25,7 @@ import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell'
 import TorqueShedWorkspace from '@/components/module-shells/TorqueShedWorkspace';
 import FaultlineLabShell from '@/components/module-shells/FaultlineLabShell';
 import BrandForgeWorkspace from '@/components/module-shells/BrandForgeWorkspace';
-import SnapProofWorkspace from '@/components/module-shells/SnapProofWorkspace';
+import SnapProofShell from '@/components/module-shells/SnapProofShell';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
@@ -61,7 +61,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
   'torqueshed':       TorqueShedWorkspace,
   'faultlinelab':     FaultlineLabShell,
   'brandforgeos':     BrandForgeWorkspace,
-  'snapproofos':      SnapProofWorkspace,
+  'snapproofos':      SnapProofShell,
 };
 const POLISHED_SHELL_NAMES: Record<string, string> = {
   techdeck: 'TechDeck', pulsedesk: 'PulseDesk', tradeflowkit: 'TradeFlowKit',
