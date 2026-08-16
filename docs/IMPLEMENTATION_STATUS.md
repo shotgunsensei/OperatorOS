@@ -1,5 +1,36 @@
 # OperatorOS implementation status
 
+## Replit deployment `3192b743` runner-mode preflight repair - SOURCE/LOCAL VERIFIED / REPUBLISH PENDING (2026-08-16)
+
+- The deployment's own startup log now identifies the terminal failure:
+  `Invalid production deployment environment: RUNNER_MODE must equal disabled`.
+  The supervisor exited with status 1 before binding the bootstrap gateway or
+  applying the database release, and Replit consequently reported repeated
+  health-check 500 responses. Interleaved deployment `4ed7c84e` cleanup traffic
+  is older runtime activity and not evidence that `3192b743` became ready.
+- The fail-closed production rule remains intact. `.replit` now declares
+  `RUNNER_MODE = "disabled"` in `[userenv.production]`; `.env.example` now uses
+  the same safe production default and documents `docker`/`k8s` as explicit
+  local isolated-runner overrides only. No production local-shell, Docker, or
+  Kubernetes runner was enabled.
+- The Replit runtime contract test now extracts the production environment
+  section and verifies every value in the machine-readable core `exact`
+  contract. This closes the gap that allowed the checked-in environment to omit
+  a value already required by production preflight.
+- Verification: the combined production-preflight/unified-runtime suite PASS
+  (12/12); a core preflight populated from the checked-in Replit production
+  section plus synthetic required secrets PASS; `corepack pnpm typecheck` PASS
+  for all four application targets; and `corepack pnpm build:production` PASS,
+  including FaultlineLab compiler tests (4/4), API, runner-gateway, SDK, and
+  Next production artifacts. `git diff --check` reports only normal Windows
+  line-ending notices.
+- This is source/local evidence only. No Replit Publishing secret, deployment,
+  database, provider, domain, or traffic was changed. Before republishing, the
+  owner must remove or set to `disabled` any Replit Publishing secret named
+  `RUNNER_MODE`, because a deployment-secret override can supersede the
+  checked-in production value. The replacement deployment must be verified
+  under its own deployment ID.
+
 ## Replit Autoscale Promote startup repair - SOURCE/LOCAL VERIFIED / REPUBLISH PENDING (2026-08-16)
 
 - The failed Replit artifact `73dfa0e3` completed its build and bundle stages but

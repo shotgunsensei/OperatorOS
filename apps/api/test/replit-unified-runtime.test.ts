@@ -54,6 +54,10 @@ test('unified Replit launcher validates production authority and port separation
 test('Replit deployment uses the supervised readiness-gated runtime', () => {
   const replit = readFileSync(resolve(repoRoot, '.replit'), 'utf8');
   const deployment = replit.slice(replit.indexOf('[deployment]'), replit.indexOf('[workflows]'));
+  const productionEnvironment = replit.slice(
+    replit.indexOf('[userenv.production]'),
+    replit.indexOf('[userenv.development]'),
+  );
   const source = readFileSync(launcherPath, 'utf8');
   const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
   const pnpmWorkspace = readFileSync(resolve(repoRoot, 'pnpm-workspace.yaml'), 'utf8');
@@ -94,6 +98,10 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(replit, /OPERATOROS_APPS_URL = "https:\/\/app\.operatoros\.net\/"/);
   assert.match(replit, /INTERNAL_API_URL = "http:\/\/localhost:5001"/);
   assert.match(replit, /OPERATOROS_DATABASE_RELEASE_MODE = "apply"/);
+  for (const [name, expected] of Object.entries(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact)) {
+    const escaped = String(expected).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    assert.match(productionEnvironment, new RegExp(`^${name} = "${escaped}"$`, 'm'));
+  }
   const exposedPorts = [...replit.matchAll(/^externalPort\s*=\s*(\d+)$/gm)].map((match) => Number(match[1]));
   assert.deepEqual(exposedPorts, [80]);
   assert.match(replit, /\[\[ports\]\]\r?\nlocalPort = 5000\r?\nexternalPort = 80/);
