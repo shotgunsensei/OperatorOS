@@ -142,6 +142,13 @@ function statusFromEcosystem(status: EcosystemModuleStatus): OperatorOSModuleSta
   return 'active';
 }
 
+function hasExplicitTestOnlyLaunch(module: EcosystemModule): boolean {
+  return module.slug === 'outcall'
+    && module.status === 'planned'
+    && process.env.APP_ENV === 'test'
+    && process.env.OUTCALL_TEST_ADAPTER === 'enabled';
+}
+
 function routeFor(slug: string): string {
   return `/app/apps/${slug}`;
 }
@@ -153,6 +160,11 @@ function localFallbackFor(slug: string): string {
 function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry {
   const catalog = MODULE_CATALOG_BY_SLUG[module.slug] as ModuleCatalogEntry | undefined;
   const baseUrl = module.ecosystemUrl.replace(/\/+$/, '');
+  // OutCall stays unavailable in the production catalog until its separate
+  // live-provider gate passes. The dual test-only condition permits exact-host
+  // browser acceptance against the explicit non-provider adapter without
+  // weakening the default registry state.
+  const testOnlyLaunch = hasExplicitTestOnlyLaunch(module);
   const launchPath = module.slug === 'pulsedesk' || module.slug === 'tradeflowkit' || module.slug === 'ninja-launch-kit'
     ? '/dashboard'
     : module.slug === 'ninjamation'
@@ -173,10 +185,10 @@ function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry
     description: module.description,
     category: module.category,
     entitlementKey: module.slug,
-    status: statusFromEcosystem(module.status),
+    status: testOnlyLaunch ? 'active' : statusFromEcosystem(module.status),
     iconName: module.iconKey,
     icon: module.iconKey,
-    enabled: module.status !== 'planned',
+    enabled: testOnlyLaunch || module.status !== 'planned',
     requiresSubscription: true,
     requiresTenant: true,
     clientId: `operatoros:${module.slug}`,

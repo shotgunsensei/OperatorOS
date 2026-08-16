@@ -87,13 +87,13 @@ This document records each owner-readable route map before that module is change
 
 | Owner task | Canonical route | Existing capability retained | Compatibility paths |
 | --- | --- | --- | --- |
-| See outbound-work posture | `/` | Readiness, upcoming work, and delivery state | `/dashboard` |
-| Manage contacts | `/contacts` | Tenant-scoped recipient/contact records | `/profiles` |
-| Plan outbound work | `/schedules`, `/campaigns` | Schedules, triggers, and bounded campaigns | `/triggers` |
+| See assistance posture | `/` | Safety acknowledgement, verified-self readiness, upcoming work, and provider state | `/dashboard`, `/readiness` |
+| Manage verified destination profiles | `/contacts` | Rescue profiles that can target only the independently verified self destination; no arbitrary address book | `/profiles` |
+| Plan bounded assistance | `/schedules`, `/campaigns` | Immediate/future self-calls and private exact-match SMS triggers; no bulk campaign capability | `/triggers` |
 | Review calls | `/calls` | Call records, result state, and record details | `/calls/:callId` |
 | Manage reminders | `/reminders` | Existing reminder workflows | — |
-| Verify intended delivery | `/verification` | Verification controls and operator confirmation | — |
-| Review provider delivery | `/delivery` | Provider-honest delivery state and readiness | `/readiness`, `/setup` |
+| Verify intended delivery | `/verification` | Independently verified self-destination controls | `/setup` |
+| Review provider delivery | `/delivery` | Provider-honest delivery state and readiness | — |
 | Review history | `/history` | Durable attempts, results, and audit context | — |
 | Review compliance | `/compliance` | Privacy, consent, retention, and provider boundaries | `/privacy` |
 | Control module behavior | `/settings` | Access, delivery defaults, and integration state | — |
@@ -109,7 +109,7 @@ Each module receives an independent checkpoint only after its focused source/API
 | FaultlineLab | Complete: 9 canonical owner routes, challenge/session record paths, and compatibility redirects | 8/8 focused catalog/domain/import/static/workflow checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | SnapProofOS | Complete: 19 canonical owner routes, durable job detail routes, and compatibility redirects | 10/10 focused API/static checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | CallCommand AI | Complete: 12 canonical owner routes, durable call detail routes, and compatibility redirects | 16/16 focused API/static checks; root typecheck; API/Next production builds; 1/1 exact-host route/browser/accessibility check | This commit |
-| OutCall | Pending | Pending | Pending |
+| OutCall | Complete: 11 canonical owner routes, durable call detail routes, and compatibility redirects | 14/14 focused provider/compliance/routing checks; root typecheck; API/Next production builds; 1/1 exact-host test-adapter route/browser/accessibility check | This commit |
 
 ## TechDeck implementation evidence
 
@@ -282,3 +282,38 @@ node scripts/phase50-business-operations-browser.mjs
 ```
 
 The browser gate exercised all 12 canonical routes and a durable call record deep link, nine compatibility redirects, a real receptionist-to-channel-to-deterministic-call journey, same-tab navigation, refresh/back history, route-active state, product-versus-MSP focused loading, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. No CallCommand AI waiver remains open. This is compiled exact-host local evidence; deployment, public-host acceptance, live Twilio, and tenant-specific MSP-provider acceptance remain separate gates.
+
+## OutCall implementation evidence
+
+- Identity: midnight-violet personal-safety workspace with lavender trust signals and an amber keyboard-focus accent (`outcall-midnight-violet-safety`). It uses the Phase 48 application shell while retaining discreet-assistance language and a calmer visual system than the business/MSP modules.
+- Product-boundary reconciliation: the prompt's contacts and campaigns nouns are implemented as the real product's verified-self rescue profiles and private exact-match triggers. OutCall does not expose an arbitrary recipient address book, audience targeting, or bulk outbound campaigns. Calls can go only to the user's independently verified number, and the UI states that OutCall does not replace 911 or another emergency service.
+- Route ownership: overview, verified destination/profiles, schedules, private triggers, calls and durable call records, reminders, verification, delivery readiness, history, privacy/safety, and settings are URL-owned. Historical dashboard/readiness/profile/trigger/setup/privacy paths redirect to canonical routes. Selecting a call creates `/calls/:callId`, which survives refresh and browser history.
+- Focused loading: each route dynamically mounts only one OutCall workspace area. The existing bounded workspace snapshot remains the single read contract for this compact product; settings and route-specific screens do not fan out across unrelated APIs, and no duplicate module instance is mounted.
+- Preserved capabilities: safety acknowledgement, independent phone ownership verification, encrypted rescue profiles, private trigger phrases, immediate/future requests, durable call attempts, cancellation, rate limits, data export, reauthenticated deletion, and provider-state visibility remain connected to the existing tenant- and user-scoped APIs.
+- Provider and activation truth: the production catalog remains `coming_soon`, and ordinary SSO remains unavailable until the separate live-provider gate passes. Exact-host acceptance requires both `APP_ENV=test` and `OUTCALL_TEST_ADAPTER=enabled`; that dual condition activates only the non-provider adapter for an isolated test environment. Live Twilio was neither configured nor invoked, and no request state was presented as delivered without provider confirmation.
+- Accessibility correction: browser acceptance found the restored workspace's generic blue profile-edit control at 3.9:1 contrast on the dark card. The control now uses the OutCall lavender link color and passes the unsuppressed axe scan.
+- Visual evidence: [OutCall schedules desktop](./evidence/outcall-schedules-desktop.png) and [OutCall compliance mobile navigation](./evidence/outcall-compliance-mobile.png).
+
+Verification performed from `C:\Dev\OperatorOS` against the disposable PostgreSQL database on `127.0.0.1:55441`:
+
+```powershell
+$env:APP_ENV='test'; $env:NODE_ENV='test'
+corepack pnpm --dir apps/api exec tsx --test `
+  test/outcall-provider.test.ts `
+  test/operatoros-messaging-compliance-static.test.ts `
+  test/core-module-deep-link-routing.test.ts `
+  test/outcall-phase50-routes.test.ts
+# 14 passed, 0 failed
+
+corepack pnpm typecheck
+# 4 workspace projects passed
+
+$env:PARITY_DATABASE_IS_DISPOSABLE='1'
+$env:PHASE50_BROWSER_SPEC='outcall'
+$env:OUTCALL_TEST_ADAPTER='enabled'
+node scripts/phase50-business-operations-browser.mjs
+# API and Next production builds passed
+# phase50-outcall-routes.spec.ts: 1 passed
+```
+
+The browser gate exercised all 11 canonical routes and a durable call-record deep link, six compatibility redirects, a real test-adapter verified-self profile-and-call-request journey, same-tab navigation, refresh/back history, route-active state, one bounded workspace loader, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. There is no Phase 50 route-migration waiver. Deployment, public-host acceptance, production catalog activation, and live Twilio acceptance remain separate, closed gates.

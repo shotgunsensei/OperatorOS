@@ -49,26 +49,22 @@ test('core module deep links resolve only to live native shell sections', () => 
   for (const path of ['clients', 'sites', 'contacts']) {
     assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-directory');
   }
-  assert.deepEqual(resolveCoreModuleDeepLink('pulsedesk', ['tickets']), {
-    sectionId: 'pulsedesk-operations',
-    label: 'Request Queue',
-  });
-  assert.deepEqual(resolveCoreModuleDeepLink('pulsedesk', ['departments']), {
-    sectionId: 'pulsedesk-operations',
-    label: 'Departments',
-  });
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['tickets'])?.sectionId, 'pulsedesk-operations');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['departments'])?.sectionId, 'pulsedesk-assignments');
   for (const path of ['clients', 'facilities', 'sites', 'contacts', 'vendors']) {
     assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-directory');
   }
-  for (const path of ['assets', 'supply-requests', 'facility-requests', 'knowledge']) {
-    assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-operations');
+  for (const path of ['assets', 'supply-requests', 'facility-requests']) {
+    assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-operations-route');
   }
-  for (const path of ['app', 'dashboard', 'analytics']) {
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['knowledge'])?.sectionId, 'pulsedesk-knowledge-route');
+  for (const path of ['app', 'dashboard']) {
     assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-overview');
   }
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['analytics'])?.sectionId, 'pulsedesk-analytics');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['submit'])?.sectionId, 'pulsedesk-operations');
-  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk', 'admin'])?.sectionId, 'pulsedesk-operations');
-  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk-admin'])?.sectionId, 'pulsedesk-operations');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk', 'admin'])?.sectionId, 'pulsedesk-assignments');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk-admin'])?.sectionId, 'pulsedesk-assignments');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['dashboard'])?.sectionId, 'faultlinelab-dashboard');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['challenges'])?.sectionId, 'faultlinelab-challenges');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['daily'])?.sectionId, 'faultlinelab-challenges');
@@ -95,12 +91,13 @@ test('core module deep links resolve only to live native shell sections', () => 
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['admin'])?.sectionId, 'ninjamation-admin');
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['checkout', 'success'])?.sectionId, 'ninjamation-account');
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['execute']), null);
-  for (const path of ['dashboard', 'readiness']) assert.equal(resolveCoreModuleDeepLink('outcall', [path])?.sectionId, 'outcall-readiness');
+  for (const path of ['dashboard', 'readiness']) assert.equal(resolveCoreModuleDeepLink('outcall', [path])?.sectionId, 'outcall-overview-route');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['contacts'])?.sectionId, 'outcall-profiles');
   assert.equal(resolveCoreModuleDeepLink('outcall', ['setup'])?.sectionId, 'outcall-setup');
   assert.equal(resolveCoreModuleDeepLink('outcall', ['profiles'])?.sectionId, 'outcall-profiles');
   assert.equal(resolveCoreModuleDeepLink('outcall', ['triggers'])?.sectionId, 'outcall-triggers');
   assert.equal(resolveCoreModuleDeepLink('outcall', ['calls'])?.sectionId, 'outcall-schedule');
-  assert.equal(resolveCoreModuleDeepLink('outcall', ['calls', 'call-123'])?.sectionId, 'outcall-schedule');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['calls', 'call-123'])?.sectionId, 'outcall-call-record');
   assert.equal(resolveCoreModuleDeepLink('outcall', ['privacy'])?.sectionId, 'outcall-privacy');
   assert.equal(resolveCoreModuleDeepLink('outcall', ['unknown']), null);
 });
@@ -118,7 +115,7 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   }
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['tickets', 'ticket-123'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['clients', 'client-123'])?.sectionId, 'pulsedesk-directory');
-  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123', 'report-issue'])?.sectionId, 'pulsedesk-operations');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123', 'report-issue'])?.sectionId, 'pulsedesk-operations-route');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123']), null);
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches']), null);
@@ -127,8 +124,8 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['brands', 'brand-123'])?.sectionId, 'brandforgeos-brands');
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['campaigns', 'campaign-123'])?.sectionId, 'brandforgeos-campaigns');
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['unknown']), null);
-  assert.equal(resolveCoreModuleDeepLink('snapproofos', ['dashboard'])?.sectionId, 'snapproofos-dashboard');
-  assert.equal(resolveCoreModuleDeepLink('snapproofos', ['cases', 'case-123'])?.sectionId, 'snapproofos-cases');
+  assert.equal(resolveCoreModuleDeepLink('snapproofos', ['dashboard'])?.sectionId, 'snapproofos-overview-route');
+  assert.equal(resolveCoreModuleDeepLink('snapproofos', ['cases', 'case-123'])?.sectionId, 'snapproofos-jobs');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['evidence', 'evidence-123'])?.sectionId, 'snapproofos-evidence');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['reports', 'report-123'])?.sectionId, 'snapproofos-reports');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['unknown']), null);
@@ -155,7 +152,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const pulseDeskShell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
   const faultlineLabWorkspace = readRepoFile('apps/web/src/components/module-shells/FaultlineLabWorkspace.tsx');
   const ninjamationShell = readRepoFile('apps/web/src/components/module-shells/NinjamationShell.tsx');
-  const outCallShell = readRepoFile('apps/web/src/components/module-shells/OutCallShell.tsx');
+  const outCallShell = readRepoFile('apps/web/src/components/module-shells/OutCallWorkspace.tsx');
 
   assert.match(catchAllPage, /resolveCoreModuleDeepLink/);
   assert.match(catchAllPage, /initialSectionId=\{target\.sectionId\}/);

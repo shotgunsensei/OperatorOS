@@ -310,13 +310,22 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/admin': { sectionId: 'ninjamation-admin', label: 'Ninjamation Administration' },
   },
   outcall: {
-    '/dashboard': { sectionId: 'outcall-readiness', label: 'Readiness and Safety' },
-    '/readiness': { sectionId: 'outcall-readiness', label: 'Readiness and Safety' },
-    '/setup': { sectionId: 'outcall-setup', label: 'Verified Mobile' },
-    '/profiles': { sectionId: 'outcall-profiles', label: 'Rescue Profiles' },
-    '/triggers': { sectionId: 'outcall-triggers', label: 'Private SMS Triggers' },
+    '/dashboard': { sectionId: 'outcall-overview-route', label: 'Overview', redirectPath: '/' },
+    '/readiness': { sectionId: 'outcall-overview-route', label: 'Readiness and Safety', redirectPath: '/' },
+    '/contacts': { sectionId: 'outcall-profiles', label: 'Verified Destination and Profiles' },
+    '/profiles': { sectionId: 'outcall-profiles', label: 'Rescue Profiles', redirectPath: '/contacts' },
+    '/schedules': { sectionId: 'outcall-schedule', label: 'Schedules' },
+    '/campaigns': { sectionId: 'outcall-triggers', label: 'Private Triggers' },
+    '/triggers': { sectionId: 'outcall-triggers', label: 'Private SMS Triggers', redirectPath: '/campaigns' },
     '/calls': { sectionId: 'outcall-schedule', label: 'Scheduled Calls' },
-    '/privacy': { sectionId: 'outcall-privacy', label: 'Privacy Controls' },
+    '/reminders': { sectionId: 'outcall-schedule', label: 'Reminders' },
+    '/verification': { sectionId: 'outcall-setup', label: 'Verified Mobile' },
+    '/setup': { sectionId: 'outcall-setup', label: 'Verified Mobile', redirectPath: '/verification' },
+    '/delivery': { sectionId: 'outcall-readiness', label: 'Delivery Readiness' },
+    '/history': { sectionId: 'outcall-schedule', label: 'Call History' },
+    '/compliance': { sectionId: 'outcall-privacy', label: 'Privacy and Safety' },
+    '/privacy': { sectionId: 'outcall-privacy', label: 'Privacy Controls', redirectPath: '/compliance' },
+    '/settings': { sectionId: 'outcall-safety-boundary', label: 'OutCall Settings' },
   },
 };
 
@@ -379,7 +388,7 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'clients') return { sectionId: 'pulsedesk-directory', label: 'Service Client Record' };
   }
   if (slug === 'outcall' && pathSegments.length === 2 && pathSegments[0] === 'calls') {
-    return { sectionId: 'outcall-schedule', label: 'Scheduled Call Record' };
+    return { sectionId: 'outcall-call-record', label: 'Scheduled Call Record' };
   }
   if (
     slug === 'pulsedesk' &&
