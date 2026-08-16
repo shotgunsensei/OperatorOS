@@ -26,16 +26,22 @@ One Replit autoscale workload owns the public runtime:
 1. `.replit` uses `npm exec` with pnpm `10.34.5` to install the frozen
    workspace and run `pnpm build:production`.
 2. `scripts/start-unified-runtime.mjs` validates the production environment.
-3. The supervisor runs the compiled 21-step database release and stops on any
+3. A supervised public gateway binds `0.0.0.0:5000` immediately. During
+   bootstrap it serves only a no-store `GET`/`HEAD /` starting page; every
+   readiness/application request and WebSocket upgrade fails closed with 503.
+   `.replit` exposes only this listener as external port 80. Ports 5001 and
+   5002 are private process-to-process listeners.
+4. The supervisor runs the compiled 52-step database release and stops on any
    failure.
-4. The compiled Fastify API starts privately on port 5001 and must report
-   `/readyz` before public startup continues.
-5. The compiled Next server starts privately on port 5002. A supervised public
-   gateway owns port 5000, routes HTTP to Next, and routes `/ws/*` upgrades
-   directly to Fastify after removing the internal `/ws` prefix. The server-
-   only `INTERNAL_API_URL=http://localhost:5001` remains the HTTP API rewrite
+5. The compiled Fastify API starts privately on port 5001 and must report
+   `/readyz` before startup continues.
+6. The compiled Next server starts privately on port 5002 and must report
+   `/healthz`. The supervisor then marks the already-bound gateway ready. It
+   routes HTTP to Next and routes `/ws/*` upgrades directly to Fastify after
+   removing the internal `/ws` prefix. The server-only
+   `INTERNAL_API_URL=http://localhost:5001` remains the HTTP API rewrite
    authority.
-6. Replit TLS and host attachment route the canonical hosts to the public
+7. Replit TLS and host attachment route the canonical hosts to the public
    gateway. It preserves exact host/session headers; Next middleware owns HTTP
    routing while Fastify authenticates and authorizes upgraded sockets.
 
@@ -158,6 +164,10 @@ Child migrations and `drizzle-kit push` are not supported deployment paths.
 - `/readyz` fails closed unless the database, session signing, SSO code
   encryption, module registry, and shared service worker are ready. Optional
   providers report configured or disabled state explicitly without values.
+- Before those checks and the private Next health check pass, the public
+  gateway identifies itself with `X-OperatorOS-Runtime-State: starting` and
+  never proxies application or WebSocket traffic. Its root-only 200 response
+  satisfies the platform startup probe without claiming application readiness.
 - Structured request completion logs include request ID and bounded
   user/tenant/module context. SSO decisions include correlation IDs without
   raw codes, cookies, passwords, secrets, or authorization headers.

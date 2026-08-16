@@ -1,5 +1,45 @@
 # OperatorOS implementation status
 
+## Replit Autoscale Promote startup repair - SOURCE/LOCAL VERIFIED / REPUBLISH PENDING (2026-08-16)
+
+- The failed Replit artifact `73dfa0e3` completed its build and bundle stages but
+  did not pass Promote. The subsequently supplied runtime-log screenshot is for
+  deployment `4ed7c84e`, which was serving ordinary level-30 request traffic; it
+  is not the failed artifact's startup log and cannot identify that artifact's
+  terminal error.
+- Two source-owned Promote defects were closed. `.replit` now exposes exactly
+  one Autoscale port (`5000 -> 80`); ports 5001 and 5002 remain private
+  loopback-only API and Next listeners. The unified supervisor now binds the
+  public gateway immediately after production validation, serves a no-store
+  `GET`/`HEAD /` starting page while bootstrapping, returns an honest JSON 503
+  from readiness/application requests, rejects bootstrap WebSocket upgrades,
+  and begins proxying only after the database release, Fastify `/readyz`, and
+  Next `/healthz` succeed. A release/API/web failure still terminates the
+  process rather than presenting a working application.
+- Focused verification: `node --import tsx --test
+  apps/api/test/replit-unified-runtime.test.ts` PASS (3/3). The test asserts the
+  one-port Replit contract, proves root 200 plus readiness/mutation 503 during
+  bootstrap, and proves the same listener proxies only after readiness.
+- Broad verification: `corepack pnpm typecheck` PASS for API,
+  runner-gateway, web, and TorqueShed native; with
+  `INTERNAL_API_URL=http://localhost:5001` and
+  `NODE_OPTIONS=--max-old-space-size=4096`, `corepack pnpm build:production`
+  PASS, including FaultlineLab compiler tests (4/4), workspace typecheck, API,
+  runner-gateway, SDK, and Next production artifacts.
+- Replit-equivalent runtime verification used a fresh disposable PostgreSQL 16
+  database and process-only test secrets. Port 5000 returned the starting page
+  immediately while the cumulative 52-step release applied and `/readyz`
+  returned 503. It then transitioned without rebinding: public
+  `/api/health`, public `/readyz`, direct API `/readyz`, and private Next
+  `/healthz` all returned 200; database/auth/SSO/module-registry/shared-worker
+  readiness was true. SIGINT stopped all three listeners, and the disposable
+  database was removed.
+- This is source/local evidence only. No branch was pushed, Replit artifact was
+  republished, production secret was changed, database was mutated, domain was
+  promoted, or public smoke/rollback gate was run. A republish from the reviewed
+  revision and inspection of that new deployment's own startup logs remain the
+  next owner-controlled gates.
+
 ## Phase 50 business-operations route migration - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
 
 - Migrated TechDeck, PulseDesk, FaultlineLab, SnapProofOS, CallCommand AI, and OutCall from monolithic/tab-primary workspaces into distinct Phase 48 route applications with stable canonical URLs, compatibility redirects, durable record deep links, shared My Apps/account/help escape, and product-specific themes.
