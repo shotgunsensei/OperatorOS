@@ -306,7 +306,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         <div style={{ display: 'flex', gap: 8, marginTop: 'auto', padding: '0 20px 20px' }}>
           {cta === 'open' && (
             <ModuleLaunchLink
-              moduleId={m.id || m.slug}
+              moduleId={m.slug}
               data-testid={`button-launch-${m.slug}`}
               style={{
                 flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8, border: 'none',
@@ -320,7 +320,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
           )}
           {cta === 'open' && (
             <ModuleLaunchLink
-              moduleId={m.id || m.slug}
+              moduleId={m.slug}
               openInNewTab
               data-testid={`button-launch-new-tab-${m.slug}`}
               aria-label={`Open ${m.name} in new tab`}

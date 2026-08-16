@@ -1,5 +1,13 @@
 # OperatorOS implementation status
 
+## Live Apps catalog launch-render repair - SOURCE/LOCAL VERIFIED / REDEPLOYMENT PENDING (2026-08-16)
+
+- Public release `5d86c82945a7970464e17b3d2914ec2c9e2ba70a` became healthy and ready, but an authenticated visit to the app-host Apps catalog (`/?page=apps`, internally rendered by `/app?page=apps`) crashed during React render with `ModuleLaunchError: Module is not available for launch`.
+- Root cause: the authenticated modules API correctly returns both the durable database row UUID (`module.id`) and the canonical registry slug (`module.slug`). Phase 46's marketplace conversion passed `m.id || m.slug` to `ModuleLaunchLink`; every normal database-backed row therefore selected its UUID, while the in-process launch registry is deliberately keyed by canonical module slug. The registry rejected the UUID before any entitlement, SSO issuance, navigation, or provider action ran.
+- Both ordinary and explicit-new-tab marketplace launch controls now pass only `m.slug`. The server-owned `cta === 'open'` decision remains the visibility gate, and tenant, entitlement, module-status, exact-host SSO, and session authority are unchanged.
+- Regression coverage now requires exactly two canonical-slug marketplace launch inputs and rejects any `moduleId={m.id...}` launch boundary. Focused command-center and same-tab launch contracts PASS (6/6); workspace typecheck PASS for all four targets; and `corepack pnpm build:production` PASS, including FaultlineLab compiler tests (4/4), API, runner-gateway, SDK, and Next production artifacts. `git diff --check` reports only normal Windows line-ending notices.
+- No deployment, production data, entitlement, billing state, session, or provider was changed. The fix requires reviewed merge/redeployment followed by an authenticated browser check of the Apps catalog, ordinary launch, explicit new-tab launch, Back behavior, and console/page errors on the replacement release.
+
 ## Replit deployment `3192b743` runner-mode preflight repair - SOURCE/LOCAL VERIFIED / REPUBLISH PENDING (2026-08-16)
 
 - The deployment's own startup log now identifies the terminal failure:

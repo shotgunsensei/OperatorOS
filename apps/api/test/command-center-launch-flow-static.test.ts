@@ -57,6 +57,12 @@ test('Marketplace launch uses the shared real-anchor module contract', () => {
 
   assert.match(appsPage, /ModuleLaunchLink/);
   assert.match(appsPage, /button-launch-new-tab-/);
+  assert.equal(
+    (appsPage.match(/moduleId=\{m\.slug\}/g) ?? []).length,
+    2,
+    'marketplace launch controls must use the canonical registry slug',
+  );
+  assert.doesNotMatch(appsPage, /moduleId=\{m\.id/);
   assert.doesNotMatch(appsPage, /launchModuleViaSso/);
   assert.doesNotMatch(appsPage, /friendlyModuleLaunchError/);
   assert.doesNotMatch(appsPage, /modulesApi\.handoff/);
