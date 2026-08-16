@@ -1,5 +1,9 @@
 # OperatorOS module parity index
 
+## Phase 50 business-operations route-application overlay
+
+TechDeck, PulseDesk, FaultlineLab, SnapProofOS, CallCommand AI, and OutCall retain their prior source/local parity states and functional scope while their major product areas now have stable refresh-safe URLs in the shared application structure. Each keeps a distinct product theme and its existing tenant, role, provider, audit, data, and safety boundaries. Compiled local acceptance covers every canonical owner route, compatibility redirects, representative durable records and workflows, same-tab history, focused loading, responsive layouts, and unsuppressed accessibility checks across all six modules. This is not a state-5 promotion: deployment, public authenticated acceptance, live providers, production migration/backup/rollback, and OutCall production activation remain open. See `docs/phase-50/BUSINESS-OPERATIONS-ROUTE-MIGRATION.md`.
+
 ## Phase 49 TorqueShed route-application overlay
 
 TorqueShed retains source/local state 4 and its Phase 28/29 functional scope, while its web product now uses the shared route application structure with a product-specific dark garage/amber theme. All collection, create, record, diagnostic Assist, live-bay, marketplace, Credits, profile, activity, search, export, and settings surfaces are URL-addressable; legacy links redirect; route loaders fail independently; and Credits/Assist preserve the Phase 41-45 revenue authority. Local compiled acceptance covers 24 canonical routes, real disposable records, the `$5` explicit test-provider settlement workflow, responsive/accessibility behavior, Back/reload, and focused request fan-out. This is not a state-5 promotion: deployed authenticated proof, second-tenant deployed denial, live Stripe/AI decisions, backup/rollback, reconciliation, and public monitoring remain open. See `docs/phase-49/TORQUESHED-ROUTE-MIGRATION-REPORT.md`.

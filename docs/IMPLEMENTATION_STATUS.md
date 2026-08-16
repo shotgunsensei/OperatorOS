@@ -1,5 +1,15 @@
 # OperatorOS implementation status
 
+## Phase 50 business-operations route migration - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
+
+- Migrated TechDeck, PulseDesk, FaultlineLab, SnapProofOS, CallCommand AI, and OutCall from monolithic/tab-primary workspaces into distinct Phase 48 route applications with stable canonical URLs, compatibility redirects, durable record deep links, shared My Apps/account/help escape, and product-specific themes.
+- Preserved the existing tenant, role, entitlement, billing, audit, provider, import/export, and data boundaries. PulseDesk remains operational/no-unnecessary-PHI; CallCommand retains consent/provider restrictions; OutCall remains verified-self/non-emergency and production `coming_soon`.
+- Added focused route loading/code splitting and removed duplicate all-product mounting where the active workflows allowed it. Settings routes intentionally avoid unrelated module workloads, and record selection now survives refresh/history.
+- Closed browser-discovered source defects: TechDeck control naming/middleware route matching, PulseDesk dark-boundary/queue overflow/labels/headings, FaultlineLab authoring overflow/control labels/headings, SnapProofOS team query and active-nav contrast, and OutCall edit-control contrast.
+- Verification: module focused suites PASS (TechDeck 23/23, PulseDesk 38/38, FaultlineLab 8/8, SnapProofOS 10/10, CallCommand AI 16/16, OutCall 14/14); root typecheck PASS across four projects; API/SDK/Next production builds PASS; combined compiled exact-host Chromium route/owner/accessibility/responsive gate PASS 6/6 in 3.8 minutes.
+- Report: `docs/phase-50/BUSINESS-OPERATIONS-ROUTE-MIGRATION.md` with per-module route/capability ledgers and 12 screenshots.
+- No deployment, production database mutation, live provider traffic, or OutCall production activation was authorized. Those remain Phase 52/state-5 gates.
+
 ## Phase 49 TorqueShed route application - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
 
 - Replaced TorqueShed's internal `Tab` workspace with the Phase 48 URL-authoritative application shell and a complete canonical collection/create/detail/Assist/Credits/system route map.
