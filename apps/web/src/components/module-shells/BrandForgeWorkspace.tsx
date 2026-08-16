@@ -1,6 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { BarChart3, CalendarDays, Copy, Download, LayoutDashboard, Megaphone, Palette, Plus, Settings, Sparkles, Trash2, Users, Gift, LayoutTemplate, PlugZap, FileText, Activity, ShieldCheck } from 'lucide-react';
 import { moduleShellApi, type BrandForgeBrand, type BrandForgeCalendarItem, type BrandForgeCampaign, type BrandForgeCopyAsset, type BrandForgeGeneration, type BrandForgePersona } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
@@ -61,8 +62,15 @@ function uniqueKey(prefix: string) {
   return `${prefix}:${Date.now()}:${crypto.randomUUID()}`;
 }
 
-export default function BrandForgeWorkspace() {
-  const [tab, setTab] = useState<Tab>('dashboard');
+function tabFromRoute(routePath?: string): Tab {
+  const root = (routePath || '/').split('/').filter(Boolean)[0] || 'dashboard';
+  const aliases: Record<string, Tab> = { content:'copy-studio', assets:'copy-studio', approvals:'campaigns', onboarding:'settings', pricing:'admin', legal:'admin', privacy:'admin', terms:'admin', activity:'activity', home:'dashboard', login:'dashboard', reports:'reports', integrations:'integrations', 'ai-workflows':'ai-workflows', analytics:'analytics', calendar:'calendar', brands:'brands', campaigns:'campaigns' };
+  return aliases[root] ?? (tabs.some(item => item.id === root) ? root as Tab : 'dashboard');
+}
+
+export default function BrandForgeWorkspace({ routePath, embedded = false }: { routePath?: string; embedded?: boolean }) {
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>(() => tabFromRoute(routePath));
   const [dashboard, setDashboard] = useState<any>(null);
   const [brands, setBrands] = useState<BrandForgeBrand[]>([]);
   const [personas, setPersonas] = useState<BrandForgePersona[]>([]);
@@ -88,62 +96,61 @@ export default function BrandForgeWorkspace() {
     setLoading(true);
     setError(null);
     try {
-      const [dash, brandRows, personaRows, campaignRows, copyRows, calendarRows, generationRows, workspaceRow, contract, product, offerRows, workflowRows, templateRows, integrationRows, recommendationRows, leadRows, reportRows, exportRows, activityRows, notificationRows, plan] = await Promise.all([
-        moduleShellApi.brandforgeos.dashboard(),
-        moduleShellApi.brandforgeos.listBrands(),
-        moduleShellApi.brandforgeos.listPersonas(),
-        moduleShellApi.brandforgeos.listCampaigns(),
-        moduleShellApi.brandforgeos.listCopyAssets(),
-        moduleShellApi.brandforgeos.listCalendar(),
-        moduleShellApi.brandforgeos.listGenerations(),
-        moduleShellApi.brandforgeos.workspace(),
-        moduleShellApi.brandforgeos.productContract(),
-        moduleShellApi.brandforgeos.productOverview(),
-        moduleShellApi.brandforgeos.listOffers(),
-        moduleShellApi.brandforgeos.listWorkflows(),
-        moduleShellApi.brandforgeos.listTemplates(),
-        moduleShellApi.brandforgeos.listIntegrations(),
-        moduleShellApi.brandforgeos.listRecommendations(),
-        moduleShellApi.brandforgeos.listLeads(),
-        moduleShellApi.brandforgeos.listReports(),
-        moduleShellApi.brandforgeos.listExports(),
-        moduleShellApi.brandforgeos.activity(),
-        moduleShellApi.brandforgeos.notifications(),
-        moduleShellApi.brandforgeos.planUsage(),
-      ]);
-      setDashboard(dash);
-      setBrands(brandRows.brands);
-      setPersonas(personaRows.personas);
-      setCampaigns(campaignRows.campaigns);
-      setCopyAssets(copyRows.copyAssets);
-      setCalendar(calendarRows.calendarItems);
-      setGenerations(generationRows.generations);
-      setProvider(generationRows.provider);
-      setWorkspace(workspaceRow);
-      setCompleteData({
-        contract,
-        product,
-        offers: offerRows.offers,
-        workflows: workflowRows.workflows,
-        templates: templateRows.templates,
-        integrations: integrationRows.integrations,
-        providerConfigurations: integrationRows.providerConfigurations,
-        recommendations: recommendationRows.recommendations,
-        leads: leadRows.leads,
-        reports: reportRows.reports,
-        exports: exportRows.exports,
-        activity: activityRows.activity,
-        notifications: notificationRows.notifications,
-        plan,
-      });
+      if (tab === 'dashboard') {
+        const [dash, campaignRows, calendarRows] = await Promise.all([moduleShellApi.brandforgeos.dashboard(), moduleShellApi.brandforgeos.listCampaigns(), moduleShellApi.brandforgeos.listCalendar()]);
+        setDashboard(dash); setCampaigns(campaignRows.campaigns); setCalendar(calendarRows.calendarItems);
+      } else if (tab === 'brands') {
+        setBrands((await moduleShellApi.brandforgeos.listBrands()).brands);
+      } else if (tab === 'personas') {
+        setPersonas((await moduleShellApi.brandforgeos.listPersonas()).personas);
+      } else if (tab === 'campaigns') {
+        const [campaignRows, brandRows, personaRows] = await Promise.all([moduleShellApi.brandforgeos.listCampaigns(), moduleShellApi.brandforgeos.listBrands(), moduleShellApi.brandforgeos.listPersonas()]);
+        setCampaigns(campaignRows.campaigns); setBrands(brandRows.brands); setPersonas(personaRows.personas);
+      } else if (tab === 'copy-studio') {
+        const [copyRows, brandRows, campaignRows, generationRows] = await Promise.all([moduleShellApi.brandforgeos.listCopyAssets(), moduleShellApi.brandforgeos.listBrands(), moduleShellApi.brandforgeos.listCampaigns(), moduleShellApi.brandforgeos.listGenerations()]);
+        setCopyAssets(copyRows.copyAssets); setBrands(brandRows.brands); setCampaigns(campaignRows.campaigns); setGenerations(generationRows.generations); setProvider(generationRows.provider);
+      } else if (tab === 'calendar') {
+        const [calendarRows, brandRows, campaignRows, copyRows] = await Promise.all([moduleShellApi.brandforgeos.listCalendar(), moduleShellApi.brandforgeos.listBrands(), moduleShellApi.brandforgeos.listCampaigns(), moduleShellApi.brandforgeos.listCopyAssets()]);
+        setCalendar(calendarRows.calendarItems); setBrands(brandRows.brands); setCampaigns(campaignRows.campaigns); setCopyAssets(copyRows.copyAssets);
+      } else if (tab === 'analytics') {
+        const [dash, campaignRows, recommendationRows] = await Promise.all([moduleShellApi.brandforgeos.dashboard(), moduleShellApi.brandforgeos.listCampaigns(), moduleShellApi.brandforgeos.listRecommendations()]);
+        setDashboard(dash); setCampaigns(campaignRows.campaigns); setCompleteData(current => ({ ...current, recommendations: recommendationRows.recommendations }));
+      } else if (tab === 'ai-workflows') {
+        const [generationRows, brandRows, campaignRows, contract] = await Promise.all([moduleShellApi.brandforgeos.listGenerations(), moduleShellApi.brandforgeos.listBrands(), moduleShellApi.brandforgeos.listCampaigns(), moduleShellApi.brandforgeos.productContract()]);
+        setGenerations(generationRows.generations); setProvider(generationRows.provider); setBrands(brandRows.brands); setCampaigns(campaignRows.campaigns); setCompleteData(current => ({ ...current, contract }));
+      } else if (tab === 'settings') {
+        setWorkspace(await moduleShellApi.brandforgeos.workspace());
+      } else {
+        const contract = await moduleShellApi.brandforgeos.productContract();
+        if (tab === 'offers') {
+          const [product, rows, recommendations] = await Promise.all([moduleShellApi.brandforgeos.productOverview(), moduleShellApi.brandforgeos.listOffers(), moduleShellApi.brandforgeos.listRecommendations()]);
+          setCompleteData({ contract, product, offers: rows.offers, recommendations: recommendations.recommendations });
+        } else if (tab === 'strategy') {
+          const [product, workflows, recommendations, leads] = await Promise.all([moduleShellApi.brandforgeos.productOverview(), moduleShellApi.brandforgeos.listWorkflows(), moduleShellApi.brandforgeos.listRecommendations(), moduleShellApi.brandforgeos.listLeads()]);
+          setCompleteData({ contract, product, workflows: workflows.workflows, recommendations: recommendations.recommendations, leads: leads.leads });
+        } else if (tab === 'templates') {
+          const rows = await moduleShellApi.brandforgeos.listTemplates(); setCompleteData({ contract, templates: rows.templates });
+        } else if (tab === 'integrations') {
+          const rows = await moduleShellApi.brandforgeos.listIntegrations(); setCompleteData({ contract, integrations: rows.integrations, providerConfigurations: rows.providerConfigurations });
+        } else if (tab === 'reports') {
+          const [reports, exports] = await Promise.all([moduleShellApi.brandforgeos.listReports(), moduleShellApi.brandforgeos.listExports()]); setCompleteData({ contract, reports: reports.reports, exports: exports.exports });
+        } else if (tab === 'activity') {
+          const [activity, notifications] = await Promise.all([moduleShellApi.brandforgeos.activity(), moduleShellApi.brandforgeos.notifications()]); setCompleteData({ contract, activity: activity.activity, notifications: notifications.notifications });
+        } else if (tab === 'admin') {
+          const plan = await moduleShellApi.brandforgeos.planUsage(); setCompleteData({ contract, plan });
+        }
+      }
     } catch (err) {
       setError(errorText(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tab]);
+
+  useEffect(() => { setTab(tabFromRoute(routePath)); }, [routePath]);
 
   useEffect(() => {
+    if (routePath) return;
     void load();
   }, [load]);
 
@@ -166,13 +173,13 @@ export default function BrandForgeWorkspace() {
     sync();
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
-  }, []);
+  }, [routePath]);
 
   const navigate = (next: Tab) => {
     setTab(next);
     const hostRouted = window.location.hostname === 'brandforgeos.operatoros.net';
     const nextPath = hostRouted ? `/${next}` : `/modules/brandforgeos/${next}`;
-    window.history.pushState({}, '', nextPath);
+    router.push(nextPath);
   };
 
   async function mutate(task: () => Promise<unknown>) {
@@ -189,7 +196,7 @@ export default function BrandForgeWorkspace() {
   }
 
   return (
-    <main
+    <div
       id="brandforgeos-workspace"
       data-testid="brandforgeos-workspace"
       data-evidence="persisted_records_only"
@@ -201,7 +208,7 @@ export default function BrandForgeWorkspace() {
         padding: `0 ${space.xxl}px ${space.xxl}px`,
       }}
     >
-      <header
+      {!embedded && <header
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -227,9 +234,9 @@ export default function BrandForgeWorkspace() {
           <p style={{ margin: 0, color: semantic.textMuted, maxWidth: 760 }}>Build reusable brand systems, campaigns, copy, content calendars, and measurable creative performance in one workspace.</p>
         </div>
         <ShellLiveBadge />
-      </header>
+      </header>}
 
-      <nav aria-label="BrandForgeOS workspace" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: space.lg }}>
+      {!embedded && <nav aria-label="BrandForgeOS workspace" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: space.lg }}>
         {tabs.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -248,7 +255,7 @@ export default function BrandForgeWorkspace() {
             <Icon size={15} /> {label}
           </button>
         ))}
-      </nav>
+      </nav>}
 
       {error && (
         <div
@@ -279,7 +286,7 @@ export default function BrandForgeWorkspace() {
           {(['offers', 'strategy', 'templates', 'integrations', 'reports', 'activity', 'admin'] as BrandForgeCompleteTab[]).includes(tab as BrandForgeCompleteTab) && <BrandForgeCompletePanel tab={tab as BrandForgeCompleteTab} data={completeData} campaigns={campaigns} saving={saving} mutate={mutate} />}
         </>
       )}
-    </main>
+    </div>
   );
 }
 

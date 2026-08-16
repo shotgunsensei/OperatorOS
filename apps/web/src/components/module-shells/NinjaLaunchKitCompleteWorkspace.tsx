@@ -78,7 +78,7 @@ function download(content: string, fileName: string, mimeType: string) {
   link.href = url; link.download = fileName; link.click(); URL.revokeObjectURL(url);
 }
 
-export default function NinjaLaunchKitCompleteWorkspace({ baseUrl, routePath }: { baseUrl?: string; routePath?: string }) {
+export default function NinjaLaunchKitCompleteWorkspace({ baseUrl, routePath, embedded = false, view = 'overview' }: { baseUrl?: string; routePath?: string; embedded?: boolean; view?: string }) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [templates, setTemplates] = useState<Row[]>([]);
   const [selected, setSelected] = useState<Row | null>(null);
@@ -195,10 +195,10 @@ export default function NinjaLaunchKitCompleteWorkspace({ baseUrl, routePath }: 
   const lockedVisuals = selected?.visualPromos?.filter((item: Row) => item.locked).length ?? 0;
 
   return (
-    <div data-testid="shell-ninja-launch-kit-complete" style={{ minHeight: '100vh', overflowX: 'hidden', background: 'radial-gradient(circle at 12% 0%,rgba(127,29,29,.22),transparent 36%),#050506', color: '#fafafa', colorScheme: 'dark' }}>
-      <style>{`@media(max-width:720px){.nlk-grid{grid-template-columns:1fr!important}.nlk-pad{padding:18px!important}.nlk-nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;flex-wrap:nowrap!important}} .nlk-button:focus-visible,.nlk-input:focus-visible{outline:3px solid #fca5a5;outline-offset:2px}`}</style>
+    <div data-testid="shell-ninja-launch-kit-complete" data-launchkit-view={view} style={{ minHeight: '100vh', overflowX: 'hidden', background: 'radial-gradient(circle at 12% 0%,rgba(127,29,29,.22),transparent 36%),#050506', color: '#fafafa', colorScheme: 'dark' }}>
+      <style>{`@media(max-width:720px){.nlk-grid{grid-template-columns:1fr!important}.nlk-pad{padding:18px!important}.nlk-nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;flex-wrap:nowrap!important}} .nlk-button:focus-visible,.nlk-input:focus-visible{outline:3px solid #fca5a5;outline-offset:2px}[data-launchkit-view] #launchkit-dashboard,[data-launchkit-view] #launchkit-builder,[data-launchkit-view] #launchkit-templates,[data-launchkit-view] #launchkit-kits,[data-launchkit-view] #launchkit-visual-promos,[data-launchkit-view] #launchkit-outputs,[data-launchkit-view] #launchkit-brands,[data-launchkit-view] #launchkit-exports,[data-launchkit-view] #launchkit-account,[data-launchkit-view] #launchkit-execution{display:none}[data-launchkit-view="overview"] #launchkit-dashboard,[data-launchkit-view="projects"] #launchkit-builder,[data-launchkit-view="projects"] #launchkit-kits,[data-launchkit-view="templates"] #launchkit-templates,[data-launchkit-view="brief"] #launchkit-builder,[data-launchkit-view="brief"] #launchkit-brands,[data-launchkit-view="deliverables"] #launchkit-visual-promos,[data-launchkit-view="deliverables"] #launchkit-outputs,[data-launchkit-view="exports"] #launchkit-exports,[data-launchkit-view="settings"] #launchkit-account{display:block}`}</style>
       <div className="nlk-pad" style={{ maxWidth: 1380, margin: '0 auto', padding: '30px clamp(18px,4vw,52px) 72px' }}>
-        <header style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', paddingBottom: 22, borderBottom: '1px solid rgba(239,68,68,.2)' }}>
+        {!embedded && <header style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', paddingBottom: 22, borderBottom: '1px solid rgba(239,68,68,.2)' }}>
           <div style={{ width: 54, height: 54, borderRadius: 16, display: 'grid', placeItems: 'center', background: 'linear-gradient(145deg,#ef4444,#450a0a)', boxShadow: '0 0 36px rgba(239,68,68,.25)' }}><Rocket size={28} /></div>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 11, letterSpacing: '.24em', color: '#fca5a5', fontWeight: 900 }}>TACTICAL LAUNCH GENERATION</span><ShellLiveBadge /></div>
@@ -206,12 +206,12 @@ export default function NinjaLaunchKitCompleteWorkspace({ baseUrl, routePath }: 
             <p style={{ margin: 0, color: '#a1a1aa', maxWidth: 780 }}>Build the complete campaign, generate nine production briefs, enforce the plan, and export a client-ready launch package from one controlled workspace.</p>
           </div>
           <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-ninja-launch-kit" label="Open exact host" />
-        </header>
+        </header>}
 
-        <nav className="nlk-nav" aria-label="Ninja Launch Kit product sections" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '16px 0 24px' }}>
+        {!embedded && <nav className="nlk-nav" aria-label="Ninja Launch Kit product sections" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '16px 0 24px' }}>
           {[['dashboard','Dashboard'],['builder','Builder'],['templates','20 templates'],['kits','Kits'],['visual-promos','Visual promos'],['brands','Brands'],['exports','Exports'],['account','Plan'],['admin','Admin']].map(([id,label]) =>
             <a key={id} href={`#launchkit-${id}`} style={{ whiteSpace: 'nowrap', color: routePath?.includes(id) ? '#fff' : '#d4d4d8', textDecoration: 'none', border: '1px solid rgba(248,113,113,.2)', background: routePath?.includes(id) ? '#7f1d1d' : '#111113', padding: '8px 11px', borderRadius: 999, fontSize: 13 }}>{label}</a>)}
-        </nav>
+        </nav>}
 
         {error && <div role="alert" style={{ ...panel, padding: 14, borderColor: '#ef4444', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
         {notice && <div role="status" style={{ ...panel, padding: 14, borderColor: '#22c55e', color: '#bbf7d0', marginBottom: 16 }}>{notice}</div>}

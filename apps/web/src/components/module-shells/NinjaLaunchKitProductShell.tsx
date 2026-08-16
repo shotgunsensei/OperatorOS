@@ -22,15 +22,20 @@ function initialMode(routePath?: string): ProductMode {
 export default function NinjaLaunchKitProductShell({
   baseUrl,
   routePath,
+  embedded = false,
+  view,
 }: {
   baseUrl?: string;
   routePath?: string;
+  embedded?: boolean;
+  view?: string;
 }) {
-  const [mode, setMode] = useState<ProductMode>(() => initialMode(routePath));
+  const [mode, setMode] = useState<ProductMode>(() => view === 'review' ? 'execution' : initialMode(routePath));
+  React.useEffect(() => setMode(view === 'review' ? 'execution' : initialMode(routePath)), [routePath, view]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#050506', colorScheme: 'dark' }}>
-      <nav
+      {!embedded && <nav
         aria-label="Ninja Launch Kit product mode"
         style={{
           position: 'sticky',
@@ -61,9 +66,9 @@ export default function NinjaLaunchKitProductShell({
         >
           <ClipboardCheck size={15} /> Execution workspaces
         </button>
-      </nav>
+      </nav>}
       {mode === 'kits' ? (
-        <NinjaLaunchKitCompleteWorkspace baseUrl={baseUrl} routePath={routePath} />
+        <NinjaLaunchKitCompleteWorkspace baseUrl={baseUrl} routePath={routePath} embedded={embedded} view={view} />
       ) : (
         <NinjaLaunchKitShell baseUrl={baseUrl} />
       )}

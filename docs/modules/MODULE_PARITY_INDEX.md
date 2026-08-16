@@ -469,3 +469,6 @@ close deployment, provider, migration, privacy, or cutover gates. See
   total additive steps. Repeated apply and compiled runtime verification pass
   on disposable PostgreSQL 16; no production backup, apply, or cutover was
   attempted.
+## Phase 51 creative, automation, and game route-application overlay
+
+BrandForgeOS, StudyForge AI, Ninja Launch Kit, Ninjamation, and Ninja Pool Hall now expose stable major product routes through distinct themes on the shared application-shell contract. The exact-host production-build suite passed 5/5 across all 44 declared routes, including history/reload, one-tab navigation, automated accessibility, and desktop/tablet/mobile layout. Focused loading retains the full Phase 30/31/33/34/36 workflows without recreating parent authority. This presentation and routing overlay does not change parity state: deployment, live-provider, authorized data reconciliation/cutover, and rollback remain state-5 gates. See `docs/phase-51/CREATIVE-AUTOMATION-GAME-ROUTE-MIGRATION.md`.

@@ -2815,3 +2815,10 @@ remain blocked until the cumulative revision is deployed through `.replit`
 and the closure steps in `docs/CURRENT_RELEASE_GATE.md` pass. Do not weaken
 exact-host cookies, PKCE, return validation, tenant checks, privacy controls or
 the verifier to make it pass.
+## Phase 51 creative, automation, and game route migration - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
+
+- BrandForgeOS, StudyForge AI, Ninja Launch Kit, Ninjamation, and Ninja Pool Hall now own stable, direct-linkable product routes under distinct shared application shells. Focused route rendering replaces whole-product loading without duplicating identity, tenant, role, entitlement, billing, provider-secret, or audit authority.
+- Ninja Launch Kit and Ninjamation retain their deliberate public acquisition roots; their authenticated dashboards are `/dashboard`, with registry launch entry at `/dashboard` and `/library`, respectively. Ninja Pool Hall retains the adaptive game layout and guarded exit from an active online room.
+- Registry coverage confirms every active polished child module is assigned across Phases 49-51. OutCall remains production-disabled and test-only exactly as recorded in Phase 50.
+- Fresh verification: root typecheck passed; final web typecheck passed; the focused Phase 31/33/34/36, Ninja Pool Hall, deep-link, and Phase 51 contract group passed 55/55; production API and Next.js builds passed; the five-product exact-host Chromium suite passed 5/5 in 1.8 minutes across 44 canonical routes, 15 zero-violation axe scans, history/reload, one-tab navigation, and responsive checks.
+- Evidence and owner-readable maps: `docs/phase-51/CREATIVE-AUTOMATION-GAME-ROUTE-MIGRATION.md` and `docs/phase-51/evidence/`. This is source/local evidence only; deployed-host, live-provider, approved data-cutover, and production rollback evidence remain open.

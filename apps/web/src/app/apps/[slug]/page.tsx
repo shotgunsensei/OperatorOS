@@ -12,19 +12,19 @@ import { ToastProvider } from '@/components/Toast';
 import ContactLink from '@/components/ContactLink';
 import LoginPage from '@/components/pages/LoginPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
-import StudyForgeShell from '@/components/module-shells/StudyForgeShell';
-import NinjaLaunchKitProductShell from '@/components/module-shells/NinjaLaunchKitProductShell';
+import StudyForgeRouteShell from '@/components/module-shells/StudyForgeRouteShell';
+import NinjaLaunchKitRouteShell from '@/components/module-shells/NinjaLaunchKitRouteShell';
 import CallCommandShell from '@/components/module-shells/CallCommandShell';
-import NinjamationShell from '@/components/module-shells/NinjamationShell';
+import NinjamationRouteShell from '@/components/module-shells/NinjamationRouteShell';
 import OutCallShell from '@/components/module-shells/OutCallShell';
 import TechDeckShell from '@/components/module-shells/TechDeckShell';
 import PulseDeskShell from '@/components/module-shells/PulseDeskShell';
 import TradeFlowKitShell from '@/components/module-shells/TradeFlowKitShell';
-import NinjaPoolHallShell from '@/components/module-shells/NinjaPoolHallShell';
+import NinjaPoolHallRouteShell from '@/components/module-shells/NinjaPoolHallRouteShell';
 import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell';
 import TorqueShedWorkspace from '@/components/module-shells/TorqueShedWorkspace';
 import FaultlineLabShell from '@/components/module-shells/FaultlineLabShell';
-import BrandForgeWorkspace from '@/components/module-shells/BrandForgeWorkspace';
+import BrandForgeRouteShell from '@/components/module-shells/BrandForgeRouteShell';
 import SnapProofShell from '@/components/module-shells/SnapProofShell';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
@@ -52,15 +52,15 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
   'techdeck':         TechDeckShell,
   'pulsedesk':        PulseDeskShell,
   'tradeflowkit':     TradeFlowKitShell,
-  'studyforge-ai':    StudyForgeShell,
-  'ninja-launch-kit': NinjaLaunchKitProductShell,
+  'studyforge-ai':    StudyForgeRouteShell,
+  'ninja-launch-kit': NinjaLaunchKitRouteShell,
   'callcommand-ai':   CallCommandShell,
-  'ninjamation':      NinjamationShell,
+  'ninjamation':      NinjamationRouteShell,
   'outcall':          OutCallShell,
-  'ninja-pool-hall':  NinjaPoolHallShell,
+  'ninja-pool-hall':  NinjaPoolHallRouteShell,
   'torqueshed':       TorqueShedWorkspace,
   'faultlinelab':     FaultlineLabShell,
-  'brandforgeos':     BrandForgeWorkspace,
+  'brandforgeos':     BrandForgeRouteShell,
   'snapproofos':      SnapProofShell,
 };
 const POLISHED_SHELL_NAMES: Record<string, string> = {
