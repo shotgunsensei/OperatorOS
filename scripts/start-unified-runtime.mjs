@@ -136,8 +136,33 @@ function upgradeResponse(socket, response, upstreamSocket, clientHead, upstreamH
   socket.pipe(upstreamSocket).pipe(socket);
 }
 
-export function createPublicGateway({ apiPort, nextPort }) {
+function writeBootstrapResponse(request, response) {
+  const method = request.method?.toUpperCase() || 'GET';
+  const pathname = new URL(request.url || '/', 'http://operatoros.invalid').pathname;
+  const homepageProbe = (method === 'GET' || method === 'HEAD') && pathname === '/';
+  const statusCode = homepageProbe ? 200 : 503;
+  const body = homepageProbe
+    ? '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OperatorOS is starting</title></head><body><main><h1>OperatorOS is starting</h1><p>The secure workspace is completing its readiness checks. Retry in a few seconds.</p></main></body></html>'
+    : JSON.stringify({ status: 'starting', ready: false, code: 'RUNTIME_STARTING' });
+  response.writeHead(statusCode, {
+    'cache-control': 'no-store, max-age=0',
+    'content-length': Buffer.byteLength(body),
+    'content-security-policy': "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    'content-type': homepageProbe ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8',
+    'retry-after': '3',
+    'x-content-type-options': 'nosniff',
+    'x-operatoros-runtime-state': 'starting',
+    'x-robots-tag': 'noindex, nofollow',
+  });
+  response.end(method === 'HEAD' ? undefined : body);
+}
+
+export function createPublicGateway({ apiPort, nextPort }, { isReady = () => true } = {}) {
   const server = http.createServer((request, response) => {
+    if (!isReady()) {
+      writeBootstrapResponse(request, response);
+      return;
+    }
     const upstream = http.request({
       hostname: '127.0.0.1',
       port: nextPort,
@@ -156,6 +181,10 @@ export function createPublicGateway({ apiPort, nextPort }) {
   });
 
   server.on('upgrade', (request, socket, head) => {
+    if (!isReady()) {
+      socket.end('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nRetry-After: 3\r\n\r\n');
+      return;
+    }
     const websocketPath = request.url?.startsWith('/ws/') === true;
     const upstream = http.request({
       hostname: '127.0.0.1',
@@ -188,6 +217,7 @@ export async function startUnifiedRuntime(env = process.env) {
   }
   const children = new Set();
   let shuttingDown = false;
+  let runtimeReady = false;
   let publicGateway;
 
   const stopChildren = (signal = 'SIGTERM') => {
@@ -209,6 +239,23 @@ export async function startUnifiedRuntime(env = process.env) {
 
   for (const signal of ['SIGINT', 'SIGTERM']) {
     process.once(signal, () => shutdown(0, `received ${signal}`));
+  }
+
+  publicGateway = createPublicGateway(config, { isReady: () => runtimeReady });
+  try {
+    await new Promise((resolvePromise, reject) => {
+      const handleListenError = (error) => reject(error);
+      publicGateway.once('error', handleListenError);
+      publicGateway.listen(config.publicPort, '0.0.0.0', () => {
+        publicGateway.off('error', handleListenError);
+        resolvePromise();
+      });
+    });
+    publicGateway.on('error', (error) => shutdown(1, `Public gateway failed: ${error.message}`));
+    console.info(`[runtime] bootstrap gateway listening on public port ${config.publicPort}; readiness remains closed`);
+  } catch (error) {
+    shutdown(1, error instanceof Error ? `Public gateway failed: ${error.message}` : 'Public gateway startup failed');
+    return;
   }
 
   const databaseRelease = spawnNode(
@@ -272,13 +319,8 @@ export async function startUnifiedRuntime(env = process.env) {
 
   try {
     await waitForHttpReady(web, config.nextReadyUrl, config.startupTimeoutMs);
-    publicGateway = createPublicGateway(config);
-    publicGateway.on('error', (error) => shutdown(1, `Public gateway failed: ${error.message}`));
-    await new Promise((resolvePromise, reject) => {
-      publicGateway.once('error', reject);
-      publicGateway.listen(config.publicPort, '0.0.0.0', resolvePromise);
-    });
-    console.info(`[runtime] Next ready; public HTTP/WebSocket gateway listening on port ${config.publicPort}`);
+    runtimeReady = true;
+    console.info(`[runtime] Next ready; public HTTP/WebSocket gateway on port ${config.publicPort} is accepting application traffic`);
   } catch (error) {
     shutdown(1, error instanceof Error ? error.message : 'Public gateway startup failed');
   }

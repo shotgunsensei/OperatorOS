@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -93,4 +94,65 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(replit, /OPERATOROS_APPS_URL = "https:\/\/app\.operatoros\.net\/"/);
   assert.match(replit, /INTERNAL_API_URL = "http:\/\/localhost:5001"/);
   assert.match(replit, /OPERATOROS_DATABASE_RELEASE_MODE = "apply"/);
+  const exposedPorts = [...replit.matchAll(/^externalPort\s*=\s*(\d+)$/gm)].map((match) => Number(match[1]));
+  assert.deepEqual(exposedPorts, [80]);
+  assert.match(replit, /\[\[ports\]\]\r?\nlocalPort = 5000\r?\nexternalPort = 80/);
+  assert.match(source, /bootstrap gateway listening on public port/);
+  assert.match(source, /runtimeReady = true/);
+});
+
+test('public gateway responds during bootstrap and proxies only after readiness', async () => {
+  const upstream = createServer((request, response) => {
+    response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end(`proxied ${request.url}`);
+  });
+  await new Promise<void>((resolvePromise, reject) => {
+    upstream.once('error', reject);
+    upstream.listen(0, '127.0.0.1', resolvePromise);
+  });
+  const upstreamAddress = upstream.address();
+  assert.ok(upstreamAddress && typeof upstreamAddress === 'object');
+
+  let ready = false;
+  const gateway = launcher.createPublicGateway(
+    { apiPort: upstreamAddress.port, nextPort: upstreamAddress.port },
+    { isReady: () => ready },
+  );
+  await new Promise<void>((resolvePromise, reject) => {
+    gateway.once('error', reject);
+    gateway.listen(0, '127.0.0.1', resolvePromise);
+  });
+  const gatewayAddress = gateway.address();
+  assert.ok(gatewayAddress && typeof gatewayAddress === 'object');
+  const baseUrl = `http://127.0.0.1:${gatewayAddress.port}`;
+
+  try {
+    const homepage = await fetch(`${baseUrl}/`);
+    assert.equal(homepage.status, 200);
+    assert.equal(homepage.headers.get('cache-control'), 'no-store, max-age=0');
+    assert.equal(homepage.headers.get('retry-after'), '3');
+    assert.equal(homepage.headers.get('x-operatoros-runtime-state'), 'starting');
+    assert.match(await homepage.text(), /OperatorOS is starting/);
+
+    const readiness = await fetch(`${baseUrl}/readyz`);
+    assert.equal(readiness.status, 503);
+    assert.deepEqual(await readiness.json(), {
+      status: 'starting',
+      ready: false,
+      code: 'RUNTIME_STARTING',
+    });
+
+    const mutation = await fetch(`${baseUrl}/`, { method: 'POST' });
+    assert.equal(mutation.status, 503);
+
+    ready = true;
+    const proxied = await fetch(`${baseUrl}/workspace`);
+    assert.equal(proxied.status, 200);
+    assert.equal(await proxied.text(), 'proxied /workspace');
+  } finally {
+    await Promise.all([
+      new Promise<void>((resolvePromise) => gateway.close(() => resolvePromise())),
+      new Promise<void>((resolvePromise) => upstream.close(() => resolvePromise())),
+    ]);
+  }
 });
