@@ -108,7 +108,7 @@ Each module receives an independent checkpoint only after its focused source/API
 | PulseDesk | Complete: 10 canonical owner routes, durable request detail routes, and compatibility redirects | 38/38 focused API/static/domain checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | FaultlineLab | Complete: 9 canonical owner routes, challenge/session record paths, and compatibility redirects | 8/8 focused catalog/domain/import/static/workflow checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | SnapProofOS | Complete: 19 canonical owner routes, durable job detail routes, and compatibility redirects | 10/10 focused API/static checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
-| CallCommand AI | Pending | Pending | Pending |
+| CallCommand AI | Complete: 12 canonical owner routes, durable call detail routes, and compatibility redirects | 16/16 focused API/static checks; root typecheck; API/Next production builds; 1/1 exact-host route/browser/accessibility check | This commit |
 | OutCall | Pending | Pending | Pending |
 
 ## TechDeck implementation evidence
@@ -250,3 +250,35 @@ node scripts/phase50-business-operations-browser.mjs
 ```
 
 The browser gate exercised all 19 canonical routes and a durable job record deep link, eight compatibility redirects, a real customer-to-job-to-persisted-report journey, same-tab navigation, refresh/back history, route-active state, zero-API settings loading, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. No SnapProofOS waiver remains open. This is compiled exact-host local evidence; deployment, public-host acceptance, and live-provider acceptance remain separate gates.
+
+## CallCommand AI implementation evidence
+
+- Identity: emerald communications signal grid with teal routing accents and amber safety focus (`callcommand-emerald-signal-grid`). It uses the Phase 48 application shell without losing the call-intelligence, MSP intake, and operator-control visual language.
+- Route ownership: switchboard, calls and call records, recordings, transcripts, analysis, actions, automations, numbers/channels, providers, organizations/support contacts, compliance/call evidence, and settings are URL-owned. Historical product, simulation, configuration, work-queue, MSP, and billing paths redirect to the canonical owner routes.
+- Focused loading: the general product workspace and MSP Automation Fabric workspace no longer mount together on every page. Calls load only the persisted product workspace; organizations load only the MSP workspace; providers/settings intentionally compose the provider or safety data they display. The MSP component renders only organization, provider, compliance, or settings controls for its active route.
+- Preserved capabilities: receptionist profiles, consent-aware channels, versioned flow graphs, deterministic simulation, call records and analysis, provider provenance, validated PDF reports, allowlisted ticket/lead/task actions, rules, live switchboard state, transfer targets, directory-backed MSP organization and contact mapping, trusted lines, rotatable display-once SupportLinks, schema-fingerprinted provider onboarding, integration kill switches, deterministic intake, and hash-linked audit remain on existing persistent APIs.
+- Access and provider truth: OperatorOS remains identity, tenant, role, entitlement, billing, secret, and audit authority. Viewer/admin boundaries remain server-enforced. Twilio stays visibly unavailable when not configured; simulations are labeled deterministic; phone numbers alone never authenticate callers; arbitrary commands and privileged/shared/service/break-glass account resets remain prohibited; live adapters stay gated until tenant-specific provider acceptance passes.
+- Record navigation: selecting a persisted call now creates a canonical `/calls/:callId` URL that survives refresh and browser history rather than leaving record selection only in component state.
+- Visual evidence: [CallCommand AI calls desktop](./evidence/callcommand-calls-desktop.png) and [CallCommand AI compliance mobile navigation](./evidence/callcommand-compliance-mobile.png).
+
+Verification performed from `C:\Dev\OperatorOS` against the disposable PostgreSQL database on `127.0.0.1:55441`:
+
+```powershell
+corepack pnpm --dir apps/api exec tsx --test `
+  test/callcommand-phase11e-contract.test.ts `
+  test/callcommand-phase35-static.test.ts `
+  test/callcommand-msp-static.test.ts `
+  test/callcommand-phase50-routes.test.ts
+# 16 passed, 0 failed
+
+corepack pnpm typecheck
+# 4 workspace projects passed
+
+$env:PARITY_DATABASE_IS_DISPOSABLE='1'
+$env:PHASE50_BROWSER_SPEC='callcommand'
+node scripts/phase50-business-operations-browser.mjs
+# API and Next production builds passed
+# phase50-callcommand-routes.spec.ts: 1 passed
+```
+
+The browser gate exercised all 12 canonical routes and a durable call record deep link, nine compatibility redirects, a real receptionist-to-channel-to-deterministic-call journey, same-tab navigation, refresh/back history, route-active state, product-versus-MSP focused loading, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. No CallCommand AI waiver remains open. This is compiled exact-host local evidence; deployment, public-host acceptance, live Twilio, and tenant-specific MSP-provider acceptance remain separate gates.

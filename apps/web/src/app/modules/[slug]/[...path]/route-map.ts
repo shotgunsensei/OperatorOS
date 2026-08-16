@@ -250,35 +250,48 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/pricing': { sectionId: 'launchkit-account', label: 'OperatorOS Plan' },
   },
   'callcommand-ai': {
-    '/dashboard': { sectionId: 'callcommand-dashboard', label: 'Call Dashboard' },
-    '/app': { sectionId: 'callcommand-dashboard', label: 'CallCommand AI' },
-    '/channels': { sectionId: 'callcommand-configuration', label: 'Channels' },
-    '/profiles': { sectionId: 'callcommand-receptionists', label: 'Reception Profiles' },
-    '/receptionist-profiles': { sectionId: 'callcommand-receptionists', label: 'Receptionist Profiles' },
-    '/flows': { sectionId: 'callcommand-flows', label: 'Call Flows' },
-    '/automation-rules': { sectionId: 'callcommand-automation', label: 'Automation Rules' },
-    '/switchboard': { sectionId: 'callcommand-switchboard', label: 'Live Switchboard' },
-    '/setup/telephony': { sectionId: 'callcommand-settings', label: 'Telephony Setup' },
-    '/integrations': { sectionId: 'callcommand-settings', label: 'Integrations' },
-    '/transfer-targets': { sectionId: 'callcommand-switchboard', label: 'Transfer Targets' },
-    '/simulate': { sectionId: 'callcommand-calls', label: 'Call Simulator' },
-    '/simulate/live-call': { sectionId: 'callcommand-switchboard', label: 'Live Call Simulator' },
-    '/consent': { sectionId: 'callcommand-configuration', label: 'Consent Policy and Ledger' },
-    '/suppressions': { sectionId: 'callcommand-settings', label: 'Suppression Controls' },
+    '/dashboard': { sectionId: 'callcommand-overview-route', label: 'Switchboard', redirectPath: '/' },
+    '/app': { sectionId: 'callcommand-overview-route', label: 'CallCommand AI', redirectPath: '/' },
+    '/switchboard': { sectionId: 'callcommand-overview-route', label: 'Live Switchboard', redirectPath: '/' },
     '/calls': { sectionId: 'callcommand-calls', label: 'Call Records' },
-    '/operations': { sectionId: 'callcommand-calls', label: 'Controlled Calling' },
-    '/tickets': { sectionId: 'callcommand-work', label: 'Call Tickets' },
-    '/leads': { sectionId: 'callcommand-work', label: 'Call Leads' },
-    '/tasks': { sectionId: 'callcommand-work', label: 'Call Tasks' },
-    '/billing': { sectionId: 'callcommand-settings', label: 'OperatorOS Plan and Usage' },
-    '/settings': { sectionId: 'callcommand-settings', label: 'CallCommand Settings' },
+    '/operations': { sectionId: 'callcommand-calls', label: 'Controlled Calling', redirectPath: '/calls' },
+    '/recordings': { sectionId: 'callcommand-recordings-route', label: 'Recordings' },
+    '/transcripts': { sectionId: 'callcommand-transcripts-route', label: 'Transcripts' },
+    '/analysis': { sectionId: 'callcommand-analysis-route', label: 'Call Analysis' },
+    '/actions': { sectionId: 'callcommand-work', label: 'Actions' },
+    '/tickets': { sectionId: 'callcommand-work', label: 'Call Tickets', redirectPath: '/actions' },
+    '/leads': { sectionId: 'callcommand-work', label: 'Call Leads', redirectPath: '/actions' },
+    '/tasks': { sectionId: 'callcommand-work', label: 'Call Tasks', redirectPath: '/actions' },
+    '/automations': { sectionId: 'callcommand-automation', label: 'Automations' },
+    '/channels': { sectionId: 'callcommand-automation', label: 'Channels', redirectPath: '/automations' },
+    '/profiles': { sectionId: 'callcommand-automation', label: 'Reception Profiles', redirectPath: '/automations' },
+    '/receptionist-profiles': { sectionId: 'callcommand-automation', label: 'Receptionist Profiles', redirectPath: '/automations' },
+    '/flows': { sectionId: 'callcommand-automation', label: 'Call Flows', redirectPath: '/automations' },
+    '/automation-rules': { sectionId: 'callcommand-automation', label: 'Automation Rules', redirectPath: '/automations' },
+    '/numbers': { sectionId: 'callcommand-configuration', label: 'Numbers and Channels' },
+    '/transfer-targets': { sectionId: 'callcommand-configuration', label: 'Transfer Targets', redirectPath: '/numbers' },
+    '/providers': { sectionId: 'callcommand-providers-route', label: 'Providers' },
+    '/setup/telephony': { sectionId: 'callcommand-providers-route', label: 'Telephony Setup', redirectPath: '/providers' },
+    '/integrations': { sectionId: 'callcommand-providers-route', label: 'Integrations', redirectPath: '/providers' },
+    '/integrations/health': { sectionId: 'callcommand-providers-route', label: 'Integration Health', redirectPath: '/providers' },
+    '/simulate': { sectionId: 'callcommand-overview-route', label: 'Call Simulator', redirectPath: '/' },
+    '/simulate/live-call': { sectionId: 'callcommand-overview-route', label: 'Live Call Simulator', redirectPath: '/' },
     '/organizations': { sectionId: 'callcommand-msp-organizations', label: 'MSP Organizations' },
-    '/contacts': { sectionId: 'callcommand-msp-contacts', label: 'MSP Support Contacts' },
-    '/integrations/health': { sectionId: 'callcommand-msp-integrations', label: 'MSP Integration Health' },
-    '/action-catalog': { sectionId: 'callcommand-msp-policy', label: 'Approved Action Catalog' },
-    '/policy': { sectionId: 'callcommand-msp-policy', label: 'Automation Policy' },
-    '/audit': { sectionId: 'callcommand-msp-audit', label: 'Call Evidence Ledger' },
-    '/onboarding': { sectionId: 'callcommand-msp-onboarding', label: 'MSP Production Onboarding' },
+    '/msp/organizations': { sectionId: 'callcommand-msp-organizations', label: 'MSP Organizations', redirectPath: '/organizations' },
+    '/contacts': { sectionId: 'callcommand-msp-contacts', label: 'MSP Support Contacts', redirectPath: '/organizations' },
+    '/msp/contacts': { sectionId: 'callcommand-msp-contacts', label: 'MSP Support Contacts', redirectPath: '/organizations' },
+    '/onboarding': { sectionId: 'callcommand-msp-organizations', label: 'MSP Production Onboarding', redirectPath: '/organizations' },
+    '/msp/onboarding': { sectionId: 'callcommand-msp-organizations', label: 'MSP Production Onboarding', redirectPath: '/organizations' },
+    '/compliance': { sectionId: 'callcommand-msp-policy', label: 'Compliance and Call Evidence' },
+    '/consent': { sectionId: 'callcommand-msp-policy', label: 'Consent Policy and Ledger', redirectPath: '/compliance' },
+    '/suppressions': { sectionId: 'callcommand-msp-policy', label: 'Suppression Controls', redirectPath: '/compliance' },
+    '/action-catalog': { sectionId: 'callcommand-msp-policy', label: 'Approved Action Catalog', redirectPath: '/compliance' },
+    '/policy': { sectionId: 'callcommand-msp-policy', label: 'Automation Policy', redirectPath: '/compliance' },
+    '/msp/policy': { sectionId: 'callcommand-msp-policy', label: 'Automation Policy', redirectPath: '/compliance' },
+    '/audit': { sectionId: 'callcommand-msp-policy', label: 'Call Evidence Ledger', redirectPath: '/compliance' },
+    '/msp/audit': { sectionId: 'callcommand-msp-policy', label: 'Call Evidence Ledger', redirectPath: '/compliance' },
+    '/billing': { sectionId: 'callcommand-settings', label: 'OperatorOS Plan and Usage', redirectPath: '/settings' },
+    '/settings': { sectionId: 'callcommand-settings', label: 'CallCommand Settings' },
   },
   ninjamation: {
     '/dashboard': { sectionId: 'ninjamation-dashboard', label: 'Script Dashboard' },
@@ -454,10 +467,12 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'callcommand-ai' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'calls') return { sectionId: 'callcommand-calls', label: 'Call Record' };
-    if (resource === 'channels' || resource === 'profiles') return { sectionId: 'callcommand-configuration', label: 'Call Configuration' };
-    if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-settings', label: 'Consent Record' };
-    if (resource === 'flows') return { sectionId: 'callcommand-flows', label: 'Call Flow' };
-    if (resource === 'tickets' || resource === 'leads' || resource === 'tasks') return { sectionId: 'callcommand-work', label: 'Generated Work Record' };
+    if (resource === 'recordings') return { sectionId: 'callcommand-recordings-route', label: 'Recording Record' };
+    if (resource === 'transcripts') return { sectionId: 'callcommand-transcripts-route', label: 'Transcript Record' };
+    if (resource === 'analysis') return { sectionId: 'callcommand-analysis-route', label: 'Analysis Record' };
+    if (resource === 'channels' || resource === 'profiles' || resource === 'flows') return { sectionId: 'callcommand-automation', label: 'Automation Configuration', redirectPath: '/automations' };
+    if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-msp-policy', label: 'Compliance Record', redirectPath: '/compliance' };
+    if (resource === 'tickets' || resource === 'leads' || resource === 'tasks') return { sectionId: 'callcommand-work', label: 'Generated Work Record', redirectPath: '/actions' };
   }
   if (slug === 'ninjamation' && pathSegments.length === 2) {
     const [resource] = pathSegments;

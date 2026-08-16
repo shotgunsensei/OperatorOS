@@ -83,7 +83,7 @@ test('Phase 11E schema and routes enforce tenant composite keys, consent, suppre
 });
 
 test('Phase 35 shell supersedes the Phase 11E boundary with persisted live-call controls and honest provider state', () => {
-  const shell = read('apps/web/src/components/module-shells/CallCommandShell.tsx');
+  const shell = read('apps/web/src/components/module-shells/CallCommandWorkspace.tsx');
   assert.match(shell, /moduleShellApi\.callcommand\.productWorkspace/);
   assert.match(shell, /Channels and phone lines/);
   assert.match(shell, /Receptionist profiles/);
