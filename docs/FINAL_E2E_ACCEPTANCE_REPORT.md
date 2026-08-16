@@ -1,5 +1,20 @@
 # OperatorOS ecosystem final E2E acceptance report
 
+## Phase 53 tenant messenger overlay — 2026-08-16
+
+Verdict: **SOURCE/LOCAL ACCEPTED — DEPLOYMENT PENDING**.
+
+The dedicated production-build browser gate uses two authenticated synthetic
+users in one disposable tenant to exercise title-bar availability, presence,
+direct-message creation, durable delivery, unread badge and in-app alert,
+reply, versioned edit, soft delete, and mobile full-viewport behavior. The
+final pass count is recorded in `docs/IMPLEMENTATION_STATUS.md`. Focused API
+coverage separately rejects a foreign tenant and proves PostgreSQL
+metadata-only fan-out between independent listeners. This does not certify a
+target deployment: production backup/apply, deployed exact-host two-user and
+cross-tenant repetition, multi-instance observation, monitoring, rollback,
+and traffic acceptance remain human-controlled gates.
+
 ## Phase 40 superseding release boundary - 2026-08-14
 
 Verdict: **NOT CERTIFIED — NO DEPLOYMENT**.

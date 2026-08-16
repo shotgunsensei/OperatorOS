@@ -133,6 +133,8 @@ export async function ensureSchemaReady() {
   await ensureCallCommandMspTables();
   const { ensureCrossModuleDataFabricTables } = await import('../src/lib/cross-module-data-fabric-db-init.js');
   await ensureCrossModuleDataFabricTables();
+  const { ensureTenantMessengerTables } = await import('../src/lib/tenant-messenger-db-init.js');
+  await ensureTenantMessengerTables();
   await ensureTestPlans();
 }
 
@@ -240,6 +242,15 @@ export async function cleanupUser(userId: string) {
     // company tenants the test forgot to clean). Cascade child rows first.
     const owned = await db.select().from(tenants).where(eq(tenants.ownerUserId, userId));
     for (const t of owned) {
+      // Release v53 messenger tables are tenant-owned and cascade on an
+      // intentional tenant hard-delete. Explicit cleanup keeps disposable
+      // fixture teardown compatible with databases created before v53.
+      try { await db.execute(sql`DELETE FROM tenant_messenger_events WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tenant_messenger_messages WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tenant_messenger_participants WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tenant_messenger_presence_connections WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tenant_messenger_presence WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tenant_messenger_conversations WHERE tenant_id = ${t.id}`); } catch {}
       // StudyForge complete-product rows use restrictive tenant/owner keys.
       // Remove both Phase 33 and legacy leaves before shared usage/idempotency
       // records and the owning tenant.

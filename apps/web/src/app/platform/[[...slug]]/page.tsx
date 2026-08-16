@@ -26,6 +26,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import TenantProvider from '@/components/TenantProvider';
 import { ToastProvider } from '@/components/Toast';
 import LoginPage from '@/components/pages/LoginPage';
 import PlatformPage from '@/components/pages/PlatformPage';
@@ -65,10 +66,12 @@ function PlatformGate() {
 export default function PlatformRoute() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <PlatformGate />
-        <ContactLink />
-      </ToastProvider>
+      <TenantProvider>
+        <ToastProvider>
+          <PlatformGate />
+          <ContactLink />
+        </ToastProvider>
+      </TenantProvider>
     </AuthProvider>
   );
 }

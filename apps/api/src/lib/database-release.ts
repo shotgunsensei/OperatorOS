@@ -48,6 +48,7 @@ import { ensureTorqueShedStripeCatalogTables } from './torqueshed-stripe-catalog
 import { ensureTorqueShedCheckoutContract } from './torqueshed-checkout-contract-db-init.js';
 import { ensureTorqueShedSettlementContract } from './torqueshed-settlement-db-init.js';
 import { ensureTorqueShedReservationContract } from './torqueshed-reservation-db-init.js';
+import { ensureTenantMessengerTables } from './tenant-messenger-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -114,6 +115,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   torqueshed_checkout_contract: ensureTorqueShedCheckoutContract,
   torqueshed_settlement_contract: ensureTorqueShedSettlementContract,
   torqueshed_reservation_contract: ensureTorqueShedReservationContract,
+  tenant_messenger_tables: ensureTenantMessengerTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -298,6 +300,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       ) AS torqueshed_checkout_contract
       ,to_regclass('public.torqueshed_credit_policy_holds') IS NOT NULL AS torqueshed_settlement_contract
       ,to_regclass('public.torqueshed_token_reservations') IS NOT NULL AS torqueshed_reservation_contract
+      ,to_regclass('public.tenant_messenger_conversations') IS NOT NULL AS tenant_messenger_conversations
+      ,to_regclass('public.tenant_messenger_participants') IS NOT NULL AS tenant_messenger_participants
+      ,to_regclass('public.tenant_messenger_messages') IS NOT NULL AS tenant_messenger_messages
+      ,to_regclass('public.tenant_messenger_presence') IS NOT NULL AS tenant_messenger_presence
+      ,to_regclass('public.tenant_messenger_presence_connections') IS NOT NULL AS tenant_messenger_presence_connections
+      ,to_regclass('public.tenant_messenger_events') IS NOT NULL AS tenant_messenger_events
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

@@ -822,6 +822,109 @@ export type TenantUserModuleAccessRow = typeof tenantUserModuleAccess.$inferSele
 export type TenantInviteRow = typeof tenantInvites.$inferSelect;
 
 // ===========================================================================
+// Release v53 — tenant messenger
+// ===========================================================================
+
+export const tenantMessengerConversations = pgTable('tenant_messenger_conversations', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  kind: text('kind', { enum: ['direct', 'group'] }).notNull(),
+  directKey: varchar('direct_key', { length: 80 }),
+  title: varchar('title', { length: 120 }),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tenant_messenger_direct_key').on(t.tenantId, t.directKey).where(sql`${t.directKey} IS NOT NULL`),
+  index('idx_tenant_messenger_conversations_recent').on(t.tenantId, t.lastMessageAt, t.updatedAt),
+]);
+
+export const tenantMessengerParticipants = pgTable('tenant_messenger_participants', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  conversationId: varchar('conversation_id', { length: 36 }).notNull().references(() => tenantMessengerConversations.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  displayNameSnapshot: varchar('display_name_snapshot', { length: 160 }).notNull(),
+  role: text('role', { enum: ['owner', 'member'] }).notNull().default('member'),
+  muted: boolean('muted').notNull().default(false),
+  joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
+  lastReadAt: timestamp('last_read_at', { withTimezone: true }),
+  hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+  leftAt: timestamp('left_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tenant_messenger_participant_user').on(t.tenantId, t.conversationId, t.userId).where(sql`${t.userId} IS NOT NULL`),
+  index('idx_tenant_messenger_participants_user').on(t.tenantId, t.userId, t.hiddenAt, t.leftAt),
+]);
+
+export const tenantMessengerMessages = pgTable('tenant_messenger_messages', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  conversationId: varchar('conversation_id', { length: 36 }).notNull().references(() => tenantMessengerConversations.id, { onDelete: 'cascade' }),
+  senderUserId: varchar('sender_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  senderNameSnapshot: varchar('sender_name_snapshot', { length: 160 }).notNull(),
+  clientMessageId: varchar('client_message_id', { length: 80 }).notNull(),
+  requestHash: varchar('request_hash', { length: 64 }).notNull(),
+  replyToMessageId: varchar('reply_to_message_id', { length: 36 }),
+  body: text('body'),
+  version: integer('version').notNull().default(1),
+  editedAt: timestamp('edited_at', { withTimezone: true }),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tenant_messenger_message_idempotency').on(t.tenantId, t.senderUserId, t.clientMessageId).where(sql`${t.senderUserId} IS NOT NULL`),
+  index('idx_tenant_messenger_messages_timeline').on(t.tenantId, t.conversationId, t.createdAt),
+]);
+
+export const tenantMessengerPresence = pgTable('tenant_messenger_presence', {
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar('connection_id', { length: 80 }),
+  status: text('status', { enum: ['online', 'offline'] }).notNull().default('offline'),
+  activeUntil: timestamp('active_until', { withTimezone: true }),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tenant_messenger_presence_user').on(t.tenantId, t.userId),
+  index('idx_tenant_messenger_presence_active').on(t.tenantId, t.activeUntil),
+]);
+
+export const tenantMessengerPresenceConnections = pgTable('tenant_messenger_presence_connections', {
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar('connection_id', { length: 80 }).notNull(),
+  activeUntil: timestamp('active_until', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tenant_messenger_presence_connection').on(t.tenantId, t.userId, t.connectionId),
+  index('idx_tenant_messenger_presence_connections_active').on(t.tenantId, t.userId, t.activeUntil),
+]);
+
+export const tenantMessengerEvents = pgTable('tenant_messenger_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  conversationId: varchar('conversation_id', { length: 36 }).notNull().references(() => tenantMessengerConversations.id, { onDelete: 'cascade' }),
+  messageId: varchar('message_id', { length: 36 }),
+  actorUserId: varchar('actor_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  eventType: varchar('event_type', { length: 80 }).notNull(),
+  metadataJson: jsonb('metadata_json').$type<Record<string, unknown>>().notNull().default({}),
+  correlationId: varchar('correlation_id', { length: 120 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('idx_tenant_messenger_events_conversation').on(t.tenantId, t.conversationId, t.createdAt),
+]);
+
+export type TenantMessengerConversationRow = typeof tenantMessengerConversations.$inferSelect;
+export type TenantMessengerParticipantRow = typeof tenantMessengerParticipants.$inferSelect;
+export type TenantMessengerMessageRow = typeof tenantMessengerMessages.$inferSelect;
+export type TenantMessengerPresenceRow = typeof tenantMessengerPresence.$inferSelect;
+export type TenantMessengerEventRow = typeof tenantMessengerEvents.$inferSelect;
+
+// ===========================================================================
 // Phase 2 — OperatorOS-owned shared Business Directory
 // ===========================================================================
 

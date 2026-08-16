@@ -47,6 +47,12 @@ export function isModuleSessionPathAllowed(moduleId: string, rawUrl: string): bo
   ]);
   if (fixed.has(path)) return true;
 
+  // Tenant messenger is a shared authenticated platform capability. Module
+  // sessions may use it, but tenant-messenger guards still resolve and verify
+  // the tenant sealed into the session before exposing any member or message.
+  if (path === '/v1/messenger' || path.startsWith('/v1/messenger/')) return true;
+  if (path === '/api/messenger' || path.startsWith('/api/messenger/')) return true;
+
   const encodedModule = encodeURIComponent(moduleId);
   const directModulePath = [
     `/v1/modules/${encodedModule}`,
@@ -58,6 +64,12 @@ export function isModuleSessionPathAllowed(moduleId: string, rawUrl: string): bo
   // module surface with tenant context in the path; tenant-auth still checks
   // this value against the module session before any route handler runs.
   const segments = path.split('/').filter(Boolean);
+  const tenantMessengerPath = segments.length >= 4
+    && (segments[0] === 'v1' || segments[0] === 'api')
+    && segments[1] === 'tenants'
+    && Boolean(segments[2])
+    && segments[3] === 'messenger';
+  if (tenantMessengerPath) return true;
   return segments.length >= 5
     && (segments[0] === 'v1' || segments[0] === 'api')
     && segments[1] === 'tenants'

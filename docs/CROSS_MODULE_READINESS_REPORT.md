@@ -3,6 +3,20 @@
 Assessment updated: 2026-08-02. Scope: OperatorOS and consolidated modules in
 the `C:\Dev\OperatorOS` runtime.
 
+## Phase 53 shared tenant-messenger overlay (2026-08-16)
+
+One OperatorOS-owned messenger is mounted in the authenticated console,
+Platform Command, and every consolidated module title bar. Same-tenant direct
+and group history, unread alerts, replies, sender edit/delete, per-user
+mute/hide, online/offline leases, membership revalidation, and PostgreSQL
+cross-instance fan-out are implemented and focused tests pass locally. This is
+a shared platform capability and does not change any module's parity state.
+
+Readiness remains **not production-ready**. Production v53 backup/apply,
+deployed exact-host two-user and cross-tenant acceptance, multi-instance
+observation, monitoring/retention operations, rollback rehearsal, and
+deployment are still open.
+
 ## Phase 37 CallCommand readiness overlay (2026-08-13)
 
 The historical CallCommand matrix row below is superseded locally by the Phase

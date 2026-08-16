@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CreditCard, Grid2X2, LifeBuoy, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import TenantMessenger from '@/components/TenantMessenger';
 import { useTenant } from '@/components/TenantProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { PLATFORM_DOMAINS } from '../../../../../packages/sdk/src/ecosystem.js';
@@ -64,6 +65,7 @@ export default function OperatorOSEcosystemHeader({
             </span>
           </div>
           <nav className="operatoros-ecosystem-header__nav" aria-label="OperatorOS account">
+            <TenantMessenger />
             {links.map(({ label, href, Icon }) => (
               <a key={label} className="operatoros-ecosystem-header__link" href={href}>
                 <Icon size={14} aria-hidden="true" /> {label}
