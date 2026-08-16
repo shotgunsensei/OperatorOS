@@ -5,7 +5,7 @@ export const REQUIRED_SOURCE_TOKENS = Object.freeze([
 ]);
 
 export const REQUIRED_MODULE_TOKENS = Object.freeze([
-  '--tfk-primary: hsl(25 95% 44%)',
+  '--tfk-primary: hsl(25 95% 36%)',
   '--tfk-primary: hsl(25 95% 52%)',
   '--tfk-navy: hsl(220 45% 14%)',
   '--tfk-blue: hsl(214 88% 45%)',

@@ -83,6 +83,7 @@
     "test:hotfix:torque-exact-host": "node scripts/hotfix/verify-torqueshed-payment-exact-host.mjs",
     "test:phase46:same-tab": "node scripts/hotfix/verify-torqueshed-payment-exact-host.mjs \"one credential entry establishes the canonical app host\"",
     "test:phase47:platform-command": "node scripts/phase47-platform-command-browser.mjs",
+    "test:phase52:certification-browser": "node scripts/phase52-certification-browser.mjs",
     "test:phase48:module-shell": "node scripts/phase48-module-shell-browser.mjs",
     "export:tradeflowkit:snapshot": "tsx apps/api/src/scripts/tradeflowkit-export.ts --read-only",
     "import:tradeflowkit:dry-run": "tsx apps/api/src/scripts/tradeflowkit-import.ts --dry-run",
