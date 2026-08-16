@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, ChevronLeft, Grid2X2, LifeBuoy } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import TenantMessenger from './TenantMessenger';
 import TenantSwitcher from './TenantSwitcher';
 import { buildNavSections } from '@/lib/sidebar-nav';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
@@ -357,6 +358,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
             </div>
           )}
           <div style={{ flex: 1 }} />
+          <TenantMessenger />
           <button
             type="button"
             onClick={() => handleNavigate('my-apps')}

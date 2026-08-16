@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 46 ordered step identifiers without secrets
+`db:plan` is read-only and prints 53 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -64,6 +64,31 @@ verification challenges, approvals/executions, device/directory mappings, and
 reset sessions. Emergency application rollback retains these additive tables,
 disables the MSP channel/integrations, and returns traffic to the prior
 artifact. Do not drop v46 tables or treat schema deletion as rollback.
+
+Release v53 appends `tenant_messenger_tables` after the v52 Torque Assist
+reservation contract. Before applying it, require a verified backup covering
+all identity, tenant-membership, session, entitlement, billing, module, and
+workflow data. The new tables contain tenant-private conversations,
+participants, message history, unread/mute/hide state, presence leases, and
+body-free messenger audit events. Application rollback retains these additive
+tables and returns traffic to the prior artifact. Do not drop v53 tables,
+truncate history, or treat presence cleanup as a database rollback. Database
+rollback remains restore into a new database, validate, and switch traffic.
+
+### Phase 53 disposable release rehearsal (2026-08-16)
+
+On an empty loopback PostgreSQL 16 database containing synthetic users only,
+`corepack pnpm db:plan` reported contract v1, release v53, 53 ordered steps,
+`destructive: false`, and final step `tenant_messenger_tables`. The clean apply
+verified 53/53 steps in 19,343 ms and immediate idempotent reapply verified
+53/53 in 1,716 ms. Catalog inspection confirmed the required request hash and
+the tenant/conversation-scoped reply and audit-message foreign keys.
+The same release path upgraded a non-empty disposable browser fixture in
+1,843 ms and backfilled request hashes for all six existing synthetic messages.
+No production backup, restore, database, customer data, provider, domain, or
+traffic was touched. Production still requires a fresh verified backup,
+isolated restore rehearsal, authorized v53 apply, reconciliation, deployed
+two-user/cross-tenant browser acceptance, and rollback decision.
 
 ### Phase 37 disposable release rehearsal (2026-08-13)
 

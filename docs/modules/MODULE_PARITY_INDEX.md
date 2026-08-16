@@ -475,3 +475,15 @@ BrandForgeOS, StudyForge AI, Ninja Launch Kit, Ninjamation, and Ninja Pool Hall 
 ## Phase 52 acceptance overlay
 
 The clean-candidate local gate proves release v52 apply/reapply, production build, same-tab launch for all 12 active modules, Platform Command escape paths, and 146 active-module major route visits. It does not change any module to state 5: the mandatory official Stripe test Checkout/signed-webhook/credit/Assist-debit journey could not run without operator-supplied test credentials, and no deployment, live-provider acceptance, production backup/apply, authorized data cutover, or rollback rehearsal occurred. See `docs/phase-52/REVENUE-NAVIGATION-ROUTE-CERTIFICATION.md`.
+
+## Phase 53 shared tenant-messenger overlay
+
+The shared authenticated title bars now mount one OperatorOS-owned tenant
+messenger in the console, Platform Command, and every consolidated module
+shell/deep link. It uses current tenant membership, durable direct/group
+history, leased presence, unread/alert state, and metadata-only cross-instance
+fan-out; it does not add module-local identity, billing, entitlement, or data
+authority. This platform overlay does not close a module parity gap or promote
+any module to state 5. Production backup/apply, deployed exact-host two-user
+and cross-tenant acceptance, monitoring, rollback, and deployment remain open.
+See `docs/phase-53/TENANT-MESSENGER-IMPLEMENTATION.md`.

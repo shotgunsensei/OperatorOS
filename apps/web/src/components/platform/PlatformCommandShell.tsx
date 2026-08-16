@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import TenantMessenger from '@/components/TenantMessenger';
 import { platformViewToPath, type PlatformView } from '@/lib/platform-routes';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { PLATFORM_DOMAINS } from '../../../../../packages/sdk/src/ecosystem.js';
@@ -164,6 +165,7 @@ export default function PlatformCommandShell({
             </div>
           </div>
           <nav className={styles.accountNav} aria-label="OperatorOS global navigation">
+            {accessState === 'authorized' && <TenantMessenger />}
             <Link className={styles.accountLink} href="/app" data-testid="platform-my-apps">
               <Grid2X2 size={16} aria-hidden="true" /><span>My Apps</span>
             </Link>

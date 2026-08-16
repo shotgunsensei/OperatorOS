@@ -1,5 +1,75 @@
 # OperatorOS implementation status
 
+## Phase 53 tenant messenger - SOURCE/LOCAL ACCEPTED / DEPLOYMENT PENDING (2026-08-16)
+
+- OperatorOS now owns a tenant-private messenger in the title bar of the
+  authenticated console, every consolidated module shell/deep link, and
+  Platform Command. It provides member search, deduplicated direct messages,
+  named groups, saved/paginated history, replies, unread totals, sender-only
+  versioned edit/delete, group-owner rename, per-user mute/hide, in-app alerts,
+  explicit opt-in browser notifications, and a responsive full-screen mobile
+  surface. Changing tenants clears the client state before reloading it.
+- Actor and tenant come only from the validated platform or tenant-bound module
+  session. Current tenant membership is mandatory even for a platform super
+  administrator; foreign tenants are non-enumerating. Delivery targets rejoin
+  current `tenant_users` membership, WebSocket heartbeats revalidate
+  membership, and all history responses are `private, no-store`. Message
+  bodies are excluded from audit metadata and realtime fan-out envelopes.
+- Presence uses per-connection 70-second leases renewed every 25 seconds, so
+  multiple tabs and API instances do not incorrectly mark a user offline.
+  PostgreSQL `LISTEN`/`NOTIFY` moves metadata-only identifiers across API
+  instances; each receiving instance reloads the saved message and authorized
+  recipients through tenant-scoped queries before local WebSocket delivery.
+  Reconnect plus 12-second conversation and 30-second member polling provide
+  durable recovery.
+- Additive release v53 appends `tenant_messenger_tables` and verifies six new
+  tables. A clean disposable PostgreSQL 16 apply completed and verified all
+  53 steps in 19,343 ms; immediate idempotent reapply verified all 53 in
+  1,716 ms. Catalog inspection confirms reply and audit-message foreign keys
+  include `(tenant_id, conversation_id, message_id)` and every message has a
+  required, format-constrained request hash. `corepack pnpm db:plan` reports
+  contract v1, release v53, 53 ordered operations,
+  `destructive: false`, and final `tenant_messenger_tables`.
+- An existing disposable v53 browser fixture was then advanced through the
+  same release path in 1,843 ms; all six pre-existing synthetic messages were
+  backfilled with request hashes before the compiled API was restarted.
+- Focused API/release/static verification PASS (16/16), including tenant
+  isolation, module sessions, direct/group behavior, idempotency, unread/read,
+  version conflicts, sender ownership, per-user hide, multi-connection
+  presence, WebSocket delivery, immediate delivery denial after membership
+  removal, and metadata-only PostgreSQL cross-instance fan-out. The release
+  identity/verifier follow-up PASS (11/11) after advancing the production
+  verifier from v52 to v53.
+- `corepack pnpm typecheck` PASS for API, runner-gateway, web, and TorqueShed
+  native. With `INTERNAL_API_URL=http://localhost:5001` and a bounded Node heap,
+  `corepack pnpm build:production` PASS, including FaultlineLab compiler tests
+  (4/4), release metadata, repeated four-target typecheck, API,
+  runner-gateway, SDK, and optimized Next production artifacts.
+- The production-build browser gate PASS (2/2 in 17.7 seconds) against a
+  disposable database and compiled API: two same-tenant synthetic users
+  exercised presence, direct creation, durable delivery, unread/in-app alert,
+  reply, edit, delete, and a 390 by 844 full-screen mobile layout without
+  horizontal overflow. Its durable-history assertions remain deterministic
+  when prior deleted-message markers already exist.
+- The complete API aggregate was exercised once: 1,156 pass, 19 fail, 6
+  intentional HTTP-only skips across 1,181 tests. Every Phase 53 test passed.
+  Eighteen failures are pre-existing non-messenger module route/snapshot and
+  order-sensitive TorqueShed contracts. The nineteenth was the expected v52
+  release-identity fixture; it was updated to v53 and its focused 11/11 rerun
+  passes. The aggregate was not rerun after that fixture-only correction, so no
+  clean aggregate is claimed.
+- `corepack pnpm preflight:production -- --core` correctly FAILS in the
+  unconfigured developer shell because the production database/session/SSO/
+  encryption environment, production mode, exact platform/module URLs,
+  release apply mode, disabled runner, and explicit proxy trust are absent. No
+  secret values were printed. This is not a production-preflight pass.
+- No production backup, database apply, customer data, deployment, provider,
+  domain, traffic, commit, or push was changed. Production requires a verified
+  backup, authorized v53 apply, deployed two-user and cross-tenant exact-host
+  acceptance, multi-instance observation, monitoring/retention review, and
+  rollback rehearsal. No module parity state changed. See ADR-0042 and
+  `docs/phase-53/TENANT-MESSENGER-IMPLEMENTATION.md`.
+
 ## Live Apps catalog launch-render repair - SOURCE/LOCAL VERIFIED / REDEPLOYMENT PENDING (2026-08-16)
 
 - Public release `5d86c82945a7970464e17b3d2914ec2c9e2ba70a` became healthy and ready, but an authenticated visit to the app-host Apps catalog (`/?page=apps`, internally rendered by `/app?page=apps`) crashed during React render with `ModuleLaunchError: Module is not available for launch`.
