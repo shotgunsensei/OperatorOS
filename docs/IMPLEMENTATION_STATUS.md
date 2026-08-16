@@ -1,5 +1,154 @@
 # OperatorOS implementation status
 
+## Phase 50 business-operations route migration - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
+
+- Migrated TechDeck, PulseDesk, FaultlineLab, SnapProofOS, CallCommand AI, and OutCall from monolithic/tab-primary workspaces into distinct Phase 48 route applications with stable canonical URLs, compatibility redirects, durable record deep links, shared My Apps/account/help escape, and product-specific themes.
+- Preserved the existing tenant, role, entitlement, billing, audit, provider, import/export, and data boundaries. PulseDesk remains operational/no-unnecessary-PHI; CallCommand retains consent/provider restrictions; OutCall remains verified-self/non-emergency and production `coming_soon`.
+- Added focused route loading/code splitting and removed duplicate all-product mounting where the active workflows allowed it. Settings routes intentionally avoid unrelated module workloads, and record selection now survives refresh/history.
+- Closed browser-discovered source defects: TechDeck control naming/middleware route matching, PulseDesk dark-boundary/queue overflow/labels/headings, FaultlineLab authoring overflow/control labels/headings, SnapProofOS team query and active-nav contrast, and OutCall edit-control contrast.
+- Verification: module focused suites PASS (TechDeck 23/23, PulseDesk 38/38, FaultlineLab 8/8, SnapProofOS 10/10, CallCommand AI 16/16, OutCall 14/14); root typecheck PASS across four projects; API/SDK/Next production builds PASS; combined compiled exact-host Chromium route/owner/accessibility/responsive gate PASS 6/6 in 3.8 minutes.
+- Report: `docs/phase-50/BUSINESS-OPERATIONS-ROUTE-MIGRATION.md` with per-module route/capability ledgers and 12 screenshots.
+- No deployment, production database mutation, live provider traffic, or OutCall production activation was authorized. Those remain Phase 52/state-5 gates.
+
+## Phase 49 TorqueShed route application - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
+
+- Replaced TorqueShed's internal `Tab` workspace with the Phase 48 URL-authoritative application shell and a complete canonical collection/create/detail/Assist/Credits/system route map.
+- Added server-route redirects for legacy dashboard, vehicle, service, journal, live-bay, template/vendor, and notification links while preserving dynamic record recovery.
+- Split Checkout/status/ledger UI into `/billing/credits`; diagnostic detail links to a diagnostic-specific Assist route, and the persistent shell shows authoritative available balance.
+- Replaced eager all-or-nothing workspace/social/tool loading with route-focused partial-success loaders and dynamic route chunks. The compiled Credits journey proves builds, reminders, vendors, and templates are not fetched.
+- Verification: route/static/settlement contracts PASS 12/12; disposable-database foundation, `$5` test settlement/Assist, social, journal/live/search/settings/export workflows PASS 5/5; web TypeScript PASS; API/SDK/Next production builds PASS; exact-host Chromium route/accessibility/responsive gate PASS 1/1 across all 24 canonical routes.
+- Report: `docs/phase-49/TORQUESHED-ROUTE-MIGRATION-REPORT.md`.
+- No deployment, production database mutation, live Stripe charge, or live AI traffic was authorized. Those remain Phase 52/state-5 gates.
+
+## Phase 48 shared route application shell - SOURCE/LOCAL ACCEPTED / DEPLOYMENT GATED (2026-08-15)
+
+- Added typed instance-scoped module theme tokens, route manifests, capability/role matching, shared application structure, responsive drawer/bottom-nav modes, route-focus behavior, and standard loading/empty/error/forbidden/provider-disabled states.
+- Refactored TradeFlowKit onto the structural shell without moving business workflows or changing its orange/navy product CSS, theme toggle, route behavior, context, or approved mobile bottom navigation.
+- Added an unmounted dark-cyan/serif `Tidal Relay` harness to prove that shell adoption does not inherit TradeFlowKit identity.
+- Preserved immutable TradeFlowKit before baselines and captured after screenshots. Compiled desktop/tablet/mobile comparisons passed at a 0.5% maximum pixel-difference ratio with WCAG, label, overflow, console, page-error, and network checks.
+- Verification: shell contract 3/3; web TypeScript PASS; API/SDK/Next production builds PASS; compiled visual/route/focus/accessibility browser gate 1/1.
+- Specification: `docs/phase-48/MODULE-APPLICATION-SHELL-SPEC.md`.
+- Production deployment and later module adoption were not authorized and remain open.
+
+## Phase 47 Platform Command persistent navigation - SOURCE/LOCAL ACCEPTED / DEPLOYMENT GATED (2026-08-15)
+
+- Replaced route-mirrored tab state with a URL-authoritative shared command shell for every `/app/platform/**` collection and detail route.
+- Added global My Apps/Home/profile/help/sign-out escape, active section context, collection/detail breadcrumbs, persistent command navigation, safe release/environment identity, and a responsive keyboard drawer.
+- Preserved the super-admin page and API boundary. Compiled exact-host acceptance proved an ordinary authenticated user receives a record-free page 403 plus API 403.
+- Added labelled user-detail selects after focused accessibility acceptance and committed desktop/mobile screenshot evidence.
+- Verification: Phase 47 static contracts 2/2; web TypeScript PASS; production API/SDK/Next builds PASS; compiled exact-host Playwright 2/2 including all command routes, detail Back/refresh/history, current-tab My Apps, axe, mobile bounding-box/overflow, and 403 behavior.
+- Report: `docs/phase-47/PLATFORM-COMMAND-NAVIGATION-REPORT.md`.
+- Public deployment and deployed authenticated acceptance were not authorized and remain open.
+
+## Phase 46 same-tab module launch contract - SOURCE/LOCAL ACCEPTED / DEPLOYMENT GATED (2026-08-15)
+
+- All primary module entry points now render the shared `ModuleLaunchLink` real-anchor contract with no `target`, so ordinary activation uses the current page and native browser history. My Apps and the Apps catalog expose separately labelled new-tab controls with `_blank` plus `noopener noreferrer`.
+- The web/native boundary is explicit: module fallback navigation uses `window.location.assign` on web and Capacitor Browser on native; external billing/documents use the separately named `openExternalDocument` path.
+- My Apps, recent apps, catalog, ecosystem, module fallback, and shared module-shell return launchers were migrated. Recent-app tracking remains synchronous and does not prevent native anchor navigation.
+- The exact-host production-artifact gate now gives long-running child processes direct log file descriptors. This preserves complete logs without allowing parent-stream backpressure to pause Fastify during the twelve-module journey.
+- Focused source contracts PASS 6/6; workspace typecheck PASS; production build PASS; and compiled local HTTPS exact-host Chromium PASS 1/1 in 27.6 seconds. The browser gate proves twelve ordinary launches keep `context.pages()` at one, Back returns to My Apps, intentional Ctrl/middle/explicit actions create exactly one extra page, the explicit page has no opener, and global logout invalidates the final module journey.
+- This is local source/runtime evidence. No public deployment or deployed authenticated acceptance was authorized, so no state-5 claim is made.
+
+## Phase 45 Torque Assist reservations and actionable failures - SOURCE/LOCAL IMPLEMENTED / PROVIDERS GATED (2026-08-15)
+
+Torque Assist now reserves a conservative maximum from the tenant/user's
+available balance before any provider call, runs the provider outside the
+transaction, and atomically converts a successful reservation into exactly one
+append-only debit while releasing the remainder. Timeout, provider, invalid
+response, cancellation, and expiry paths release all units and debit zero. A
+three-minute database-time reaper is idempotent and also releases abandoned
+shared idempotency leases. Free runs are explicitly disabled.
+
+The UI exposes ledger/reserved/available/estimated units, keeps non-AI Garage
+records usable when Assist fails, and translates known machine codes into safe
+customer action, administrator action, retryability, no-charge confirmation,
+and a support reference. Focused contracts pass 22/22, the disposable database
+workflow passes 1/1, cumulative v52 clean apply/reapply passes, workspace
+typecheck and production build pass, and compiled exact-host browser acceptance
+passes 1/1 with desktop/mobile screenshots. Real Stripe test purchase and
+approved AI-provider delivery remain external Phase 52 gates. See
+`docs/phase-45/TORQUE-ASSIST-CREDIT-CONSUMPTION.md`.
+
+## Phase 44 TorqueShed settlement and reconciliation - SOURCE/LOCAL IMPLEMENTED / REAL STRIPE GATED (2026-08-15)
+
+The raw-body, signature-verified canonical billing webhook is now the only
+external settlement trigger. Catalog-backed purchases require matching Stripe
+account/mode, Session, PaymentIntent, Product, Price, quantity, amount,
+currency, metadata, purchase, tenant, user, module, and diagnostic evidence.
+The provider receipt claim, purchase lock, balance lock, one append-only
+credit, purchase state, audit, and receipt completion commit atomically.
+Refunds and disputes reverse only available units and record explicit review
+or freeze holds instead of creating a negative balance.
+
+The v2 reconciliation command is dry-run by default, reports provider/local
+identity, payment, ledger, receipt, policy, audit, orphan, duplicate, stuck,
+and negative-balance inconsistencies, and can only repair by replaying one
+existing signature-verified receipt under exact apply confirmation. Focused
+tests pass 22/22; workspace typecheck, production build, disposable v51
+apply/reapply, and compiled exact-host browser 1/1 pass. Real Stripe test
+Checkout/refund/dispute delivery remains provider-gated and no live repair or
+production mutation was attempted. See
+`docs/phase-44/TORQUESHED-SETTLEMENT-AND-RECONCILIATION.md`.
+
+## Phase 43 canonical TorqueShed checkout - SOURCE/LOCAL IMPLEMENTED / STRIPE TEST JOURNEY BLOCKED (2026-08-15)
+
+TorqueShed now has one server-owned checkout contract accepting only an owned
+diagnostic ID, canonical package key, and idempotency header. Additive release
+v50 persists the complete catalog/provider/return snapshot before Session
+creation, uses only a validated durable Price, exposes a tenant/user-scoped
+safe state machine, and makes identifier-only browser returns read-only. The
+UI distinguishes verifying, paid-pending-credit, credited, cancellation,
+expiration, failure, refund, and dispute; `Credits added` requires the actual
+append-only grant. Bounded polling, manual refresh, server-backed recent
+purchase recovery, and diagnostic follow-up draft preservation are included.
+
+Focused release/static/database tests pass 8/8; typecheck, clean v50
+apply/reapply, production build, and compiled exact-host browser 1/1 pass. The
+browser evidence includes verifying and credited screenshots and authoritative
+balance persistence. No Stripe test credential was available, so the real
+provider Checkout journey remains Phase 44/52-gated and purchases stay closed
+outside deterministic tests. See
+`docs/phase-43/TORQUESHED-CHECKOUT-STATE-MACHINE.md`.
+
+## Phase 42 TorqueShed durable Stripe catalog - SOURCE/LOCAL IMPLEMENTED / PROVIDER APPLY BLOCKED (2026-08-15)
+
+The approved Roadside, Workshop, and Fleet credit packages now live in one
+typed `torqueshed-credit-v1` manifest with stable SKUs/lookup keys and exact
+metadata. Additive database release v49 persists environment/account-specific
+Product/Price mappings. Non-test checkout resolves only an active validated
+persistent Price and no longer uses inline TorqueShed `price_data`. An
+idempotent dry-run/apply/validate command, drift detection, duplicate/mode
+guards, two-part live apply confirmation, and a super-admin read-only Platform
+Command catalog are implemented.
+
+Focused tests pass 20/20 plus 2/2 database workflows and 16/16 static/admin
+checks; typecheck, production build, exact-host browser 1/1, and v49
+apply/reapply pass on disposable PostgreSQL 16. No Stripe test or live credential was available, so
+the real provider catalog was not created and the Phase 41 kill switch remains
+closed outside deterministic tests. See
+`docs/phase-42/TORQUESHED-STRIPE-CATALOG-REPORT.md`.
+
+## Phase 41 TorqueShed revenue containment - SOURCE IMPLEMENTED / DEPLOYED TRANSACTION TRUTH BLOCKED (2026-08-15)
+
+TorqueShed credit checkout now has a fail-closed composite readiness contract
+covering explicit enablement, Stripe configuration and exact mode, durable
+catalog validation, canonical webhook topology/events, required billing
+tables, safe module return URL, and release identity. Blocked attempts stop
+before purchase-intent/Checkout creation, write a redacted audit event, and
+return stable customer/admin diagnostics with request references. The UI obeys
+this server state and cannot claim credits before the authenticated purchase
+status and append-only ledger reach `credited`.
+
+Read-only public evidence identifies deployed commit `6de0648da6d05423ab3bce8cc19460d6ff920d30`,
+build `31d4258255b052bf32692d89`, and database release v44; source began at
+`973885f594f7e66c1ab5c1048d2da7360ad6b825` with v48. The deployed code contains
+the canonical webhook hotfix and still uses inline `price_data`. The new
+reported no-charge attempt has no supplied purchase/provider reference and
+cannot be classified from Git; production/Stripe/database read credentials are
+absent. No charge, credit, refund, replay, reconciliation apply, deployment, or
+production mutation occurred. See
+`docs/phase-41/TORQUESHED-REVENUE-INCIDENT-REPORT.md`.
+
 ## Phase 40 certification - NOT CERTIFIED / NO DEPLOYMENT (2026-08-14)
 
 The exact candidate `4c24d818f5108aa0d049241c7ae386ae7787a211`
@@ -2666,3 +2815,16 @@ remain blocked until the cumulative revision is deployed through `.replit`
 and the closure steps in `docs/CURRENT_RELEASE_GATE.md` pass. Do not weaken
 exact-host cookies, PKCE, return validation, tenant checks, privacy controls or
 the verifier to make it pass.
+## Phase 51 creative, automation, and game route migration - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
+
+- BrandForgeOS, StudyForge AI, Ninja Launch Kit, Ninjamation, and Ninja Pool Hall now own stable, direct-linkable product routes under distinct shared application shells. Focused route rendering replaces whole-product loading without duplicating identity, tenant, role, entitlement, billing, provider-secret, or audit authority.
+- Ninja Launch Kit and Ninjamation retain their deliberate public acquisition roots; their authenticated dashboards are `/dashboard`, with registry launch entry at `/dashboard` and `/library`, respectively. Ninja Pool Hall retains the adaptive game layout and guarded exit from an active online room.
+- Registry coverage confirms every active polished child module is assigned across Phases 49-51. OutCall remains production-disabled and test-only exactly as recorded in Phase 50.
+- Fresh verification: root typecheck passed; final web typecheck passed; the focused Phase 31/33/34/36, Ninja Pool Hall, deep-link, and Phase 51 contract group passed 55/55; production API and Next.js builds passed; the five-product exact-host Chromium suite passed 5/5 in 1.8 minutes across 44 canonical routes, 15 zero-violation axe scans, history/reload, one-tab navigation, and responsive checks.
+- Evidence and owner-readable maps: `docs/phase-51/CREATIVE-AUTOMATION-GAME-ROUTE-MIGRATION.md` and `docs/phase-51/evidence/`. This is source/local evidence only; deployed-host, live-provider, approved data-cutover, and production rollback evidence remain open.
+## Phase 52 revenue, navigation, and multi-page acceptance - NOT CERTIFIED / STRIPE PROVIDER GATE CLOSED (2026-08-15)
+
+- Clean clone `fcf217ecb79b602f95b16ac6e09a87ca2eeff0d2`, build `770427753b9799a1822f3507`, frozen install, release v52 fresh apply/reapply, four-project typecheck, and production build pass against disposable PostgreSQL `operatoros_phase52_cert`.
+- Same-tab SSO/navigation passed 1/1 for all 12 active modules including deliberate Ctrl/middle/explicit new-tab behavior; Platform Command passed 2/2; 146 active-module major routes plus 11 production-disabled OutCall test routes passed their Phase 49–51 route suites. The Phase 52 runner preserves production secure-cookie semantics and restarts OutCall only under its explicit test adapter boundary. The 13-module approved visual-contract verifier passes with zero issues and the TradeFlowKit visual source contract passes 9/9; platform-specific Playwright screenshot comparison remains open because reviewed `*-win32.png` spec baselines do not exist and were not self-approved.
+- Focused Phase 41–45 revenue contracts pass 24/24, but the mandatory provider journey is blocked: no Stripe test secret/account, webhook secret/CLI, catalog rows, official Checkout/PaymentIntent/Charge, signed receipt, or provider-backed Assist credential was available. Fresh DB provider counts remain catalog 0, receipts 0, ledger 0, Assist 0. The catalog dry-run fails closed with `TORQUESHED_STRIPE_CATALOG_FAILED` and `STRIPE_SECRET_KEY is required`.
+- Therefore Phase 52 is not certified, no production-ready/deployed claim is made, the purchase kill switch remains closed, and no deterministic completion is substituted. Full evidence and the exact owner checklist are in `docs/phase-52/REVENUE-NAVIGATION-ROUTE-CERTIFICATION.md`.

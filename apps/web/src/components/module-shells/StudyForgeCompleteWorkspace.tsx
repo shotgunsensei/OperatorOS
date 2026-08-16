@@ -55,7 +55,7 @@ function Panel({ id, eyebrow, title, description, children }: { id: string; eyeb
   </section>;
 }
 
-export default function StudyForgeCompleteWorkspace({ routePath = '' }: { routePath?: string }) {
+export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'overview' }: { routePath?: string; view?: string }) {
   const [workspace, setWorkspace] = useState<CompleteWorkspace | null>(null);
   const [selected, setSelected] = useState<Item | null>(null);
   const [busy, setBusy] = useState(false);
@@ -98,13 +98,13 @@ export default function StudyForgeCompleteWorkspace({ routePath = '' }: { routeP
   return <div data-testid="studyforge-phase33-complete" style={{ marginBottom: 36, minHeight: '100vh' }}>
     {error && <div role="alert" style={{ ...shellCard, borderColor: 'rgba(248,113,113,.7)', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
     {!workspace ? <div style={shellCard}>Loading complete StudyForge learning records…</div> : <>
-      {!workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} />}
-      <CompleteDashboard workspace={workspace} />
-      <Organizer workspace={workspace} busy={busy} act={act} open={open} />
-      <SetCreator workspace={workspace} busy={busy} act={act} />
-      {selected && <SetWorkspace key={selected.id} set={selected} plan={workspace.plan} busy={busy} act={act} close={() => setSelected(null)} />}
-      <Countdowns workspace={workspace} busy={busy} act={act} />
-      <Account workspace={workspace} />
+      {view === 'settings' && !workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} />}
+      {view === 'overview' && <CompleteDashboard workspace={workspace} />}
+      {view === 'sets' && <Organizer workspace={workspace} busy={busy} act={act} open={open} />}
+      {view === 'sets' && <SetCreator workspace={workspace} busy={busy} act={act} />}
+      {view === 'sets' && selected && <SetWorkspace key={selected.id} set={selected} plan={workspace.plan} busy={busy} act={act} close={() => setSelected(null)} />}
+      {view === 'sessions' && <Countdowns workspace={workspace} busy={busy} act={act} />}
+      {view === 'settings' && <Account workspace={workspace} />}
     </>}
   </div>;
 }

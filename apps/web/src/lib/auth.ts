@@ -1110,12 +1110,32 @@ export interface TorqueAssistResponse {
   model: string;
   providerVersion: string;
   latencyMs: number;
+  reservationId: string | null;
+  reservedUnits: number;
+  releasedUnits: number;
+  remainingBalance: number;
+  correlationId: string;
   replayed: boolean;
 }
 export interface TorqueAssistStatus {
   provider: { name: string; state: 'configured' | 'test' | 'disabled' };
   payments: { name: string; state: 'configured' | 'test' | 'disabled' };
+  purchaseReadiness: {
+    ready: boolean;
+    code: string;
+    userMessage: string;
+    retryable: boolean;
+    administratorAction: string;
+    providerMode: 'test' | 'live' | 'disabled';
+    catalogVersion: string | null;
+    checks: Array<{ key: string; ready: boolean; code: string }>;
+  };
   balance: number;
+  ledgerBalance: number;
+  reservedUnits: number;
+  availableBalance: number;
+  consumptionMode: 'paid_credits_only';
+  reservationReaper: { expiredCount: number };
   packages: Array<{
     key: string;
     name: string;
@@ -1128,17 +1148,27 @@ export interface TorqueAssistStatus {
 }
 export interface TorqueTokenPurchaseStatus {
   purchaseId: string;
-  state: 'checkout_created' | 'payment_pending' | 'paid_pending_credit' | 'credited' |
+  state: 'creating_checkout' | 'checkout_open' | 'payment_pending' | 'paid_pending_credit' | 'credited' |
     'cancelled' | 'expired' | 'failed' | 'refunded' | 'disputed';
+  diagnosticSessionId: string | null;
   packageKey: string;
   units: number;
   amountMinor: number;
   currency: string;
   failureCode: string | null;
   credited: boolean;
+  terminal: boolean;
+  catalogVersion: string | null;
+  providerMode: 'test' | 'live';
+  paymentIntentId: string | null;
+  settlementPolicy: {
+    state: 'none' | 'refund_review' | 'dispute_frozen' | 'dispute_lost';
+    units: number;
+  };
   balance: number;
   updatedAt: string;
   creditedAt: string | null;
+  checkoutCreatedAt: string | null;
   authority: 'operatoros_ledger';
 }
 
@@ -1906,6 +1936,9 @@ export const moduleShellApi = {
       ) as Promise<any>,
     getTokenLedger: (): Promise<{
       balance: number;
+      ledgerBalance: number;
+      reservedUnits: number;
+      availableBalance: number;
       entries: Array<Record<string, any>>;
       purchases: Array<Record<string, any>>;
     }> => apiFetch('/modules/torqueshed/token-ledger?limit=25') as Promise<any>,

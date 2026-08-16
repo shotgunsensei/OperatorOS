@@ -88,7 +88,7 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
   );
 }
 
-export function TorqueShedMarketplacePanel() {
+export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }) {
   const [listings, setListings] = useState<TorqueShedMarketplaceListing[]>([]);
   const [categories, setCategories] = useState<Array<{ slug: string; name: string }>>([]);
   const [conversations, setConversations] = useState<Array<Record<string, any>>>([]);
@@ -111,14 +111,16 @@ export function TorqueShedMarketplacePanel() {
       if (scope !== 'browse') query.set('scope', scope);
       if (search.trim()) query.set('search', search.trim());
       if (category) query.set('category', category);
-      const [listingData, categoryData, conversationData] = await Promise.all([
+      const settled = await Promise.allSettled([
         moduleShellApi.torqueshed.listMarketplace(query.toString()),
         moduleShellApi.torqueshed.listMarketplaceCategories(),
         moduleShellApi.torqueshed.listMarketplaceConversations(),
-      ]);
-      setListings(listingData.listings);
-      setCategories(categoryData.categories);
-      setConversations(conversationData.conversations);
+      ] as const);
+      if (settled[0].status === 'fulfilled') setListings(settled[0].value.listings);
+      if (settled[1].status === 'fulfilled') setCategories(settled[1].value.categories);
+      if (settled[2].status === 'fulfilled') setConversations(settled[2].value.conversations);
+      const failure = settled.find((entry) => entry.status === 'rejected');
+      if (failure?.status === 'rejected') setError(errorText(failure.reason));
     } catch (next) {
       setError(errorText(next));
     } finally {
@@ -130,16 +132,16 @@ export function TorqueShedMarketplacePanel() {
     void load();
   }, [load]);
   useEffect(() => {
-    const match = window.location.pathname.match(/\/marketplace\/([0-9a-f-]{36})\/?$/i);
-    if (!match?.[1]) return;
+    const requestedId = listingId ?? window.location.pathname.match(/\/marketplace\/([0-9a-f-]{36})\/?$/i)?.[1];
+    if (!requestedId) return;
     void moduleShellApi.torqueshed
-      .getMarketplaceListing(match[1])
+      .getMarketplaceListing(requestedId)
       .then((detail) => {
         setSelected(detail.listing);
         setSelectedMedia(detail.media);
       })
       .catch((next) => setError(errorText(next)));
-  }, []);
+  }, [listingId]);
 
   async function run(name: string, operation: () => Promise<unknown>, success: string) {
     setBusy(name);
@@ -776,16 +778,20 @@ export function TorqueShedCommunityPanel() {
       if (scope !== 'feed') query.set('scope', scope);
       if (search.trim()) query.set('search', search.trim());
       if (topic) query.set('topic', topic);
-      const [postData, topicData, profileData] = await Promise.all([
+      const settled = await Promise.allSettled([
         moduleShellApi.torqueshed.listCommunityPosts(query.toString()),
         moduleShellApi.torqueshed.listCommunityTopics(),
         moduleShellApi.torqueshed.getCommunityProfile(),
-      ]);
-      setPosts(postData.posts);
-      setTopics(topicData.topics);
-      setProfile(profileData.profile);
-      setViewerUserId(profileData.viewerUserId);
-      setPreferences(profileData.preferences);
+      ] as const);
+      if (settled[0].status === 'fulfilled') setPosts(settled[0].value.posts);
+      if (settled[1].status === 'fulfilled') setTopics(settled[1].value.topics);
+      if (settled[2].status === 'fulfilled') {
+        setProfile(settled[2].value.profile);
+        setViewerUserId(settled[2].value.viewerUserId);
+        setPreferences(settled[2].value.preferences);
+      }
+      const failure = settled.find((entry) => entry.status === 'rejected');
+      if (failure?.status === 'rejected') setError(errorText(failure.reason));
     } catch (next) {
       setError(errorText(next));
     } finally {

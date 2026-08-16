@@ -51,6 +51,15 @@ type StripeClient = {
   charges: { retrieve: (id: string) => Promise<any> };
   events: { list: (args: unknown) => Promise<{ data: any[] }> };
   accounts: { retrieve: () => Promise<any> };
+  products: {
+    list: (args: unknown) => Promise<{ data: any[] }>;
+    create: (args: unknown) => Promise<any>;
+    retrieve: (id: string) => Promise<any>;
+  };
+  prices: {
+    list: (args: unknown) => Promise<{ data: any[] }>;
+    create: (args: unknown) => Promise<any>;
+  };
 };
 let __stripeSingleton: StripeClient | null = null;
 
@@ -108,6 +117,14 @@ function getStripe() {
   } catch (err) {
     throw new Error(`Stripe SDK could not be loaded: ${(err as Error)?.message ?? 'unknown'}`);
   }
+}
+
+/** Narrow server-only access for the versioned catalog provisioner. */
+export function getStripeCatalogClient(): Pick<StripeClient, 'accounts' | 'products' | 'prices'> {
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe is not configured'), { code: 'STRIPE_NOT_CONFIGURED' });
+  }
+  return getStripe();
 }
 
 // Task #66: monthly + annual price resolution. STRIPE_PRICE_<PLAN>_<INTERVAL>
@@ -431,6 +448,12 @@ export interface UsageCreditCheckoutInput {
   moduleId: string;
   packageKey: string;
   packageName: string;
+  priceId: string;
+  productId: string;
+  stripeAccountId: string;
+  diagnosticSessionId: string;
+  catalogVersion: string;
+  environment: 'test' | 'live';
   units: number;
   amountMinor: number;
   currency: string;
@@ -456,7 +479,7 @@ export async function createUsageCreditCheckoutSession(
     input.units <= 0 ||
     !Number.isSafeInteger(input.amountMinor) ||
     input.amountMinor <= 0 ||
-    !/^[A-Z]{3}$/.test(input.currency)
+    !/^[A-Z]{3}$/.test(input.currency) || !/^price_[A-Za-z0-9_]+$/.test(input.priceId)
   ) {
     throw Object.assign(new Error('Usage-credit package snapshot is invalid'), {
       code: 'USAGE_CREDIT_PACKAGE_INVALID',
@@ -468,18 +491,22 @@ export async function createUsageCreditCheckoutSession(
     tenant_id: input.tenantId,
     user_id: input.userId,
     module_id: input.moduleId,
+    module_slug: 'torqueshed',
+    diagnostic_session_id: input.diagnosticSessionId,
     package_key: input.packageKey,
     units: String(input.units),
+    catalog_version: input.catalogVersion,
+    environment: input.environment,
+    operatoros_source: 'server_authoritative_catalog',
+    stripe_account_id: input.stripeAccountId,
+    provider_product_id: input.productId,
+    provider_price_id: input.priceId,
   };
   const session = await getStripe().checkout.sessions.create({
     mode: 'payment',
     line_items: [
       {
-        price_data: {
-          currency: input.currency.toLowerCase(),
-          unit_amount: input.amountMinor,
-          product_data: { name: `Torque Assist ${input.packageName} credits` },
-        },
+        price: input.priceId,
         quantity: 1,
       },
     ],
@@ -601,6 +628,49 @@ export async function resolveStripePaymentMetadata(event: {
   };
 }
 
+/**
+ * Retrieve the actual Checkout line item and account before a v50+ credit
+ * grant. Metadata establishes OperatorOS scope; this evidence proves that the
+ * provider Session charged the snapshotted durable Product and Price.
+ */
+export async function retrieveTorqueStripeCheckoutEvidence(checkoutSessionId: string) {
+  if (!/^cs_(?:test_|live_)?[A-Za-z0-9]+$/.test(checkoutSessionId)) {
+    throw Object.assign(new Error('Checkout Session id is invalid'), {
+      code: 'TORQUE_PAYMENT_CHECKOUT_INVALID',
+    });
+  }
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe settlement evidence is unavailable'), {
+      code: 'STRIPE_NOT_CONFIGURED',
+    });
+  }
+  const stripe = getStripe();
+  const [account, session, lineItems] = await Promise.all([
+    stripe.accounts.retrieve(),
+    stripe.checkout.sessions.retrieve(checkoutSessionId),
+    stripe.checkout.sessions.listLineItems(checkoutSessionId, {
+      limit: 10,
+      expand: ['data.price.product'],
+    }),
+  ]);
+  const item = lineItems.data[0] as any;
+  const price = item?.price as any;
+  const product = price?.product;
+  return {
+    accountId: String(account.id || ''),
+    checkoutSessionId: String(session.id || ''),
+    paymentIntentId: stripeId(session.payment_intent, 'pi_') || '',
+    lineItemCount: lineItems.data.length,
+    quantity: Number(item?.quantity ?? 0),
+    priceId: String(price?.id || ''),
+    productId: typeof product === 'string' ? product : String(product?.id || ''),
+    amountMinor: Number(session.amount_total || 0),
+    currency: String(session.currency || '').toUpperCase(),
+    paymentStatus: String(session.payment_status || ''),
+    checkoutMode: String(session.mode || ''),
+  };
+}
+
 const TORQUE_STRIPE_EVENT_TYPES = Object.freeze([
   'checkout.session.completed',
   'checkout.session.async_payment_succeeded',
@@ -658,7 +728,12 @@ export async function retrieveTorqueStripeReconciliationSnapshot(paymentIntentId
     .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
   const safeMetadata = (value: unknown) => value && typeof value === 'object'
     ? Object.fromEntries(Object.entries(value as Record<string, unknown>)
-        .filter(([key]) => ['operatoros_kind', 'purchase_id', 'tenant_id', 'user_id', 'module_id', 'package_key', 'units'].includes(key))
+        .filter(([key]) => [
+          'operatoros_kind', 'purchase_id', 'tenant_id', 'user_id', 'module_id',
+          'module_slug', 'diagnostic_session_id', 'package_key', 'units',
+          'catalog_version', 'environment', 'operatoros_source',
+          'stripe_account_id', 'provider_product_id', 'provider_price_id',
+        ].includes(key))
         .map(([key, metadataValue]) => [key, String(metadataValue)]))
     : {};
   return {
@@ -675,6 +750,16 @@ export async function retrieveTorqueStripeReconciliationSnapshot(paymentIntentId
       paymentStatus: String(session.payment_status || ''), status: String(session.status || ''),
       amountTotal: Number(session.amount_total || 0), currency: String(session.currency || '').toLowerCase(),
       paymentIntentId: stripeId(session.payment_intent, 'pi_'), metadata: safeMetadata(session.metadata),
+      lineItems: (await stripe.checkout.sessions.listLineItems(session.id, {
+        limit: 10,
+        expand: ['data.price.product'],
+      })).data.map((item: any) => ({
+        quantity: Number(item.quantity || 0),
+        priceId: String(item.price?.id || ''),
+        productId: typeof item.price?.product === 'string'
+          ? item.price.product
+          : String(item.price?.product?.id || ''),
+      })),
     } : null,
     charge: charge ? {
       id: String(charge.id), amountRefunded: Number(charge.amount_refunded || 0),

@@ -18,6 +18,9 @@ export type SnapProofFieldTab =
   | 'templates'
   | 'team'
   | 'activity'
+  | 'reports'
+  | 'share'
+  | 'exports'
   | 'branding';
 type Row = Record<string, any>;
 
@@ -100,10 +103,12 @@ export default function SnapProofFieldWorkspace({
   tab,
   selectedJobId,
   onSelectJob,
+  onOpenJob = onSelectJob,
 }: {
   tab: SnapProofFieldTab;
   selectedJobId: string | null;
   onSelectJob: (id: string) => void;
+  onOpenJob?: (id: string) => void;
 }) {
   const [customers, setCustomers] = useState<Row[]>([]);
   const [jobs, setJobs] = useState<Row[]>([]);
@@ -124,46 +129,38 @@ export default function SnapProofFieldWorkspace({
     setLoading(true);
     setError(null);
     try {
-      const [
-        customerRows,
-        jobRows,
-        templateRows,
-        teamRows,
-        activityRows,
-        brand,
-        exportRows,
-        queue,
-      ] = await Promise.all([
-        moduleShellApi.snapproofos.customers(),
-        moduleShellApi.snapproofos.jobs(),
-        moduleShellApi.snapproofos.templates(),
-        moduleShellApi.snapproofos.team(),
-        moduleShellApi.snapproofos.activity(),
-        moduleShellApi.snapproofos.branding(),
-        moduleShellApi.snapproofos.listExports(),
-        listSnapProofCaptures(),
-      ]);
-      setCustomers(customerRows.customers);
-      setJobs(jobRows.jobs);
-      setTemplates(templateRows.templates);
-      setTeam(teamRows.members || []);
-      setEvents(activityRows.events || []);
-      setBranding(brand.branding || {});
-      setExports(exportRows.exports);
-      setQueued(queue.length);
+      const tasks: Array<Promise<void>> = [];
+      let loadedJobs: Row[] | null = null;
+      const needsJobs = ['jobs', 'capture', 'work', 'costs', 'templates', 'reports', 'share', 'exports'].includes(tab);
+      const needsCustomers = ['customers', 'jobs'].includes(tab);
+      const needsTeam = tab === 'jobs';
+      if (needsCustomers) tasks.push(moduleShellApi.snapproofos.customers().then(rows => setCustomers(rows.customers)));
+      if (needsJobs) tasks.push(moduleShellApi.snapproofos.jobs().then(rows => {
+        loadedJobs = rows.jobs;
+        setJobs(rows.jobs);
+      }));
+      if (tab === 'templates') tasks.push(moduleShellApi.snapproofos.templates().then(rows => setTemplates(rows.templates)));
+      if (needsTeam) tasks.push(moduleShellApi.snapproofos.team().then(rows => setTeam(rows.members || [])));
+      if (tab === 'activity') tasks.push(moduleShellApi.snapproofos.activity().then(rows => setEvents(rows.events || [])));
+      if (tab === 'branding') tasks.push(moduleShellApi.snapproofos.branding().then(value => setBranding(value.branding || {})));
+      if (['reports', 'share', 'exports'].includes(tab)) tasks.push(moduleShellApi.snapproofos.listExports().then(rows => setExports(rows.exports)));
+      if (tab === 'capture') tasks.push(listSnapProofCaptures().then(queue => setQueued(queue.length)));
+      await Promise.all(tasks);
+      const jobRows = loadedJobs as Row[] | null;
+      if (!jobRows) return;
       const current =
-        selectedJobId && jobRows.jobs.some((item) => item.id === selectedJobId)
+        selectedJobId && jobRows.some((item) => item.id === selectedJobId)
           ? selectedJobId
-          : jobRows.jobs[0]?.id;
+          : jobRows[0]?.id;
       if (current && !selectedJobId) onSelectJob(current);
     } catch (reason) {
       setError(errorText(reason));
     } finally {
       setLoading(false);
     }
-  }, [selectedJobId, onSelectJob]);
+  }, [selectedJobId, onSelectJob, tab]);
   const loadDetail = useCallback(async () => {
-    if (!selectedJobId) {
+    if (!selectedJobId || !['jobs', 'capture', 'work', 'costs', 'templates', 'reports', 'share', 'exports'].includes(tab)) {
       setDetail(null);
       return;
     }
@@ -172,7 +169,7 @@ export default function SnapProofFieldWorkspace({
     } catch (reason) {
       setError(errorText(reason));
     }
-  }, [selectedJobId]);
+  }, [selectedJobId, tab]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -276,7 +273,7 @@ export default function SnapProofFieldWorkspace({
           team={team}
           selected={selected}
           selectedJobId={selectedJobId}
-          onSelect={onSelectJob}
+          onSelect={onOpenJob}
           saving={saving}
           mutate={mutate}
         />
@@ -332,6 +329,7 @@ export default function SnapProofFieldWorkspace({
             This token is shown once. Copy it before leaving this page.
           </p>
           <input
+            aria-label="New secure share URL"
             readOnly
             value={`${window.location.origin}${lastShare}`}
             style={input}
@@ -339,7 +337,10 @@ export default function SnapProofFieldWorkspace({
           />
         </div>
       )}
-      {tab === 'jobs' && selected && (
+      {['reports', 'share', 'exports'].includes(tab) && !selected && (
+        <State>Create or select a job before generating a report, export, or secure share.</State>
+      )}
+      {['reports', 'share', 'exports'].includes(tab) && selected && (
         <Reports
           detail={detail}
           exports={exports}

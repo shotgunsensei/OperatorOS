@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
-
 /**
  * Gate 2 — Path-addressable Platform Command surface.
  *
@@ -31,9 +29,9 @@ import AuthProvider, { useAuth } from '@/components/AuthProvider';
 import { ToastProvider } from '@/components/Toast';
 import LoginPage from '@/components/pages/LoginPage';
 import PlatformPage from '@/components/pages/PlatformPage';
+import PlatformCommandShell from '@/components/platform/PlatformCommandShell';
 import { pathToPlatformView, platformViewToPath, type PlatformView } from '@/lib/platform-routes';
 import ContactLink from '@/components/ContactLink';
-import { useState, useEffect } from 'react';
 
 function PlatformGate() {
   const { user, loading } = useAuth();
@@ -41,28 +39,26 @@ function PlatformGate() {
   const router = useRouter();
   const rawSlug = (params as any)?.slug;
   const slug: string[] | undefined = Array.isArray(rawSlug) ? rawSlug : (rawSlug ? [rawSlug] : undefined);
-  const [view, setView] = useState<PlatformView>(() => pathToPlatformView(slug));
-
-  // Re-derive view whenever the URL changes (browser back/forward).
-  useEffect(() => { setView(pathToPlatformView(slug)); }, [JSON.stringify(slug)]);
+  // The URL is the only view state. This makes refresh, deep links, and the
+  // browser Back/Forward history authoritative instead of mirroring them in
+  // component state.
+  const view: PlatformView = pathToPlatformView(slug);
 
   if (loading) {
-    return <div style={{ padding: 48, color: '#8b949e', textAlign: 'center' }}>Loading…</div>;
+    return <PlatformCommandShell accessState="loading" view={view} />;
   }
   if (!user) return <LoginPage onSwitch={() => router.push('/')} />;
   if ((user as any).platformRole !== 'super_admin') {
-    return (
-      <div style={{ padding: 48, color: '#f85149', textAlign: 'center' }}>
-        <h1 style={{ fontSize: 20 }}>403 — Platform Command requires super-admin role.</h1>
-        <a href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: '#58a6ff' }}>← Return to your workspace</a>
-      </div>
-    );
+    return <PlatformCommandShell accessState="denied" view={view} />;
   }
   return (
-    <PlatformPage
-      view={view}
-      onNavigate={(v) => { setView(v); router.push(platformViewToPath(v)); }}
-    />
+    <PlatformCommandShell accessState="authorized" view={view}>
+      <PlatformPage
+        view={view}
+        showNavigation={false}
+        onNavigate={(nextView) => router.push(platformViewToPath(nextView))}
+      />
+    </PlatformCommandShell>
   );
 }
 

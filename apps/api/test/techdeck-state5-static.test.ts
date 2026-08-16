@@ -15,9 +15,17 @@ test('TechDeck state-5 routes expose no secret reveal or remote execution endpoi
 
 test('TechDeck UI and deep links mount completed operations without pending workflow cards', () => {
   const shell = read('../../web/src/components/module-shells/TechDeckShell.tsx');
+  const routeContract = read('../../web/src/components/module-shells/TechDeckRoute.contract.ts');
   const workspace = read('../../web/src/components/module-shells/TechDeckOperations.tsx');
   const deepLinks = read('../../web/src/app/modules/[slug]/[...path]/route-map.ts');
   assert.doesNotMatch(shell, /pendingWorkflowShortcuts|command actions/);
+  assert.match(shell, /ModuleApplicationShell/);
+  assert.match(shell, /dynamic\(\(\) => import\('\.\/TechDeckOperations'\)/);
+  assert.match(shell, /data-techdeck-route/);
+  for (const route of ['tickets', 'clients', 'assets', 'network', 'lifecycle', 'documentation', 'runbooks', 'evidence', 'reports', 'time', 'calendar', 'portal', 'licenses', 'status', 'compliance', 'webhooks', 'api-tokens', 'settings']) {
+    assert.match(routeContract, new RegExp(`canonicalPath: '/${route}'`));
+  }
+  assert.match(routeContract, /techdeck-midnight-msp-cyan/);
   for (const section of ['techdeck-inventory', 'techdeck-network', 'techdeck-lifecycle', 'techdeck-documentation', 'techdeck-runbooks', 'techdeck-evidence', 'techdeck-reports', 'techdeck-time']) {
     assert.match(`${workspace}\n${deepLinks}`, new RegExp(section));
   }

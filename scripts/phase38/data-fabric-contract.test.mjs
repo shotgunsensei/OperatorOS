@@ -26,6 +26,6 @@ test('Phase 38 release, API, UI, browser, and ADR evidence is tracked', () => {
     'apps/api/test/cross-module-data-fabric.test.ts','apps/web/e2e/cross-module-data-fabric-phase38.spec.ts',
     'docs/adr/ADR-0041-cross-module-data-fabric.md',
   ]) assert.ok(existsSync(resolve(root, file)), file);
-  assert.match(read('apps/api/src/lib/database-release-contract.ts'), /releaseVersion:\s*48/);
+  assert.match(read('apps/api/src/lib/database-release-contract.ts'), /releaseVersion:\s*(?:4[9]|[5-9][0-9])/);
   assert.match(read('apps/web/src/components/pages/SharedServicesAdminPage.tsx'), /cross-module-provenance/);
 });

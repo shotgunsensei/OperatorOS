@@ -1,0 +1,399 @@
+.shell {
+  min-height: 100vh;
+  color-scheme: dark;
+  background:
+    radial-gradient(circle at 88% -10%, rgba(47, 111, 235, .14), transparent 34rem),
+    #010409;
+  color: #c9d1d9;
+}
+
+.skipLink {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  transform: translateY(-160%);
+  padding: 10px 14px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  color: #010409;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid #253044;
+  background: rgba(7, 12, 20, .96);
+  backdrop-filter: blur(16px);
+}
+
+.headerRow {
+  min-height: 64px;
+  padding: 9px clamp(12px, 2vw, 24px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.identity,
+.accountNav,
+.context,
+.crumbs {
+  display: flex;
+  align-items: center;
+}
+
+.identity {
+  min-width: 0;
+  gap: 10px;
+}
+
+.brand {
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: .01em;
+  text-decoration: none;
+}
+
+.commandMark {
+  padding-left: 10px;
+  border-left: 1px solid #344158;
+  color: #8bb9ff;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.context {
+  gap: 6px;
+  min-width: 0;
+}
+
+.badge {
+  max-width: 180px;
+  min-height: 24px;
+  padding: 3px 8px;
+  overflow: hidden;
+  border: 1px solid #344158;
+  border-radius: 999px;
+  color: #aeb9c7;
+  font-size: 10px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountNav {
+  justify-content: flex-end;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.accountLink,
+.logoutButton,
+.menuButton {
+  min-height: 40px;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #dbe4ee;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.accountLink:hover,
+.logoutButton:hover,
+.menuButton:hover {
+  border-color: #435269;
+  background: #18212c;
+  color: #fff;
+}
+
+.logoutButton:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.menuButton {
+  display: none;
+}
+
+.alert {
+  padding: 8px 24px;
+  border-top: 1px solid #5e2428;
+  background: #2f1317;
+  color: #fecaca;
+  font-size: 12px;
+}
+
+.body {
+  min-height: calc(100vh - 65px);
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+}
+
+.sideNav {
+  position: sticky;
+  top: 65px;
+  align-self: start;
+  height: calc(100vh - 65px);
+  padding: 20px 12px;
+  overflow-y: auto;
+  border-right: 1px solid #212b3b;
+  background: rgba(7, 12, 20, .82);
+}
+
+.navLabel {
+  margin: 0 10px 9px;
+  color: #738198;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.navLink {
+  min-height: 42px;
+  margin-bottom: 3px;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #aeb9c7;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  border-color: #344158;
+  background: #121a27;
+  color: #f1f5f9;
+}
+
+.navLinkActive {
+  border-color: #315d9e;
+  background: #112342;
+  color: #a8c9ff;
+}
+
+.mainColumn {
+  min-width: 0;
+}
+
+.crumbBar {
+  min-height: 47px;
+  padding: 9px clamp(16px, 2.5vw, 28px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #172131;
+  background: rgba(13, 17, 23, .58);
+}
+
+.crumbs {
+  min-width: 0;
+  gap: 7px;
+  color: #8492a6;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.crumbs a {
+  color: #9fc2ff;
+  text-decoration: none;
+}
+
+.crumbCurrent {
+  overflow: hidden;
+  color: #dbe4ee;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activeSection {
+  flex: 0 0 auto;
+  color: #8bb9ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.content {
+  min-width: 0;
+}
+
+.state {
+  width: min(680px, calc(100% - 32px));
+  min-height: 300px;
+  margin: clamp(32px, 8vw, 92px) auto;
+  padding: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #29364a;
+  border-radius: 14px;
+  background: #0d1117;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .28);
+  text-align: center;
+}
+
+.state h1 {
+  margin: 0 0 10px;
+  color: #f1f5f9;
+  font-size: clamp(22px, 3vw, 30px);
+}
+
+.state p {
+  max-width: 54ch;
+  margin: 0;
+  color: #aeb9c7;
+  line-height: 1.6;
+}
+
+.stateActions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stateActions a {
+  min-height: 44px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #315d9e;
+  border-radius: 8px;
+  background: #112342;
+  color: #d7e6ff;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.overlay {
+  display: none;
+}
+
+@media (max-width: 1060px) {
+  .accountLink span,
+  .logoutButton span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+}
+
+@media (max-width: 820px) {
+  .headerRow {
+    min-height: 60px;
+  }
+
+  .commandMark,
+  .context {
+    display: none;
+  }
+
+  .menuButton {
+    display: inline-flex;
+  }
+
+  .body {
+    display: block;
+    min-height: calc(100vh - 61px);
+  }
+
+  .sideNav {
+    position: fixed;
+    z-index: 60;
+    top: 0;
+    left: 0;
+    width: min(84vw, 300px);
+    height: 100vh;
+    padding: 78px 14px 24px;
+    transform: translateX(-104%);
+    border-right-color: #40506a;
+    background: #070c14;
+    box-shadow: 18px 0 50px rgba(0, 0, 0, .5);
+    transition: transform 180ms ease;
+  }
+
+  .sideNav.sideNavOpen {
+    transform: translateX(0);
+  }
+
+  .sideNavOpen {
+    transform: translateX(0);
+  }
+
+  .overlay {
+    position: fixed;
+    z-index: 50;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgba(0, 0, 0, .62);
+    cursor: pointer;
+  }
+
+  .crumbBar {
+    min-height: 50px;
+  }
+
+  .activeSection {
+    display: none;
+  }
+
+  .state {
+    padding: 26px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerRow {
+    padding-inline: 9px;
+    gap: 6px;
+  }
+
+  .accountNav {
+    gap: 1px;
+  }
+
+  .accountLink,
+  .logoutButton,
+  .menuButton {
+    min-width: 42px;
+    min-height: 44px;
+    padding: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sideNav {
+    transition: none;
+  }
+}

@@ -2,26 +2,30 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
-  ArrowLeft,
   Bot,
   Car,
   CheckCircle2,
   ClipboardCheck,
   Coins,
   FileUp,
-  Gauge,
+  Grid2X2,
   Plus,
   RefreshCw,
   Search,
-  Settings2,
   ShieldCheck,
-  Store,
-  Users,
+  LifeBuoy,
+  UserRound,
   Wrench,
 } from 'lucide-react';
+import { ModuleApplicationShell } from '@/components/module-application-shell';
+import { useAuth } from '@/components/AuthProvider';
+import { useTenant } from '@/components/TenantProvider';
 import {
   moduleShellApi,
   type TorqueShedDashboard,
@@ -34,39 +38,24 @@ import {
 } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
-import { ShellLiveBadge } from './ShellChrome';
-import { TorqueShedCommunityPanel, TorqueShedMarketplacePanel } from './TorqueShedSocialPanels';
-import { TorqueShedJournalPanel, TorqueShedLiveBayPanel, TorqueShedUtilityPanel } from './TorqueShedRestorationPanels';
 import TorqueShedNativeAuthorizePanel from './TorqueShedNativeAuthorizePanel';
+import {
+  TORQUESHED_NAVIGATION,
+  TORQUESHED_THEME,
+  resolveTorqueShedRoute,
+} from './TorqueShedRoute.contract';
+import {
+  formatTorqueShedError,
+  translateTorqueShedError,
+  type TorqueErrorPresentation,
+} from '@/lib/torque-error-translator';
 
-type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'journal' | 'diagnostics' | 'live' | 'templates' | 'marketplace' | 'community' | 'tools';
-
-function errorText(error: unknown): string {
-  const row = error && typeof error === 'object' ? error as Record<string, unknown> : {};
-  const code = typeof row.code === 'string' && /^[A-Z0-9_:-]{2,120}$/.test(row.code)
-    ? row.code
-    : 'TORQUESHED_UNKNOWN';
-  const requestId = typeof row.requestId === 'string' && /^[A-Za-z0-9_-]{4,120}$/.test(row.requestId)
-    ? row.requestId
-    : null;
-  const status = Number(row.status || 0);
-  const messages: Record<string, string> = {
-    TORQUE_ASSIST_BALANCE_EXHAUSTED: 'Torque Assist credits are insufficient. Review the balance or buy a credit pack before retrying.',
-    TORQUE_PAYMENT_PROVIDER_DISABLED: 'Credit checkout is temporarily unavailable. Nothing was charged; contact an administrator.',
-    TORQUE_ASSIST_PROVIDER_DISABLED: 'Torque Assist is unavailable until an administrator connects the AI provider.',
-    TORQUE_ASSIST_PROVIDER_CIRCUIT_OPEN: 'Torque Assist is recovering from a provider outage. Wait one minute, then retry the same request.',
-    TORQUE_ASSIST_RATE_LIMITED: 'Torque Assist is rate limited. Wait one minute, then retry the same request.',
-    TORQUE_ASSIST_SESSION_NOT_FOUND: 'This diagnostic is unavailable in the active tenant or your current role cannot access it.',
-    TORQUE_PURCHASE_NOT_FOUND: 'The payment reference is unavailable in this tenant. Refresh from the original diagnostic.',
-  };
-  const message = messages[code]
-    ?? (status === 503
-      ? 'Torque Assist could not reach its provider. No credits were charged; retry the same request shortly.'
-      : status === 401 || status === 403 || status === 404
-        ? 'TorqueShed could not access that diagnostic in the active tenant. Return to the garage and reopen it.'
-        : 'TorqueShed could not confirm that action. Your saved records remain available; retry once or contact support.');
-  return `${message} (${code}${requestId ? ` · reference ${requestId}` : ''})`;
-}
+const routeLoading = () => <div role="status" style={{ ...cardStyle, color: semantic.textMuted }}>Loading this TorqueShed route…</div>;
+const TorqueShedMarketplacePanel = dynamic(() => import('./TorqueShedSocialPanels').then(module => module.TorqueShedMarketplacePanel), { loading: routeLoading });
+const TorqueShedCommunityPanel = dynamic(() => import('./TorqueShedSocialPanels').then(module => module.TorqueShedCommunityPanel), { loading: routeLoading });
+const TorqueShedJournalPanel = dynamic(() => import('./TorqueShedRestorationPanels').then(module => module.TorqueShedJournalPanel), { loading: routeLoading });
+const TorqueShedLiveBayPanel = dynamic(() => import('./TorqueShedRestorationPanels').then(module => module.TorqueShedLiveBayPanel), { loading: routeLoading });
+const TorqueShedUtilityPanel = dynamic(() => import('./TorqueShedRestorationPanels').then(module => module.TorqueShedUtilityPanel), { loading: routeLoading });
 
 function number(value: FormDataEntryValue | null): number | undefined {
   if (value === null || String(value).trim() === '') return undefined;
@@ -85,6 +74,23 @@ function money(value: unknown): string {
   return Number.isFinite(minor)
     ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(minor / 100)
     : '$0.00';
+}
+
+function purchaseMessage(status: TorqueTokenPurchaseStatus): string {
+  if (status.state === 'credited' && status.credited) return 'Credits added';
+  if (status.state === 'paid_pending_credit') return 'Payment received; credits are being applied';
+  if (['creating_checkout', 'checkout_open', 'payment_pending'].includes(status.state)) return 'Verifying payment';
+  if (status.state === 'cancelled') return 'Checkout cancelled; no credits were added';
+  if (status.state === 'expired') return 'Checkout expired; no credits were added';
+  if (status.state === 'failed') return 'Payment failed; no credits were added';
+  if (status.state === 'refunded' && status.settlementPolicy.state === 'refund_review') {
+    return `Payment refunded; available credits were reversed and ${status.settlementPolicy.units.toLocaleString()} spent units require administrator review`;
+  }
+  if (status.state === 'refunded') return 'Payment refunded; purchased credits were reversed under policy';
+  if (status.settlementPolicy.state === 'dispute_lost') {
+    return `Payment dispute lost; ${status.settlementPolicy.units.toLocaleString()} spent units require administrator review`;
+  }
+  return 'Payment disputed; purchased credits are frozen';
 }
 
 const input: React.CSSProperties = {
@@ -118,8 +124,19 @@ const button: React.CSSProperties = {
   gap: 7,
 };
 
-export default function TorqueShedWorkspace() {
-  const [tab, setTab] = useState<Tab>('dashboard');
+export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; routePath?: string } = {}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const { activeTenant, activeRole } = useTenant();
+  const route = resolveTorqueShedRoute(routePath || pathname);
+  const sourceRouted = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
+  const hrefFor = useCallback((path: string) => sourceRouted ? `/modules/torqueshed${path === '/' ? '/dashboard' : path}` : path, [sourceRouted]);
+  const navigation = useMemo(() => TORQUESHED_NAVIGATION.map(group => ({
+    ...group,
+    items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })),
+  })), [hrefFor]);
   const [dashboard, setDashboard] = useState<TorqueShedDashboard | null>(null);
   const [vehicles, setVehicles] = useState<TorqueShedVehicle[]>([]);
   const [builds, setBuilds] = useState<Array<Record<string, any>>>([]);
@@ -129,58 +146,48 @@ export default function TorqueShedWorkspace() {
   const [vendors, setVendors] = useState<Array<Record<string, any>>>([]);
   const [vehicleDetail, setVehicleDetail] = useState<Record<string, any> | null>(null);
   const [diagnosticDetail, setDiagnosticDetail] = useState<Record<string, any> | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [nativeAuthorization, setNativeAuthorization] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
-    try {
-      const query = new URLSearchParams({ limit: '100' });
-      if (search.trim()) query.set('search', search.trim());
-      const [
-        dashboardData,
-        vehicleData,
-        buildData,
-        diagnosticData,
-        reminderData,
-        templateData,
-        vendorData,
-      ] = await Promise.all([
-        moduleShellApi.torqueshed.dashboard(),
-        moduleShellApi.torqueshed.listVehicles(query.toString()),
-        moduleShellApi.torqueshed.listBuilds(),
-        moduleShellApi.torqueshed.listDiagnostics('limit=100'),
-        moduleShellApi.torqueshed.listReminders(),
-        moduleShellApi.torqueshed.listTemplates(),
-        moduleShellApi.torqueshed.listVendors(),
-      ]);
-      setDashboard(dashboardData);
-      setVehicles(vehicleData.vehicles);
-      setBuilds(buildData.builds);
-      setDiagnostics(diagnosticData.diagnostics);
-      setReminders(reminderData.reminders);
-      setTemplates(templateData.templates);
-      setVendors(vendorData.vendors);
-    } catch (next) {
-      setError(errorText(next));
-    } finally {
-      setLoading(false);
+    const query = new URLSearchParams({ limit: '100' });
+    if (search.trim()) query.set('search', search.trim());
+    const failures: string[] = [];
+    const task = async <T,>(label: string, request: Promise<T>, apply: (value: T) => void) => {
+      try { apply(await request); } catch (next) { failures.push(`${label}: ${formatTorqueShedError(next)}`); }
+    };
+    const tasks: Array<Promise<void>> = [];
+    const needsVehicles = ['dashboard', 'garage', 'service', 'diagnostics', 'live', 'credits'].includes(route.area);
+    const needsBuilds = ['dashboard', 'builds', 'journal', 'live'].includes(route.area);
+    const needsDiagnostics = ['dashboard', 'diagnostics', 'live', 'credits'].includes(route.area) || route.kind === 'exports';
+    if (route.area === 'dashboard') tasks.push(task('Overview', moduleShellApi.torqueshed.dashboard(), setDashboard));
+    if (needsVehicles) tasks.push(task('Vehicles', moduleShellApi.torqueshed.listVehicles(query.toString()), value => setVehicles(value.vehicles)));
+    if (needsBuilds) tasks.push(task('Builds', moduleShellApi.torqueshed.listBuilds(), value => setBuilds(value.builds)));
+    if (needsDiagnostics) tasks.push(task('Diagnostics', moduleShellApi.torqueshed.listDiagnostics('limit=100'), value => setDiagnostics(value.diagnostics)));
+    if (route.area === 'service' || route.area === 'dashboard') tasks.push(task('Reminders', moduleShellApi.torqueshed.listReminders(), value => setReminders(value.reminders)));
+    if (route.area === 'templates') {
+      tasks.push(task('Templates', moduleShellApi.torqueshed.listTemplates(), value => setTemplates(value.templates)));
+      tasks.push(task('Vendors', moduleShellApi.torqueshed.listVendors(), value => setVendors(value.vendors)));
+    } else if (route.area === 'service') {
+      tasks.push(task('Vendors', moduleShellApi.torqueshed.listVendors(), value => setVendors(value.vendors)));
     }
-  }, [search]);
+    await Promise.allSettled(tasks);
+    if (failures.length) setError(failures.join(' '));
+    setLoading(false);
+  }, [route.area, search]);
 
   const openVehicle = useCallback(async (id: string) => {
     setBusy('vehicle-detail');
     setError('');
     try {
       setVehicleDetail(await moduleShellApi.torqueshed.getVehicle(id));
-      setTab('garage');
     } catch (next) {
-      setError(errorText(next));
+      setError(formatTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -191,9 +198,8 @@ export default function TorqueShedWorkspace() {
     setError('');
     try {
       setDiagnosticDetail(await moduleShellApi.torqueshed.getDiagnostic(id));
-      setTab('diagnostics');
     } catch (next) {
-      setError(errorText(next));
+      setError(formatTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -218,26 +224,11 @@ export default function TorqueShedWorkspace() {
     return () => manifest?.remove();
   }, []);
   useEffect(() => {
-    const path = window.location.pathname;
-    if (/\/native-auth\/?$/.test(path)) {
-      setNativeAuthorization(true);
-      return;
-    }
-    const diagnostic = path.match(/\/diagnostics\/([a-z0-9-]+)\/?$/i);
-    const vehicle = path.match(/\/vehicles\/([a-z0-9-]+)\/?$/i);
-    if (diagnostic?.[1]) void openDiagnostic(diagnostic[1]);
-    else if (/\/diagnostics(?:\/|$)/.test(path)) setTab('diagnostics');
-    else if (vehicle?.[1]) void openVehicle(vehicle[1]);
-    else if (/\/(?:garage|vehicles)(?:\/|$)/.test(path)) setTab('garage');
-    else if (/\/(?:maintenance|repairs|reminders)(?:\/|$)/.test(path)) setTab('service');
-    else if (/\/builds(?:\/|$)/.test(path)) setTab('builds');
-    else if (/\/(?:journal|build-journal)(?:\/|$)/.test(path)) setTab('journal');
-    else if (/\/(?:live-bay|live-bays)(?:\/|$)/.test(path)) setTab('live');
-    else if (/\/marketplace(?:\/|$)/.test(path)) setTab('marketplace');
-    else if (/\/community(?:\/|$)/.test(path)) setTab('community');
-    else if (/\/(?:search|activity|notifications|exports|settings)(?:\/|$)/.test(path)) setTab('tools');
-    else if (/\/diagnostic-templates(?:\/|$)/.test(path)) setTab('templates');
-  }, [openDiagnostic, openVehicle]);
+    setVehicleDetail(null);
+    setDiagnosticDetail(null);
+    if (route.kind === 'vehicle-detail' && route.recordId) void openVehicle(route.recordId);
+    if ((route.kind === 'diagnostic-detail' || route.kind === 'diagnostic-assist') && route.recordId) void openDiagnostic(route.recordId);
+  }, [openDiagnostic, openVehicle, route.kind, route.recordId]);
 
   async function mutate(
     name: string,
@@ -255,7 +246,7 @@ export default function TorqueShedWorkspace() {
       await load();
       if (refresh) await refresh();
     } catch (next) {
-      setError(errorText(next));
+      setError(formatTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -342,12 +333,46 @@ export default function TorqueShedWorkspace() {
     );
   }
 
-  if (nativeAuthorization) return <TorqueShedNativeAuthorizePanel />;
+  if (route.kind === 'native-auth') return <TorqueShedNativeAuthorizePanel />;
+
+  const pageAction = route.kind === 'vehicle-new' ? null
+    : route.area === 'garage' ? (
+      <Link href={hrefFor('/garage/vehicles/new')} style={{ ...button, textDecoration: 'none' }}><Plus size={16} /> Add vehicle</Link>
+    ) : route.kind === 'diagnostic-assist' ? (
+      <Link href={hrefFor(`/diagnostics/${route.recordId}`)} style={{ ...button, textDecoration: 'none' }}><ClipboardCheck size={16} /> Diagnostic record</Link>
+    ) : route.kind === 'diagnostic-detail' ? (
+      <Link href={hrefFor(`/diagnostics/${route.recordId}/assist`)} style={{ ...button, textDecoration: 'none' }}><Bot size={16} /> Open Torque Assist</Link>
+    ) : route.area === 'diagnostics' ? (
+      <Link href={hrefFor('/diagnostics/new')} style={{ ...button, textDecoration: 'none' }}><Plus size={16} /> New diagnostic</Link>
+    ) : null;
 
   return (
-    <main
-      data-testid="torqueshed-module-shell"
-      style={{ maxWidth: 1320, margin: '0 auto', padding: space.xxl, colorScheme: 'dark', position: 'relative' }}
+    <ModuleApplicationShell
+      moduleId="torqueshed"
+      moduleName="TorqueShed"
+      theme={TORQUESHED_THEME}
+      currentPath={hrefFor(route.canonicalPath)}
+      navigation={navigation}
+      brand={(
+        <Link href={hrefFor('/')} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#f8fafc', textDecoration: 'none', fontWeight: 900 }}>
+          <span style={{ width: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 10, color: '#f59e0b', border: '1px solid #f59e0b66', background: '#f59e0b18' }}><Wrench size={21} /></span>
+          <span>TorqueShed</span>
+        </Link>
+      )}
+      organization={{ label: 'Organization', value: activeTenant?.name ?? user?.currentTenantId ?? 'No organization selected', testId: 'torqueshed-organization-context' }}
+      accessContext={{ label: 'Access', value: activeRole ?? (user?.platformRole === 'super_admin' ? 'Platform administrator' : 'Member'), testId: 'torqueshed-access-context' }}
+      utilityActions={[
+        { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'torqueshed-my-apps' },
+        { label: 'Profile', href: hrefFor('/profile'), icon: UserRound, testId: 'torqueshed-profile' },
+        { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'torqueshed-help' },
+      ]}
+      topActions={<TorqueCreditBalanceChip href={hrefFor('/billing/credits')} />}
+      page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
+      pageHeaderTestId="torqueshed-route-header"
+      onRetry={() => void load()}
+      mobileNavigation="drawer"
+      testId="torqueshed-module-shell"
+      dataAttributes={{ 'data-torqueshed-route': route.kind }}
     >
       <style>{`
         [data-testid="torqueshed-module-shell"] { box-sizing:border-box; width:100%; min-width:0; }
@@ -368,7 +393,7 @@ export default function TorqueShedWorkspace() {
         .ts28-three { grid-template-columns:repeat(3,minmax(0,1fr)); }
         .ts28-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0; }
         .ts28-stats b { background:#0b0d0f; border:1px solid #332b21; border-radius:10px; padding:10px; color:#fbbf24; }
-        .ts28-stats small { display:block; color:#78716c; font-weight:600; margin-top:3px; }
+        .ts28-stats small { display:block; color:#a8a29e; font-weight:600; margin-top:3px; }
         .ts28-list,.ts28-bays { display:grid; gap:8px; margin-top:14px; }
         .ts28-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px; background:#0b0d0f; border:1px solid #29241d; border-radius:10px; }
         .ts28-row>div { display:grid; gap:4px; min-width:0; } .ts28-row small { color:#8e8880; overflow:hidden; text-overflow:ellipsis; } .ts28-row span { color:#fbbf24; font-size:12px; text-transform:uppercase; }
@@ -379,137 +404,9 @@ export default function TorqueShedWorkspace() {
         .ts28-report{display:grid;gap:5px;margin-top:12px;padding:12px;background:#0b0d0f;border-radius:10px;border:1px solid #30291f}.ts28-report p{margin:0;color:#a8a29e}.ts28-report small{color:#fbbf24}.ts28-report output{overflow-wrap:anywhere;color:#86efac;margin-top:8px}.ts28-check{display:flex;align-items:center;gap:8px;color:#d6d3d1}.ts28-actions{display:flex;gap:8px;flex-wrap:wrap}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
         @media (prefers-reduced-motion:reduce){.ts28-pulse{animation:none}}
         @media (max-width: 900px) { .ts28-grid,.ts28-live { grid-template-columns:minmax(0,1fr); }.ts28-live{min-height:0}.ts28-chat{min-height:560px} }
-        @media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } [data-testid="torqueshed-module-shell"] { padding: 16px !important; } .ts28-three{grid-template-columns:minmax(0,1fr)} }
+        @media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } .ts28-three{grid-template-columns:minmax(0,1fr)} }
         @media (max-width: 560px) { [data-testid="torqueshed-garage"] form > div, [data-testid="torqueshed-service"] form > div,.ts28-two { grid-template-columns: minmax(0, 1fr) !important; }.ts28-send{grid-template-columns:1fr}.ts28-send button{width:100%}.ts28-message{max-width:96%}.ts28-stats{grid-template-columns:1fr}.ts28-hero svg{display:none} }
       `}</style>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          gap: space.lg,
-          flexWrap: 'wrap',
-          alignItems: 'flex-start',
-          marginBottom: space.xl,
-        }}
-      >
-        <div style={{ display: 'flex', gap: space.md }}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              display: 'grid',
-              placeItems: 'center',
-              borderRadius: radius.md,
-              background: '#f59e0b20',
-              border: '1px solid #f59e0b55',
-            }}
-          >
-            <Wrench color="#f59e0b" />
-          </div>
-          <div>
-            <div
-              style={{
-                color: '#f59e0b',
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
-              }}
-            >
-              Vehicle service and diagnostics
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <h1 style={{ margin: '3px 0', color: semantic.text }}>TorqueShed</h1>
-              <ShellLiveBadge />
-            </div>
-            <p style={{ color: semantic.textMuted, margin: 0 }}>
-              Keep vehicle history, repairs, reminders, projects, and diagnostic evidence in one place.
-            </p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <button type="button" onClick={() => setTab(vehicles.length ? 'diagnostics' : 'garage')} style={button}>
-            {vehicles.length ? <Activity size={16} /> : <Plus size={16} />}
-            {vehicles.length ? 'Start a diagnostic' : 'Add your first vehicle'}
-          </button>
-          <a
-            href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
-            style={{ ...button, color: '#f59e0b', background: 'transparent', border: '1px solid #f59e0b66', textDecoration: 'none' }}
-          >
-            <ArrowLeft size={16} /> My Apps
-          </a>
-        </div>
-      </header>
-
-      <div
-        style={{
-          ...cardStyle,
-          display: 'flex',
-          gap: 6,
-          flexWrap: 'wrap',
-          marginBottom: space.lg,
-          padding: 8,
-        }}
-      >
-        {(
-          [
-            ['dashboard', 'Overview', Gauge],
-            ['garage', 'Vehicles', Car],
-            ['service', 'Service records', Wrench],
-            ['diagnostics', 'Diagnostics', Activity],
-            ['builds', 'Projects', Settings2],
-          ] as const
-        ).map(([id, name, Icon]) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            aria-pressed={tab === id}
-            style={{
-              ...button,
-              background: tab === id ? '#f59e0b' : 'transparent',
-              color: tab === id ? '#18130a' : semantic.textMuted,
-            }}
-          >
-            <Icon size={15} />
-            {name}
-          </button>
-        ))}
-        <details style={{ position: 'relative' }}>
-          <summary style={{ ...button, minHeight: 44, background: 'transparent', color: semantic.textMuted, listStyle: 'none' }}>
-            More tools
-          </summary>
-          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 10, minWidth: 220, display: 'grid', gap: 5, padding: 8, borderRadius: radius.md, border: `1px solid ${semantic.border}`, background: semantic.bgPanel, boxShadow: '0 16px 40px rgba(0,0,0,.35)' }}>
-            {(
-              [
-                ['templates', 'Templates and vendors', ClipboardCheck],
-                ['marketplace', 'Parts marketplace', Store],
-                ['community', 'Community', Users],
-                ['journal', 'Build journal', ClipboardCheck],
-                ['live', 'Live bay', Activity],
-                ['tools', 'Search, reports and settings', Search],
-              ] as const
-            ).map(([id, name, Icon]) => (
-              <button key={id} onClick={() => setTab(id)} aria-pressed={tab === id} style={{ ...button, width: '100%', justifyContent: 'flex-start', background: tab === id ? '#f59e0b' : 'transparent', color: tab === id ? '#18130a' : semantic.textMuted }}>
-                <Icon size={15} /> {name}
-              </button>
-            ))}
-          </div>
-        </details>
-        <button
-          onClick={() => void load()}
-          disabled={loading}
-          style={{
-            ...button,
-            marginLeft: 'auto',
-            background: 'transparent',
-            color: semantic.textMuted,
-          }}
-        >
-          <RefreshCw size={15} />
-          {loading ? 'Loading…' : 'Refresh'}
-        </button>
-      </div>
-
       {error && (
         <div
           role="alert"
@@ -560,13 +457,15 @@ export default function TorqueShedWorkspace() {
         </span>
       </div>
 
-      {tab === 'marketplace' && <TorqueShedMarketplacePanel />}
-      {tab === 'community' && <TorqueShedCommunityPanel />}
-      {tab === 'journal' && <TorqueShedJournalPanel builds={builds} />}
-      {tab === 'live' && <TorqueShedLiveBayPanel vehicles={vehicles} builds={builds} diagnostics={diagnostics} />}
-      {tab === 'tools' && <TorqueShedUtilityPanel diagnostics={diagnostics} />}
+      {route.area === 'marketplace' && <TorqueShedMarketplacePanel listingId={route.recordId} />}
+      {route.area === 'community' && <TorqueShedCommunityPanel />}
+      {route.area === 'journal' && <TorqueShedJournalPanel builds={builds} />}
+      {route.area === 'live' && <TorqueShedLiveBayPanel vehicles={vehicles} builds={builds} diagnostics={diagnostics} initialBayId={route.recordId} />}
+      {route.kind === 'profile' && <TorqueProfilePanel email={user?.email ?? 'Signed-in OperatorOS user'} organization={activeTenant?.name ?? 'Current organization'} />}
+      {route.area === 'tools' && route.kind !== 'profile' && <TorqueShedUtilityPanel diagnostics={diagnostics} routeKind={route.kind as 'activity' | 'search' | 'exports' | 'settings'} />}
+      {route.area === 'credits' && <TorqueCreditsPanel diagnostics={diagnostics} />}
 
-      {tab === 'dashboard' && (
+      {route.area === 'dashboard' && (
         <section data-testid="torqueshed-dashboard" style={{ display: 'grid', gap: space.lg }}>
           {(vehicles.length === 0 || diagnostics.length === 0) && (
             <article style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.lg, flexWrap: 'wrap', borderColor: '#f59e0b66', background: '#f59e0b0b' }}>
@@ -578,10 +477,10 @@ export default function TorqueShedWorkspace() {
                     : 'Open a diagnostic session to record the customer concern, codes, tests, evidence, and final fix.'}
                 </p>
               </div>
-              <button type="button" onClick={() => setTab(vehicles.length === 0 ? 'garage' : 'diagnostics')} style={button}>
+              <Link href={hrefFor(vehicles.length === 0 ? '/garage/vehicles/new' : '/diagnostics/new')} style={{ ...button, textDecoration: 'none' }}>
                 {vehicles.length === 0 ? <Plus size={16} /> : <Activity size={16} />}
                 {vehicles.length === 0 ? 'Add vehicle' : 'Start diagnostic'}
-              </button>
+              </Link>
             </article>
           )}
           <div
@@ -664,7 +563,7 @@ export default function TorqueShedWorkspace() {
         </section>
       )}
 
-      {tab === 'garage' && (
+      {route.area === 'garage' && (
         <section
           data-testid="torqueshed-garage"
           style={{
@@ -674,7 +573,7 @@ export default function TorqueShedWorkspace() {
             alignItems: 'start',
           }}
         >
-          <div style={{ display: 'grid', gap: space.md }}>
+          {route.kind === 'vehicle-new' && <div style={{ display: 'grid', gap: space.md }}>
             <form onSubmit={vehicleForm} style={{ ...cardStyle, display: 'grid', gap: space.sm }}>
               <h2 style={{ margin: 0, color: semantic.text }}>Add vehicle</h2>
               <div
@@ -753,8 +652,9 @@ export default function TorqueShedWorkspace() {
                 Save vehicle
               </button>
             </form>
-          </div>
-          <div style={{ display: 'grid', gap: space.md, minWidth: 0 }}>
+          </div>}
+          {route.kind !== 'vehicle-new' && <div style={{ display: 'grid', gap: space.md, minWidth: 0 }}>
+            {route.kind === 'garage' && <>
             <div style={{ display: 'flex', gap: 8 }}>
               <Search size={18} color={semantic.textMuted} />
               <input
@@ -768,7 +668,7 @@ export default function TorqueShedWorkspace() {
             {vehicles.map((row) => (
               <article key={row.id} style={{ ...cardStyle, borderLeft: '3px solid #f59e0b' }}>
                 <button
-                  onClick={() => void openVehicle(row.id)}
+                  onClick={() => router.push(hrefFor(`/garage/vehicles/${row.id}`))}
                   style={{
                     border: 0,
                     background: 'transparent',
@@ -795,6 +695,7 @@ export default function TorqueShedWorkspace() {
                 No vehicles match this garage view.
               </div>
             )}
+            </>}
             {vehicleDetail && (
               <article style={{ ...cardStyle, borderColor: '#f59e0b55' }}>
                 <h2 style={{ marginTop: 0, color: semantic.text }}>
@@ -823,11 +724,11 @@ export default function TorqueShedWorkspace() {
                 ))}
               </article>
             )}
-          </div>
+          </div>}
         </section>
       )}
 
-      {tab === 'service' && (
+      {route.area === 'service' && (
         <section
           data-testid="torqueshed-service"
           style={{
@@ -970,7 +871,7 @@ export default function TorqueShedWorkspace() {
         </section>
       )}
 
-      {tab === 'builds' && (
+      {route.area === 'builds' && (
         <section
           data-testid="torqueshed-builds"
           style={{
@@ -1038,9 +939,9 @@ export default function TorqueShedWorkspace() {
             </button>
           </form>
           <div style={{ display: 'grid', gap: space.md }}>
-            {builds.map((row) => (
+            {builds.filter((row) => route.kind !== 'build-detail' || row.id === route.recordId).map((row) => (
               <article key={row.id} style={{ ...cardStyle, borderLeft: '3px solid #f59e0b' }}>
-                <h3 style={{ margin: 0, color: semantic.text }}>{row.title}</h3>
+                <h3 style={{ margin: 0, color: semantic.text }}><Link href={hrefFor(`/builds/${row.id}`)} style={{ color: 'inherit' }}>{row.title}</Link></h3>
                 <p style={{ color: semantic.textMuted }}>
                   {row.description || 'No description'} · {row.status} · {money(row.budgetMinor)}
                 </p>
@@ -1060,7 +961,7 @@ export default function TorqueShedWorkspace() {
                   }}
                   style={{ display: 'flex', gap: 8 }}
                 >
-                  <input name="title" required placeholder="Add a build task" style={input} />
+                  <input name="title" required aria-label={`Add task to ${row.title}`} placeholder="Add a build task" style={input} />
                   <button style={button}>
                     <Plus size={15} />
                   </button>
@@ -1074,7 +975,7 @@ export default function TorqueShedWorkspace() {
         </section>
       )}
 
-      {tab === 'diagnostics' && (
+      {route.area === 'diagnostics' && (
         <section
           data-testid="torqueshed-diagnostics"
           style={{
@@ -1084,7 +985,7 @@ export default function TorqueShedWorkspace() {
             alignItems: 'start',
           }}
         >
-          <form onSubmit={diagnosticForm} style={{ ...cardStyle, display: 'grid', gap: space.sm }}>
+          {route.kind === 'diagnostic-new' && <form onSubmit={diagnosticForm} style={{ ...cardStyle, display: 'grid', gap: space.sm }}>
             <h2 style={{ margin: 0, color: semantic.text }}>Start diagnostic session</h2>
             <label style={label}>
               Vehicle
@@ -1119,13 +1020,14 @@ export default function TorqueShedWorkspace() {
               <Plus size={16} />
               Start session
             </button>
-          </form>
+          </form>}
           <div style={{ display: 'grid', gap: space.md }}>
+            {route.kind === 'diagnostics' && <>
             {diagnostics.map((row) => (
               <button
                 key={row.id}
                 data-record-id={row.id}
-                onClick={() => void openDiagnostic(row.id)}
+                onClick={() => router.push(hrefFor(`/diagnostics/${row.id}`))}
                 style={{
                   ...cardStyle,
                   textAlign: 'left',
@@ -1142,19 +1044,23 @@ export default function TorqueShedWorkspace() {
                 </div>
               </button>
             ))}
+            </>}
             {diagnosticDetail && (
               <DiagnosticDetail
                 detail={diagnosticDetail}
                 busy={busy}
                 mutate={mutate}
                 refresh={() => openDiagnostic(diagnosticDetail.diagnostic.id)}
+                showAssist={route.kind === 'diagnostic-assist'}
+                assistHref={hrefFor(`/diagnostics/${diagnosticDetail.diagnostic.id}/assist`)}
+                creditsHref={hrefFor(`/billing/credits?diagnostic=${encodeURIComponent(diagnosticDetail.diagnostic.id)}`)}
               />
             )}
           </div>
         </section>
       )}
 
-      {tab === 'templates' && (
+      {route.area === 'templates' && (
         <section
           data-testid="torqueshed-templates"
           style={{
@@ -1280,7 +1186,216 @@ export default function TorqueShedWorkspace() {
           </form>
         </section>
       )}
-    </main>
+    </ModuleApplicationShell>
+  );
+}
+
+type TorqueCreditLedger = Awaited<ReturnType<typeof moduleShellApi.torqueshed.getTokenLedger>>;
+
+function TorqueProfilePanel({ email, organization }: { email: string; organization: string }) {
+  return (
+    <section data-testid="torqueshed-profile-route" className="ts28-grid">
+      <article style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>Operator identity</h2>
+        <p style={{ color: semantic.textMuted }}>TorqueShed uses the validated OperatorOS session. It does not maintain a second login, password, or tenant authority.</p>
+        <div className="ts28-row"><div><strong>{email}</strong><small>Signed-in identity</small></div><ShieldCheck size={18} color="#f59e0b" /></div>
+        <div className="ts28-row"><div><strong>{organization}</strong><small>Active organization</small></div><Wrench size={18} color="#f59e0b" /></div>
+      </article>
+      <article style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>Account and security</h2>
+        <p style={{ color: semantic.textMuted }}>Profile, credentials, active organization, memberships, roles, billing, and entitlements remain centrally controlled by OperatorOS.</p>
+        <a href={DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl} style={{ ...button, textDecoration: 'none' }}>Open OperatorOS profile and security</a>
+      </article>
+    </section>
+  );
+}
+
+function TorqueCreditBalanceChip({ href }: { href: string }) {
+  const [ledger, setLedger] = useState<TorqueCreditLedger | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void moduleShellApi.torqueshed.getTokenLedger().then((next) => {
+      if (active) setLedger(next);
+    }).catch(() => {
+      if (active) setUnavailable(true);
+    });
+    return () => { active = false; };
+  }, []);
+  return (
+    <Link
+      href={href}
+      data-testid="torqueshed-credit-balance"
+      style={{ minHeight: 38, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, border: '1px solid #f59e0b66', color: '#fbbf24', textDecoration: 'none', fontWeight: 800 }}
+      title={unavailable ? 'Credit balance is temporarily unavailable' : 'Open credits and usage'}
+    >
+      <Coins size={16} /> {unavailable ? 'Credits unavailable' : ledger ? `${ledger.availableBalance.toLocaleString()} credits` : 'Loading credits…'}
+    </Link>
+  );
+}
+
+function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic[] }) {
+  const searchParams = useSearchParams();
+  const requestedDiagnostic = searchParams.get('diagnostic') ?? '';
+  const [selectedDiagnosticId, setSelectedDiagnosticId] = useState(requestedDiagnostic);
+  const [status, setStatus] = useState<TorqueAssistStatus | null>(null);
+  const [ledger, setLedger] = useState<TorqueCreditLedger | null>(null);
+  const [purchaseStatus, setPurchaseStatus] = useState<TorqueTokenPurchaseStatus | null>(null);
+  const [purchaseReference, setPurchaseReference] = useState(searchParams.get('purchase') ?? '');
+  const [purchaseKeys, setPurchaseKeys] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState<TorqueErrorPresentation | null>(null);
+  const [notice, setNotice] = useState('');
+
+  const load = useCallback(async () => {
+    const settled = await Promise.allSettled([
+      moduleShellApi.torqueshed.getTorqueAssistStatus(),
+      moduleShellApi.torqueshed.getTokenLedger(),
+    ] as const);
+    if (settled[0].status === 'fulfilled') setStatus(settled[0].value);
+    if (settled[1].status === 'fulfilled') setLedger(settled[1].value);
+    const failure = settled.find((entry) => entry.status === 'rejected');
+    if (failure?.status === 'rejected') setError(translateTorqueShedError(failure.reason));
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!selectedDiagnosticId && diagnostics[0]?.id) setSelectedDiagnosticId(diagnostics[0].id);
+  }, [diagnostics, selectedDiagnosticId]);
+
+  const refreshPurchaseStatus = useCallback(async (purchaseId = purchaseReference) => {
+    if (!purchaseId) return null;
+    try {
+      const next = await moduleShellApi.torqueshed.getTorqueTokenPurchaseStatus(purchaseId);
+      setPurchaseStatus(next);
+      setPurchaseReference(purchaseId);
+      if (next.state === 'credited' && next.credited) {
+        setNotice(`Credits added. The authoritative balance is ${next.balance.toLocaleString()} units.`);
+        await load();
+      }
+      return next;
+    } catch (next) {
+      setError(translateTorqueShedError(next));
+      return null;
+    }
+  }, [load, purchaseReference]);
+
+  useEffect(() => {
+    if (!/^[0-9a-f-]{36}$/iu.test(purchaseReference)) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    const delays = [1_000, 2_000, 3_000, 5_000, 8_000, 13_000];
+    setNotice('Verifying payment. The return URL cannot credit this ledger.');
+    const poll = async () => {
+      const next = await refreshPurchaseStatus(purchaseReference);
+      if (stopped || !next || next.terminal) return;
+      if (attempt < delays.length) timer = setTimeout(poll, delays[attempt++]);
+    };
+    void poll();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [purchaseReference, refreshPurchaseStatus]);
+
+  async function purchase(packageKey: string) {
+    if (!selectedDiagnosticId) return;
+    const purchaseKey = purchaseKeys[packageKey] || key(`token-purchase:${packageKey}`);
+    setPurchaseKeys((current) => ({ ...current, [packageKey]: purchaseKey }));
+    setBusy(packageKey);
+    setError(null);
+    setNotice('');
+    try {
+      const next = await moduleShellApi.torqueshed.purchaseTorqueTokens(
+        { diagnosticSessionId: selectedDiagnosticId, packageKey },
+        purchaseKey,
+      );
+      const checkoutUrl = next.purchase.providerCheckoutUrl;
+      if (typeof checkoutUrl === 'string' && checkoutUrl.startsWith('https://')) {
+        window.location.assign(checkoutUrl);
+        return;
+      }
+      const purchaseId = String(next.purchase.id ?? '');
+      if (purchaseId) {
+        setPurchaseReference(purchaseId);
+        await refreshPurchaseStatus(purchaseId);
+      }
+      setNotice('Checkout was created. Credits appear only after provider-confirmed settlement.');
+      await load();
+    } catch (next) {
+      setError(translateTorqueShedError(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  const paymentsDisabled = !status?.purchaseReadiness.ready || !selectedDiagnosticId;
+  return (
+    <section data-testid="torqueshed-credits-route" style={{ display: 'grid', gap: space.lg }}>
+      <div className="ts28-stats" aria-label="Authoritative TorqueShed credit balance">
+        <b>{(ledger?.availableBalance ?? status?.availableBalance ?? 0).toLocaleString()}<small>Available units</small></b>
+        <b>{(ledger?.reservedUnits ?? status?.reservedUnits ?? 0).toLocaleString()}<small>Reserved units</small></b>
+        <b>{(ledger?.ledgerBalance ?? status?.ledgerBalance ?? 0).toLocaleString()}<small>Ledger balance</small></b>
+      </div>
+
+      {error && (
+        <div role="alert" data-error-code={error.code} style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger }}>
+          <strong>{error.message}</strong>
+          <div style={{ color: semantic.textMuted }}>{error.administratorAction}</div>
+        </div>
+      )}
+      {notice && <div role="status" style={{ ...cardStyle, borderColor: '#16a34a77', color: semantic.accentSuccess }}>{notice}</div>}
+      {purchaseStatus && (
+        <div data-testid="torque-purchase-status" style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span><strong>{purchaseMessage(purchaseStatus)}</strong><br /><small style={{ color: semantic.textMuted }}>{purchaseStatus.packageKey} · {purchaseStatus.units.toLocaleString()} units · {money(purchaseStatus.amountMinor)}</small></span>
+          <button type="button" onClick={() => void refreshPurchaseStatus()} style={{ ...button, minHeight: 36, padding: '7px 10px' }}><RefreshCw size={14} /> Refresh status</button>
+        </div>
+      )}
+
+      <article style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>Buy diagnostic credits</h2>
+        <p style={{ color: semantic.textMuted }}>Choose the diagnostic that will receive the checkout context. Payment state is accepted only from the signed provider settlement path.</p>
+        <label style={label}>
+          Diagnostic session
+          <select aria-label="Diagnostic session for credit purchase" value={selectedDiagnosticId} onChange={(event) => setSelectedDiagnosticId(event.target.value)} style={input}>
+            <option value="">Select a diagnostic</option>
+            {diagnostics.map((diagnostic) => <option key={diagnostic.id} value={diagnostic.id}>{diagnostic.title}</option>)}
+          </select>
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 10, marginTop: space.md }}>
+          {status?.packages.map((tokenPackage) => (
+            <button type="button" key={tokenPackage.key} disabled={paymentsDisabled || busy === tokenPackage.key} onClick={() => void purchase(tokenPackage.key)} style={{ ...button, minHeight: 76, background: semantic.bgPanel, color: semantic.text, border: `1px solid ${semantic.border}`, display: 'grid' }}>
+              <span>{tokenPackage.name}</span><small>{tokenPackage.units.toLocaleString()} units · {money(tokenPackage.amountMinor)}</small>
+            </button>
+          ))}
+        </div>
+        {!diagnostics.length && <p style={{ color: semantic.accentWarning }}>Create a diagnostic session before buying credits so checkout remains bound to authorized workshop work.</p>}
+        {!status?.purchaseReadiness.ready && (
+          <div style={{ color: semantic.accentDanger, marginTop: space.md }} data-testid="torque-credit-purchase-readiness">
+            <strong>{status?.purchaseReadiness.userMessage ?? 'Credit purchase readiness is being checked. Nothing will be charged.'}</strong>
+            {status?.purchaseReadiness.code && <div style={{ color: semantic.textMuted }}>{status.purchaseReadiness.code} · {status.purchaseReadiness.administratorAction}</div>}
+          </div>
+        )}
+      </article>
+
+      <div className="ts28-grid">
+        <article style={cardStyle}>
+          <h2 style={{ marginTop: 0 }}>Recent purchases</h2>
+          {ledger?.purchases.slice(0, 10).map((item) => (
+            <div key={item.id} className="ts28-row"><div><strong>{String(item.packageKey)}</strong><small>{new Date(String(item.createdAt)).toLocaleString()}</small></div><button type="button" style={{ ...button, minHeight: 34, padding: '6px 9px' }} onClick={() => void refreshPurchaseStatus(String(item.id))}>{String(item.status).replaceAll('_', ' ')}</button></div>
+          ))}
+          {!ledger?.purchases.length && <p style={{ color: semantic.textMuted }}>No credit purchases yet.</p>}
+        </article>
+        <article style={cardStyle}>
+          <h2 style={{ marginTop: 0 }}>Ledger activity</h2>
+          {ledger?.entries.slice(0, 10).map((item) => (
+            <div key={item.id} className="ts28-row"><div><strong>{String(item.entryType ?? item.type ?? 'credit activity').replaceAll('_', ' ')}</strong><small>{new Date(String(item.createdAt)).toLocaleString()}</small></div><span>{Number(item.units ?? item.amount ?? 0).toLocaleString()} units</span></div>
+          ))}
+          {!ledger?.entries.length && <p style={{ color: semantic.textMuted }}>No usage or settlement entries yet.</p>}
+        </article>
+      </div>
+    </section>
   );
 }
 
@@ -1289,6 +1404,9 @@ function DiagnosticDetail({
   busy,
   mutate,
   refresh,
+  showAssist,
+  assistHref,
+  creditsHref,
 }: {
   detail: Record<string, any>;
   busy: string;
@@ -1299,6 +1417,9 @@ function DiagnosticDetail({
     refresh?: () => Promise<void>,
   ) => Promise<void>;
   refresh: () => Promise<void>;
+  showAssist: boolean;
+  assistHref: string;
+  creditsHref: string;
 }) {
   const diagnostic = detail.diagnostic as TorqueShedDiagnostic;
   return (
@@ -1309,7 +1430,13 @@ function DiagnosticDetail({
     >
       <h2 style={{ marginTop: 0, color: semantic.text }}>{diagnostic.title}</h2>
       <p style={{ color: semantic.textMuted }}>{diagnostic.customerConcern}</p>
-      <TorqueAssistPanel diagnostic={diagnostic} />
+      {showAssist ? (
+        <TorqueAssistPanel diagnostic={diagnostic} creditsHref={creditsHref} />
+      ) : (
+        <Link href={assistHref} style={{ ...button, textDecoration: 'none', marginBottom: space.md }}>
+          <Bot size={16} /> Open Torque Assist for this diagnostic
+        </Link>
+      )}
       <label style={label}>
         Workflow status
         <select
@@ -1362,9 +1489,9 @@ function DiagnosticDetail({
           style={{ display: 'grid', gap: 7 }}
         >
           <strong style={{ color: semantic.text }}>Trouble code</strong>
-          <input name="code" required placeholder="P0171" style={input} />
-          <input name="description" placeholder="Description" style={input} />
-          <input name="freezeFrame" placeholder="Freeze-frame note" style={input} />
+          <input name="code" required aria-label="Diagnostic trouble code" placeholder="P0171" style={input} />
+          <input name="description" aria-label="Trouble code description" placeholder="Description" style={input} />
+          <input name="freezeFrame" aria-label="Freeze-frame note" placeholder="Freeze-frame note" style={input} />
           <button style={button}>
             <Plus size={15} />
             Add code
@@ -1399,7 +1526,7 @@ function DiagnosticDetail({
           style={{ display: 'grid', gap: 7 }}
         >
           <strong style={{ color: semantic.text }}>Timeline evidence</strong>
-          <select name="kind" style={input}>
+          <select name="kind" aria-label="Evidence kind" style={input}>
             {[
               'symptom',
               'condition',
@@ -1417,17 +1544,17 @@ function DiagnosticDetail({
               </option>
             ))}
           </select>
-          <input name="title" required placeholder="Fuel pressure under load" style={input} />
-          <input name="valueText" placeholder="Observation or result" style={input} />
+          <input name="title" required aria-label="Evidence title" placeholder="Fuel pressure under load" style={input} />
+          <input name="valueText" aria-label="Evidence observation or result" placeholder="Observation or result" style={input} />
           <div style={{ display: 'flex', gap: 6 }}>
-            <input name="valueNumeric" type="number" step="any" placeholder="Value" style={input} />
-            <input name="unit" placeholder="Unit" style={input} />
+            <input name="valueNumeric" type="number" step="any" aria-label="Evidence numeric value" placeholder="Value" style={input} />
+            <input name="unit" aria-label="Evidence unit" placeholder="Unit" style={input} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <input name="referenceMin" type="number" step="any" placeholder="Min" style={input} />
-            <input name="referenceMax" type="number" step="any" placeholder="Max" style={input} />
+            <input name="referenceMin" type="number" step="any" aria-label="Reference minimum" placeholder="Min" style={input} />
+            <input name="referenceMax" type="number" step="any" aria-label="Reference maximum" placeholder="Max" style={input} />
           </div>
-          <input name="outcome" placeholder="Outcome" style={input} />
+          <input name="outcome" aria-label="Evidence outcome" placeholder="Outcome" style={input} />
           <button style={button}>
             <Plus size={15} />
             Add evidence
@@ -1489,6 +1616,7 @@ function DiagnosticDetail({
         <input
           name="file"
           type="file"
+          aria-label="Attach diagnostic evidence"
           accept="image/png,image/jpeg,application/pdf,text/plain,text/csv,application/json"
           required
           style={{ color: semantic.textMuted }}
@@ -1502,103 +1630,81 @@ function DiagnosticDetail({
   );
 }
 
-function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic }) {
+function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShedDiagnostic; creditsHref: string }) {
   const [status, setStatus] = useState<TorqueAssistStatus | null>(null);
   const [context, setContext] = useState<Record<string, any> | null>(null);
   const [history, setHistory] = useState<Array<Record<string, any>>>([]);
   const [ledger, setLedger] = useState<{
     balance: number;
+    ledgerBalance: number;
+    reservedUnits: number;
+    availableBalance: number;
     entries: Array<Record<string, any>>;
+    purchases: Array<Record<string, any>>;
   } | null>(null);
   const [response, setResponse] = useState<TorqueAssistResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [activeRequestKey, setActiveRequestKey] = useState('');
-  const [purchaseKeys, setPurchaseKeys] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState('');
-  const [error, setError] = useState('');
+  const [assistError, setAssistError] = useState<TorqueErrorPresentation | null>(null);
   const [notice, setNotice] = useState('');
-  const [purchaseStatus, setPurchaseStatus] = useState<TorqueTokenPurchaseStatus | null>(null);
-  const [purchaseReference, setPurchaseReference] = useState('');
 
   const load = useCallback(async () => {
-    try {
-      const [nextStatus, nextContext, nextHistory, nextLedger] = await Promise.all([
-        moduleShellApi.torqueshed.getTorqueAssistStatus(),
-        moduleShellApi.torqueshed.getTorqueAssistContext(diagnostic.id),
-        moduleShellApi.torqueshed.getTorqueAssistHistory(diagnostic.id),
-        moduleShellApi.torqueshed.getTokenLedger(),
-      ]);
-      setStatus(nextStatus);
-      setContext(nextContext);
-      setHistory(nextHistory.requests);
-      setLedger(nextLedger);
-    } catch (next) {
-      setError(errorText(next));
-    }
+    const settled = await Promise.allSettled([
+      moduleShellApi.torqueshed.getTorqueAssistStatus(),
+      moduleShellApi.torqueshed.getTorqueAssistContext(diagnostic.id),
+      moduleShellApi.torqueshed.getTorqueAssistHistory(diagnostic.id),
+      moduleShellApi.torqueshed.getTokenLedger(),
+    ] as const);
+    if (settled[0].status === 'fulfilled') setStatus(settled[0].value);
+    if (settled[1].status === 'fulfilled') setContext(settled[1].value);
+    if (settled[2].status === 'fulfilled') setHistory(settled[2].value.requests);
+    if (settled[3].status === 'fulfilled') setLedger(settled[3].value);
+    const failure = settled.find((entry) => entry.status === 'rejected');
+    if (failure?.status === 'rejected') setAssistError(translateTorqueShedError(failure.reason));
   }, [diagnostic.id]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const refreshPurchaseStatus = useCallback(async (purchaseId = purchaseReference) => {
-    if (!purchaseId) return null;
-    const next = await moduleShellApi.torqueshed.getTorqueTokenPurchaseStatus(purchaseId);
-    setPurchaseStatus(next);
-    if (next.state === 'credited' && next.credited) {
-      setNotice(`Credits added. Your authoritative balance is ${next.balance.toLocaleString()} units.`);
-      await load();
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(`torqueshed:checkout-form:${diagnostic.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, unknown>;
+        setAnswers(Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === 'string')));
+      }
+    } catch {
+      // Session-scoped form recovery is optional; persistent diagnostic data
+      // remains authoritative when storage is unavailable.
     }
-    return next;
-  }, [load, purchaseReference]);
+  }, [diagnostic.id]);
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const purchaseId = url.searchParams.get('purchase') ?? '';
-    const returned = url.searchParams.get('tokenPurchase');
-    if (!/^[0-9a-f-]{36}$/i.test(purchaseId) || !returned) return;
-    setPurchaseReference(purchaseId);
-    setNotice(returned === 'cancelled'
-      ? 'Checkout was closed. This return link grants no credits; checking the authoritative payment status now.'
-      : 'Verifying payment. Credits appear only after OperatorOS records the signed settlement.');
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let attempt = 0;
-    const delays = [1_000, 2_000, 3_000, 5_000, 8_000, 13_000];
-    const poll = async () => {
-      try {
-        const next = await moduleShellApi.torqueshed.getTorqueTokenPurchaseStatus(purchaseId);
-        if (stopped) return;
-        setPurchaseStatus(next);
-        if (next.state === 'credited' && next.credited) {
-          setNotice(`Credits added. Your authoritative balance is ${next.balance.toLocaleString()} units.`);
-          await load();
-          return;
-        }
-        if (['failed', 'expired', 'refunded', 'disputed'].includes(next.state)) return;
-        if (attempt < delays.length) timer = setTimeout(poll, delays[attempt++]);
-      } catch (next) {
-        if (!stopped) setError(errorText(next));
+    try {
+      if (Object.keys(answers).length > 0) {
+        window.sessionStorage.setItem(`torqueshed:checkout-form:${diagnostic.id}`, JSON.stringify(answers));
       }
-    };
-    void poll();
-    return () => {
-      stopped = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [load]);
+    } catch {
+      // Form recovery is best effort and never carries authority.
+    }
+  }, [answers, diagnostic.id]);
 
   const result = (response?.result ??
     history[0]?.responseJson ??
     null) as TorqueAssistResult | null;
-  const providerDisabled = status?.provider.state === 'disabled';
-  const paymentsDisabled = status?.payments.state === 'disabled';
+  const providerDisabled = !status || status.provider.state === 'disabled';
+  const availableUnits = ledger?.availableBalance ?? status?.availableBalance ?? 0;
+  const estimatedUnits = Number(context?.estimatedUnits ?? 0);
+  const clearlyInsufficient = estimatedUnits > 0 && availableUnits < estimatedUnits;
+  const assistUnavailable = providerDisabled || !context || clearlyInsufficient;
 
   async function runAssist() {
     const requestKey = activeRequestKey || key('torque-assist');
     if (!activeRequestKey) setActiveRequestKey(requestKey);
     setBusy('assist');
-    setError('');
+    setAssistError(null);
     setNotice('');
     try {
       const followUpAnswers = (result?.followUpQuestions ?? [])
@@ -1611,41 +1717,15 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       setResponse(next);
       setActiveRequestKey('');
       setAnswers({});
+      try { window.sessionStorage.removeItem(`torqueshed:checkout-form:${diagnostic.id}`); } catch {}
       setNotice(
         next.replayed
           ? 'The prior accepted result was replayed without another charge.'
-          : `Accepted result recorded. ${next.actualUnits.toLocaleString()} units charged once.`,
+          : `Accepted result recorded. ${next.actualUnits.toLocaleString()} units consumed once; ${next.releasedUnits.toLocaleString()} reserved units released. ${next.remainingBalance.toLocaleString()} units remain.`,
       );
       await load();
     } catch (next) {
-      setError(errorText(next));
-    } finally {
-      setBusy('');
-    }
-  }
-
-  async function purchase(packageKey: string) {
-    const purchaseKey = purchaseKeys[packageKey] || key(`token-purchase:${packageKey}`);
-    setPurchaseKeys((current) => ({ ...current, [packageKey]: purchaseKey }));
-    setBusy(`purchase:${packageKey}`);
-    setError('');
-    setNotice('');
-    try {
-      const next = await moduleShellApi.torqueshed.purchaseTorqueTokens(
-        { diagnosticSessionId: diagnostic.id, packageKey },
-        purchaseKey,
-      );
-      const checkoutUrl = next.purchase.providerCheckoutUrl;
-      if (typeof checkoutUrl === 'string' && checkoutUrl.startsWith('https://')) {
-        window.location.assign(checkoutUrl);
-        return;
-      }
-      setNotice(
-        'Checkout started. Credits appear after payment is confirmed. If you return here before they appear, refresh once before trying again.',
-      );
-      await load();
-    } catch (next) {
-      setError(errorText(next));
+      setAssistError(translateTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -1683,10 +1763,11 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
         </div>
         <div style={{ color: semantic.text, textAlign: 'right' }}>
           <strong style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <Coins size={17} /> {(ledger?.balance ?? status?.balance ?? 0).toLocaleString()} units
+            <Coins size={17} /> {availableUnits.toLocaleString()} units available
           </strong>
           <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-            Ledger-computed balance · Credits available
+            {(ledger?.ledgerBalance ?? status?.ledgerBalance ?? status?.balance ?? 0).toLocaleString()} ledger units
+            {' · '}{(ledger?.reservedUnits ?? status?.reservedUnits ?? 0).toLocaleString()} reserved
           </span>
         </div>
       </div>
@@ -1701,28 +1782,19 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           Preview analysis mode is active. Verify every diagnostic recommendation before starting a repair.
         </div>
       )}
-      {error && <div style={{ color: semantic.accentDanger }}>{error}</div>}
-      {notice && <div style={{ color: semantic.accentSuccess }}>{notice}</div>}
-      {purchaseStatus && (
-        <div data-testid="torque-purchase-status" style={{ ...cardStyle, padding: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-          <span style={{ color: semantic.text }}>
-            {purchaseStatus.state === 'credited' && purchaseStatus.credited
-              ? 'Credits added'
-              : purchaseStatus.state === 'paid_pending_credit'
-                ? 'Payment received · adding credits'
-                : purchaseStatus.state === 'checkout_created' || purchaseStatus.state === 'payment_pending'
-                  ? 'Verifying payment'
-                  : purchaseStatus.state === 'refunded'
-                    ? 'Payment refunded · credits reversed under policy'
-                    : purchaseStatus.state === 'disputed'
-                      ? 'Payment disputed · purchased credits are frozen'
-                      : `Payment ${purchaseStatus.state.replaceAll('_', ' ')}`}
-          </span>
-          <button type="button" onClick={() => void refreshPurchaseStatus()} style={{ ...button, minHeight: 36, padding: '7px 10px' }}>
-            <RefreshCw size={14} /> Refresh status
-          </button>
+      {assistError && (
+        <div data-testid="torque-assist-error" data-error-code={assistError.code} style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, padding: 10 }}>
+          <strong>{assistError.message}</strong>
+          {assistError.noCreditsConsumed && <div>No credits were consumed for this failed request.</div>}
+          <div style={{ color: semantic.textMuted }}>{assistError.administratorAction}</div>
+          {(assistError.correlationId || assistError.requestId) && (
+            <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+              Support reference: {assistError.correlationId ?? assistError.requestId}
+            </div>
+          )}
         </div>
       )}
+      {notice && <div style={{ color: semantic.accentSuccess }}>{notice}</div>}
 
       <div
         style={{
@@ -1747,7 +1819,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           </div>
         </div>
         <div style={{ ...cardStyle, padding: 10 }}>
-          <strong>Estimated total</strong>
+          <strong>Maximum reservation</strong>
           <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
             {(context?.estimatedUnits ?? 0).toLocaleString()} units ·{' '}
             {(context?.contextCharacters ?? 0).toLocaleString()} context characters
@@ -1777,8 +1849,8 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       <button
         type="button"
         onClick={() => void runAssist()}
-        disabled={providerDisabled || busy === 'assist'}
-        style={{ ...button, opacity: providerDisabled || busy === 'assist' ? 0.55 : 1 }}
+        disabled={assistUnavailable || busy === 'assist'}
+        style={{ ...button, opacity: assistUnavailable || busy === 'assist' ? 0.55 : 1 }}
       >
         <Activity size={16} />
         {busy === 'assist'
@@ -1787,7 +1859,9 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
             ? 'Retry same request without duplicate charge'
             : result?.status === 'follow_up_required'
               ? 'Submit follow-up evidence'
-              : 'Generate diagnostic plan'}
+              : clearlyInsufficient
+                ? 'More credits required'
+                : 'Generate diagnostic plan'}
       </button>
 
       {result && (
@@ -1867,51 +1941,9 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
         </div>
       )}
 
-      <details>
-        <summary style={{ cursor: 'pointer', color: semantic.text }}>
-          Buy credits and review usage
-        </summary>
-        <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-          {status?.packages.map((tokenPackage) => (
-            <button
-              type="button"
-              key={tokenPackage.key}
-              disabled={paymentsDisabled || busy === `purchase:${tokenPackage.key}`}
-              onClick={() => void purchase(tokenPackage.key)}
-              style={{
-                ...button,
-                background: semantic.bgPanel,
-                color: semantic.text,
-                border: `1px solid ${semantic.border}`,
-              }}
-            >
-              {tokenPackage.name}: {tokenPackage.units.toLocaleString()} units ·{' '}
-              {money(tokenPackage.amountMinor)}
-            </button>
-          ))}
-          {paymentsDisabled && (
-            <span style={{ color: semantic.accentDanger }}>
-              Credit purchases are temporarily unavailable. Nothing will be charged. Contact your organization administrator for help.
-            </span>
-          )}
-          {history.slice(0, 5).map((item) => (
-            <div
-              key={item.id}
-              style={{
-                borderTop: `1px solid ${semantic.border}`,
-                paddingTop: 6,
-                color: semantic.textMuted,
-              }}
-            >
-              {String(item.status).replace(/_/g, ' ')} · {Number(item.actualUnits ?? 0).toLocaleString()} credits ·{' '}
-              {new Date(item.createdAt).toLocaleString()}
-            </div>
-          ))}
-          {!history.length && (
-            <span style={{ color: semantic.textMuted }}>No Torque Assist usage yet.</span>
-          )}
-        </div>
-      </details>
+      <Link href={creditsHref} style={{ color: '#fbbf24', fontWeight: 800 }}>
+        Buy credits and review authoritative usage
+      </Link>
     </section>
   );
 }

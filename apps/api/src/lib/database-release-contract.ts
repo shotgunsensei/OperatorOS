@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 48,
+  releaseVersion: 52,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -55,4 +55,8 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'callcommand_msp_automation_fabric_tables', kind: 'ddl' },
   { id: 'torqueshed_native_tables', kind: 'ddl' },
   { id: 'cross_module_data_fabric_tables', kind: 'ddl' },
+  { id: 'torqueshed_stripe_credit_catalog', kind: 'ddl' },
+  { id: 'torqueshed_checkout_contract', kind: 'ddl' },
+  { id: 'torqueshed_settlement_contract', kind: 'ddl' },
+  { id: 'torqueshed_reservation_contract', kind: 'ddl' },
 ] as const);

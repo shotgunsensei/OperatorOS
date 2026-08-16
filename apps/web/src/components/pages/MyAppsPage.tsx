@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  ExternalLink,
   Loader2,
   Lock,
   Rocket,
@@ -17,6 +18,7 @@ import {
   Store,
 } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
+import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { useAuth } from '@/components/AuthProvider';
 import { useTenant } from '@/components/TenantProvider';
 import { useToast } from '@/components/Toast';
@@ -35,10 +37,6 @@ import {
   COMMAND_CENTER_MODULES,
   type OperatorOSModuleRegistryEntry,
 } from '@/lib/operatoros-registry';
-import {
-  friendlyModuleLaunchError,
-  launchModuleViaSso,
-} from '@/lib/module-launch';
 import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 
 interface MyAppsPageProps {
@@ -322,8 +320,6 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   const [summaries, setSummaries] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [launching, setLaunching] = useState<string | null>(null);
-  const [launchErrors, setLaunchErrors] = useState<Record<string, string>>({});
   const [recentSlugs, setRecentSlugs] = useState<string[]>([]);
   const [switchingTenant, setSwitchingTenant] = useState(false);
   const [repairingTenant, setRepairingTenant] = useState(false);
@@ -415,29 +411,9 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
     }
   };
 
-  const launch = async (card: LaunchpadModule) => {
-    if (!activeTenant?.id && card.registry.requiresTenant) {
-      setLaunchErrors((cur) => ({ ...cur, [card.registry.slug]: 'Choose an organization before opening this module.' }));
-      return;
-    }
-    setLaunching(card.registry.slug);
-    setLaunchErrors((cur) => {
-      const next = { ...cur };
-      delete next[card.registry.slug];
-      return next;
-    });
-    try {
-      await launchModuleViaSso(card.registry.id, activeTenant?.id ?? null);
-      pushRecent(card.registry.slug);
-      setRecentSlugs(readRecent());
-      toast(`Launching ${card.name}`, 'success');
-    } catch (err) {
-      const message = friendlyModuleLaunchError(err);
-      setLaunchErrors((cur) => ({ ...cur, [card.registry.slug]: message }));
-      toast(message, 'error');
-    } finally {
-      setLaunching(null);
-    }
+  const recordLaunch = (card: LaunchpadModule) => {
+    pushRecent(card.registry.slug);
+    setRecentSlugs(readRecent());
   };
 
   const handleTenantChange = async (tenantId: string) => {
@@ -636,16 +612,16 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
           <SectionTitle icon={<Clock size={13} />} title="Recently used" />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.sm }}>
             {recentCards.map((card) => (
-              <button
+              <ModuleLaunchLink
                 key={card.registry.slug}
+                moduleId={card.registry.id}
                 data-testid={`recent-app-${card.registry.slug}`}
-                onClick={() => launch(card)}
-                disabled={launching === card.registry.slug}
-                style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 12px' }}
+                onLaunch={() => recordLaunch(card)}
+                style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 12px', textDecoration: 'none' }}
               >
-                {launching === card.registry.slug ? <Loader2 size={13} /> : <Rocket size={13} />}
+                <Rocket size={13} />
                 {card.name}
-              </button>
+              </ModuleLaunchLink>
             ))}
           </div>
         </section>
@@ -684,9 +660,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             icon={<Rocket size={13} />}
             empty="No tools are ready for this organization yet. An organization administrator can add tool access, or you can review available tools."
             cards={activeCards}
-            launching={launching}
-            launchErrors={launchErrors}
-            onLaunch={launch}
+            onLaunch={recordLaunch}
             onNavigate={onNavigate}
             canManage={userIsTenantAdmin}
           />
@@ -696,9 +670,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             icon={<Lock size={13} />}
             empty="Every active tool is already available to this organization."
             cards={addableCards}
-            launching={launching}
-            launchErrors={launchErrors}
-            onLaunch={launch}
+            onLaunch={recordLaunch}
             onNavigate={onNavigate}
             canManage={userIsTenantAdmin}
           />
@@ -783,8 +755,6 @@ function ModuleSection({
   icon,
   empty,
   cards,
-  launching,
-  launchErrors,
   onLaunch,
   onNavigate,
   canManage,
@@ -793,8 +763,6 @@ function ModuleSection({
   icon: React.ReactNode;
   empty: string;
   cards: LaunchpadModule[];
-  launching: string | null;
-  launchErrors: Record<string, string>;
   onLaunch: (card: LaunchpadModule) => void;
   onNavigate: (page: string) => void;
   canManage: boolean;
@@ -822,8 +790,6 @@ function ModuleSection({
             <ModuleCard
               key={card.registry.slug}
               card={card}
-              launching={launching === card.registry.slug}
-              error={launchErrors[card.registry.slug]}
               onLaunch={() => onLaunch(card)}
               onNavigate={onNavigate}
               canManage={canManage}
@@ -837,21 +803,17 @@ function ModuleSection({
 
 function ModuleCard({
   card,
-  launching,
-  error,
   onLaunch,
   onNavigate,
   canManage,
 }: {
   card: LaunchpadModule;
-  launching: boolean;
-  error?: string;
   onLaunch: () => void;
   onNavigate: (page: string) => void;
   canManage: boolean;
 }) {
   const image = marketingBySlug.get(card.registry.slug)?.imageSrc;
-  const actionButton = renderActionButton({ card, launching, onLaunch, onNavigate });
+  const actionButton = renderActionButton({ card, onLaunch, onNavigate });
 
   return (
     <article
@@ -897,26 +859,6 @@ function ModuleCard({
           {card.description}
         </p>
 
-        {error && (
-          <div
-            data-testid={`module-launch-error-${card.registry.slug}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 7,
-              color: semantic.accentDanger,
-              fontSize: fontSize.sm,
-              border: `1px solid ${semantic.accentDanger}44`,
-              borderRadius: radius.sm,
-              padding: '7px 8px',
-              background: 'rgba(248,81,73,0.07)',
-            }}
-          >
-            <AlertTriangle size={13} />
-            <span>{error}</span>
-          </div>
-        )}
-
         <div style={{ marginTop: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {actionButton}
           {canManage && (
@@ -937,26 +879,36 @@ function ModuleCard({
 
 function renderActionButton({
   card,
-  launching,
   onLaunch,
   onNavigate,
 }: {
   card: LaunchpadModule;
-  launching: boolean;
   onLaunch: () => void;
   onNavigate: (page: string) => void;
 }) {
   if (card.action === 'launch') {
     return (
-      <button
-        data-testid={`button-launch-${card.registry.slug}`}
-        onClick={onLaunch}
-        disabled={launching}
-        style={{ ...buttonStyles.primary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
-      >
-        {launching ? <Loader2 size={14} /> : <Rocket size={14} />}
-        {launching ? `Opening ${card.name}` : `Open ${card.name}`}
-      </button>
+      <>
+        <ModuleLaunchLink
+          moduleId={card.registry.id}
+          data-testid={`button-launch-${card.registry.slug}`}
+          onLaunch={onLaunch}
+          style={{ ...buttonStyles.primary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1, textDecoration: 'none' }}
+        >
+          <Rocket size={14} /> Open {card.name}
+        </ModuleLaunchLink>
+        <ModuleLaunchLink
+          moduleId={card.registry.id}
+          openInNewTab
+          data-testid={`button-launch-new-tab-${card.registry.slug}`}
+          aria-label={`Open ${card.name} in new tab`}
+          title={`Open ${card.name} in new tab`}
+          onLaunch={onLaunch}
+          style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textDecoration: 'none' }}
+        >
+          <ExternalLink size={14} />
+        </ModuleLaunchLink>
+      </>
     );
   }
 

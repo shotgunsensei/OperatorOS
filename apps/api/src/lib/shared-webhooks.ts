@@ -157,7 +157,22 @@ export async function processWebhookReceipt(row: Record<string, unknown>, execut
         AND status = 'processing' AND lease_owner = ${String(row.lease_owner)}
       RETURNING *
     `);
-    return completed.rows[0] as Record<string, unknown>;
+    const completedRow = completed.rows[0] as Record<string, unknown> | undefined;
+    if (completedRow) return completedRow;
+    // A revenue handler may atomically complete its receipt in the same
+    // transaction as the protected business mutation. Read that committed row
+    // instead of treating the intentional second update as a processing loss.
+    const atomicallyCompleted = await executor.execute(sql`
+      SELECT * FROM shared_webhook_receipts
+      WHERE id=${String(row.id)} AND tenant_id=${String(row.tenant_id)}
+        AND status='processed'
+      LIMIT 1
+    `);
+    const atomicRow = atomicallyCompleted.rows[0] as Record<string, unknown> | undefined;
+    if (!atomicRow) throw Object.assign(new Error('Webhook receipt completion was lost'), {
+      code: 'WEBHOOK_RECEIPT_COMPLETION_CONFLICT',
+    });
+    return atomicRow;
   } catch (error) {
     await markWebhookFailure(row, error, executor);
     const failed = await executor.execute(sql`

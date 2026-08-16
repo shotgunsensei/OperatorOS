@@ -6,7 +6,7 @@ const route = readFileSync(new URL('../src/routes/callcommand-phase35-routes.ts'
 const schema = readFileSync(new URL('../src/lib/callcommand-phase35-db-init.ts', import.meta.url), 'utf8');
 const domain = readFileSync(new URL('../src/lib/callcommand-phase35.ts', import.meta.url), 'utf8');
 const telephony = readFileSync(new URL('../src/lib/telephony.ts', import.meta.url), 'utf8');
-const shell = readFileSync(new URL('../../web/src/components/module-shells/CallCommandShell.tsx', import.meta.url), 'utf8');
+const shell = readFileSync(new URL('../../web/src/components/module-shells/CallCommandWorkspace.tsx', import.meta.url), 'utf8');
 const routeMap = readFileSync(new URL('../../web/src/app/modules/[slug]/[...path]/route-map.ts', import.meta.url), 'utf8');
 const release = readFileSync(new URL('../src/lib/database-release-contract.ts', import.meta.url), 'utf8');
 

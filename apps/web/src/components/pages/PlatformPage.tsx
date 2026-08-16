@@ -43,7 +43,7 @@ type View = PlatformView;
 // Top-level
 // -------------------------------------------------------------------------
 
-export default function PlatformPage(props: { view?: View; onNavigate?: (v: View) => void } = {}) {
+export default function PlatformPage(props: { view?: View; onNavigate?: (v: View) => void; showNavigation?: boolean } = {}) {
   const { user } = useAuth();
   // Controlled mode: parent owns view (used by /platform/[[...slug]] route
   // for path-addressable URLs). Uncontrolled mode: internal state (used
@@ -70,40 +70,47 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
     { key: 'modules',   label: 'Modules' },
     { key: 'billing',   label: 'Billing Events' },
     { key: 'pricing',   label: 'Pricing' },
+    { key: 'credit-catalog', label: 'Credit Catalog' },
     { key: 'health',    label: 'Health' },
     { key: 'audit',     label: 'Audit' },
     { key: 'sso',       label: 'SSO' },
   ];
 
+  const showNavigation = props.showNavigation !== false;
+
   return (
     <div style={{ padding: 24, color: colors.text, background: colors.bg, minHeight: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 16 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Platform Command</h1>
-        <div style={{ color: colors.textMuted, fontSize: 13 }}>Super admin control surface</div>
-      </div>
-      <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${colors.border}`, marginBottom: 16, flexWrap: 'wrap' }}>
-        {tabs.map(t => {
-          const active = view.kind === t.key
-            || (t.key === 'tenants' && view.kind === 'tenant')
-            || (t.key === 'modules' && view.kind === 'module')
-            || (t.key === 'users'   && view.kind === 'user');
-          return (
-            <button
-              key={t.key}
-              onClick={() => setView({ kind: t.key } as View)}
-              data-testid={`tab-platform-${t.key}`}
-              style={{
-                background: 'transparent',
-                color: active ? colors.accent : colors.textMuted,
-                border: 'none',
-                borderBottom: `2px solid ${active ? colors.accent : 'transparent'}`,
-                padding: '8px 14px', fontSize: 13, cursor: 'pointer',
-              }}>
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+      {showNavigation && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 16 }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Platform Command</h1>
+            <div style={{ color: colors.textMuted, fontSize: 13 }}>Super admin control surface</div>
+          </div>
+          <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${colors.border}`, marginBottom: 16, flexWrap: 'wrap' }}>
+            {tabs.map(t => {
+              const active = view.kind === t.key
+                || (t.key === 'tenants' && view.kind === 'tenant')
+                || (t.key === 'modules' && view.kind === 'module')
+                || (t.key === 'users'   && view.kind === 'user');
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setView({ kind: t.key } as View)}
+                  data-testid={`tab-platform-${t.key}`}
+                  style={{
+                    background: 'transparent',
+                    color: active ? colors.accent : colors.textMuted,
+                    border: 'none',
+                    borderBottom: `2px solid ${active ? colors.accent : 'transparent'}`,
+                    padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                  }}>
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
       {view.kind === 'dashboard' && <Dashboard onNavigate={setView} />}
       {view.kind === 'tenants'   && <TenantList onOpen={(id) => setView({ kind: 'tenant', id })} />}
       {view.kind === 'tenant'    && <TenantDetail id={view.id} onBack={() => setView({ kind: 'tenants' })} />}
@@ -113,6 +120,7 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
       {view.kind === 'user'      && <UserDetail id={view.id} onBack={() => setView({ kind: 'users' })} />}
       {view.kind === 'billing'   && <BillingEvents />}
       {view.kind === 'pricing'   && <Pricing />}
+      {view.kind === 'credit-catalog' && <TorqueShedCreditCatalog />}
       {view.kind === 'health'    && <Health />}
       {view.kind === 'audit'     && <AuditLog />}
       {view.kind === 'sso'       && <SsoSettings />}
@@ -1691,21 +1699,21 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
           {data.subscription?.currentPeriodEnd && <> · ends: {new Date(data.subscription.currentPeriodEnd).toLocaleString()}</>}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select data-testid="select-change-plan" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; changePlan(v); }} style={inp}>
+          <select aria-label="Change subscription plan" data-testid="select-change-plan" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; changePlan(v); }} style={inp}>
             <option value="">Change plan…</option>
             {planOptions.map((p: any) => (
               <option key={p.slug} value={p.slug}>{p.slug}</option>
             ))}
           </select>
-          <select data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
+          <select aria-label="Change tenant role" data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
             <option value="user">user</option>
             <option value="admin">admin</option>
           </select>
-          <select data-testid="select-change-platform-role" value={u.platformRole ?? 'user'} disabled={busy} onChange={e => changePlatformRole(e.target.value)} style={inp}>
+          <select aria-label="Change platform role" data-testid="select-change-platform-role" value={u.platformRole ?? 'user'} disabled={busy} onChange={e => changePlatformRole(e.target.value)} style={inp}>
             <option value="user">platform user</option>
             <option value="super_admin">super_admin</option>
           </select>
-          <select data-testid="select-sub-status" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; if (v) setSubStatus(v); }} style={inp}>
+          <select aria-label="Change subscription status" data-testid="select-sub-status" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; if (v) setSubStatus(v); }} style={inp}>
             <option value="">Force sub status…</option>
             <option value="active">active</option>
             <option value="trialing">trialing</option>
@@ -2363,6 +2371,52 @@ function Pricing() {
               );
             })}
           </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
+function TorqueShedCreditCatalog() {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<any>(null);
+  const load = () => {
+    setErr(null);
+    return apiCall('/platform/torqueshed/credit-catalog').then(setData).catch(setErr);
+  };
+  useEffect(() => { load(); }, []);
+  if (err && !data) return <ErrorBlock err={err} onRetry={load} />;
+  if (!data) return <div style={{ color: colors.textMuted }}>Loading TorqueShed catalog…</div>;
+  return (
+    <div data-testid="torqueshed-credit-catalog">
+      <ErrorBlock err={err} />
+      <div style={{ marginBottom: 12, padding: 12, background: colors.bgSecondary, border: `1px solid ${data.ready ? colors.accentGreen : colors.accentYellow}`, borderRadius: 6 }}>
+        <strong>TorqueShed durable credit catalog</strong>{' '}
+        <Pill tone={data.ready ? 'green' : 'yellow'}>{data.ready ? 'validated' : 'purchases disabled'}</Pill>{' '}
+        <Pill tone={data.stripeMode === 'live' ? 'green' : 'yellow'}>{data.stripeMode}</Pill>
+        <div style={{ marginTop: 6, color: colors.textMuted, fontSize: 12 }}>
+          {data.catalogVersion}. Object IDs are safe operational identifiers; no Stripe secrets are exposed here.
+        </div>
+      </div>
+      <Card style={{ padding: 0, overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 980 }}>
+          <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
+            <Th>Package</Th><Th>Amount</Th><Th>Units</Th><Th>Lookup key</Th><Th>Product</Th><Th>Price</Th><Th>State</Th><Th>Last validation</Th>
+          </tr></thead>
+          <tbody>{data.packages.map((item: any) => (
+            <tr key={item.packageKey} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-credit-catalog-${item.packageKey}`}>
+              <Td><strong>{item.name}</strong><div style={{ color: colors.textMuted }}>{item.packageKey}</div></Td>
+              <Td>{new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currency }).format(item.amountMinor / 100)}</Td>
+              <Td>{Number(item.units).toLocaleString()}</Td>
+              <Td><code>{item.lookupKey}</code></Td>
+              <Td><code>{item.productId ?? '—'}</code></Td>
+              <Td><code>{item.priceId ?? '—'}</code></Td>
+              <Td>{item.active && item.validationStatus === 'validated'
+                ? <Pill tone="green">validated</Pill>
+                : <Pill tone="red">{item.driftCode ?? item.validationStatus}</Pill>}</Td>
+              <Td>{item.validatedAt ? new Date(item.validatedAt).toLocaleString() : 'Never'}</Td>
+            </tr>
+          ))}</tbody>
         </table>
       </Card>
     </div>

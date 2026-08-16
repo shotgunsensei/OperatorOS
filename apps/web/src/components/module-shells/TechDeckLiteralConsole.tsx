@@ -4,7 +4,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, FileArchive, KeyRound, RadioTower, RefreshCw, ShieldCheck, Webhook } from 'lucide-react';
 import { moduleShellApi, type TechDeckLiteralWorkspaceResponse } from '@/lib/auth';
 
-interface Props { tenantKey: string; canWrite: boolean; canManage: boolean }
+export type TechDeckLiteralArea = 'calendar' | 'portal' | 'licenses' | 'status' | 'webhooks' | 'api-tokens' | 'compliance';
+interface Props { tenantKey: string; canWrite: boolean; canManage: boolean; area: TechDeckLiteralArea }
 type ActionOptions = { method?: 'POST' | 'PUT' | 'PATCH'; idempotencyKey?: string };
 
 function errorMessage(error: unknown): string {
@@ -24,7 +25,7 @@ function RowList({ rows, empty, label }: { rows: Array<Record<string, any>>; emp
   return <ul className="tdl-list">{rows.slice(0, 6).map((row, index) => <li key={String(row.id ?? index)}>{label(row)}</li>)}</ul>;
 }
 
-export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage }: Props) {
+export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage, area }: Props) {
   const [workspace, setWorkspace] = useState<TechDeckLiteralWorkspaceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -72,68 +73,68 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage 
       {notice && <div className="tdl-notice" role="status">{notice}</div>}
       {oneTimeSecret && <div className="tdl-secret" role="status"><strong>Copy now — shown once:</strong><code>{oneTimeSecret}</code></div>}
       {loading && !workspace ? <div className="tdl-loading" aria-busy="true">Loading restored workflows…</div> : <div className="tdl-grid">
-        <article id="techdeck-calendar" className="tdl-card">
+        {area === 'calendar' && <article id="techdeck-calendar" className="tdl-card">
           <h3><CalendarClock size={17} />Calendar and recurrence</h3>
           <RowList rows={workspace?.appointments ?? []} empty="No appointments scheduled." label={row => <><strong>{row.title}</strong><span>{new Date(String(row.starts_at)).toLocaleString()}</span></>} />
           {canWrite && <form onSubmit={submit('appointment', 'appointments', input => ({ ...input, startsAt: new Date(input.startsAt).toISOString(), endsAt: new Date(input.endsAt).toISOString() }))}>
-            <input name="title" required placeholder="Appointment title" /><input name="startsAt" required type="datetime-local" aria-label="Starts at" /><input name="endsAt" required type="datetime-local" aria-label="Ends at" /><button disabled={busy === 'appointment'}>Schedule</button>
+            <input name="title" required aria-label="Appointment title" placeholder="Appointment title" /><input name="startsAt" required type="datetime-local" aria-label="Starts at" /><input name="endsAt" required type="datetime-local" aria-label="Ends at" /><button disabled={busy === 'appointment'}>Schedule</button>
           </form>}
           <RowList rows={workspace?.schedules ?? []} empty="No recurring ticket rules." label={row => <><strong>{row.name}</strong><span>{row.enabled ? 'Enabled' : 'Paused'} · every {row.interval_seconds}s</span></>} />
           {canManage && <form onSubmit={submit('recurrence', 'recurring-tickets', input => ({ name: input.name, title: input.ticketTitle, intervalDays: Number(input.intervalDays), nextRunAt: new Date().toISOString(), priority: 'medium' }))}>
-            <input name="name" required placeholder="Rule name" /><input name="ticketTitle" required placeholder="Generated ticket title" /><input name="intervalDays" required type="number" min="1" max="30" defaultValue="1" aria-label="Interval days" /><button disabled={busy === 'recurrence'}>Create rule</button>
+            <input name="name" required aria-label="Recurring rule name" placeholder="Rule name" /><input name="ticketTitle" required aria-label="Generated ticket title" placeholder="Generated ticket title" /><input name="intervalDays" required type="number" min="1" max="30" defaultValue="1" aria-label="Interval days" /><button disabled={busy === 'recurrence'}>Create rule</button>
           </form>}
-        </article>
+        </article>}
 
-        <article id="techdeck-portal" className="tdl-card">
+        {area === 'portal' && <article id="techdeck-portal" className="tdl-card">
           <h3><ShieldCheck size={17} />Scoped client portal</h3>
           <RowList rows={workspace?.portalAssignments ?? []} empty="No portal assignments." label={row => <><strong>{row.organization_name}</strong><span>{row.site_name ?? 'All assigned sites'} · user {String(row.user_id).slice(0, 8)}</span></>} />
           {canManage && <form onSubmit={submit('portal', 'portal-assignments', input => ({ userId: input.userId, directoryOrganizationId: input.organizationId, directorySiteId: input.siteId || undefined, canCreateTickets: true, canComment: true, canViewEvidence: true }))}>
-            <input name="userId" required placeholder="OperatorOS user UUID" /><input name="organizationId" required placeholder="Directory client UUID" /><input name="siteId" placeholder="Optional site UUID" /><button disabled={busy === 'portal'}>Grant portal access</button>
+            <input name="userId" required aria-label="OperatorOS user ID" placeholder="OperatorOS user UUID" /><input name="organizationId" required aria-label="Directory client ID" placeholder="Directory client UUID" /><input name="siteId" aria-label="Optional site ID" placeholder="Optional site UUID" /><button disabled={busy === 'portal'}>Grant portal access</button>
           </form>}
           <p className="tdl-note">Portal users see and comment only on tickets for their assigned Directory clients and sites.</p>
-        </article>
+        </article>}
 
-        <article id="techdeck-licenses" className="tdl-card">
+        {area === 'licenses' && <article id="techdeck-licenses" className="tdl-card">
           <h3><KeyRound size={17} />License server</h3>
           <RowList rows={workspace?.licenseProducts ?? []} empty="No licensed products." label={row => <><strong>{row.name}</strong><span>{row.key_count ?? 0} issued keys</span>{canManage && <button type="button" onClick={() => void act(`key-${row.id}`, `license/products/${row.id}/keys`, { label: 'Operator-issued key', maxActivations: 1 })}>Issue key</button>}</>} />
-          {canManage && <form onSubmit={submit('license', 'license/products')}><input name="name" required placeholder="Product name" /><input name="slug" required pattern="[a-z0-9-]+" placeholder="product-slug" /><input name="description" placeholder="License purpose" /><button disabled={busy === 'license'}>Add product</button></form>}
+          {canManage && <form onSubmit={submit('license', 'license/products')}><input name="name" required aria-label="Licensed product name" placeholder="Product name" /><input name="slug" required aria-label="Licensed product slug" pattern="[a-z0-9-]+" placeholder="product-slug" /><input name="description" aria-label="License purpose" placeholder="License purpose" /><button disabled={busy === 'license'}>Add product</button></form>}
           <p className="tdl-note">Raw keys appear once; validation stores only hashes and rate-limited activation history.</p>
-        </article>
+        </article>}
 
-        <article id="techdeck-status" className="tdl-card">
+        {area === 'status' && <article id="techdeck-status" className="tdl-card">
           <h3><RadioTower size={17} />Public status</h3>
           <RowList rows={workspace?.statusPages ?? []} empty="No public status pages." label={row => <><strong>{row.title}</strong><span>/{row.public_slug} · {row.component_count ?? 0} components · {row.incident_count ?? 0} incidents</span>{canManage && <button type="button" onClick={() => void act(`incident-${row.id}`, `status/pages/${row.id}/incidents`, { title: 'Service investigation', description: 'Operators are investigating a service degradation.', severity: 'minor' })}>Open incident</button>}</>} />
-          {canManage && <form onSubmit={submit('status', 'status/pages', input => ({ title: input.title, publicSlug: input.slug, description: input.description, public: true }))}><input name="title" required placeholder="Status page title" /><input name="slug" required pattern="[a-z0-9-]+" placeholder="public-slug" /><input name="description" placeholder="Public summary" /><button disabled={busy === 'status'}>Publish page</button></form>}
-        </article>
+          {canManage && <form onSubmit={submit('status', 'status/pages', input => ({ title: input.title, publicSlug: input.slug, description: input.description, public: true }))}><input name="title" required aria-label="Status page title" placeholder="Status page title" /><input name="slug" required aria-label="Public status slug" pattern="[a-z0-9-]+" placeholder="public-slug" /><input name="description" aria-label="Public status summary" placeholder="Public summary" /><button disabled={busy === 'status'}>Publish page</button></form>}
+        </article>}
 
-        <article id="techdeck-webhooks" className="tdl-card">
+        {area === 'webhooks' && <article id="techdeck-webhooks" className="tdl-card">
           <h3><Webhook size={17} />Signed webhooks</h3>
           <RowList rows={workspace?.webhooks ?? []} empty="No webhook endpoints." label={row => <><strong>{row.name}</strong><span>{row.enabled ? 'Enabled' : 'Disabled'} · {row.endpoint_url}</span></>} />
-          {canManage && <form onSubmit={submit('webhook', 'webhooks', input => ({ name: input.name, url: input.url, secret: input.secret, eventTypes: ['techdeck.status.incident_updated'] }))}><input name="name" required placeholder="Endpoint name" /><input name="url" required type="url" placeholder="https://receiver.example/hook" /><input name="secret" required type="password" minLength={16} placeholder="Signing secret" /><button disabled={busy === 'webhook'}>Add endpoint</button></form>}
+          {canManage && <form onSubmit={submit('webhook', 'webhooks', input => ({ name: input.name, url: input.url, secret: input.secret, eventTypes: ['techdeck.status.incident_updated'] }))}><input name="name" required aria-label="Webhook endpoint name" placeholder="Endpoint name" /><input name="url" required type="url" aria-label="Webhook endpoint URL" placeholder="https://receiver.example/hook" /><input name="secret" required type="password" minLength={16} aria-label="Webhook signing secret" placeholder="Signing secret" /><button disabled={busy === 'webhook'}>Add endpoint</button></form>}
           <p className="tdl-note">Delivery uses HMAC signatures, SSRF checks, bounded retries, delivery logs, and dead-letter state.</p>
-        </article>
+        </article>}
 
-        <article id="techdeck-api-tokens" className="tdl-card">
+        {area === 'api-tokens' && <article id="techdeck-api-tokens" className="tdl-card">
           <h3><KeyRound size={17} />Scoped API tokens</h3>
           <RowList rows={workspace?.apiTokens ?? []} empty="No API-only identities." label={row => <><strong>{row.name}</strong><span>{row.identity_name} · {row.revoked_at ? 'Revoked' : 'Active'} · {row.token_prefix}</span></>} />
-          {canManage && <form onSubmit={submit('token', 'api-tokens', input => ({ identityName: input.identityName, tokenName: input.tokenName, description: 'TechDeck headless client', scopes: ['techdeck:read'] }))}><input name="identityName" required placeholder="Service identity" /><input name="tokenName" required placeholder="Token label" /><button disabled={busy === 'token'}>Issue read token</button></form>}
+          {canManage && <form onSubmit={submit('token', 'api-tokens', input => ({ identityName: input.identityName, tokenName: input.tokenName, description: 'TechDeck headless client', scopes: ['techdeck:read'] }))}><input name="identityName" required aria-label="Service identity" placeholder="Service identity" /><input name="tokenName" required aria-label="API token label" placeholder="Token label" /><button disabled={busy === 'token'}>Issue read token</button></form>}
           <p className="tdl-note">Headless ticket and evidence requests validate module identity, scope, expiry, and revocation.</p>
-        </article>
+        </article>}
 
-        <article id="techdeck-secure-intake" className="tdl-card">
+        {area === 'compliance' && <article id="techdeck-secure-intake" className="tdl-card">
           <h3><ShieldCheck size={17} />Secure evidence intake</h3>
           <RowList rows={workspace?.intakeSpaces ?? []} empty="No intake spaces." label={row => <><strong>{row.name}</strong><span>{row.external_uploads_enabled ? 'External uploads enabled' : 'Internal only'} · {row.retention_days} day retention</span>{canWrite && <button type="button" onClick={() => void act(`intake-${row.id}`, 'intake/requests', { spaceId: row.id, title: `Evidence request for ${row.name}`, maxUploads: 5, oneTimeUse: false })}>Create request</button>}</>} />
-          {canManage && <form onSubmit={submit('space', 'intake/spaces', input => ({ name: input.name, slug: input.slug, description: input.description, allowedFileTypes: ['application/pdf', 'image/png', 'image/jpeg', 'text/plain'], externalUploadsEnabled: true, retentionDays: 30 }))}><input name="name" required placeholder="Intake space" /><input name="slug" required pattern="[a-z0-9-]+" placeholder="intake-slug" /><input name="description" placeholder="Uploader instructions" /><button disabled={busy === 'space'}>Create space</button></form>}
+          {canManage && <form onSubmit={submit('space', 'intake/spaces', input => ({ name: input.name, slug: input.slug, description: input.description, allowedFileTypes: ['application/pdf', 'image/png', 'image/jpeg', 'text/plain'], externalUploadsEnabled: true, retentionDays: 30 }))}><input name="name" required aria-label="Intake space name" placeholder="Intake space" /><input name="slug" required aria-label="Intake space slug" pattern="[a-z0-9-]+" placeholder="intake-slug" /><input name="description" aria-label="Uploader instructions" placeholder="Uploader instructions" /><button disabled={busy === 'space'}>Create space</button></form>}
           <RowList rows={workspace?.intakeRequests ?? []} empty="No outstanding upload requests." label={row => <><strong>{row.title}</strong><span>{row.upload_count}/{row.max_uploads} uploads · expires {new Date(String(row.expires_at)).toLocaleDateString()}</span></>} />
-        </article>
+        </article>}
 
-        <article id="techdeck-compliance" className="tdl-card">
+        {area === 'compliance' && <article id="techdeck-compliance" className="tdl-card">
           <h3><FileArchive size={17} />Compliance packets and IT Ops</h3>
           <RowList rows={workspace?.exports ?? []} empty="No compliance packet exports." label={row => <><strong>{row.export_type}</strong><span>{row.status} · {row.completed_at ? 'integrity artifact ready' : 'queued'}</span></>} />
           {canWrite && <button type="button" className="tdl-wide" disabled={busy === 'packet'} onClick={() => void act('packet', 'compliance-packets', { filters: {} }, { idempotencyKey: crypto.randomUUID() })}>Build deterministic ZIP packet</button>}
-          {canWrite && <form onSubmit={submit('itops', 'itops/query')}><textarea name="query" required placeholder="Ask for documentation-only diagnostic guidance. TechDeck never claims execution." /><button disabled={busy === 'itops'}>Generate reviewed guidance</button></form>}
+          {canWrite && <form onSubmit={submit('itops', 'itops/query')}><textarea name="query" required aria-label="IT operations guidance request" placeholder="Ask for documentation-only diagnostic guidance. TechDeck never claims execution." /><button disabled={busy === 'itops'}>Generate reviewed guidance</button></form>}
           <p className="tdl-note">Exports include a manifest, entry hashes, audit records, and deterministic ZIP bytes. AI output is guidance only—no scripts run in the API process.</p>
-        </article>
+        </article>}
       </div>}
       <style>{css}</style>
     </section>

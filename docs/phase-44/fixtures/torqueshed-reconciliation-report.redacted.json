@@ -1,0 +1,76 @@
+{
+  "schema": "operatoros.torque-payment-reconciliation.v2",
+  "fixtureOnly": true,
+  "redacted": true,
+  "paymentIntentId": "pi_REDACTED",
+  "mode": "dry-run",
+  "provider": {
+    "account": { "id": "acct_REDACTED", "livemode": false },
+    "paymentIntent": {
+      "id": "pi_REDACTED",
+      "livemode": false,
+      "status": "succeeded",
+      "amountReceived": 500,
+      "currency": "usd"
+    },
+    "checkoutSession": {
+      "id": "cs_test_REDACTED",
+      "livemode": false,
+      "mode": "payment",
+      "paymentStatus": "paid",
+      "amountTotal": 500,
+      "currency": "usd",
+      "lineItems": [
+        {
+          "quantity": 1,
+          "priceId": "price_REDACTED",
+          "productId": "prod_REDACTED"
+        }
+      ]
+    },
+    "events": [
+      {
+        "id": "evt_REDACTED",
+        "type": "checkout.session.completed",
+        "livemode": false
+      }
+    ]
+  },
+  "local": {
+    "purchase": {
+      "id": "purchase_REDACTED",
+      "tenantId": "tenant_REDACTED",
+      "userId": "user_REDACTED",
+      "packageKey": "roadside-25000",
+      "units": 25000,
+      "amountMinor": 500,
+      "currency": "USD",
+      "status": "credited"
+    },
+    "ledger": [
+      {
+        "entry_kind": "credit",
+        "operation_type": "token_purchase",
+        "units": "25000",
+        "external_event_ref": "stripe:test:pi_REDACTED"
+      }
+    ],
+    "webhookReceipts": [
+      {
+        "provider_event_id": "evt_REDACTED",
+        "status": "processed",
+        "signature_verified": true
+      }
+    ],
+    "policyHolds": [],
+    "balance": 25000
+  },
+  "findings": [],
+  "checks": {
+    "green": true,
+    "eligible": false,
+    "alreadyCredited": true,
+    "failures": []
+  },
+  "applied": false
+}

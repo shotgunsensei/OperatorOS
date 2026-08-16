@@ -69,6 +69,11 @@ import {
 import { tenantInvites } from '../schema.js';
 import { OPERATOROS_MODULE_REGISTRY } from '../../../../packages/modules/registry.js';
 import { SSO_TOKEN_TTL_SECONDS } from '../../../../packages/sso/index.js';
+import {
+  TORQUESHED_CREDIT_CATALOG,
+  TORQUESHED_CREDIT_CATALOG_VERSION,
+  listTorqueShedCatalogMappings,
+} from '../lib/torqueshed-credit-catalog.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -1377,6 +1382,40 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       });
     }
     return { pricing: out, total: out.length, stripeMode: process.env.STRIPE_MODE || 'off' };
+  });
+
+  app.get('/v1/platform/torqueshed/credit-catalog', { preHandler: [requireSuperAdmin] }, async () => {
+    const configuredMode = process.env.STRIPE_MODE === 'test' || process.env.STRIPE_MODE === 'live'
+      ? process.env.STRIPE_MODE
+      : null;
+    const rows = configuredMode ? await listTorqueShedCatalogMappings(configuredMode) : [];
+    const byKey = new Map(rows.map((row) => [row.packageKey, row]));
+    return {
+      catalogVersion: TORQUESHED_CREDIT_CATALOG_VERSION,
+      stripeMode: configuredMode ?? 'disabled',
+      ready: configuredMode != null && TORQUESHED_CREDIT_CATALOG.every((item) => {
+        const row = byKey.get(item.key);
+        return row?.active && row.validationStatus === 'validated' && !row.driftCode;
+      }),
+      packages: TORQUESHED_CREDIT_CATALOG.map((item) => {
+        const row = byKey.get(item.key);
+        return {
+          packageKey: item.key,
+          name: item.name,
+          sku: item.sku,
+          lookupKey: item.lookupKey,
+          units: item.units,
+          amountMinor: item.amountMinor,
+          currency: item.currency,
+          productId: row?.stripeProductId ?? null,
+          priceId: row?.stripePriceId ?? null,
+          active: row?.active ?? false,
+          validationStatus: row?.validationStatus ?? 'unavailable',
+          driftCode: row?.driftCode ?? 'CATALOG_MAPPING_MISSING',
+          validatedAt: row?.validatedAt ?? null,
+        };
+      }),
+    };
   });
 
   // Pricing-drift fix #1: copy live Stripe unit_amount into

@@ -49,7 +49,7 @@ test('Phase 11B dedicated UI exposes persisted workflows and canonical deep link
   const workspace = read('apps/web/src/components/module-shells/SnapProofWorkspace.tsx');
   const routeMap = read('apps/web/src/app/modules/[slug]/[...path]/route-map.ts');
   const modulePage = read('apps/web/src/app/apps/[slug]/page.tsx');
-  assert.match(workspace, /data-testid="snapproofos-workspace"/);
+  assert.match(workspace, /data-testid=\{`snapproofos-\$\{view\}-route`\}/);
   for (const capability of ['Dashboard', 'Cases', 'Evidence', 'Review', 'Findings', 'Reports', 'Custody', 'Retention', 'Settings']) {
     assert.match(workspace, new RegExp(capability));
   }
@@ -59,7 +59,7 @@ test('Phase 11B dedicated UI exposes persisted workflows and canonical deep link
   assert.match(routeMap, /resource === 'cases'/);
   assert.match(routeMap, /resource === 'evidence'/);
   assert.match(routeMap, /resource === 'reports'/);
-  assert.match(modulePage, /'snapproofos':\s+SnapProofWorkspace/);
+  assert.match(modulePage, /'snapproofos':\s+SnapProofShell/);
   assert.doesNotMatch(workspace, /Math\.random|mock data|fake counter|Coming soon|href="#"/i);
 });
 

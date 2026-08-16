@@ -34,7 +34,7 @@ test('TradeFlowKit, TechDeck, and PulseDesk render the same directory component 
   ] as const;
   for (const [slug, path] of files) {
     const source = read(path);
-    assert.match(source, /import BusinessDirectory from '\.\/BusinessDirectory'/);
+    assert.match(source, /(?:import BusinessDirectory from|import\('\.\/BusinessDirectory'\))/);
     assert.ok(source.includes(`moduleSlug="${slug}"`));
     assert.ok(source.includes(`id="${slug}-directory"`));
   }

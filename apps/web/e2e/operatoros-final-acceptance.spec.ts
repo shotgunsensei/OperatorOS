@@ -130,11 +130,9 @@ async function login(page: Page, email: string) {
 
 async function launch(page: Page, slug: typeof MODULES[number], shellTestId: string): Promise<Page> {
   await expect(page.getByTestId(`button-launch-${slug}`)).toBeVisible();
-  const popupPromise = page.waitForEvent('popup');
   await page.getByTestId(`button-launch-${slug}`).click();
-  const modulePage = await popupPromise;
-  await expect(modulePage.getByTestId(shellTestId)).toBeVisible({ timeout: 30_000 });
-  return modulePage;
+  await expect(page.getByTestId(shellTestId)).toBeVisible({ timeout: 30_000 });
+  return page;
 }
 
 async function returnToApps(modulePage: Page) {
@@ -298,6 +296,21 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
               module_id: String(purchase.moduleId ?? ''),
               package_key: String(purchase.packageKey ?? ''),
               units: String(purchase.units ?? ''),
+              diagnostic_session_id: String(purchase.diagnosticSessionId ?? ''),
+              catalog_version: String(purchase.catalogVersion ?? ''),
+              environment: String(purchase.providerMode ?? ''),
+              module_slug: 'torqueshed',
+              operatoros_source: 'server_authoritative_catalog',
+              stripe_account_id: purchase.stripeAccountId,
+              provider_product_id: purchase.providerProductId,
+              provider_price_id: purchase.providerPriceId,
+            },
+            mode: 'payment',
+            line_items: {
+              data: [{ quantity: 1, price: {
+                id: purchase.providerPriceId,
+                product: { id: purchase.providerProductId },
+              } }],
             },
           },
         },

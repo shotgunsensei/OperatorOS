@@ -400,7 +400,7 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
   app.get(`${base}/team`, { preHandler: readGuards }, async (request) => {
     const module = await snapModuleId();
     const result = await db.execute(
-      sql`SELECT u.id,u.name,u.email,tu.role,COALESCE(tuma.access_level,'viewer') AS module_access,tu.created_at FROM tenant_users tu JOIN users u ON u.id=tu.user_id LEFT JOIN tenant_user_module_access tuma ON tuma.tenant_id=tu.tenant_id AND tuma.user_id=tu.user_id AND tuma.module_id=${module} WHERE tu.tenant_id=${tenant(request)} ORDER BY u.name,u.email`,
+      sql`SELECT u.id,u.name,u.email,tu.role,COALESCE(tuma.access_level,'viewer') AS module_access,tu.joined_at FROM tenant_users tu JOIN users u ON u.id=tu.user_id LEFT JOIN tenant_user_module_access tuma ON tuma.tenant_id=tu.tenant_id AND tuma.user_id=tu.user_id AND tuma.module_id=${module} WHERE tu.tenant_id=${tenant(request)} ORDER BY u.name,u.email`,
     );
     return {
       members: list(result.rows),

@@ -55,7 +55,7 @@ function key(prefix: string) {
   return `${prefix}:${Date.now()}:${crypto.randomUUID()}`;
 }
 
-export default function StudyForgeShell({ routePath = '' }: { baseUrl?: string; routePath?: string }) {
+export default function StudyForgeShell({ routePath = '', embedded = false, view = 'overview' }: { baseUrl?: string; routePath?: string; embedded?: boolean; view?: string }) {
   const [data, setData] = useState<Workspace | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,7 +70,8 @@ export default function StudyForgeShell({ routePath = '' }: { baseUrl?: string; 
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  const legacyView = ['sources', 'flashcards', 'quizzes', 'sessions', 'studio', 'progress'].includes(view);
+  useEffect(() => { if (legacyView) void load(); }, [load, legacyView]);
 
   const mutate = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -96,13 +97,13 @@ export default function StudyForgeShell({ routePath = '' }: { baseUrl?: string; 
   };
 
   return (
-    <main
+    <div
       id="studyforge-workspace"
       data-testid="shell-studyforge-ai"
       data-evidence="persisted_records_only"
       style={{ minHeight: '100vh', overflowX: 'clip', background: 'radial-gradient(circle at 85% 0%,rgba(124,58,237,.18),transparent 35%),#070a13', color: semantic.text, padding: `0 clamp(16px, 4vw, ${space.xxl}px) ${space.xxl}px` }}
     >
-      <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `${space.xl}px 0`, flexWrap: 'wrap' }}>
+      {!embedded && <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `${space.xl}px 0`, flexWrap: 'wrap' }}>
         <div style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', borderRadius: 14, background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
           <GraduationCap size={25} />
         </div>
@@ -114,31 +115,30 @@ export default function StudyForgeShell({ routePath = '' }: { baseUrl?: string; 
         </div>
         <button style={subtleButton} onClick={() => setMobileNav((value) => !value)} aria-expanded={mobileNav}>Workspace menu</button>
         <button style={subtleButton} onClick={() => void load()} disabled={busy}><RefreshCw size={14} /> Refresh</button>
-      </header>
+      </header>}
 
-      <nav aria-label="StudyForge workspace" style={{ display: mobileNav ? 'flex' : 'flex', gap: 8, overflowX: 'auto', paddingBottom: space.lg, flexWrap: mobileNav ? 'wrap' : 'nowrap' }}>
+      {!embedded && <nav aria-label="StudyForge workspace" style={{ display: mobileNav ? 'flex' : 'flex', gap: 8, overflowX: 'auto', paddingBottom: space.lg, flexWrap: mobileNav ? 'wrap' : 'nowrap' }}>
         {sections.map(([id, label, Icon]) => (
           <button key={id} onClick={() => navigate(id)} style={{ ...subtleButton, whiteSpace: 'nowrap', display: 'inline-flex', gap: 7, alignItems: 'center' }}>
             <Icon size={14} /> {label}
           </button>
         ))}
-      </nav>
+      </nav>}
 
       {error && <div role="alert" data-testid="studyforge-error" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
-      <StudyForgeCompleteWorkspace routePath={routePath} />
-      {!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading your courses and study progress…</p></Panel> : (
+      {(!legacyView || view === 'sessions') && <StudyForgeCompleteWorkspace routePath={routePath} view={view} />}
+      {legacyView && (!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading your courses and study progress…</p></Panel> : (
         <>
-          <Dashboard data={data} />
-          <Subjects data={data} mutate={mutate} busy={busy} />
-          <Sources data={data} mutate={mutate} busy={busy} />
-          <Studio data={data} mutate={mutate} busy={busy} />
-          <Decks data={data} mutate={mutate} busy={busy} />
-          <Quizzes data={data} mutate={mutate} busy={busy} />
-          <Plans data={data} mutate={mutate} busy={busy} />
-          <Progress data={data} />
+          {view === 'sources' && <Subjects data={data} mutate={mutate} busy={busy} />}
+          {view === 'sources' && <Sources data={data} mutate={mutate} busy={busy} />}
+          {view === 'studio' && <Studio data={data} mutate={mutate} busy={busy} />}
+          {view === 'flashcards' && <Decks data={data} mutate={mutate} busy={busy} />}
+          {view === 'quizzes' && <Quizzes data={data} mutate={mutate} busy={busy} />}
+          {view === 'sessions' && <Plans data={data} mutate={mutate} busy={busy} />}
+          {view === 'progress' && <Progress data={data} />}
         </>
-      )}
-    </main>
+      ))}
+    </div>
   );
 }
 

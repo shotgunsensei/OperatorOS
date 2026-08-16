@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
+import type { CallCommandRouteArea } from './CallCommandRoute.contract';
 
 type Row = Record<string, any>;
 type MspWorkspace = {
@@ -79,7 +80,7 @@ function IntegrationCard({ item, onKill, busy }: { item: Row; onKill: (item: Row
   </article>;
 }
 
-export default function CallCommandMspWorkspace() {
+export default function CallCommandMspWorkspace({ view }: { view: CallCommandRouteArea }) {
   const [data, setData] = useState<MspWorkspace | null>(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -144,14 +145,7 @@ export default function CallCommandMspWorkspace() {
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><FileKey2 color="#fbbf24"/><div style={{ flex: 1 }}><strong>SupportLink ID — display once</strong><div style={{ fontFamily: 'ui-monospace,monospace', fontSize: 25, letterSpacing: 4, marginTop: 5 }}>{revealedSupportLink}</div><small style={{ color: semantic.textMuted }}>Deliver it using an approved channel. It cannot be recovered from this screen; rotate it if lost.</small></div><button style={quietButton} onClick={() => setRevealedSupportLink('')}>I recorded it</button></div>
     </div>}
 
-    <nav aria-label="MSP workspace sections" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: space.lg }}>
-      {[
-        ['callcommand-msp-operations','Operations'],['callcommand-msp-organizations','Organizations'],['callcommand-msp-contacts','Contacts'],
-        ['callcommand-msp-integrations','Integrations'],['callcommand-msp-policy','Policy'],['callcommand-msp-audit','Audit'],['callcommand-msp-onboarding','Onboarding'],
-      ].map(([id,label])=><a key={id} href={`#${id}`} style={{ color:'#99f6e4',textDecoration:'none',padding:'7px 10px',borderRadius:8,background:'rgba(15,118,110,.12)',fontSize:12,fontWeight:800 }}>{label}</a>)}
-    </nav>
-
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,390px),1fr))', gap: space.lg, marginBottom: space.lg }}>
+    {view === 'organizations' && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,390px),1fr))', gap: space.lg, marginBottom: space.lg }}>
       <section id="callcommand-msp-operations" style={panel}>
         <SectionHeading icon={<Activity/>} title="Live intake operations" subtitle="Screen-pop only after trusted-line and SupportLink association. A phone number alone never authenticates a caller." badge={<Badge tone={data?.activeCalls.length ? 'good' : 'neutral'}>{data?.activeCalls.length ?? 0} live</Badge>}/>
         <div style={{ display: 'grid', gap: 9 }}>
@@ -162,17 +156,18 @@ export default function CallCommandMspWorkspace() {
         </div>
       </section>
 
-      <section style={panel}>
+    </div>}
+
+    {view === 'settings' && <section id="callcommand-msp-safety" style={{...panel, marginBottom: space.lg}}>
         <SectionHeading icon={<Siren/>} title="Global safety controls" subtitle="Ticket-only is the safe default. Incident mode immediately narrows the product to human-reviewed intake." badge={<Badge tone={data?.settings.incidentMode?'bad':'good'}>{data?.settings.incidentMode?'incident mode':'normal mode'}</Badge>}/>
         <div style={{display:'grid',gap:11}}>
           <Label title="Automation mode"><select style={field} value={data?.settings.automationMode || 'TICKET_ONLY'} onChange={event=>setData(current=>current?{...current,settings:{...current.settings,automationMode:event.target.value}}:current)}><option value="TICKET_ONLY">Ticket only</option><option value="READ_ONLY">Read-only health</option><option value="STANDARD">Standard policy-gated</option><option value="MANUAL_ONLY">Manual only</option></select></Label>
           <label style={{display:'flex',gap:9,alignItems:'center',minHeight:24,fontSize:13,color:semantic.textMuted}}><input type="checkbox" checked={Boolean(data?.settings.incidentMode)} onChange={event=>setData(current=>current?{...current,settings:{...current.settings,incidentMode:event.target.checked}}:current)}/>Incident mode / automation kill switch</label>
           <button style={data?.settings.incidentMode?quietButton:primaryButton} disabled={!!busy||!data} onClick={()=>void run('settings',()=>moduleShellApi.callcommand.mspUpdateSettings({automationMode:data?.settings.automationMode,incidentMode:data?.settings.incidentMode,recordingDefault:data?.settings.recordingDefault,transcriptRetentionHours:data?.settings.transcriptRetentionHours}),'MSP safety settings updated.')}>{busy==='settings'?<Loader2 size={15}/>:<ShieldCheck size={15}/>}Save safety controls</button>
         </div>
-      </section>
-    </div>
+      </section>}
 
-    <section id="callcommand-msp-organizations" style={{ ...panel, marginBottom: space.lg }}>
+    {view === 'organizations' && <section id="callcommand-msp-organizations" style={{ ...panel, marginBottom: space.lg }}>
       <SectionHeading icon={<Building2/>} title="Organizations and trusted originating lines" subtitle="The OperatorOS Business Directory stays authoritative. CallCommand adds the service contract, BMS mapping, approved-line trust and cooldown evidence."/>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,280px),1fr))',gap:space.md}}>
         <div style={{display:'grid',gap:9}}><strong>Service profile</strong>
@@ -189,9 +184,9 @@ export default function CallCommandMspWorkspace() {
         </div>
       </div>
       <div style={{display:'grid',gap:8,marginTop:16}}>{data?.trustedLines.map(item=><div key={item.id} style={{display:'flex',gap:9,alignItems:'center',padding:10,border:'1px solid rgba(94,234,212,.13)',borderRadius:9,flexWrap:'wrap'}}><Phone size={14}/><span style={{flex:1,minWidth:180}}>•••• {item.displayLast4} · {item.lineType} · {item.trustMode}</span><Badge tone={item.status==='ACTIVE'?'good':item.status==='PENDING'||item.status==='SUSPENDED'?'warn':'bad'}>{item.status}</Badge>{['PENDING','SUSPENDED'].includes(item.status)&&<button style={{...quietButton,padding:'7px 9px'}} disabled={!!busy} onClick={()=>void run(`verify:${item.id}`,()=>moduleShellApi.callcommand.mspVerifyTrustedLine(item.id,{verificationMethod:'CALLBACK_TEST',verificationEvidence:'Administrator completed documented provider callback and number ownership review.',allowsAutomation:false}),'Line verified for intake. Automation remains disabled during onboarding.')}><CheckCircle2 size={13}/>Verify intake line</button>}{item.status==='ACTIVE'&&<button style={{...quietButton,padding:'7px 9px'}} disabled={!!busy} onClick={()=>void run(`line-suspend:${item.id}`,()=>moduleShellApi.callcommand.mspSetTrustedLineStatus(item.id,{status:'SUSPENDED',reason:'Suspended by an OperatorOS tenant administrator.'}),'Trusted line suspended.')}><AlertTriangle size={13}/>Suspend</button>}{item.status!=='REVOKED'&&<button style={{...quietButton,padding:'7px 9px',background:'#3a1520'}} disabled={!!busy} onClick={()=>{if(window.confirm('Permanently revoke this trusted originating line?'))void run(`line-revoke:${item.id}`,()=>moduleShellApi.callcommand.mspSetTrustedLineStatus(item.id,{status:'REVOKED',reason:'Revoked by an OperatorOS tenant administrator.'}),'Trusted line revoked.');}}><AlertOctagon size={13}/>Revoke</button>}</div>)}</div>
-    </section>
+    </section>}
 
-    <section id="callcommand-msp-contacts" style={{ ...panel, marginBottom: space.lg }}>
+    {view === 'organizations' && <section id="callcommand-msp-contacts" style={{ ...panel, marginBottom: space.lg }}>
       <SectionHeading icon={<UserRoundCheck/>} title="Support contacts and SupportLink" subtitle="Contacts remain Directory records. SupportLink is a rotatable 10-digit association identifier with checksum, retry limits, encrypted storage, and display-once issuance."/>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,280px),1fr))',gap:space.md}}>
         <div style={{display:'grid',gap:9}}><strong>Contact mapping</strong>
@@ -208,9 +203,9 @@ export default function CallCommandMspWorkspace() {
         </div>
       </div>
       <div style={{display:'grid',gap:8,marginTop:16}}>{data?.supportLinks.map(item=><div key={item.id} style={{display:'flex',gap:9,alignItems:'center',padding:10,border:'1px solid rgba(94,234,212,.13)',borderRadius:9,flexWrap:'wrap'}}><Fingerprint size={14}/><span style={{flex:1,minWidth:180}}>SupportLink ending {item.last4} · {item.expiresAt?`expires ${new Date(item.expiresAt).toLocaleDateString()}`:'no expiry'}</span><Badge tone={item.status==='ACTIVE'?'good':item.status==='SUSPENDED'?'warn':'neutral'}>{item.status}</Badge>{item.status==='ACTIVE'&&<button style={{...quietButton,padding:'7px 9px'}} disabled={!!busy} onClick={()=>void run(`link-suspend:${item.id}`,()=>moduleShellApi.callcommand.mspSetSupportLinkStatus(item.id,{status:'SUSPENDED',reason:'Suspended by an OperatorOS tenant administrator.'}),'SupportLink suspended.')}><AlertTriangle size={13}/>Suspend</button>}{['ACTIVE','SUSPENDED'].includes(item.status)&&<button style={{...quietButton,padding:'7px 9px',background:'#3a1520'}} disabled={!!busy} onClick={()=>{if(window.confirm('Permanently revoke this SupportLink? The caller will need a newly issued value.'))void run(`link-revoke:${item.id}`,()=>moduleShellApi.callcommand.mspSetSupportLinkStatus(item.id,{status:'REVOKED',reason:'Revoked by an OperatorOS tenant administrator.'}),'SupportLink revoked.');}}><AlertOctagon size={13}/>Revoke</button>}</div>)}</div>
-    </section>
+    </section>}
 
-    <section id="callcommand-msp-integrations" style={{ ...panel, marginBottom: space.lg }}>
+    {view === 'providers' && <section id="callcommand-msp-integrations" style={{ ...panel, marginBottom: space.lg }}>
       <SectionHeading icon={<PlugZap/>} title="MSP Automation Fabric integrations" subtitle="Credentials are sealed in the shared OperatorOS vault. Live adapters stay degraded until tenant-specific contracts, mappings, scopes, rate limits, and provider acceptance have passed."/>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:space.md}}>
         <Label title="Provider"><select style={field} value={integration.providerType} onChange={event=>setIntegration({...integration,providerType:event.target.value,label:event.target.options[event.target.selectedIndex].text})}><option value="BMS">Kaseya BMS</option><option value="DATTO_RMM">Datto RMM</option><option value="MICROSOFT_GRAPH">Microsoft Graph</option><option value="AD_BROKER">On-prem AD broker</option><option value="TWILIO_VERIFY">Twilio Verify</option></select></Label>
@@ -220,9 +215,9 @@ export default function CallCommandMspWorkspace() {
       </div>
       <button style={{...primaryButton,marginTop:12}} disabled={!!busy} onClick={()=>void run('integration',()=>moduleShellApi.callcommand.mspConfigureIntegration({...integration,publicConfig:{onboardingRequested:true}}),'Integration onboarding record saved without asserting provider readiness.')}><Network size={15}/>Save onboarding record</button>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(230px,1fr))',gap:10,marginTop:15}}>{data?.integrations.map(item=><IntegrationCard key={item.id} item={item} busy={busy} onKill={selected=>void run(`kill:${selected.id}`,()=>moduleShellApi.callcommand.mspIntegrationKillSwitch(selected.id,!selected.killSwitch),selected.killSwitch?'Integration moved to revalidation required.':'Integration kill switch activated.')}/>)}</div>
-    </section>
+    </section>}
 
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,390px),1fr))',gap:space.lg,marginBottom:space.lg}}>
+    {view === 'compliance' && <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,390px),1fr))',gap:space.lg,marginBottom:space.lg}}>
       <section id="callcommand-msp-policy" style={panel}>
         <SectionHeading icon={<ShieldCheck/>} title="Assurance and action policy" subtitle="A0 intake, A1 SupportLink association, A2 independent verification, A3 approval, and A4 security-administrator oversight."/>
         <div style={{display:'grid',gap:7}}>{data?.phases.map(item=><div key={item.phase} style={{display:'flex',gap:8,alignItems:'center',padding:9,borderRadius:8,background:'#07151c'}}><strong style={{minWidth:58}}>Phase {item.phase}</strong><span style={{flex:1,fontSize:12,color:semantic.textMuted}}>{item.label}</span><Badge tone={item.status==='ACTIVE_LOCAL'?'good':'warn'}>{item.status}</Badge></div>)}</div>
@@ -237,14 +232,14 @@ export default function CallCommandMspWorkspace() {
           <button style={primaryButton} disabled={!!busy||!simulation.organizationId||!simulation.contactId||simulation.description.trim().length<5} onClick={()=>void run('simulate-msp',()=>moduleShellApi.callcommand.mspSimulateIntake(simulation),'Deterministic MSP intake created a local case and evaluated BMS provider truth.')}><Wrench size={15}/>Run intake lab</button>
         </div>
       </section>
-    </div>
+    </div>}
 
-    <section id="callcommand-msp-audit" style={{...panel,marginBottom:space.lg}}>
+    {view === 'compliance' && <section id="callcommand-msp-audit" style={{...panel,marginBottom:space.lg}}>
       <SectionHeading icon={<ScrollText/>} title="Hash-linked call evidence" subtitle="Each call context has a monotonic, previous-hash-linked event ledger. Sensitive raw associations and provider credentials are excluded from browser responses." badge={<Badge>{data?.audit.length ?? 0} recent events</Badge>}/>
       <div role="region" aria-label="CallCommand audit events" tabIndex={0} style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:720}}><thead><tr>{['Time','Event','Actor','Outcome','Sequence','Event hash'].map(item=><th key={item} style={{textAlign:'left',padding:8,color:semantic.textMuted,borderBottom:'1px solid rgba(94,234,212,.2)'}}>{item}</th>)}</tr></thead><tbody>{data?.audit.slice(0,40).map(item=><tr key={item.id}><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)',whiteSpace:'nowrap'}}>{new Date(item.createdAt).toLocaleString()}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.eventType}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.actorType}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.outcome}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.sequence}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)',fontFamily:'monospace'}}>{String(item.eventHash).slice(0,16)}…</td></tr>)}</tbody></table></div>
-    </section>
+    </section>}
 
-    <section id="callcommand-msp-onboarding" style={panel}>
+    {view === 'compliance' && <section id="callcommand-msp-onboarding" style={panel}>
       <SectionHeading icon={<ClipboardCheck/>} title="Production onboarding gates" subtitle="Local completeness is not deployment acceptance. These gates must be satisfied per tenant and target environment before the corresponding capability can be advertised as live."/>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(230px,1fr))',gap:10}}>{[
         ['1. Telephony boundary','Dedicated MSP product-mode number, public exact URL, Twilio signature fixture, status callback and transfer target.'],
@@ -255,7 +250,7 @@ export default function CallCommandMspWorkspace() {
         ['6. Identity reset','Cloud-only standard account, secure browser flow, prohibited-account tests, provider audit and emergency disable control.'],
       ].map(([title,text])=><article key={title} style={{padding:12,border:'1px solid rgba(94,234,212,.13)',borderRadius:10,background:'#07151c'}}><strong>{title}</strong><p style={{color:semantic.textMuted,fontSize:12,lineHeight:1.5,margin:'6px 0 0'}}>{text}</p></article>)}</div>
       <p style={{color:semantic.textMuted,fontSize:11,margin:'14px 0 0'}}>Contract: {data?.contract || 'loading'} · Password reset and RMM action toggles are server-forced off in this delivery.</p>
-    </section>
+    </section>}
     </div>
   </section>;
 }

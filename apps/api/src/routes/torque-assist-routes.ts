@@ -12,15 +12,17 @@ import {
   listTorqueTokenPackages,
   OperatorOsTokenBillingError,
   registerTorqueTokenWebhookHandler,
+  torqueTokenPurchaseReadiness,
 } from '../lib/operatoros-token-billing.js';
 import {
   listTorqueAssistHistory,
   listTorqueTokenLedger,
   normalizeFollowUpAnswers,
   runTorqueAssist,
+  expireTorqueAssistReservations,
   torqueAssistContextPreview,
   torqueAssistReconciliation,
-  torqueTokenBalance,
+  torqueTokenAvailability,
   TorqueAssistServiceError,
 } from '../lib/torque-assist-service.js';
 import { torqueId, TorqueShedValidationError } from '../lib/torqueshed-foundation.js';
@@ -102,30 +104,63 @@ async function requireOwnedDiagnostic(
 
 function sendError(reply: FastifyReply, error: unknown) {
   if (error instanceof TorqueAssistServiceError || error instanceof OperatorOsTokenBillingError) {
+    const diagnostics = error instanceof OperatorOsTokenBillingError ? error.diagnostics : undefined;
     return reply.code(error.statusCode).send({
-      error: error.message,
+      error: diagnostics?.userMessage ?? error.message,
       code: error.code,
+      requestId: reply.request.id,
+      retryable: diagnostics?.retryable ?? error.statusCode >= 500,
+      administratorAction: diagnostics?.administratorAction
+        ?? (error.statusCode >= 500
+          ? 'Retry once using the same idempotency key, then contact support with the request reference.'
+          : 'Review the request and try again.'),
       ...('details' in error ? (error as TorqueAssistServiceError).details : {}),
     });
   }
   if (error instanceof TorqueShedValidationError) {
-    return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+    return reply.code(error.statusCode).send({
+      error: error.message,
+      code: error.code,
+      requestId: reply.request.id,
+      retryable: false,
+      charged: false,
+      administratorAction: 'Correct the highlighted TorqueShed input and retry.',
+    });
   }
   if (error instanceof ProviderDisabledError) {
     return reply.code(503).send({
-      error: `${error.providerKind} provider is disabled`,
+      error: error.providerKind === 'ai'
+        ? 'Torque Assist is temporarily unavailable. No credits were charged.'
+        : 'Credit purchases are temporarily unavailable. Nothing was charged.',
       code:
         error.providerKind === 'ai'
           ? 'TORQUE_ASSIST_PROVIDER_DISABLED'
           : 'TORQUE_PAYMENT_PROVIDER_DISABLED',
+      requestId: reply.request.id,
+      retryable: false,
+      administratorAction: error.providerKind === 'ai'
+        ? 'Validate the approved AI provider configuration and circuit state.'
+        : 'Validate the complete TorqueShed purchase readiness contract before enabling checkout.',
     });
   }
   const code =
     error && typeof error === 'object' && 'code' in error ? String((error as any).code) : '';
   if (code === 'WEBHOOK_EVENT_CONFLICT' || code === 'WEBHOOK_SCOPE_CONFLICT') {
-    return reply.code(409).send({ error: 'Webhook event conflicts with its prior claim', code });
+    return reply.code(409).send({
+      error: 'Webhook event conflicts with its prior claim',
+      code,
+      requestId: reply.request.id,
+      retryable: false,
+      administratorAction: 'Inspect the redacted webhook receipt and prior event claim before replaying it.',
+    });
   }
-  throw error;
+  return reply.code(500).send({
+    error: 'TorqueShed could not confirm that action. Saved records remain available.',
+    code: /^[A-Z0-9_:-]{2,120}$/.test(code) ? code : 'TORQUESHED_ACTION_FAILED',
+    requestId: reply.request.id,
+    retryable: true,
+    administratorAction: 'Retry once with the same idempotency key, then inspect server logs using the request reference.',
+  });
 }
 
 export async function registerTorqueAssistRoutes(app: FastifyInstance): Promise<void> {
@@ -134,14 +169,30 @@ export async function registerTorqueAssistRoutes(app: FastifyInstance): Promise<
   app.get(
     '/v1/modules/torqueshed/torque-assist/status',
     { preHandler: readGuards },
-    async (request) => ({
-      provider: getSharedAiProviderAdapter().status,
-      payments: getPaymentProviderAdapter().status,
-      balance: await torqueTokenBalance({ tenantId: tenant(request), userId: user(request) }),
-      packages: listTorqueTokenPackages(),
-      limits: { userPerMinute: 5, tenantPerMinute: 20, maximumContextCharacters: 48_000 },
-      ledgerAuthoritative: true,
-    }),
+    async (request) => {
+      const reaper = await expireTorqueAssistReservations({
+        tenantId: tenant(request),
+        userId: user(request),
+      });
+      const [availability, purchaseReadiness] = await Promise.all([
+        torqueTokenAvailability({ tenantId: tenant(request), userId: user(request) }),
+        torqueTokenPurchaseReadiness(),
+      ]);
+      return {
+        provider: getSharedAiProviderAdapter().status,
+        payments: getPaymentProviderAdapter().status,
+        purchaseReadiness,
+        balance: availability.ledgerBalance,
+        ledgerBalance: availability.ledgerBalance,
+        reservedUnits: availability.reservedUnits,
+        availableBalance: availability.availableUnits,
+        consumptionMode: 'paid_credits_only',
+        reservationReaper: { expiredCount: reaper.expiredCount },
+        packages: listTorqueTokenPackages(),
+        limits: { userPerMinute: 5, tenantPerMinute: 20, maximumContextCharacters: 48_000 },
+        ledgerAuthoritative: true,
+      };
+    },
   );
 
   app.post(
@@ -150,6 +201,15 @@ export async function registerTorqueAssistRoutes(app: FastifyInstance): Promise<
     async (request, reply) => {
       try {
         const input = body(request);
+        const unexpected = Object.keys(input).filter((key) => !['diagnosticSessionId', 'packageKey'].includes(key));
+        if (unexpected.length) {
+          throw new TorqueAssistServiceError(
+            'Checkout accepts only diagnosticSessionId and packageKey',
+            'TORQUE_CHECKOUT_BODY_INVALID',
+            400,
+            { unexpectedFields: unexpected.sort() },
+          );
+        }
         const diagnosticSessionId = torqueId(
           input.diagnosticSessionId,
           'diagnosticSessionId',

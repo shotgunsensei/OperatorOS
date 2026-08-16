@@ -1,5 +1,89 @@
 # OperatorOS module parity index
 
+## Phase 50 business-operations route-application overlay
+
+TechDeck, PulseDesk, FaultlineLab, SnapProofOS, CallCommand AI, and OutCall retain their prior source/local parity states and functional scope while their major product areas now have stable refresh-safe URLs in the shared application structure. Each keeps a distinct product theme and its existing tenant, role, provider, audit, data, and safety boundaries. Compiled local acceptance covers every canonical owner route, compatibility redirects, representative durable records and workflows, same-tab history, focused loading, responsive layouts, and unsuppressed accessibility checks across all six modules. This is not a state-5 promotion: deployment, public authenticated acceptance, live providers, production migration/backup/rollback, and OutCall production activation remain open. See `docs/phase-50/BUSINESS-OPERATIONS-ROUTE-MIGRATION.md`.
+
+## Phase 49 TorqueShed route-application overlay
+
+TorqueShed retains source/local state 4 and its Phase 28/29 functional scope, while its web product now uses the shared route application structure with a product-specific dark garage/amber theme. All collection, create, record, diagnostic Assist, live-bay, marketplace, Credits, profile, activity, search, export, and settings surfaces are URL-addressable; legacy links redirect; route loaders fail independently; and Credits/Assist preserve the Phase 41-45 revenue authority. Local compiled acceptance covers 24 canonical routes, real disposable records, the `$5` explicit test-provider settlement workflow, responsive/accessibility behavior, Back/reload, and focused request fan-out. This is not a state-5 promotion: deployed authenticated proof, second-tenant deployed denial, live Stripe/AI decisions, backup/rollback, reconciliation, and public monitoring remain open. See `docs/phase-49/TORQUESHED-ROUTE-MIGRATION-REPORT.md`.
+
+## Phase 48 shared module-shell overlay
+
+TradeFlowKit retains its existing state and source-functional scope while its route framing now consumes typed shared structural primitives. Its desktop/tablet/mobile visuals remain within the pre-existing 0.5% baselines, and the shared token contract is instance-scoped so later products retain distinct themes. No other module is counted as migrated in Phase 48. See `docs/phase-48/MODULE-APPLICATION-SHELL-SPEC.md`.
+
+## Phase 47 Platform Command navigation overlay
+
+All module parity states remain unchanged. Phase 47 changes the shared super-admin command workspace around the module registry, tenant, user, billing, health, audit, and SSO views: persistent path-addressable navigation, global My Apps escape, route-derived breadcrumbs, safe release context, responsive drawer behavior, and record-free 403 handling are locally accepted. It neither widens platform authority nor changes module entitlements. See `docs/phase-47/PLATFORM-COMMAND-NAVIGATION-REPORT.md`.
+
+## Phase 46 same-tab launch overlay
+
+All twelve currently enabled child modules retain state 4 and their existing product/parity evidence. Phase 46 changes only the shared launch/navigation contract: ordinary launches reuse the current page, normal browser modifier/context-menu behavior remains available, and separately labelled new-tab actions are opener-isolated. Compiled exact-host Chromium exercised every active module shell and explicit page-count assertions. Deployment, provider, migration/cutover, and state-5 gates remain unchanged. See `docs/phase-46/MODULE-LAUNCH-NAVIGATION-CONTRACT.md`.
+
+## Phase 45 Torque Assist reservation overlay
+
+Torque Assist uses a durable tenant/user/module reservation before provider
+delivery, computes available balance as immutable ledger minus active
+reservations, and atomically settles one debit plus unused remainder only after
+an accepted response. Failures and three-minute expiry release all units and
+preserve an actionable correlation reference. The UI exposes exact availability
+and maps known failures without collapsing other TorqueShed records. Focused
+contracts pass 22/22, the database workflow and compiled exact-host browser
+fixture pass, and cumulative v52 apply/reapply passes. Real Stripe test funding,
+approved AI provider delivery, and production deployment remain external gates.
+See `docs/phase-45/TORQUE-ASSIST-CREDIT-CONSUMPTION.md`.
+
+## Phase 44 TorqueShed settlement-integrity overlay
+
+TorqueShed settlement is bound to verified raw Stripe events and complete
+provider/catalog/purchase scope. The receipt, exactly-once grant, purchase
+state, and audit now commit atomically; explicit refund/dispute holds prevent
+negative balances. Dry-run reconciliation detects provider/local and ledger
+drift, while its separately gated repair can only replay an existing verified
+receipt and refuses ambiguity. Focused tests pass 22/22, compiled exact-host
+acceptance passes 1/1, and cumulative v51 apply/reapply passes. Real Stripe
+test-mode delivery, refund/dispute, and final green reconciliation remain
+external provider gates. See
+`docs/phase-44/TORQUESHED-SETTLEMENT-AND-RECONCILIATION.md`.
+
+## Phase 43 TorqueShed checkout-contract overlay
+
+TorqueShed has one canonical package-key checkout endpoint and additive v50
+purchase snapshots. Session creation is idempotent, durable-Price-only, and
+fail-safe; browser returns carry only a purchase ID and cannot grant credits.
+The authenticated status endpoint and UI expose the full truthful settlement
+state machine, recover state after refresh/relogin, and show completion only
+after the exactly-once ledger grant. Focused tests pass 8/8, compiled
+exact-host browser acceptance passes 1/1 with screenshots, and clean v50
+apply/reapply passes. Real Stripe test Checkout and provider settlement remain
+explicit external gates. See
+`docs/phase-43/TORQUESHED-CHECKOUT-STATE-MACHINE.md`.
+
+## Phase 42 TorqueShed durable-catalog overlay
+
+TorqueShed now has one typed v1 commercial manifest, additive v49
+environment/account-specific Stripe mappings, persistent-Price checkout, a
+safe idempotent provision/validate command, and read-only Platform Command
+visibility. Manifest, drift, mode, duplicate, inactive Price, database
+resolution, and no-inline-price behavior are locally executable. Actual
+Stripe test-mode provisioning and all live mutation remain owner/provider
+gates, so purchases stay disabled outside deterministic tests. Evidence is in
+`docs/phase-42/TORQUESHED-STRIPE-CATALOG-REPORT.md`.
+
+## Phase 41 TorqueShed revenue-integrity overlay
+
+TorqueShed credit checkout is source-contained behind a server-authoritative
+composite readiness gate. The existing inline Stripe `price_data` path is
+classified unavailable outside deterministic disposable tests, so production
+purchase creation remains disabled until Phase 42 supplies a validated durable
+catalog. Canonical signed webhook and append-only settlement behavior remain
+preserved. Pure/static/preflight evidence passes; database/browser and exact
+reported-attempt production truth remain open and no state-5 promotion is
+claimed. Exact evidence is in
+`docs/phase-41/TORQUESHED-REVENUE-INCIDENT-REPORT.md`. Phase 41 database-backed
+workflow and exact-host browser evidence subsequently passed locally; only the
+reported production attempt classification remains externally blocked.
+
 ## Current Phase 40 certification overlay - NOT CERTIFIED / RELEASE BLOCKED (2026-08-14)
 
 The clean-candidate compiler reports 7,396 capabilities: 3,515 native, 2,432
@@ -385,3 +469,9 @@ close deployment, provider, migration, privacy, or cutover gates. See
   total additive steps. Repeated apply and compiled runtime verification pass
   on disposable PostgreSQL 16; no production backup, apply, or cutover was
   attempted.
+## Phase 51 creative, automation, and game route-application overlay
+
+BrandForgeOS, StudyForge AI, Ninja Launch Kit, Ninjamation, and Ninja Pool Hall now expose stable major product routes through distinct themes on the shared application-shell contract. The exact-host production-build suite passed 5/5 across all 44 declared routes, including history/reload, one-tab navigation, automated accessibility, and desktop/tablet/mobile layout. Focused loading retains the full Phase 30/31/33/34/36 workflows without recreating parent authority. This presentation and routing overlay does not change parity state: deployment, live-provider, authorized data reconciliation/cutover, and rollback remain state-5 gates. See `docs/phase-51/CREATIVE-AUTOMATION-GAME-ROUTE-MIGRATION.md`.
+## Phase 52 acceptance overlay
+
+The clean-candidate local gate proves release v52 apply/reapply, production build, same-tab launch for all 12 active modules, Platform Command escape paths, and 146 active-module major route visits. It does not change any module to state 5: the mandatory official Stripe test Checkout/signed-webhook/credit/Assist-debit journey could not run without operator-supplied test credentials, and no deployment, live-provider acceptance, production backup/apply, authorized data cutover, or rollback rehearsal occurred. See `docs/phase-52/REVENUE-NAVIGATION-ROUTE-CERTIFICATION.md`.

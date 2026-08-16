@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle, Bot, Check, CheckCircle2, Clipboard, Code2, Download, FileClock,
   FileCode2, Filter, GitBranch, Heart, History, Loader2, LockKeyhole, Plus,
@@ -71,9 +72,18 @@ function sectionFromTarget(sectionId?: string): Section {
   return 'dashboard';
 }
 
-export default function NinjamationShell() {
+function sectionFromView(view?: string): Section {
+  if (['library','review','runs','versions'].includes(view || '')) return 'library';
+  if (view === 'generate') return 'generate';
+  if (view === 'sources') return 'sync';
+  if (view === 'settings') return 'account';
+  return 'dashboard';
+}
+
+export default function NinjamationShell({ routePath, embedded = false, view }: { baseUrl?: string; routePath?: string; embedded?: boolean; view?: string }) {
+  const router = useRouter();
   const deepLink = useModuleDeepLinkTarget();
-  const [active, setActive] = useState<Section>(() => sectionFromTarget(deepLink.sectionId));
+  const [active, setActive] = useState<Section>(() => view ? sectionFromView(view) : sectionFromTarget(deepLink.sectionId));
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [library, setLibrary] = useState<Library | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -87,11 +97,16 @@ export default function NinjamationShell() {
   const [query, setQuery] = useState({ search: '', format: '', category: '', sort: 'name', favoritesOnly: false, ownedOnly: false, includeDeprecated: false });
   const [generation, setGeneration] = useState({ prompt: '', name: '', language: 'powershell', category: 'AI generated', riskTier: 'medium' });
   const [manual, setManual] = useState({ name: '', description: '', language: 'powershell', category: 'General', riskTier: 'medium', content: '' });
+  const routeHref = (path: string) => typeof window !== 'undefined' && window.location.pathname.startsWith('/modules/ninjamation') ? `/modules/ninjamation${path}` : path;
+  const navigateSection = (next: Section) => {
+    if (!embedded) { setActive(next); return; }
+    router.push(routeHref(next === 'dashboard' ? '/' : next === 'sync' ? '/sources' : next === 'account' || next === 'admin' ? '/settings' : `/${next}`));
+  };
 
   const deepScriptId = useMemo(() => {
-    const match = /^\/scripts\/([A-Za-z0-9-]+)$/.exec(deepLink.routePath ?? '');
+    const match = /^\/scripts\/([A-Za-z0-9-]+)$/.exec(routePath ?? deepLink.routePath ?? '');
     return match?.[1] ?? null;
-  }, [deepLink.routePath]);
+  }, [deepLink.routePath, routePath]);
 
   const loadWorkspace = useCallback(async () => {
     const value = await moduleShellApi.ninjamation.productWorkspace() as Workspace;
@@ -112,15 +127,16 @@ export default function NinjamationShell() {
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      await Promise.all([loadWorkspace(), loadLibrary()]);
+      await loadWorkspace();
+      if (active === 'library' || deepScriptId) await loadLibrary();
       if (deepScriptId) await loadDetail(deepScriptId);
     } catch (caught) {
       setError(errorMessage(caught, 'Could not load the Ninjamation product'));
     } finally { setLoading(false); }
-  }, [deepScriptId, loadDetail, loadLibrary, loadWorkspace]);
+  }, [active, deepScriptId, loadDetail, loadLibrary, loadWorkspace]);
 
   useEffect(() => { void refresh(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { setActive(sectionFromTarget(deepLink.sectionId)); }, [deepLink.sectionId]);
+  useEffect(() => { setActive(view ? sectionFromView(view) : sectionFromTarget(deepLink.sectionId)); }, [deepLink.sectionId, view]);
   useEffect(() => {
     if (active === 'account' && !account) moduleShellApi.ninjamation.account().then(setAccount).catch((caught) => setError(errorMessage(caught, 'Could not load account')));
     if (active === 'admin' && !admin) moduleShellApi.ninjamation.admin().then(setAdmin).catch((caught) => setError(errorMessage(caught, 'Could not load administration')));
@@ -208,16 +224,16 @@ export default function NinjamationShell() {
   const metrics = workspace?.metrics ?? {};
   const selectedFindings = detail?.script.staticAnalysis?.findings ?? [];
 
-  return <main data-testid="shell-ninjamation" aria-busy={Boolean(busy)} style={{ minHeight: '100vh', background: 'radial-gradient(circle at 12% 0%,rgba(41,151,255,.16),transparent 34%),radial-gradient(circle at 88% 10%,rgba(185,28,28,.1),transparent 28%),#020711', color: colors.text, colorScheme: 'dark', padding: 'clamp(16px,3vw,34px)', boxSizing: 'border-box' }}>
-    <header style={{ maxWidth: 1480, margin: '0 auto 18px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+  return <div data-testid="shell-ninjamation" aria-busy={Boolean(busy)} style={{ minHeight: '100vh', background: 'radial-gradient(circle at 12% 0%,rgba(41,151,255,.16),transparent 34%),radial-gradient(circle at 88% 10%,rgba(185,28,28,.1),transparent 28%),#020711', color: colors.text, colorScheme: 'dark', padding: 'clamp(16px,3vw,34px)', boxSizing: 'border-box' }}>
+    {!embedded && <header style={{ maxWidth: 1480, margin: '0 auto 18px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
       <div style={{ width: 48, height: 48, display: 'grid', placeItems: 'center', borderRadius: 14, background: 'linear-gradient(145deg,#1688ff,#06142d)', border: '1px solid #38bdf866', boxShadow: '0 0 34px #1688ff2f' }}><TerminalSquare /></div>
       <div><div style={{ display: 'flex', gap: 9, alignItems: 'center' }}><h1 style={{ margin: 0, fontSize: 'clamp(25px,4vw,40px)', letterSpacing: '-.045em' }}>NINJAMATION</h1><ShellLiveBadge /></div><p style={{ margin: '4px 0 0', color: colors.muted }}>Script intelligence, provenance, review, and controlled delivery.</p></div>
       <div data-testid="notice-ninjamation-no-execution" style={{ marginLeft: 'auto', maxWidth: 460, padding: '9px 12px', borderRadius: 10, background: '#7f1d1d22', border: '1px solid #ef444455', color: '#fecaca', fontSize: 12, lineHeight: 1.45 }}><LockKeyhole size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Ninjamation never executes script source in the browser, web server, or API process.</div>
-    </header>
+    </header>}
 
-    <nav aria-label="Ninjamation workspace" style={{ maxWidth: 1480, margin: '0 auto 18px', display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-      {sections.map(({ id, label, icon: Icon }) => <button key={id} data-testid={`nav-ninjamation-${id}`} onClick={() => setActive(id)} disabled={Boolean(busy)} style={{ ...secondary, whiteSpace: 'nowrap', background: active === id ? 'linear-gradient(135deg,#137ee8,#7f1d1d)' : 'rgba(41,151,255,.06)', borderColor: active === id ? '#2997ff88' : colors.border }}><Icon size={15} />{label}</button>)}
-    </nav>
+    {!embedded && <nav aria-label="Ninjamation workspace" style={{ maxWidth: 1480, margin: '0 auto 18px', display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+      {sections.map(({ id, label, icon: Icon }) => <button key={id} data-testid={`nav-ninjamation-${id}`} onClick={() => navigateSection(id)} disabled={Boolean(busy)} style={{ ...secondary, whiteSpace: 'nowrap', background: active === id ? 'linear-gradient(135deg,#137ee8,#7f1d1d)' : 'rgba(41,151,255,.06)', borderColor: active === id ? '#2997ff88' : colors.border }}><Icon size={15} />{label}</button>)}
+    </nav>}
 
     <div style={{ maxWidth: 1480, margin: '0 auto' }}>
       {error && <div data-testid="text-ninjamation-error" style={{ marginBottom: 14 }}><ErrorState title="Ninjamation request failed" description={error} action={<button style={secondary} onClick={() => void refresh()}>Try again</button>} /></div>}
@@ -226,7 +242,7 @@ export default function NinjamationShell() {
         {active === 'dashboard' && <section id="ninjamation-dashboard" data-testid="section-ninjamation-dashboard" style={{ display: 'grid', gap: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 12 }}>{[['Scripts',metrics.scripts ?? 0,FileCode2],['Approved',metrics.approved ?? 0,ShieldCheck],['In review',metrics.inReview ?? 0,FileClock],['Favorites',metrics.favorites ?? 0,Heart],['Downloads',metrics.downloads ?? 0,Download],['AI drafts',metrics.generated ?? 0,Bot]].map(([label,value,Icon]: any) => <article key={label} style={card}><Icon size={18} color={colors.blueSoft}/><strong style={{ display: 'block', fontSize: 30, marginTop: 9 }}>{value}</strong><span style={{ color: colors.muted }}>{label}</span></article>)}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,330px),1fr))', gap: 14 }}>
-            <article style={card}><span style={{ color: colors.blueSoft, fontWeight: 900, letterSpacing: '.12em', fontSize: 11 }}>CATALOG PROVENANCE</span><h2>AutomationPacks</h2><p style={{ color: colors.muted }}>{workspace?.catalog.repository} · {workspace?.catalog.branch}</p><code style={{ color: '#bfdbfe', overflowWrap: 'anywhere' }}>{workspace?.catalog.pinnedCommit}</code><p style={{ color: colors.muted, fontSize: 13 }}>Incremental synchronization versions changed files, restores reappearing paths, and deprecates missing paths without destructive deletion.</p><button style={button} onClick={() => setActive('sync')}><GitBranch size={15}/>Open sync control</button></article>
+            <article style={card}><span style={{ color: colors.blueSoft, fontWeight: 900, letterSpacing: '.12em', fontSize: 11 }}>CATALOG PROVENANCE</span><h2>AutomationPacks</h2><p style={{ color: colors.muted }}>{workspace?.catalog.repository} · {workspace?.catalog.branch}</p><code style={{ color: '#bfdbfe', overflowWrap: 'anywhere' }}>{workspace?.catalog.pinnedCommit}</code><p style={{ color: colors.muted, fontSize: 13 }}>Incremental synchronization versions changed files, restores reappearing paths, and deprecates missing paths without destructive deletion.</p><button style={button} onClick={() => navigateSection('sync')}><GitBranch size={15}/>Open sync control</button></article>
             <article style={card}><span style={{ color: colors.blueSoft, fontWeight: 900, letterSpacing: '.12em', fontSize: 11 }}>PLAN + USAGE</span><h2 style={{ textTransform: 'capitalize' }}>{workspace?.access.plan}</h2><p style={{ color: colors.muted }}>Downloads this month: {workspace?.planUsage.downloadCount ?? 0}{workspace?.access.limits?.monthlyDownloads === null ? ' · unlimited' : ` / ${workspace?.access.limits?.monthlyDownloads ?? 0}`}</p><p style={{ color: colors.muted }}>AI generations: {workspace?.planUsage.generationCount ?? 0}{workspace?.access.limits?.monthlyGenerations === null ? ' · unlimited' : ` / ${workspace?.access.limits?.monthlyGenerations ?? 0}`}</p><a href="/app/billing" style={{ ...button, textDecoration: 'none' }}>Manage in OperatorOS</a></article>
             <article style={{ ...card, borderColor: '#ef444455' }}><span style={{ color: '#fca5a5', fontWeight: 900, letterSpacing: '.12em', fontSize: 11 }}>EXECUTION BOUNDARY</span><h2>Library, not remote shell</h2><p style={{ color: colors.muted }}>Display, review, copy, and download do not imply execution or universal safety. Any future execution must use a separately approved runner-gateway policy and isolated signed jobs.</p><span style={badge('deprecated')}>web/API execution denied</span></article>
           </div>
@@ -242,7 +258,7 @@ export default function NinjamationShell() {
             <div style={{ gridColumn: '1 / -1', display: 'flex', flexWrap: 'wrap', gap: 12 }}>{[['favoritesOnly','Favorites'],['ownedOnly','My generated'],['includeDeprecated','Include deprecated']].map(([key,label])=><label key={key} style={{ color: colors.muted, fontSize: 13, display: 'inline-flex', gap: 6 }}><input type="checkbox" checked={(query as any)[key]} onChange={(e)=>setQuery({...query,[key]:e.target.checked})}/>{label}</label>)}</div>
           </form>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,360px),1fr))', gap: 14, alignItems: 'start' }}>
-            <aside style={{ ...card, maxHeight: 780, overflowY: 'auto' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><h2 style={{ marginTop: 0 }}>Script arsenal</h2><span style={{ color: colors.muted }}>{library?.total ?? 0}</span></div>{(library?.scripts.length ?? 0)===0?<EmptyState title="No matching scripts" description="Change the filters or have an organization administrator synchronize the allowlisted catalog."/>:<div data-testid="list-ninjamation-scripts" style={{ display: 'grid', gap: 8 }}>{library?.scripts.map((script)=><button key={script.id} data-testid={`button-ninjamation-script-${script.id}`} onClick={()=>void loadDetail(script.id)} style={{ textAlign: 'left', border: `1px solid ${detail?.script.id===script.id?'#2997ff99':colors.border}`, borderRadius: 12, background: detail?.script.id===script.id?'#0b2b52':'#030b19', color: colors.text, padding: 12, cursor: 'pointer' }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{script.displayName}</strong>{script.favorite&&<Heart size={14} fill="#ef4444" color="#ef4444"/>}</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}><span style={badge(script.status)}>{script.status}</span><span style={badge(script.language)}>{script.language}</span>{script.syncState==='deprecated'&&<span style={badge('deprecated')}>deprecated</span>}</div><small style={{ color: colors.muted, display: 'block', marginTop: 7 }}>{script.category} · {script.downloadCount} downloads</small></button>)}</div>}</aside>
+            <aside style={{ ...card, maxHeight: 780, overflowY: 'auto' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><h2 style={{ marginTop: 0 }}>Script arsenal</h2><span style={{ color: colors.muted }}>{library?.total ?? 0}</span></div>{(library?.scripts.length ?? 0)===0?<EmptyState title="No matching scripts" description="Change the filters or have an organization administrator synchronize the allowlisted catalog."/>:<div data-testid="list-ninjamation-scripts" style={{ display: 'grid', gap: 8 }}>{library?.scripts.map((script)=><button key={script.id} data-testid={`button-ninjamation-script-${script.id}`} onClick={()=>embedded?router.push(routeHref(`/scripts/${script.id}`)):void loadDetail(script.id)} style={{ textAlign: 'left', border: `1px solid ${detail?.script.id===script.id?'#2997ff99':colors.border}`, borderRadius: 12, background: detail?.script.id===script.id?'#0b2b52':'#030b19', color: colors.text, padding: 12, cursor: 'pointer' }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{script.displayName}</strong>{script.favorite&&<Heart size={14} fill="#ef4444" color="#ef4444"/>}</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}><span style={badge(script.status)}>{script.status}</span><span style={badge(script.language)}>{script.language}</span>{script.syncState==='deprecated'&&<span style={badge('deprecated')}>deprecated</span>}</div><small style={{ color: colors.muted, display: 'block', marginTop: 7 }}>{script.category} · {script.downloadCount} downloads</small></button>)}</div>}</aside>
             <article id="ninjamation-editor" style={{ ...card, minWidth: 0 }}>{!detail?<EmptyState title="Select a script" description="Open a script to inspect inert source, exact checksum, immutable versions, safety metadata, and provenance."/>:<>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}><div style={{ flex: 1 }}><span style={{ color: colors.blueSoft, fontSize: 11, fontWeight: 900, letterSpacing: '.12em' }}>{detail.script.category} / {detail.script.language}</span><h2 style={{ fontSize: 26, margin: '6px 0' }}>{detail.script.displayName}</h2><p style={{ color: colors.muted }}>{detail.script.description}</p></div><button aria-label={detail.favorite?'Remove favorite':'Add favorite'} style={secondary} onClick={()=>void toggleFavorite()}><Heart size={16} fill={detail.favorite?'#ef4444':'none'} color={detail.favorite?'#ef4444':'currentColor'}/>{detail.favorite?'Saved':'Save'}</button></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, margin: '14px 0' }}>{[['Status',detail.script.status],['Version',detail.script.currentVersionNumber],['SHA-256',String(detail.script.contentSha256).slice(0,16)+'…'],['Safety',detail.script.safetyStatus],['Downloads',detail.script.downloadCount],['Source',detail.script.source]].map(([label,value])=><div key={String(label)} style={{ background: '#020813', borderRadius: 9, padding: 10 }}><small style={{ color: colors.muted }}>{label}</small><strong style={{ display: 'block', marginTop: 4, overflowWrap: 'anywhere' }}>{value}</strong></div>)}</div>
@@ -263,5 +279,5 @@ export default function NinjamationShell() {
         {active === 'admin' && <section id="ninjamation-admin" style={{display:'grid',gap:14}}>{!admin?<LoadingState label="Loading Ninjamation administration"/>:<><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:12}}>{Object.entries(admin.stats).map(([label,value])=><article key={label} style={card}><strong style={{fontSize:28}}>{String(value)}</strong><span style={{display:'block',color:colors.muted,textTransform:'capitalize'}}>{label.replace(/([A-Z])/g,' $1')}</span></article>)}</div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,360px),1fr))',gap:14}}><article style={card}><h2><Users size={17}/> Users and tiers</h2><p style={{color:colors.muted}}>Ninjamation projects parent membership, module access, and tenant plan. It cannot mutate child billing or invent a local tier.</p>{admin.users.map((user:Row)=><div key={user.id} style={{padding:'9px 0',borderBottom:`1px solid ${colors.border}`}}><strong>{user.email}</strong><small style={{display:'block',color:colors.muted}}>{user.role} · {user.accessLevel||'inherited'} · {user.plan} via {user.planAuthority}</small></div>)}<a href={admin.management.users} style={{...button,textDecoration:'none',marginTop:12}}>Manage in OperatorOS</a></article><article style={card}><h2><RefreshCw size={17}/> Background sync</h2><p style={{color:colors.muted}}>Recurrence uses the shared scheduler and job retry/dead-letter system. It never spawns a shell or executes imported content.</p>{admin.schedules.length===0?<p style={{color:colors.muted}}>No automatic sync schedule configured.</p>:admin.schedules.map((row:Row)=><p key={row.id}>{row.enabled?'Enabled':'Disabled'} · every {Math.round(row.intervalSeconds/3600)}h · next {date(row.nextRunAt)}</p>)}<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button style={button} onClick={()=>void setSchedule(true)}><Check size={14}/>Enable daily</button><button style={secondary} onClick={()=>void setSchedule(false)}><XCircle size={14}/>Disable</button></div></article><article style={card}><h2><Plus size={17}/> Admin script draft</h2><form onSubmit={createManual} style={{display:'grid',gap:8}}><input data-testid="input-ninjamation-name" aria-label="Script name" value={manual.name} onChange={(e)=>setManual({...manual,name:e.target.value})} style={input} placeholder="Script name" required/><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><select data-testid="select-ninjamation-language" aria-label="Script language" value={manual.language} onChange={(e)=>setManual({...manual,language:e.target.value})} style={input}>{languages.map((value)=><option key={value}>{value}</option>)}</select><select data-testid="select-ninjamation-risk" aria-label="Risk tier" value={manual.riskTier} onChange={(e)=>setManual({...manual,riskTier:e.target.value})} style={input}><option>low</option><option>medium</option><option>high</option></select></div><textarea data-testid="textarea-ninjamation-content" aria-label="Script source" value={manual.content} onChange={(e)=>setManual({...manual,content:e.target.value})} style={{...input,minHeight:120}} required/><button data-testid="button-ninjamation-save" style={button}><Save size={14}/>Create draft</button></form></article></div></>}</section>}
       </>}
     </div>
-  </main>;
+  </div>;
 }

@@ -13,6 +13,7 @@
 
 import React from 'react';
 import { ArrowRight, Clock } from 'lucide-react';
+import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { badgeStyles, buttonStyles, semantic, fontSize, radius } from '@/lib/design-tokens';
 
 export function ShellLiveBadge() {
@@ -64,15 +65,9 @@ export function ShellLaunchButton({
     );
   }
   return (
-    <a
+    <ModuleLaunchLink
       href={baseUrl}
-      target="_blank"
-      rel="noopener noreferrer"
       data-testid={testId}
-      onClick={(e) => {
-        e.preventDefault();
-        import('@/lib/launch').then(({ openExternal }) => openExternal(baseUrl));
-      }}
         style={{
           ...buttonStyles.primary,
         display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -80,6 +75,6 @@ export function ShellLaunchButton({
       }}
     >
       {label} <ArrowRight size={14} />
-    </a>
+    </ModuleLaunchLink>
   );
 }

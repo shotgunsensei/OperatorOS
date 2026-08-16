@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Bot,
   Crosshair,
@@ -48,6 +49,7 @@ function routeState(routePath?: string): { view: View; matchId: string | null; r
   if (path === '/host') return { view: 'host', matchId: null, roomId: null };
   if (path === '/join') return { view: 'join', matchId: null, roomId: null };
   if (path === '/profile') return { view: 'profile', matchId: null, roomId: null };
+  if (['/history', '/stats', '/rules', '/settings'].includes(path)) return { view: 'profile', matchId: null, roomId: null };
   return { view: 'home', matchId: null, roomId: null };
 }
 
@@ -62,7 +64,8 @@ const pathFor: Record<Exclude<View, 'detail'>, string> = {
   profile: '/profile',
 };
 
-export default function NinjaPoolHallShell({ routePath }: { baseUrl?: string; routePath?: string }) {
+export default function NinjaPoolHallShell({ routePath, embedded = false, gameActive = false }: { baseUrl?: string; routePath?: string; embedded?: boolean; gameActive?: boolean }) {
+  const router = useRouter();
   const initial = routeState(routePath);
   const [view, setView] = useState<View>(initial.view);
   const [matchId, setMatchId] = useState<string | null>(initial.matchId);
@@ -107,11 +110,12 @@ export default function NinjaPoolHallShell({ routePath }: { baseUrl?: string; ro
   }, []);
 
   const navigate = useCallback((next: Exclude<View, 'detail'>) => {
-    window.history.pushState(null, '', browserPath(pathFor[next]));
+    if (roomId && next !== 'online' && !window.confirm('Leave this active online room and return to another Pool Hall page?')) return;
+    router.push(browserPath(pathFor[next]));
     setView(next);
     setMatchId(null);
     setRoomId(null);
-  }, []);
+  }, [roomId, router]);
 
   const updateMatchPath = useCallback((id: string | null) => {
     const fallback = view === 'local' ? '/local' : '/cpu';
@@ -131,10 +135,10 @@ export default function NinjaPoolHallShell({ routePath }: { baseUrl?: string; ro
   }, []);
 
   return (
-    <main id="ninja-pool-hall-shell" className="nph-shell" data-testid="ninja-pool-hall-shell">
+    <div id="ninja-pool-hall-shell" className="nph-shell" data-testid="ninja-pool-hall-shell">
       <style>{shellCss}</style>
       <div className="nph-shell-wrap">
-        <header className="nph-shell-header">
+        {!embedded && <header className="nph-shell-header">
           <div className="nph-shell-mark"><Crosshair size={26} /></div>
           <div className="nph-shell-copy">
             <span>SHOTGUN NINJAS // OPERATOR TABLE</span>
@@ -146,16 +150,16 @@ export default function NinjaPoolHallShell({ routePath }: { baseUrl?: string; ro
             <span><Wifi size={14} /> Authenticated online rooms</span>
             <span><ShieldCheck size={14} /> Server-verified deterministic results</span>
           </div>
-        </header>
+        </header>}
 
-        <nav className="nph-nav" aria-label="Ninja Pool Hall navigation">
+        {(!embedded || gameActive) && <nav className="nph-nav" aria-label="Ninja Pool Hall navigation">
           <button className={view === 'home' ? 'active' : ''} onClick={() => navigate('home')}><Target size={15} /> Hall</button>
           <button className={view === 'practice' ? 'active' : ''} onClick={() => navigate('practice')}><Crosshair size={15} /> Free Shoot</button>
           <button className={view === 'bot' ? 'active' : ''} onClick={() => navigate('bot')}><Bot size={15} /> Vs CPU</button>
           <button className={view === 'local' ? 'active' : ''} onClick={() => navigate('local')}><Users size={15} /> Local 2P</button>
           <button className={['online', 'host', 'join'].includes(view) ? 'active' : ''} onClick={() => navigate('online')}><Wifi size={15} /> Online</button>
           <button className={view === 'profile' ? 'active' : ''} onClick={() => navigate('profile')}><Settings size={15} /> Profile</button>
-        </nav>
+        </nav>}
 
         {error && <div className="nph-shell-error" role="alert">{error}<button type="button" onClick={() => void loadProfile()}>Retry</button></div>}
 
@@ -210,7 +214,7 @@ export default function NinjaPoolHallShell({ routePath }: { baseUrl?: string; ro
           }}><Trophy size={15} /> Open latest saved result</button>
         )}
       </div>
-    </main>
+    </div>
   );
 }
 

@@ -64,8 +64,8 @@ export default function TenantBillingPage() {
     try {
       const r = await billingApi.createPortalSession();
       if (r?.url) {
-        const { openExternal } = await import('@/lib/launch');
-        await openExternal(r.url);
+        const { openExternalDocument } = await import('@/lib/launch');
+        await openExternalDocument(r.url);
       } else setErr('Billing management is temporarily unavailable. Your plan and payment method are unchanged.');
     } catch (e: any) {
       setErr('We could not open billing management. Your plan and payment method are unchanged. Try again in a moment.');

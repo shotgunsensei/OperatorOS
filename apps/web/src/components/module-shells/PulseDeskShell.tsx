@@ -1,323 +1,88 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import type { CSSProperties } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import React, { useCallback, useMemo } from 'react';
 import {
   Activity,
-  AlertTriangle,
   BarChart3,
   Building2,
   ClipboardList,
   ExternalLink,
+  Grid2X2,
   HeartPulse,
   Inbox,
-  PackageCheck,
+  LifeBuoy,
   Settings,
   ShieldCheck,
   Stethoscope,
-  Truck,
+  UserRound,
+  UsersRound,
   type LucideIcon,
-  Wrench,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
-import PulseDeskDepartmentEscalationQueue from './PulseDeskDepartmentEscalationQueue';
-import PulseDeskServiceDeskWorkspace from './PulseDeskServiceDeskWorkspace';
-import BusinessDirectory from './BusinessDirectory';
-import PulseDeskConnectorConsole from './PulseDeskConnectorConsole';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import {
+  PULSEDESK_NAVIGATION,
+  PULSEDESK_THEME,
+  resolvePulseDeskRoute,
+  type PulseDeskRouteArea,
+} from './PulseDeskRoute.contract';
 
 interface PulseDeskShellProps {
   baseUrl?: string;
+  routePath?: string;
 }
 
-const colors = {
-  bg: '#07111b',
-  ink: '#eaf4ff',
-  muted: '#9bb0c6',
-  dim: '#a6b9cd',
-  panel: '#0e1a27',
-  panelSoft: '#132536',
-  border: 'rgba(125, 211, 252, 0.16)',
-  borderStrong: 'rgba(56, 189, 248, 0.38)',
-  blue: '#38bdf8',
-  cyan: '#22d3ee',
-  green: '#4ade80',
-  amber: '#fbbf24',
-  red: '#fb7185',
-  violet: '#c4b5fd',
+function RouteLoading() {
+  return <section className="pulsedesk-route-state" aria-busy="true"><Activity size={18} />Loading this PulseDesk route…</section>;
+}
+
+const PulseDeskServiceDeskWorkspace = dynamic(() => import('./PulseDeskServiceDeskWorkspace'), { loading: RouteLoading });
+const PulseDeskDepartmentEscalationQueue = dynamic(() => import('./PulseDeskDepartmentEscalationQueue'), { loading: RouteLoading });
+const PulseDeskConnectorConsole = dynamic(() => import('./PulseDeskConnectorConsole'), { loading: RouteLoading });
+const BusinessDirectory = dynamic(() => import('./BusinessDirectory'), { loading: RouteLoading });
+
+const overviewRoutes: Array<{ area: PulseDeskRouteArea; path: string; label: string; summary: string; Icon: LucideIcon }> = [
+  { area: 'requests', path: '/requests', label: 'Requests', summary: 'Triage and progress PHI-minimized operational work.', Icon: ClipboardList },
+  { area: 'assignments', path: '/assignments', label: 'Assignments', summary: 'Coordinate department routing and escalations.', Icon: UsersRound },
+  { area: 'contacts', path: '/contacts', label: 'Facilities and contacts', summary: 'Use the authorized operational directory.', Icon: Building2 },
+  { area: 'operations', path: '/operations', label: 'Facility operations', summary: 'Coordinate equipment, supplies, and physical facilities.', Icon: Stethoscope },
+  { area: 'inbound', path: '/inbound', label: 'Inbound communication', summary: 'Review authorized mailbox delivery and intake state.', Icon: Inbox },
+  { area: 'analytics', path: '/analytics', label: 'Analytics', summary: 'Review demand, SLA pressure, and service health.', Icon: BarChart3 },
+];
+
+const serviceView: Partial<Record<PulseDeskRouteArea, 'dashboard' | 'tickets' | 'operations' | 'knowledge' | 'admin'>> = {
+  overview: 'dashboard', requests: 'tickets', operations: 'operations', analytics: 'dashboard', knowledge: 'knowledge', settings: 'admin',
 };
 
-const workflowShortcuts = [
-  {
-    id: 'tickets',
-    label: 'Tickets',
-    summary: 'Healthcare operations requests, escalations, assignments, replies, time, and SLA tracking.',
-    Icon: ClipboardList,
-    tone: colors.blue,
-  },
-  {
-    id: 'departments',
-    label: 'Departments',
-    summary: 'Facility-linked department routing for imaging operations, administration, and facility teams.',
-    Icon: Building2,
-    tone: colors.cyan,
-  },
-  {
-    id: 'assets',
-    label: 'Assets',
-    summary: 'Operational equipment and maintenance context; network and configuration authority stays in TechDeck.',
-    Icon: Stethoscope,
-    tone: colors.green,
-  },
-  {
-    id: 'supplies',
-    label: 'Supplies',
-    summary: 'Supply requests and operational restock coordination without billing ownership.',
-    Icon: PackageCheck,
-    tone: colors.amber,
-  },
-  {
-    id: 'facilities',
-    label: 'Facilities',
-    summary: 'Facility repair, room readiness, and physical operations request queues.',
-    Icon: Wrench,
-    tone: colors.violet,
-  },
-  {
-    id: 'vendors',
-    label: 'Vendors',
-    summary: 'Vendor follow-up, service coordination, and external escalation tracking.',
-    Icon: Truck,
-    tone: colors.cyan,
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    summary: 'Department demand, response trends, and operational health reporting.',
-    Icon: BarChart3,
-    tone: colors.blue,
-  },
-  {
-    id: 'notifications',
-    label: 'Notifications',
-    summary: 'Notify the right team without copying sensitive request details into the alert.',
-    Icon: Inbox,
-    tone: colors.green,
-  },
-];
-
-const readinessRows = [
-  ['Sign-in', 'One account', colors.green],
-  ['Operational data', 'Organization-only', colors.blue],
-  ['Patient charts', 'Not stored here', colors.amber],
-  ['Team access', 'Based on role', colors.cyan],
-];
-
-const shellCss = `
-  .pulsedesk-shell {
-    min-height: 100vh;
-    color-scheme: dark;
-    color: ${colors.ink};
-    background:
-      radial-gradient(circle at 10% -4%, rgba(56, 189, 248, 0.20), transparent 31%),
-      radial-gradient(circle at 90% 4%, rgba(74, 222, 128, 0.08), transparent 28%),
-      linear-gradient(180deg, #0a1825 0%, ${colors.bg} 58%, #050b12 100%),
-      ${colors.bg};
-    padding: 24px;
-  }
-  .pulsedesk-wrap {
-    max-width: 1240px;
-    margin: 0 auto;
-    display: grid;
-    gap: 16px;
-  }
-  .pulsedesk-header {
-    border: 1px solid ${colors.borderStrong};
-    background: linear-gradient(135deg, rgba(14, 26, 39, 0.97), rgba(7, 17, 27, 0.98));
-    border-radius: 8px;
-    padding: 22px;
-    display: grid;
-    gap: 18px;
-    box-shadow: 0 22px 58px rgba(0, 0, 0, 0.30);
-  }
-  .pulsedesk-header-top,
-  .pulsedesk-actions,
-  .pulsedesk-chip-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-  .pulsedesk-body {
-    display: grid;
-    grid-template-columns: minmax(180px, 236px) minmax(0, 1fr);
-    gap: 16px;
-    align-items: start;
-  }
-  .pulsedesk-rail,
-  .pulsedesk-panel {
-    border: 1px solid ${colors.border};
-    background: rgba(14, 26, 39, 0.94);
-    border-radius: 8px;
-  }
-  .pulsedesk-rail {
-    position: sticky;
-    top: 18px;
-    padding: 12px;
-    display: grid;
-    gap: 8px;
-  }
-  .pulsedesk-main {
-    display: grid;
-    gap: 16px;
-    min-width: 0;
-  }
-  .pulsedesk-shell .directory-pulsedesk {
-    --d-bg: #0a1520;
-    --d-panel: #132536;
-    --d-text: #eaf4ff;
-    --d-muted: #9bb0c6;
-    --d-border: rgba(125, 211, 252, 0.18);
-    --d-accent: #38bdf8;
-    --d-danger: #fb7185;
-  }
-  .pulsedesk-shell :is(input, select, textarea) {
-    color-scheme: dark;
-  }
-  .pulsedesk-shell :is(input, select, textarea)::placeholder {
-    color: #6e849b;
-  }
-  .pulsedesk-shell :is(.pds, .pdq-root, .directory-root) {
-    color: ${colors.ink};
-  }
-  .pulsedesk-shell :is(.pds, .pdq-root, .directory-root) :is(h2, h3, h4, strong, summary) {
-    color: ${colors.ink};
-  }
-  .pulsedesk-shell :is(input, select, textarea) {
-    background: #0a1520 !important;
-    color: ${colors.ink} !important;
-    border-color: ${colors.border} !important;
-  }
-  .pulsedesk-shell :is(
-    .pds-card,
-    .pds-metrics article,
-    .pds-ticket,
-    .pds-row-button,
-    .pdq-intake,
-    .pdq-departments,
-    .pdq-list,
-    .pdq-detail,
-    .pdq-card,
-    .pdq-manager-controls,
-    .pdq-timeline,
-    .directory-root
-  ) {
-    background: ${colors.panel} !important;
-    color: ${colors.ink} !important;
-    border-color: ${colors.border} !important;
-  }
-  .pulsedesk-shell :is(
-    .pds-form,
-    .pds-empty,
-    .pds-config div,
-    .pds-message,
-    .pds-chips span,
-    .pds-route-context,
-    .pdq-filters,
-    .pdq-empty,
-    .pdq-detail-empty,
-    .pdq-department-body,
-    .pdq-timeline-empty
-  ) {
-    background: ${colors.panelSoft} !important;
-    color: ${colors.muted} !important;
-    border-color: ${colors.border} !important;
-  }
-  .pulsedesk-shell :is(.pds-ticket.selected, .pdq-card[aria-pressed='true']) {
-    background: rgba(56, 189, 248, 0.10) !important;
-    border-color: ${colors.blue} !important;
-  }
-  .pulsedesk-shell :is(.pds-secondary, .pdq-secondary) {
-    background: ${colors.panelSoft} !important;
-    color: ${colors.ink} !important;
-    border-color: ${colors.border} !important;
-  }
-  .pulsedesk-shell :is(.pds-heading p, .pds-row small, .pds-ticket small, .pds-description, .pds-config span, .pdq-heading p, .pdq-card-context, .pdq-card-footer) {
-    color: ${colors.muted} !important;
-  }
-  .pulsedesk-shell .pds-ack {
-    background: rgba(251, 191, 36, 0.10);
-    color: ${colors.amber};
-  }
-  .pulsedesk-shell .pds-warning strong {
-    color: #3f2d00 !important;
-  }
-  .pulsedesk-shell .pds-metrics span {
-    color: ${colors.muted} !important;
-  }
-  .pulsedesk-shell .directory-tabs button[aria-selected='true'] {
-    color: #07111b !important;
-  }
-  .pulsedesk-card-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .pulsedesk-workflow-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-  @media (max-width: 920px) {
-    .pulsedesk-body {
-      grid-template-columns: 1fr;
-    }
-    .pulsedesk-rail {
-      position: static;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .pulsedesk-card-grid,
-    .pulsedesk-workflow-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 620px) {
-    .pulsedesk-shell {
-      padding: 14px;
-    }
-    .pulsedesk-header {
-      padding: 16px;
-    }
-    .pulsedesk-rail,
-    .pulsedesk-card-grid,
-    .pulsedesk-workflow-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-`;
-
-export default function PulseDeskShell(_props: PulseDeskShellProps) {
+export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
+  const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
   const tenantId = activeTenant?.id ?? fallbackTenantId;
   const platformAdmin = hasPlatformAdminAuthority(user);
   const adapterRole = platformAdmin ? 'admin' : activeRole ?? 'member';
+  const route = resolvePulseDeskRoute(routePath || pathname);
+  const sourceRouted = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
+  const hrefFor = useCallback(
+    (path: string) => sourceRouted ? `/modules/pulsedesk${path === '/' ? '/dashboard' : path}` : path,
+    [sourceRouted],
+  );
+  const navigation = useMemo(() => PULSEDESK_NAVIGATION.map(group => ({
+    ...group,
+    items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })),
+  })), [hrefFor]);
 
   const adapter = useMemo(() => createPulseDeskAdapterContext({
-    currentUser: user
-      ? {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          platformRole: user.platformRole,
-        }
-      : null,
+    currentUser: user ? { id: user.id, email: user.email, name: user.name, platformRole: user.platformRole } : null,
     tenantId,
     role: adapterRole,
     entitlements: { modules: [{ slug: 'pulsedesk', enabled: true }] },
@@ -326,6 +91,8 @@ export default function PulseDeskShell(_props: PulseDeskShellProps) {
 
   const isLoading = authLoading || tenantLoading;
   const hasTenantContext = !!adapter.tenantId;
+  const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
+  const restrictedProviderRoute = (route.area === 'inbound' || route.area === 'integrations') && !canManageModule;
   const roleLabel = platformAdmin
     ? 'Platform administrator'
     : activeRole === 'owner'
@@ -336,477 +103,166 @@ export default function PulseDeskShell(_props: PulseDeskShellProps) {
           ? 'Read-only access'
           : 'Team member';
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
-  const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
+  const activeServiceView = serviceView[route.area];
 
-  if (isLoading) {
-    return (
-      <main className="pulsedesk-shell" data-testid="pulsedesk-module-shell">
-        <style>{shellCss}</style>
-        <section className="pulsedesk-wrap">
-          <div style={loadingPanelStyle} data-testid="pulsedesk-loading-state" aria-busy="true">
-            <Activity size={18} color={colors.blue} />
-            <div>
-              <div style={{ fontWeight: 800 }}>Loading PulseDesk</div>
-              <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                Preparing your departments, escalations, equipment, and team access.
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
+  const pageAction = route.area === 'requests'
+    ? null
+    : route.area === 'settings' && platformAdmin
+      ? <Link className="pulsedesk-action" href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/pulsedesk`}><ExternalLink size={15} />Platform settings</Link>
+      : <Link className="pulsedesk-action" href={hrefFor('/requests')}><ClipboardList size={15} />Open request queue</Link>;
 
   return (
-    <main className="pulsedesk-shell" data-testid="pulsedesk-module-shell">
-      <style>{shellCss}</style>
-      <section className="pulsedesk-wrap">
-        <header
-          id="pulsedesk-overview"
-          className="pulsedesk-header"
-          data-testid="pulsedesk-module-header"
-          tabIndex={-1}
-        >
-          <div className="pulsedesk-header-top">
-            <div style={{ minWidth: 0 }}>
-              <div style={eyebrowStyle}>Healthcare operations coordination</div>
-              <h1 style={titleStyle}>PulseDesk</h1>
-              <p style={ledeStyle}>
-                Coordinate requests, departments, assets, supplies, facilities, vendors, and reporting from one clinical operations workspace.
-              </p>
-            </div>
-            <div className="pulsedesk-actions">
-              <HeaderLink href="#pulsedesk-operations" testId="pulsedesk-open-request-queue" Icon={ClipboardList}>
-                Open request queue
-              </HeaderLink>
-              {canManageModule && (
-                <HeaderLink href="#pulsedesk-settings" testId="pulsedesk-module-settings-link" Icon={Settings}>
-                  Manage PulseDesk
-                </HeaderLink>
-              )}
-              {platformAdmin && (
-                <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/pulsedesk`} testId="pulsedesk-platform-manage-link" Icon={ShieldCheck}>
-                  Platform settings
-                </HeaderLink>
-              )}
-              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="pulsedesk-return-command-center" Icon={ExternalLink}>
-                Return to My Apps
-              </HeaderLink>
-            </div>
-          </div>
-
-          <div className="pulsedesk-chip-row">
-            <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="pulsedesk-tenant-badge" />
-            <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="pulsedesk-role-badge" />
-            <ContextChip label="Sign-in" value="Protected by OperatorOS" tone={colors.green} testId="pulsedesk-session-badge" />
-            {platformAdmin && <ContextChip label="Module address" value={adapter.hostnames.production} tone={colors.amber} testId="pulsedesk-host-badge" />}
-          </div>
-        </header>
-
-        {!hasTenantContext && (
-          <StatePanel
-            testId="pulsedesk-empty-state"
-            tone={colors.red}
-            Icon={AlertTriangle}
-            title="Choose an organization"
-            body="Return to My Apps and choose the organization whose operational requests you want to manage."
-          />
-        )}
-
-        <div className="pulsedesk-body">
-          <nav className="pulsedesk-rail" aria-label="PulseDesk sections" data-testid="pulsedesk-module-sidebar">
-            {workflowShortcuts.map(({ id, label, Icon, tone }) => (
-              <a
-                key={id}
-                href={id === 'tickets' || id === 'departments'
-                  ? '#pulsedesk-operations'
-                  : id === 'vendors' || id === 'facilities'
-                    ? '#pulsedesk-directory'
-                    : `#pulsedesk-${id}`}
-                style={railLinkStyle}
-                data-testid={`pulsedesk-sidebar-${id}`}
-              >
-                <Icon size={15} color={tone} />
-                <span>{label}</span>
-              </a>
-            ))}
-            <a href="#pulsedesk-settings" style={railLinkStyle} data-testid="pulsedesk-sidebar-settings">
-              <Settings size={15} color={colors.amber} />
-              <span>Settings</span>
-            </a>
-            <a href="#pulsedesk-connectors" style={railLinkStyle} data-testid="pulsedesk-sidebar-connectors">
-              <Inbox size={15} color={colors.cyan} />
-              <span>Email connectors</span>
-            </a>
-          </nav>
-
-          <section className="pulsedesk-main">
-            <section className="pulsedesk-card-grid" aria-label="PulseDesk readiness">
-              {readinessRows.map(([label, value, tone]) => (
-                <MetricTile key={label} label={label} value={value} tone={tone} />
+    <ModuleApplicationShell
+      moduleId="pulsedesk"
+      moduleName="PulseDesk"
+      theme={PULSEDESK_THEME}
+      currentPath={hrefFor(route.canonicalPath)}
+      navigation={navigation}
+      brand={(
+        <Link href={hrefFor('/')} className="pulsedesk-brand">
+          <span><HeartPulse size={21} /></span><strong>PulseDesk</strong>
+        </Link>
+      )}
+      organization={{ label: 'Organization', value: tenantLabel, testId: 'pulsedesk-tenant-badge' }}
+      accessContext={{ label: 'Access', value: roleLabel, testId: 'pulsedesk-role-badge' }}
+      utilityActions={[
+        { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'pulsedesk-return-command-center' },
+        { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound, testId: 'pulsedesk-profile' },
+        { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'pulsedesk-help' },
+      ]}
+      page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
+      state={isLoading ? 'loading' : !hasTenantContext ? 'empty' : restrictedProviderRoute ? 'forbidden' : 'ready'}
+      stateMessage={!hasTenantContext
+        ? 'Choose an organization in My Apps before opening tenant-scoped PulseDesk work.'
+        : restrictedProviderRoute
+          ? 'An organization administrator must review inbound provider configuration and delivery state.'
+          : undefined}
+      pageHeaderTestId="pulsedesk-module-header"
+      mobileNavigation="drawer"
+      testId="pulsedesk-module-shell"
+      dataAttributes={{ 'data-pulsedesk-route': route.area }}
+    >
+      <style>{pulseDeskRouteCss}</style>
+      {hasTenantContext && adapter.tenantId && !restrictedProviderRoute && (
+        <>
+          {route.area === 'overview' && (
+            <section className="pulsedesk-route-grid" id="pulsedesk-overview" data-testid="pulsedesk-overview-route">
+              {overviewRoutes.map(item => (
+                <Link key={item.area} href={hrefFor(item.path)} className="pulsedesk-route-card" data-testid={`pulsedesk-overview-${item.area}`}>
+                  <item.Icon size={19} /><strong>{item.label}</strong><span>{item.summary}</span>
+                </Link>
               ))}
             </section>
+          )}
 
+          {activeServiceView && (
             <section
-              id="pulsedesk-operations"
-              className="pulsedesk-panel"
-              style={{ padding: 18 }}
-              data-testid="pulsedesk-operations-panel"
-              tabIndex={-1}
+              id={route.area === 'requests' ? 'pulsedesk-operations' : route.area === 'settings' ? 'pulsedesk-settings-workflow' : route.area === 'overview' ? 'pulsedesk-overview-dashboard' : `pulsedesk-${route.area}`}
+              data-testid={route.area === 'overview' ? 'pulsedesk-overview-dashboard' : `pulsedesk-${route.area}-route`}
             >
-              {adapter.tenantId ? (
-                <div style={{ display: 'grid', gap: 16 }}>
-                  <PulseDeskServiceDeskWorkspace
-                    key={`service-desk-${adapter.tenantId}`}
-                    tenantKey={adapter.tenantId}
-                    canManageModule={canManageModule}
-                  />
-                  <details style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 12 }}>
-                    <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Department escalation intake and routing</summary>
-                    <div style={{ marginTop: 12 }}>
-                      <PulseDeskDepartmentEscalationQueue
-                        key={`department-queue-${adapter.tenantId}`}
-                        tenantKey={adapter.tenantId}
-                      />
-                    </div>
-                  </details>
-                </div>
-              ) : (
-                <StatePanel
-                  testId="pulsedesk-operations-no-tenant"
-                  tone={colors.red}
-                  Icon={AlertTriangle}
-                  title="Select an organization to open the operations queue"
-                  body="Choose the organization whose departments, tickets, and escalations you want to manage."
-                />
-              )}
-            </section>
-
-            {adapter.tenantId && (
-              <section id="pulsedesk-directory" tabIndex={-1}>
-                <BusinessDirectory moduleSlug="pulsedesk" tenantKey={adapter.tenantId} canArchive={canManageModule} />
-              </section>
-            )}
-
-            {adapter.tenantId && canManageModule && <PulseDeskConnectorConsole />}
-
-            <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-workflow-map">
-              <SectionHeading
-                Icon={HeartPulse}
-                title="Healthcare operations map"
-                subtitle="Move operational work between departments while keeping patient and clinical records out of PulseDesk."
+              <PulseDeskServiceDeskWorkspace
+                key={`${adapter.tenantId}-${route.area}`}
+                tenantKey={adapter.tenantId}
+                canManageModule={canManageModule}
+                view={activeServiceView}
+                requestHref={id => hrefFor(`/requests/${id}`)}
               />
-              <div className="pulsedesk-workflow-grid" style={{ marginTop: 14 }}>
-                {workflowShortcuts.filter(({ id }) => id !== 'tickets').map(({ id, label, summary, Icon, tone }) => (
-                  <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
-                ))}
-              </div>
             </section>
+          )}
 
-            <section
-              id="pulsedesk-settings"
-              className="pulsedesk-panel"
-              style={{ padding: 18 }}
-              data-testid="pulsedesk-settings-panel"
-              tabIndex={-1}
-            >
-              <SectionHeading
-                Icon={ShieldCheck}
-                title="Access and settings"
-                subtitle={canManageModule ? 'You can manage this tool because you are an organization administrator.' : 'Your administrator controls team access and settings.'}
-              />
-              <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-                <AdminRow
-                  label="Account and access"
-                  value="OperatorOS manages sign-in, subscription access, and workspace membership."
-                  tone={colors.green}
-                />
-                <AdminRow
-                  label="Data boundary"
-                  value="PulseDesk is for operational coordination, not patient charts or clinical records."
-                  tone={colors.blue}
-                />
-                <AdminRow
-                  label="Current access"
-                  value={canManageModule ? 'You can manage team access and settings.' : 'You can use the healthcare operations workflows assigned to you.'}
-                  tone={canManageModule ? colors.amber : colors.muted}
-                />
-              </div>
+          {route.area === 'assignments' && (
+            <section id="pulsedesk-assignments" className="pulsedesk-route-panel" data-testid="pulsedesk-assignments-route">
+              <PulseDeskDepartmentEscalationQueue key={`department-queue-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
             </section>
+          )}
 
-            <StatePanel
-              testId="pulsedesk-error-state"
-              tone={colors.amber}
-              Icon={AlertTriangle}
-              title="Need help?"
-              body="Try the action again. If you still cannot open a request, contact your organization administrator. A failed attempt will not change existing requests."
-            />
-          </section>
-        </div>
-      </section>
-    </main>
+          {route.area === 'contacts' && (
+            <section id="pulsedesk-directory" data-testid="pulsedesk-contacts-route">
+              <div className="pulsedesk-boundary"><ShieldCheck size={17} /><span><strong>Operational directory only.</strong> Do not store patient charts, clinical records, diagnoses, or unnecessary PHI.</span></div>
+              <BusinessDirectory moduleSlug="pulsedesk" tenantKey={adapter.tenantId} canArchive={canManageModule} />
+            </section>
+          )}
+
+          {(route.area === 'inbound' || route.area === 'integrations') && canManageModule && (
+            <section data-testid={`pulsedesk-${route.area}-route`}>
+              <PulseDeskConnectorConsole key={`${adapter.tenantId}-${route.area}`} mode={route.area} />
+            </section>
+          )}
+
+          {route.area === 'settings' && (
+            <section id="pulsedesk-settings" className="pulsedesk-settings" data-testid="pulsedesk-settings-panel">
+              <h2><Settings size={19} />Healthcare operations boundary</h2>
+              <p>PulseDesk coordinates operational work. It is not a patient chart, EHR, clinical record, medical device, or HIPAA certification claim.</p>
+              <SettingsRow label="Identity and access" value="OperatorOS manages sign-in, entitlements, tenant selection, roles, and membership." />
+              <SettingsRow label="Data minimization" value="Requests and integrations must remain operational and exclude patient names, MRNs, diagnoses, treatment details, and other unnecessary PHI." />
+              <SettingsRow label="Integration authority" value="Only organization administrators can configure inbound providers. Live modes fail closed until their provider checks pass." />
+            </section>
+          )}
+        </>
+      )}
+    </ModuleApplicationShell>
   );
 }
 
-function HeaderLink({
-  href,
-  testId,
-  Icon,
-  children,
-}: {
-  href: string;
-  testId: string;
-  Icon: LucideIcon;
-  children: React.ReactNode;
-}) {
-  return (
-    <a href={href} data-testid={testId} style={headerLinkStyle}>
-      <Icon size={14} />
-      {children}
-    </a>
-  );
+function SettingsRow({ label, value }: { label: string; value: string }) {
+  return <div className="pulsedesk-settings-row"><strong>{label}</strong><span>{value}</span></div>;
 }
 
-function ContextChip({
-  label,
-  value,
-  tone,
-  testId,
-}: {
-  label: string;
-  value: string;
-  tone: string;
-  testId: string;
-}) {
-  return (
-    <div style={{ ...chipStyle, borderColor: `${tone}66` }} data-testid={testId}>
-      <span style={{ color: colors.dim }}>{label}</span>
-      <strong style={{ color: tone, overflowWrap: 'anywhere' }}>{value}</strong>
-    </div>
-  );
-}
-
-function MetricTile({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div style={metricTileStyle} data-testid={`pulsedesk-metric-${label.toLowerCase().replace(/\s+/g, '-')}`}>
-      <div style={{ width: 8, height: 8, borderRadius: 999, background: tone }} />
-      <div style={{ color: colors.muted, fontSize: 12, marginTop: 12 }}>{label}</div>
-      <div style={{ marginTop: 4, fontSize: 17, fontWeight: 800 }}>{value}</div>
-    </div>
-  );
-}
-
-function SectionHeading({
-  Icon,
-  title,
-  subtitle,
-}: {
-  Icon: LucideIcon;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-      <span style={sectionIconStyle}>
-        <Icon size={17} color={colors.blue} />
-      </span>
-      <div>
-        <h2 style={{ margin: 0, fontSize: 16 }}>{title}</h2>
-        <p style={{ margin: '4px 0 0', color: colors.muted, fontSize: 13, lineHeight: 1.45 }}>{subtitle}</p>
-      </div>
-    </div>
-  );
-}
-
-function WorkflowPanel({
-  id,
-  label,
-  summary,
-  Icon,
-  tone,
-}: {
-  id: string;
-  label: string;
-  summary: string;
-  Icon: LucideIcon;
-  tone: string;
-}) {
-  return (
-    <article id={`pulsedesk-${id}`} style={workflowPanelStyle} data-testid={`pulsedesk-workflow-${id}`}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ ...smallIconStyle, borderColor: `${tone}66` }}>
-          <Icon size={16} color={tone} />
-        </span>
-        <h3 style={{ margin: 0, fontSize: 15 }}>{label}</h3>
-      </div>
-      <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
-      <div style={{ marginTop: 12, color: colors.amber, fontSize: 12, fontWeight: 800 }}>
-        Available in PulseDesk
-      </div>
-    </article>
-  );
-}
-
-function AdminRow({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div style={adminRowStyle}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ color: colors.ink, fontSize: 13, fontWeight: 800 }}>{label}</div>
-        <div style={{ color: colors.muted, fontSize: 12, marginTop: 3, lineHeight: 1.45 }}>{value}</div>
-      </div>
-      <span style={{ width: 8, height: 8, borderRadius: 999, background: tone, flex: '0 0 auto' }} />
-    </div>
-  );
-}
-
-function StatePanel({
-  testId,
-  tone,
-  Icon,
-  title,
-  body,
-}: {
-  testId: string;
-  tone: string;
-  Icon: LucideIcon;
-  title: string;
-  body: string;
-}) {
-  return (
-    <section
-      className="pulsedesk-panel"
-      data-testid={testId}
-      style={{ padding: 16, borderColor: `${tone}66`, background: `${colors.panel}` }}
-    >
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <Icon size={18} color={tone} />
-        <div>
-          <div style={{ fontWeight: 800 }}>{title}</div>
-          <div style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, marginTop: 4 }}>{body}</div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const eyebrowStyle: CSSProperties = {
-  color: colors.cyan,
-  fontSize: 12,
-  fontWeight: 800,
-  letterSpacing: 0,
-  textTransform: 'uppercase',
-};
-
-const titleStyle: CSSProperties = {
-  margin: '7px 0 0',
-  fontSize: 34,
-  lineHeight: 1.05,
-};
-
-const ledeStyle: CSSProperties = {
-  margin: '9px 0 0',
-  color: colors.muted,
-  maxWidth: 760,
-  lineHeight: 1.5,
-};
-
-const headerLinkStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 8,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  padding: '9px 12px',
-  color: colors.ink,
-  background: 'rgba(19, 37, 54, 0.92)',
-  textDecoration: 'none',
-  fontSize: 13,
-  fontWeight: 800,
-};
-
-const chipStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 8,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  padding: '7px 10px',
-  background: colors.panelSoft,
-  fontSize: 12,
-  minWidth: 0,
-};
-
-const railLinkStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 9,
-  padding: '10px 11px',
-  borderRadius: 8,
-  color: colors.ink,
-  background: colors.panelSoft,
-  border: `1px solid ${colors.border}`,
-  textDecoration: 'none',
-  fontSize: 13,
-  fontWeight: 800,
-};
-
-const metricTileStyle: CSSProperties = {
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  background: 'rgba(14, 26, 39, 0.96)',
-  padding: 14,
-  minHeight: 96,
-};
-
-const sectionIconStyle: CSSProperties = {
-  width: 34,
-  height: 34,
-  borderRadius: 8,
-  border: `1px solid ${colors.border}`,
-  background: 'rgba(14, 165, 233, 0.10)',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flex: '0 0 auto',
-};
-
-const smallIconStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  border: `1px solid ${colors.border}`,
-  background: colors.panelSoft,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flex: '0 0 auto',
-};
-
-const workflowPanelStyle: CSSProperties = {
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  padding: 14,
-  background: 'rgba(14, 26, 39, 0.86)',
-  minWidth: 0,
-};
-
-const adminRowStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 12,
-  alignItems: 'center',
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  background: colors.panelSoft,
-  padding: 12,
-};
-
-const loadingPanelStyle: CSSProperties = {
-  border: `1px solid ${colors.borderStrong}`,
-  background: 'rgba(14, 26, 39, 0.96)',
-  borderRadius: 8,
-  padding: 18,
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: 12,
-};
+const pulseDeskRouteCss = `
+  [data-testid="pulsedesk-module-shell"] { box-sizing:border-box; width:100%; min-width:0; color-scheme:dark; }
+  [data-testid="pulsedesk-module-shell"] *,[data-testid="pulsedesk-module-shell"] *:before,[data-testid="pulsedesk-module-shell"] *:after { box-sizing:border-box; min-width:0; }
+  [data-testid="pulsedesk-module-shell"]:before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; background:radial-gradient(circle at 10% -4%,rgba(56,189,248,.18),transparent 31rem),radial-gradient(circle at 90% 4%,rgba(74,222,128,.07),transparent 27rem); }
+  .pulsedesk-brand { display:flex; align-items:center; gap:10px; color:#eaf4ff; text-decoration:none; }
+  .pulsedesk-brand>span { width:40px; height:40px; display:grid; place-items:center; color:#4ade80; border:1px solid rgba(56,189,248,.42); border-radius:10px; background:#0b2232; }
+  .pulsedesk-brand strong { font-size:16px; font-weight:900; }
+  .pulsedesk-action { display:inline-flex; align-items:center; gap:7px; border:1px solid rgba(56,189,248,.42); background:#075985; color:#e0f2fe; border-radius:8px; padding:9px 12px; font-size:13px; font-weight:850; text-decoration:none; }
+  .pulsedesk-action:focus-visible,.pulsedesk-route-card:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
+  .pulsedesk-route-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .pulsedesk-route-card { display:grid; grid-template-columns:auto 1fr; gap:7px 11px; padding:18px; border:1px solid #29445a; border-radius:12px; color:#eaf4ff; text-decoration:none; background:linear-gradient(145deg,#0e1a27,#0a1722); }
+  .pulsedesk-route-card:hover { border-color:#38bdf8; }
+  .pulsedesk-route-card svg { grid-row:1/3; color:#4ade80; }
+  .pulsedesk-route-card span { color:#9bb0c6; font-size:12px; line-height:1.5; }
+  .pulsedesk-route-state { min-height:170px; display:flex; align-items:center; justify-content:center; gap:9px; border:1px solid #29445a; border-radius:10px; background:#0e1a27; color:#9bb0c6; }
+  .pulsedesk-route-panel { border:1px solid #29445a; border-radius:10px; background:#0e1a27; padding:18px; }
+  .pulsedesk-route-panel .pdq-heading { grid-template-columns:1fr; }
+  .pulsedesk-route-panel .pdq-metrics { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .pulsedesk-route-panel .pdq-filters { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .pulsedesk-route-panel .pdq-workspace { grid-template-columns:1fr; }
+  .pulsedesk-boundary { display:flex; align-items:flex-start; gap:10px; margin-bottom:14px; padding:12px; border:1px solid rgba(251,191,36,.35); border-radius:9px; color:#fde68a; background:rgba(120,53,15,.18); font-size:13px; line-height:1.5; }
+  .pulsedesk-settings { border:1px solid #29445a; background:#0e1a27; border-radius:10px; padding:19px; display:grid; gap:12px; margin-top:16px; }
+  .pulsedesk-settings h2 { margin:0; display:flex; align-items:center; gap:9px; color:#eaf4ff; font-size:18px; }
+  .pulsedesk-settings h2 svg { color:#4ade80; }
+  .pulsedesk-settings>p { margin:0; color:#9bb0c6; line-height:1.55; }
+  .pulsedesk-settings-row { display:grid; gap:5px; padding:12px; border-left:2px solid #38bdf8; background:#091622; }
+  .pulsedesk-settings-row strong { color:#eaf4ff; font-size:13px; }
+  .pulsedesk-settings-row span { color:#9bb0c6; font-size:12px; line-height:1.5; }
+  [data-testid="pulsedesk-module-shell"] :is(input,select,textarea) { color-scheme:dark; background:#0a1520!important; color:#eaf4ff!important; border-color:#29445a!important; }
+  [data-testid="pulsedesk-module-shell"] :is(input,select,textarea)::placeholder { color:#6e849b; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds,.pdq-root,.directory-root,.pdc) { color:#eaf4ff; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds,.pdq-root,.directory-root,.pdc) :is(h2,h3,h4,strong,summary) { color:#eaf4ff; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds-card,.pds-metrics article,.pds-ticket,.pds-row-button,.pdq-intake,.pdq-departments,.pdq-list,.pdq-detail,.pdq-card,.pdq-manager-controls,.pdq-timeline,.directory-root,.pdc,.pdc article) { background:#0e1a27!important; color:#eaf4ff!important; border-color:#29445a!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pdq-metric,.pdq-warning,.pdq-error,.pdq-success,.pdq-inline-error,.pdq-assignee-error,.pdq-department-list>div,.pdq-detail-heading dl>div,.pdq-skeleton) { background:#132536!important; color:#eaf4ff!important; border-color:#29445a!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds-form,.pds-empty,.pds-config div,.pds-message,.pds-chips span,.pds-route-context,.pdq-filters,.pdq-empty,.pdq-detail-empty,.pdq-department-body,.pdq-timeline-empty,.pdc-notice) { background:#132536!important; color:#9bb0c6!important; border-color:#29445a!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds-ticket.selected,.pdq-card[aria-pressed='true']) { background:rgba(56,189,248,.10)!important; border-color:#38bdf8!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds-secondary,.pdq-secondary) { background:#132536!important; color:#eaf4ff!important; border-color:#29445a!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds-heading p,.pds-row small,.pds-ticket small,.pds-description,.pds-config span,.pdq-heading p,.pdq-card-context,.pdq-card-footer,.pdc article span,.pdc article small,.pdc header p) { color:#9bb0c6!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pdc header span,.pdc-empty) { color:#b9cada!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds-metrics span,.pds-row-button small) { color:#9bb0c6!important; }
+  [data-testid="pulsedesk-module-shell"] :is(.pds-check,.pds-toggle,.pds-row p,.pds-message small) { color:#b9cada!important; }
+  [data-testid="pulsedesk-module-shell"] .pds-ticket > button { color:#eaf4ff!important; }
+  [data-testid="pulsedesk-module-shell"] .pdq-root button { background:#0369a1!important; border-color:#0369a1!important; color:#fff!important; }
+  [data-testid="pulsedesk-module-shell"] .pdq-root :is(.pdq-eyebrow,.pdq-card h3>span,.pdq-detail-heading h3,.pdq-form-title>svg,.pdq-search>svg) { color:#7dd3fc!important; }
+  [data-testid="pulsedesk-module-shell"] .pdq-root :is(.pdq-metric span,.pdq-form-title span,.pdq-intake label>span,.pdq-manager-controls label>span,.pdq-department-body label>span,.pdq-checkbox span,.pdq-departments summary>small,.pdq-department-list span:nth-child(3),.pdq-card-footer>span,.pdq-detail-heading dt,.pdq-detail-heading dd,.pdq-timeline li span,.pdq-timeline li small,.pdq-wide small) { color:#b9cada!important; }
+  [data-testid="pulsedesk-module-shell"] .pdq-root :is(.pdq-metric-blue strong) { color:#7dd3fc!important; }
+  [data-testid="pulsedesk-module-shell"] .pdq-root :is(.pdq-metric-amber strong,.pdq-warning,.pdq-warning strong) { color:#fde68a!important; }
+  [data-testid="pulsedesk-module-shell"] .pdq-root :is(.pdq-metric-red strong,.pdq-error,.pdq-inline-error,.pdq-assignee-error) { color:#fecaca!important; }
+  [data-testid="pulsedesk-module-shell"] .pdq-root .pdq-success { color:#bbf7d0!important; }
+  [data-testid="pulsedesk-module-shell"] .pds-route-label { margin:0; color:#eaf4ff; font-size:15px; text-transform:capitalize; }
+  [data-testid="pulsedesk-module-shell"] .pds-warning { background:rgba(120,53,15,.22); border-color:rgba(251,191,36,.4); color:#fde68a; }
+  [data-testid="pulsedesk-module-shell"] .pds-warning strong { color:#fef3c7!important; }
+  [data-testid="pulsedesk-module-shell"] .pds-row-button { text-decoration:none; }
+  [data-testid="pulsedesk-module-shell"] .directory-pulsedesk { --d-bg:#0a1520;--d-panel:#132536;--d-text:#eaf4ff;--d-muted:#9bb0c6;--d-border:#29445a;--d-accent:#38bdf8;--d-danger:#fb7185; }
+  [data-testid="pulsedesk-module-shell"] .directory-tabs button[aria-selected='true'] { color:#07111b!important; }
+  @media(max-width:1100px){#pulsedesk-directory .directory-layout{grid-template-columns:1fr}#pulsedesk-directory .directory-list{max-height:320px}}
+  @media(max-width:720px){.pulsedesk-route-grid{grid-template-columns:1fr}.pulsedesk-action{width:100%;justify-content:center}#pulsedesk-directory .directory-columns{grid-template-columns:1fr}}
+`;
