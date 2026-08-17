@@ -96,7 +96,7 @@ STRIPE_MODE = "live"
 
 [postMerge]
 path = "scripts/post-merge.sh"
-timeoutMs = 20000
+timeoutMs = 300000
 
 [agent]
 integrations = ["stripe:1.0.0"]
