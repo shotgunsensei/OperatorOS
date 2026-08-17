@@ -1,0 +1,13 @@
+# OperatorOS
+
+> The modular command layer for modern business operations. One console, shared sign-on, billing, and role-aware access for your entire product ecosystem.
+
+## Pages
+
+- [Home](https://operatoros.net/): Platform overview and ecosystem introduction.
+- [Pricing](https://operatoros.net/pricing): Plans and module pricing.
+- [How It Works](https://operatoros.net/how-it-works): Four-step onboarding flow.
+- [Ecosystem](https://operatoros.net/ecosystem): All active and planned modules.
+- [Modules](https://operatoros.net/modules): Module gateway and category listing.
+- [Privacy Policy](https://operatoros.net/privacy): Privacy practices.
+- [Terms](https://operatoros.net/terms): Terms and conditions.
