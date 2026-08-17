@@ -95,10 +95,12 @@ export default function PlatformCommandShell({
   accessState,
   view,
   children,
+  deniedActions,
 }: {
   accessState: AccessState;
   view: PlatformView;
   children?: React.ReactNode;
+  deniedActions?: React.ReactNode;
 }) {
   const { logoutEverywhere } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -263,7 +265,7 @@ export default function PlatformCommandShell({
                   <h1>403 — Platform Command unavailable</h1>
                   <p>This workspace requires the OperatorOS super-admin role. No platform records were loaded.</p>
                   <div className={styles.stateActions}>
-                    <Link href="/app">Return to My Apps</Link>
+                    {deniedActions ?? <Link href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}>Return to My Apps</Link>}
                     <a href={PLATFORM_DOMAINS.root}>OperatorOS Home</a>
                   </div>
                 </>

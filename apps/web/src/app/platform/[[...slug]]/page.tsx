@@ -24,6 +24,7 @@
  * a customer doesn't leak the surface.
  */
 
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
 import TenantProvider from '@/components/TenantProvider';
@@ -33,6 +34,7 @@ import PlatformPage from '@/components/pages/PlatformPage';
 import PlatformCommandShell from '@/components/platform/PlatformCommandShell';
 import { pathToPlatformView, platformViewToPath, type PlatformView } from '@/lib/platform-routes';
 import ContactLink from '@/components/ContactLink';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
 function PlatformGate() {
   const { user, loading } = useAuth();
@@ -50,7 +52,13 @@ function PlatformGate() {
   }
   if (!user) return <LoginPage onSwitch={() => router.push('/')} />;
   if ((user as any).platformRole !== 'super_admin') {
-    return <PlatformCommandShell accessState="denied" view={view} />;
+    return (
+      <PlatformCommandShell
+        accessState="denied"
+        view={view}
+        deniedActions={<Link href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}>Return to My Apps</Link>}
+      />
+    );
   }
   return (
     <PlatformCommandShell accessState="authorized" view={view}>
