@@ -14,10 +14,10 @@ const COL_PRODUCT = [
 ];
 
 const COL_MODULES = [
-  { href: '/modules', label: 'TradeFlowKit' },
-  { href: '/modules', label: 'TechDeck' },
-  { href: '/modules', label: 'PulseDesk' },
-  { href: '/modules', label: 'Ninjamation' },
+  { href: '/modules#module-tradeflowkit', label: 'TradeFlowKit' },
+  { href: '/modules#module-techdeck', label: 'TechDeck' },
+  { href: '/modules#module-pulsedesk', label: 'PulseDesk' },
+  { href: '/modules#module-ninjamation', label: 'Ninjamation' },
 ];
 
 const COL_ACTIONS = [

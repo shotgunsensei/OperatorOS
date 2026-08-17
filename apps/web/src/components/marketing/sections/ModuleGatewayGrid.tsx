@@ -236,9 +236,11 @@ function ModuleCard({ module: m, signedIn }: { module: MarketingModule; signedIn
 
   return (
     <div
+      id={`module-${m.slug}`}
       data-testid={`module-gateway-card-${m.slug}`}
       className="operatoros-module-card"
       style={{
+        scrollMarginTop: 96,
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',

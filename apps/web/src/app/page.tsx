@@ -13,6 +13,7 @@ import TrustSection from '@/components/marketing/sections/TrustSection';
 import FinalCta from '@/components/marketing/sections/FinalCta';
 import { useAuth } from '@/components/AuthProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules/navigation.js';
+import { serializeJsonLd, softwareApplicationJsonLd } from '@/lib/seo';
 
 /**
  * Marketing home — Phase 2.
@@ -50,6 +51,11 @@ function HomeBody() {
 export default function MarketingHomePage() {
   return (
     <MarketingLayout testId="page-marketing-home">
+      <script
+        id="operatoros-software-application-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(softwareApplicationJsonLd) }}
+      />
       <HomeBody />
     </MarketingLayout>
   );

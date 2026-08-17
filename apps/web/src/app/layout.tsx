@@ -1,6 +1,13 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { brand, brandCssVariables } from '@/lib/brand';
+import {
+  buildPublicMetadata,
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  globalJsonLd,
+  serializeJsonLd,
+} from '@/lib/seo';
 import './globals.css';
 
 // Keep production builds deterministic. The prior next/font Google loader
@@ -9,10 +16,12 @@ import './globals.css';
 // platform fonts without a runtime or build-time third-party request.
 
 export const metadata: Metadata = {
+  ...buildPublicMetadata({
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    path: '/',
+  }),
   metadataBase: new URL('https://operatoros.net'),
-  title: 'OperatorOS — The Command Layer for Modern Operations',
-  description:
-    'The modular command layer for modern business operations. One console, every tool your team launches. Powered by Shotgun Ninjas.',
   manifest: '/manifest.json',
   icons: {
     // Browsers always probe `/favicon.ico` even when an SVG icon is
@@ -41,13 +50,6 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
-  },
-  openGraph: {
-    title: 'OperatorOS — The Command Layer for Modern Operations',
-    description:
-      'The modular command layer for modern business operations. One console, every tool your team launches.',
-    siteName: 'OperatorOS',
-    type: 'website',
   },
 };
 
@@ -83,6 +85,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <style dangerouslySetInnerHTML={{ __html: `:root { ${brandCssVariables} }` }} />
+        <script
+          id="operatoros-global-jsonld"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(globalJsonLd) }}
+        />
         {children}
       </body>
     </html>

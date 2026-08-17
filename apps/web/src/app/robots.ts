@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { absoluteUrl } from '@/lib/seo';
 
 /**
  * SEO fix: Lighthouse flagged "Page is blocked from indexing" because
@@ -22,8 +23,20 @@ export default function robots(): MetadataRoute.Robots {
         // `/portfolio` and `/john` (Task #113) are hidden share-by-link
         // pages — kept out of search even though they reuse the public
         // marketing chrome.
-        disallow: ['/admin', '/platform', '/apps/', '/invites/', '/app', '/portfolio', '/john'],
+        disallow: [
+          '/admin',
+          '/platform',
+          '/apps',
+          '/invites',
+          '/app',
+          '/login',
+          '/signed-out',
+          '/sso',
+          '/portfolio',
+          '/john',
+        ],
       },
     ],
+    sitemap: absoluteUrl('/sitemap.xml'),
   };
 }
