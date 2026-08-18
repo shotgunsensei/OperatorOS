@@ -820,8 +820,9 @@ function DeleteTenantDialog({
         <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Delete tenant permanently?</h3>
         <p style={{ margin: '0 0 12px 0', color: colors.textMuted, fontSize: 13 }}>
           This removes <strong>{tenant.name}</strong> and every member, module
-          assignment, invite, and module-shell row attached to it. This action
-          cannot be undone.
+          assignment, invite, entitlement, and tenant-owned product row attached
+          to it. Active paid subscriptions must be cancelled and reconciled
+          first. This action cannot be undone.
         </p>
         <p style={{ margin: '0 0 6px 0', fontSize: 13 }}>
           Type <code>{tenant.slug}</code> to confirm you want to delete this organization:
@@ -1605,7 +1606,12 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const hardDelete = async () => {
-    if (!confirm('PERMANENTLY delete this user? This cannot be undone.')) return;
+    if (!confirm(
+      `PERMANENTLY delete ${data?.user?.email ?? 'this user'}?\n\n` +
+      'Their personal tenant, memberships, workspace/project data, sessions, and user-owned module rows will be removed. ' +
+      'Historical audit records will be retained without a live user reference. Active billing must be cancelled first, ' +
+      'and company tenants must be transferred or deleted. This cannot be undone.',
+    )) return;
     setErr(null); setBusy(true);
     try { await apiCall(`/platform/users/${id}/hard`, { method: 'DELETE' }); onBack(); }
     catch (e) { setErr(e); } finally { setBusy(false); }

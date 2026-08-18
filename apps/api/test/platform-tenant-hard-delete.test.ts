@@ -3,9 +3,10 @@
  *
  * Verifies:
  *   - 400 TENANT_DELETE_CONFIRM_REQUIRED if ?confirm=<slug> missing/wrong
- *   - 409 TENANT_HAS_DEPENDENTS when active addons / launchable modules /
- *     non-super-admin members exist (returns dependents counts)
- *   - 200 + transactional delete on a clean tenant; audit row written
+ *   - members, module assignments, and entitlement rows are owned dependents
+ *     removed by the confirmed transaction
+ *   - 409 TENANT_HAS_ACTIVE_BILLING while provider-backed billing is live
+ *   - 200 + transactional delete; audit row written
  *     BEFORE the delete with action 'tenant_deleted' and pickSafe snapshot
  *   - tenant + child rows actually removed
  */
@@ -15,7 +16,7 @@ import assert from 'node:assert/strict';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
-  users, tenants, tenantUsers, tenantModules, modules, addonSubscriptions,
+  users, tenants, tenantUsers, tenantModules, tenantEntitlements, addonSubscriptions,
   adminAuditLogs, ninjaPoolPracticeSessions,
 } from '../src/schema.js';
 import { ensureSchemaReady, createTestUser, createTestModule, cleanupUser, cleanupModule, uniqueId } from './_setup.js';
@@ -89,7 +90,7 @@ test('hard-delete: 400 when confirm slug does not match', async () => {
   }
 });
 
-test('hard-delete: 409 TENANT_HAS_DEPENDENTS — non-super-admin member', async () => {
+test('hard-delete: 200 cascades ordinary tenant members', async () => {
   const t = await makeTenant();
   await db.insert(tenantUsers).values({ tenantId: t.id, userId: otherUser.id, role: 'member' });
   try {
@@ -97,38 +98,38 @@ test('hard-delete: 409 TENANT_HAS_DEPENDENTS — non-super-admin member', async 
       method: 'DELETE', url: `/v1/platform/tenants/${t.id}?confirm=${t.slug}`,
       headers: bearer(admin),
     });
-    assert.equal(res.statusCode, 409);
-    const body = res.json();
-    assert.equal(body.code, 'TENANT_HAS_DEPENDENTS');
-    assert.equal(body.dependents.nonAdminMembers, 1);
-    assert.equal(body.dependents.activeAddons, 0);
-    assert.equal(body.dependents.launchableModules, 0);
-
-    // Tenant must still exist.
-    const [still] = await db.select().from(tenants).where(eq(tenants.id, t.id));
-    assert.ok(still, 'tenant not deleted');
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal((await db.select().from(tenants).where(eq(tenants.id, t.id))).length, 0);
+    assert.equal((await db.select().from(tenantUsers).where(eq(tenantUsers.tenantId, t.id))).length, 0);
   } finally {
     try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, t.id)); } catch {}
     try { await db.delete(tenants).where(eq(tenants.id, t.id)); } catch {}
   }
 });
 
-test('hard-delete: 409 TENANT_HAS_DEPENDENTS — launchable tenant_module', async () => {
+test('hard-delete: 200 cascades module assignments and tenant entitlements', async () => {
   const t = await makeTenant();
   const m = await createTestModule();
   await db.insert(tenantModules).values({
     tenantId: t.id, moduleId: m.id, status: 'enabled', source: 'admin',
+  });
+  await db.insert(tenantEntitlements).values({
+    tenantId: t.id,
+    entitlementKey: `module:${m.slug}`,
+    entitlementType: 'companion_module',
+    source: 'admin',
   });
   try {
     const res = await app.inject({
       method: 'DELETE', url: `/v1/platform/tenants/${t.id}?confirm=${t.slug}`,
       headers: bearer(admin),
     });
-    assert.equal(res.statusCode, 409);
-    const body = res.json();
-    assert.equal(body.code, 'TENANT_HAS_DEPENDENTS');
-    assert.equal(body.dependents.launchableModules, 1);
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal((await db.select().from(tenants).where(eq(tenants.id, t.id))).length, 0);
+    assert.equal((await db.select().from(tenantModules).where(eq(tenantModules.tenantId, t.id))).length, 0);
+    assert.equal((await db.select().from(tenantEntitlements).where(eq(tenantEntitlements.tenantId, t.id))).length, 0);
   } finally {
+    try { await db.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, t.id)); } catch {}
     try { await db.delete(tenantModules).where(eq(tenantModules.tenantId, t.id)); } catch {}
     try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, t.id)); } catch {}
     try { await db.delete(tenants).where(eq(tenants.id, t.id)); } catch {}
@@ -136,7 +137,7 @@ test('hard-delete: 409 TENANT_HAS_DEPENDENTS — launchable tenant_module', asyn
   }
 });
 
-test('hard-delete: 409 TENANT_HAS_DEPENDENTS — active addon subscription', async () => {
+test('hard-delete: 409 TENANT_HAS_ACTIVE_BILLING — active addon subscription', async () => {
   const t = await makeTenant();
   const m = await createTestModule();
   await db.insert(addonSubscriptions).values({
@@ -149,6 +150,7 @@ test('hard-delete: 409 TENANT_HAS_DEPENDENTS — active addon subscription', asy
       headers: bearer(admin),
     });
     assert.equal(res.statusCode, 409);
+    assert.equal(res.json().code, 'TENANT_HAS_ACTIVE_BILLING');
     assert.equal(res.json().dependents.activeAddons, 1);
   } finally {
     try { await db.delete(addonSubscriptions).where(eq(addonSubscriptions.tenantId, t.id)); } catch {}

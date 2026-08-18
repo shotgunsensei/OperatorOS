@@ -1,5 +1,18 @@
 # OperatorOS module parity index
 
+## Release v54 identity/onboarding overlay (2026-08-18)
+
+The shared OperatorOS account and tenant layer now completes invitations on a
+single exact platform host, atomically joins the invited tenant, recovers only
+exact pending same-business-domain invitations, and makes same-user acceptance
+retries idempotent. Confirmed tenant/user removal cascades owned data while
+preserving active-billing, company-ownership, self-delete, and final-super-admin
+safeguards; historical audit rows retain actor-email snapshots after the live
+identity reference is removed. This fixes a shared platform boundary and does
+not promote or demote any module. Release v54 is source/local verified on a
+disposable database; production application and deployed acceptance remain
+open.
+
 ## TradeFlowKit executable-route and SEO overlay (2026-08-17)
 
 TradeFlowKit retains its current product-truth state while every currently

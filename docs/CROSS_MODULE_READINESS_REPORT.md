@@ -1,5 +1,20 @@
 # Cross-module readiness report
 
+## Release v54 tenant onboarding and removal overlay (2026-08-18)
+
+Shared identity and tenant onboarding now keeps invitation account creation
+and acceptance on one exact platform host, commits account/membership/current
+tenant state atomically, and recovers only an administrator-authored exact
+pending same-business-domain invitation. Tenant and user hard-delete now use a
+complete tenant-owned data cascade instead of treating ordinary members,
+module grants, personal tenants, and workspaces as permanent blockers. Active
+billing and owned company tenants still fail closed, and release v54 preserves
+audit history through actor snapshots plus `ON DELETE SET NULL` live actor
+references. Focused PostgreSQL acceptance and relevant auth/boundary tests
+pass. No child module receives identity, session, tenant, or deletion
+authority, no module readiness state changes, and production deployment gates
+remain open.
+
 Assessment updated: 2026-08-02. Scope: OperatorOS and consolidated modules in
 the `C:\Dev\OperatorOS` runtime.
 

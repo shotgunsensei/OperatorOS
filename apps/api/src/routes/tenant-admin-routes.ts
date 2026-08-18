@@ -34,6 +34,11 @@ import { requireTenantAdmin, requireTenantOwner } from '../lib/tenant-auth.js';
 import { writeAudit, pickSafe, TENANT_USER_ACCESS_SAFE_FIELDS } from '../lib/audit.js';
 import { sendInviteEmail, buildInviteAcceptUrl } from '../lib/email-service.js';
 import { isTenantOwner } from '../lib/rbac.js';
+import {
+  acceptTenantInvitationWithDatabase,
+  isTenantInviteToken,
+  TenantInvitationError,
+} from '../lib/tenant-invitations.js';
 
 const INVITE_TTL_DAYS = 14;
 const TENANT_USER_SAFE_FIELDS = ['id', 'tenantId', 'userId', 'role'] as const;
@@ -434,13 +439,14 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
   // status so the page can short-circuit to an error state without making
   // the recipient sign in first.
   //
-  // Anti-enumeration: tokens are 32+ random bytes so listing them isn't
-  // feasible. We only expose the email back to whoever already holds the
-  // token (they got it in their inbox), never the underlying tenantId.
+  // Anti-enumeration: tokens are 192-bit random capabilities, so listing them
+  // isn't feasible. We only expose the email back to whoever already holds
+  // the token (they got it in their inbox), never the underlying tenantId.
   app.get<{ Params: { token: string } }>(
     '/v1/invites/:token/peek',
     async (request, reply) => {
       const { token } = request.params;
+      if (!isTenantInviteToken(token)) return notFound(reply, 'INVITE_NOT_FOUND', 'Invite not found');
       const [invite] = await db.select().from(tenantInvites)
         .where(eq(tenantInvites.token, token)).limit(1);
       if (!invite) return notFound(reply, 'INVITE_NOT_FOUND', 'Invite not found');
@@ -465,44 +471,20 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const user = (request as any).user;
       const { token } = request.params;
-      const [invite] = await db.select().from(tenantInvites)
-        .where(eq(tenantInvites.token, token)).limit(1);
-      if (!invite) return notFound(reply, 'INVITE_NOT_FOUND', 'Invite not found');
-      if (invite.acceptedAt) {
-        return reply.code(409).send({ error: 'Invite already accepted', code: 'INVITE_ALREADY_ACCEPTED' });
+      try {
+        const accepted = await db.transaction(tx => acceptTenantInvitationWithDatabase(tx, {
+          token,
+          user,
+          request,
+          ipAddress: request.ip,
+        }));
+        return accepted;
+      } catch (error) {
+        if (error instanceof TenantInvitationError) {
+          return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+        }
+        throw error;
       }
-      if (invite.expiresAt.getTime() < Date.now()) {
-        return reply.code(410).send({ error: 'Invite has expired', code: 'INVITE_EXPIRED' });
-      }
-      // Email mismatch → return 403; do not reveal which other email it
-      // was issued to.
-      if (invite.email.toLowerCase() !== user.email.toLowerCase()) {
-        return reply.code(403).send({
-          error: 'This invite was issued to a different email address',
-          code: 'INVITE_EMAIL_MISMATCH',
-        });
-      }
-      const [existing] = await db.select().from(tenantUsers)
-        .where(and(eq(tenantUsers.tenantId, invite.tenantId), eq(tenantUsers.userId, user.id))).limit(1);
-      let membership: any;
-      if (existing) {
-        membership = existing;
-      } else {
-        [membership] = await db.insert(tenantUsers).values({
-          tenantId: invite.tenantId, userId: user.id, role: invite.role,
-        }).returning();
-      }
-      await db.update(tenantInvites).set({ acceptedAt: new Date() })
-        .where(eq(tenantInvites.id, invite.id));
-      await writeAudit({
-        actorUserId: user.id, tenantId: invite.tenantId,
-        targetType: 'tenant_user', targetId: membership.id,
-        action: 'tenant_invite_accepted',
-        before: null, after: pickSafe(membership, [...TENANT_USER_SAFE_FIELDS]),
-        extra: { inviteId: invite.id },
-        ipAddress: request.ip,
-      }, request);
-      return { membership, tenantId: invite.tenantId };
     },
   );
 
@@ -666,7 +648,9 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         .orderBy(desc(adminAuditLogs.createdAt))
         .limit(20);
 
-      const actorIds = [...new Set(auditRows.map(r => r.adminId))];
+      const actorIds = [...new Set(auditRows
+        .map(r => r.adminId)
+        .filter((id): id is string => typeof id === 'string'))];
       const targetUserIds = [...new Set(auditRows.filter(r => r.targetUserId).map(r => r.targetUserId!))];
       const allUserIds = [...new Set([...actorIds, ...targetUserIds])];
       const nameMap = new Map<string, { name: string | null; email: string | null }>();
@@ -699,7 +683,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       }
 
       const recentEvents = auditRows.map(r => {
-        const actor = nameMap.get(r.adminId);
+        const actor = r.adminId ? nameMap.get(r.adminId) : undefined;
         const detailsUserId = targetUserIdFromDetails(r);
         const targetUserId = detailsUserId ?? r.targetUserId;
         const target = targetUserId ? nameMap.get(targetUserId) : null;
@@ -708,7 +692,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
           id: r.id,
           action: r.action,
           createdAt: r.createdAt,
-          actorName: actor?.name || actor?.email || 'Unknown',
+          actorName: actor?.name || actor?.email || r.actorEmailSnapshot || 'Deleted user',
           targetUserName: target ? (target.name || target.email || 'Deleted user') : null,
           targetType: typeof details.targetType === 'string' ? details.targetType : null,
           targetId: typeof details.targetId === 'string' ? details.targetId : null,

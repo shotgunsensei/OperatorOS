@@ -2,6 +2,22 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current release v54 identity/onboarding overlay
+
+OperatorOS invitation onboarding now remains inside the shared identity and
+tenant authority: one-host password creation atomically accepts the exact
+invitation, existing-account acceptance is idempotent, and an exact pending
+same-business-domain invitation can be recovered during platform account
+creation or authentication without introducing domain-wide tenant discovery.
+Confirmed tenant and user removal cascades owned platform/module data while
+active billing and company-tenant ownership fail closed. Audit events survive
+identity purge through release-v54 actor snapshots and nullable live actor
+references. Focused disposable-database acceptance passes; the complete API
+aggregate remains red on 13 existing module-shell/source-snapshot assertions.
+This shared-platform repair changes no module parity state. Production
+backup/apply, deployment, authenticated browser acceptance, and rollback are
+still required.
+
 ## Current Phase 40 certification overlay
 
 Candidate `4c24d818f5108aa0d049241c7ae386ae7787a211` is **not

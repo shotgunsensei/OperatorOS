@@ -49,6 +49,7 @@ import { ensureTorqueShedCheckoutContract } from './torqueshed-checkout-contract
 import { ensureTorqueShedSettlementContract } from './torqueshed-settlement-db-init.js';
 import { ensureTorqueShedReservationContract } from './torqueshed-reservation-db-init.js';
 import { ensureTenantMessengerTables } from './tenant-messenger-db-init.js';
+import { ensureIdentityOnboardingIntegrity } from './identity-onboarding-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -116,6 +117,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   torqueshed_settlement_contract: ensureTorqueShedSettlementContract,
   torqueshed_reservation_contract: ensureTorqueShedReservationContract,
   tenant_messenger_tables: ensureTenantMessengerTables,
+  identity_onboarding_integrity: ensureIdentityOnboardingIntegrity,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {

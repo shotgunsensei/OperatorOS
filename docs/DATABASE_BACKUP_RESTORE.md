@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 53 ordered step identifiers without secrets
+`db:plan` is read-only and prints 54 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -65,6 +65,17 @@ reset sessions. Emergency application rollback retains these additive tables,
 disables the MSP channel/integrations, and returns traffic to the prior
 artifact. Do not drop v46 tables or treat schema deletion as rollback.
 
+Release v54 appends `identity_onboarding_integrity` after the v53 tenant
+messenger step. It snapshots the actor email on platform audit rows, backfills
+existing rows, makes the live `admin_id` reference nullable, and changes that
+foreign key to `ON DELETE SET NULL`. Before applying it, require a verified
+backup covering users, tenants, memberships, invitations, sessions, billing,
+entitlements, module/product data, and the complete audit ledger. Application
+rollback retains the additive snapshot column and relaxed foreign key. A user
+or tenant hard-delete performed after v54 cannot be undone by application
+rollback; recovery requires restore into a new database, validation, and an
+authorized traffic switch.
+
 Release v53 appends `tenant_messenger_tables` after the v52 Torque Assist
 reservation contract. Before applying it, require a verified backup covering
 all identity, tenant-membership, session, entitlement, billing, module, and
@@ -74,6 +85,22 @@ body-free messenger audit events. Application rollback retains these additive
 tables and returns traffic to the prior artifact. Do not drop v53 tables,
 truncate history, or treat presence cleanup as a database rollback. Database
 rollback remains restore into a new database, validate, and switch traffic.
+
+### Release v54 disposable rehearsal (2026-08-18)
+
+On an empty isolated PostgreSQL 16 Docker database, the supported root
+`corepack pnpm db:apply` path completed and verified all 54 ordered operations
+in 18,929 ms with final step `identity_onboarding_integrity`. A second run of
+the same supported root command against the populated database verified all 54
+steps in 1,963 ms, proving the v54 release path remains re-entrant. Focused
+tests then created and reconciled synthetic same-business-domain invitations,
+created an account directly from an opaque invite, cascaded member/module/
+entitlement and personal-tenant/workspace/product dependents, retained audit
+snapshots, and proved billing/company-ownership safeguards. The database and
+container were disposable; no production database, customer data, provider,
+deployment, or traffic was touched. Production still requires a fresh verified
+backup, authorized v54 apply, reconciliation, deployed invitation/removal
+acceptance, and a rollback decision.
 
 ### Phase 53 disposable release rehearsal (2026-08-16)
 

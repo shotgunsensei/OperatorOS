@@ -1,7 +1,6 @@
 /**
- * Task #27 — End-to-end: a brand-new user can register, accept an invite,
- * log in, and see only their explicit grant plus canonical free-account apps
- * on the launchpad.
+ * End-to-end tenant invitation onboarding: both generic registration recovery
+ * and direct invite registration attach a new user to the intended tenant.
  *
  * This test stitches together the real HTTP surface (auth + tenant-admin +
  * module-routes) into a single Fastify instance and drives the journey
@@ -15,12 +14,11 @@
  *                         no per-user grant for the invitee
  *      A third module lives in OTHER tenant; it must never leak.
  *   2. Owner POST /v1/tenants/:id/invites for invitee@... .
- *   3. Brand-new user POST /v1/auth/register with that email; the endpoint
- *      returns the same generic 202 response for new and existing accounts.
+ *   3. Brand-new user POST /v1/auth/register with that exact pending business
+ *      invite email. Registration recovers the missed link and joins the
+ *      tenant while retaining the generic anti-enumeration response.
  *   4. New user POST /v1/auth/login and receives a host-only session cookie.
- *   5. New user POST /v1/invites/:token/accept using that cookie.
- *   6. New user switches to the invited tenant, matching the browser invite
- *      flow before it reloads My Apps.
+ *   5. Retrying the invitation acceptance is idempotent.
  *   7. Owner POST .../users/:userId/module-access for grantedMod (level=user).
  *   8. New user GET /v1/me/modules with the cookie from step 4 → asserts the
  *      explicit grant plus only canonical free companions appear
@@ -46,7 +44,7 @@ let owner: any;
 let tenantA: any, tenantB: any;
 let grantedMod: any, withheldMod: any, otherTenantMod: any;
 // Captured during the journey so teardown can reach them.
-let inviteeUserId: string | null = null;
+const inviteeUserIds: string[] = [];
 let inviteeEmail: string | null = null;
 
 before(async () => {
@@ -120,7 +118,7 @@ after(async () => {
   try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, tenantB.id)); } catch {}
   try { await db.delete(tenants).where(eq(tenants.id, tenantB.id)); } catch {}
   // Users + modules
-  if (inviteeUserId) await cleanupUser(inviteeUserId);
+  for (const userId of inviteeUserIds) await cleanupUser(userId);
   if (owner) await cleanupUser(owner.id);
   for (const m of [grantedMod, withheldMod, otherTenantMod]) if (m) await cleanupModule(m.id);
 });
@@ -129,7 +127,7 @@ const ownerBearer = () => ({
   authorization: `Bearer ${signToken({ userId: owner.id, email: owner.email, role: owner.role, sessionType: 'platform' })}`,
 });
 
-test('owner→invite→register→login→accept→launchpad shows the grant and only canonical free companions', async () => {
+test('missed-link registration recovers an exact same-business-domain invite and launchpad remains tenant-safe', async () => {
   inviteeEmail = `${uniqueId('e2e-invitee')}@test.local`;
 
   // 1. Owner creates an invite for the future member.
@@ -153,6 +151,18 @@ test('owner→invite→register→login→accept→launchpad shows the grant and
   assert.ok(!('user' in registerBody), 'registration must not disclose the registered user');
   assert.ok(!('token' in registerBody), 'registration must not issue a browser bearer token');
 
+  const [registeredUser] = await db.select().from(users).where(eq(users.email, inviteeEmail));
+  assert.ok(registeredUser, 'registration must persist the invited user');
+  inviteeUserIds.push(registeredUser.id);
+  assert.equal(registeredUser.currentTenantId, tenantA.id, 'pending business invite becomes the active tenant');
+  const [recoveredMembership] = await db.select().from(tenantUsers).where(and(
+    eq(tenantUsers.tenantId, tenantA.id),
+    eq(tenantUsers.userId, registeredUser.id),
+  ));
+  assert.equal(recoveredMembership?.role, 'member', 'exact pending invite is accepted during account creation');
+  const [acceptedInvite] = await db.select().from(tenantInvites).where(eq(tenantInvites.token, inviteToken));
+  assert.ok(acceptedInvite?.acceptedAt, 'recovered invite is no longer left pending');
+
   // 3. New user logs in via /v1/auth/login. The generic registration response
   //    intentionally carries neither user identity nor credentials, so login
   //    is the first authenticated step in the journey.
@@ -162,18 +172,20 @@ test('owner→invite→register→login→accept→launchpad shows the grant and
   });
   assert.equal(loginRes.statusCode, 200, `login: ${loginRes.body}`);
   const loginBody = loginRes.json();
-  inviteeUserId = loginBody.user.id;
+  const inviteeUserId = loginBody.user.id as string;
+  assert.equal(inviteeUserId, registeredUser.id);
   assert.ok(inviteeUserId, 'login must return the authenticated user id');
   const loginCookie = loginRes.cookies.find((c: any) => c.name === 'operatoros_session');
   assert.ok(loginCookie, 'login must set the host-only OperatorOS session cookie');
 
-  // 4. New user accepts the invite with the host-only session cookie.
+  // 4. A browser/network retry after the successful recovery is idempotent.
   const acceptRes = await app.inject({
     method: 'POST', url: `/v1/invites/${inviteToken}/accept`,
     cookies: { operatoros_session: loginCookie.value },
   });
   assert.equal(acceptRes.statusCode, 200, `accept: ${acceptRes.body}`);
   assert.equal(acceptRes.json().tenantId, tenantA.id);
+  assert.equal(acceptRes.json().alreadyAccepted, true);
   // Membership row exists with role=member.
   const [mem] = await db.select().from(tenantUsers).where(and(
     eq(tenantUsers.tenantId, tenantA.id),
@@ -181,19 +193,7 @@ test('owner→invite→register→login→accept→launchpad shows the grant and
   ));
   assert.equal(mem.role, 'member');
 
-  // 5. Mirror the browser invite flow: acceptInvite returns tenantId, then
-  //    tenantApi.switch makes that tenant authoritative before My Apps loads.
-  //    Without this step a newly registered user correctly remains in their
-  //    personal tenant and sees its free-account entitlements.
-  const switchRes = await app.inject({
-    method: 'POST',
-    url: `/v1/tenants/${tenantA.id}/switch`,
-    cookies: { operatoros_session: loginCookie.value },
-  });
-  assert.equal(switchRes.statusCode, 200, `tenant switch: ${switchRes.body}`);
-  assert.equal(switchRes.json().currentTenantId, tenantA.id);
-
-  // 6. Owner explicitly grants the invitee access to grantedMod.
+  // 5. Owner explicitly grants the invitee access to grantedMod.
   const grantRes = await app.inject({
     method: 'POST',
     url: `/v1/tenants/${tenantA.id}/users/${inviteeUserId}/module-access`,
@@ -202,7 +202,7 @@ test('owner→invite→register→login→accept→launchpad shows the grant and
   });
   assert.equal(grantRes.statusCode, 200, `grant: ${grantRes.body}`);
 
-  // 7. New user fetches their launchpad with the login cookie.
+  // 6. New user fetches their launchpad with the login cookie.
   const launchRes = await app.inject({
     method: 'GET', url: '/v1/me/modules',
     cookies: { operatoros_session: loginCookie.value },
@@ -231,4 +231,92 @@ test('owner→invite→register→login→accept→launchpad shows the grant and
   for (const k of ['slug', 'name', 'description', 'category', 'iconUrl', 'baseUrl']) {
     assert.ok(k in m, `launchpad module missing field ${k}`);
   }
+});
+
+test('invite link creates the account, membership, active tenant, and session in one transaction', async () => {
+  const email = `${uniqueId('direct-invitee')}@test.local`;
+  const inviteRes = await app.inject({
+    method: 'POST',
+    url: `/v1/tenants/${tenantA.id}/invites`,
+    headers: ownerBearer(),
+    payload: { email, role: 'member' },
+  });
+  assert.equal(inviteRes.statusCode, 200, `invite create: ${inviteRes.body}`);
+  const token: string = inviteRes.json().invite.token;
+
+  const registerRes = await app.inject({
+    method: 'POST',
+    url: '/v1/auth/register-with-invite',
+    payload: { token, password: 'DirectInvitePassword9!', name: 'Direct Invitee' },
+  });
+  assert.equal(registerRes.statusCode, 201, `direct invite registration: ${registerRes.body}`);
+  const body = registerRes.json();
+  inviteeUserIds.push(body.user.id);
+  assert.equal(body.user.email, email);
+  assert.equal(body.user.currentTenantId, tenantA.id);
+  assert.equal(body.tenantId, tenantA.id);
+  assert.equal(body.membership.role, 'member');
+  const sessionCookie = registerRes.cookies.find((cookie: any) => cookie.name === 'operatoros_session');
+  assert.ok(sessionCookie, 'direct invite registration must issue the host-only session cookie');
+
+  const memberships = await db.select().from(tenantUsers).where(and(
+    eq(tenantUsers.tenantId, tenantA.id),
+    eq(tenantUsers.userId, body.user.id),
+  ));
+  assert.equal(memberships.length, 1, 'invite registration creates exactly one tenant membership');
+
+  const personalTenants = await db.select().from(tenants).where(and(
+    eq(tenants.ownerUserId, body.user.id),
+    eq(tenants.type, 'personal'),
+  ));
+  assert.equal(personalTenants.length, 0,
+    'direct company invitation must not create an unwanted personal tenant');
+
+  const acceptRetry = await app.inject({
+    method: 'POST',
+    url: `/v1/invites/${token}/accept`,
+    cookies: { operatoros_session: sessionCookie.value },
+  });
+  assert.equal(acceptRetry.statusCode, 200, acceptRetry.body);
+  assert.equal(acceptRetry.json().alreadyAccepted, true);
+});
+
+test('an existing same-business-domain account is attached on its next authenticated login', async () => {
+  const email = `${uniqueId('existing-invitee')}@test.local`;
+  const password = 'ExistingInviteePassword9!';
+  const registerRes = await app.inject({
+    method: 'POST',
+    url: '/v1/auth/register',
+    payload: { email, password, name: 'Existing Invitee' },
+  });
+  assert.equal(registerRes.statusCode, 202, registerRes.body);
+  const [createdUser] = await db.select().from(users).where(eq(users.email, email));
+  assert.ok(createdUser);
+  inviteeUserIds.push(createdUser.id);
+  assert.notEqual(createdUser.currentTenantId, tenantA.id);
+
+  const inviteRes = await app.inject({
+    method: 'POST',
+    url: `/v1/tenants/${tenantA.id}/invites`,
+    headers: ownerBearer(),
+    payload: { email, role: 'member' },
+  });
+  assert.equal(inviteRes.statusCode, 200, inviteRes.body);
+
+  const loginRes = await app.inject({
+    method: 'POST',
+    url: '/v1/auth/login',
+    payload: { email, password },
+  });
+  assert.equal(loginRes.statusCode, 200, loginRes.body);
+  assert.equal(loginRes.json().user.currentTenantId, tenantA.id);
+  assert.deepEqual(loginRes.json().onboarding.joinedTenantIds, [tenantA.id]);
+  const memberships = await db.select().from(tenantUsers).where(and(
+    eq(tenantUsers.tenantId, tenantA.id),
+    eq(tenantUsers.userId, createdUser.id),
+  ));
+  assert.equal(memberships.length, 1);
+  const [invite] = await db.select().from(tenantInvites)
+    .where(eq(tenantInvites.token, inviteRes.json().invite.token));
+  assert.ok(invite.acceptedAt, 'login reconciliation must clear the pending invitation');
 });

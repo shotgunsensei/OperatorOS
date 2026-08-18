@@ -38,12 +38,10 @@ import {
  *     ConsolePage gate renders LoginPage when `!user`, so blocking
  *     here would create a redirect loop ("Sign in" CTA → /app → / →
  *     "Sign in" CTA → ...) with no way to authenticate.
- *   - `/app/invites/:token` — the invite page reads the token, keeps
- *     it in tab-scoped sessionStorage, and bounces the user to `/app` to sign in;
- *     ConsolePage then re-reads the token and lands them back at the
- *     canonical invite URL. The page must run its own pre-auth logic
- *     for that handoff to work (and for `peek` to display invitee
- *     context before sign-in).
+ *   - `/app/invites/:token` — the invite page validates the opaque token and
+ *     completes sign-in or password creation on that same origin. It must be
+ *     reachable before authentication so no invitation state is relayed
+ *     through browser storage across production host boundaries.
  *
  * Why presence-only:
  *   The Edge runtime doesn't share the API's JWT secret. We do a fast
@@ -504,7 +502,7 @@ export async function middleware(req: NextRequest) {
     return await redirectToLogin(req, context);
   }
 
-  // Invite-accept handles its own pre-auth token handoff. Permit it only on
+  // Invite-accept handles its own same-origin authentication. Permit it only on
   // the root/app surfaces (plus localhost/Replit preview development), never
   // on auth or module production hosts.
   if (

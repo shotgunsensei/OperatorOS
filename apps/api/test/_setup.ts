@@ -135,6 +135,8 @@ export async function ensureSchemaReady() {
   await ensureCrossModuleDataFabricTables();
   const { ensureTenantMessengerTables } = await import('../src/lib/tenant-messenger-db-init.js');
   await ensureTenantMessengerTables();
+  const { ensureIdentityOnboardingIntegrity } = await import('../src/lib/identity-onboarding-db-init.js');
+  await ensureIdentityOnboardingIntegrity();
   await ensureTestPlans();
 }
 

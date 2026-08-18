@@ -305,27 +305,28 @@ test('marketing shell · HTTP — /login is reachable and renders the sign-in su
   assert.match(body, /OperatorOS/i, 'GET /login should serve the branded shell');
 });
 
-test('marketing shell · HTTP — /app/invites/:token bypasses middleware for the pre-auth handoff', { concurrency: false }, async (t) => {
+test('marketing shell · HTTP — /app/invites/:token bypasses middleware for inline invitation auth', { concurrency: false }, async (t) => {
   if (!(await webIsUp())) {
     t.skip('Next dev server not reachable at ' + WEB_BASE);
     return;
   }
-  // The invite page handles its own auth state: it reads the token,
-  // keeps it in this tab's sessionStorage, and redirects to /app to sign in.
-  // Middleware must NOT pre-empt that flow or invitation emails break.
+  // The invite page handles its own auth state and password creation without
+  // crossing origins. Middleware must not pre-empt the invitation page.
   const r = await probe('/app/invites/example-token', { redirect: 'manual' });
   assert.equal(r.status, 200, 'GET /app/invites/:token should reach the page logic without a cookie');
 });
 
-test('marketing shell · invite capability handoff is tab-scoped', () => {
+test('marketing shell · invite authentication remains on the invitation page', () => {
   const invitePage = read('src/app/invites/[token]/page.tsx');
   const consolePage = read('src/app/app/page.tsx');
   const loginPage = read('src/components/pages/LoginPage.tsx');
   const registerPage = read('src/components/pages/RegisterPage.tsx');
   const handoffSources = [invitePage, consolePage, loginPage, registerPage].join('\n');
 
-  assert.match(handoffSources, /sessionStorage\.setItem\(PENDING_INVITE_KEY, token\)/);
-  assert.match(consolePage, /sessionStorage\.getItem\(['"]operatoros\.pendingInviteToken['"]\)/);
+  assert.match(invitePage, /registerWithInvite\(token, password, name\)/);
+  assert.match(invitePage, /tenantApi\.acceptInvite\(token\)/);
+  assert.doesNotMatch(handoffSources, /sessionStorage\.setItem\([^\n]*pendingInvite/);
+  assert.doesNotMatch(consolePage, /sessionStorage\.getItem\(['"]operatoros\.pendingInviteToken['"]\)/);
   assert.doesNotMatch(
     handoffSources,
     /localStorage\.(?:getItem|setItem)\([^\n]*operatoros\.pendingInvite/,
