@@ -558,7 +558,7 @@
         "fileCount": 321,
         "totalBytes": 7820081
       },
-      "capabilityDigestSha256": "5b7412df7c02246d17b8a501bd0c42c4815295887407ffe2ecbcdfd735fdced3",
+      "capabilityDigestSha256": "ee3e8ac1c5335ded6fdbe0412d0f9f4d2bc4fa35ab65f8c145ed88b14864cec6",
       "stateCounts": {
         "ACTIVE_NATIVE": 142,
         "ACTIVE_SHARED_EQUIVALENT": 27,

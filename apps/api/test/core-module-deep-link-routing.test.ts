@@ -25,7 +25,11 @@ test('core module deep links resolve only to live native shell sections', () => 
     label: 'Lead Center',
   });
   for (const path of ['customers', 'quotes', 'invoices', 'payments']) assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-revenue-flow');
-  for (const path of ['jobs', 'tasks', 'analytics']) assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-operations');
+  for (const path of ['jobs', 'analytics']) assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-operations');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['workflows'])?.sectionId, 'tradeflowkit-workflows');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['tasks'])?.sectionId, 'tradeflowkit-tasks');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['recurring-jobs'])?.sectionId, 'tradeflowkit-recurring-jobs');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['activity'])?.sectionId, 'tradeflowkit-activity');
   for (const path of ['directory', 'contacts', 'sites']) {
     assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-directory');
   }
@@ -106,6 +110,12 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['payments'])?.sectionId, 'tradeflowkit-revenue-flow');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123'])?.sectionId, 'tradeflowkit-lead-center');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['jobs', 'job-123'])?.sectionId, 'tradeflowkit-operations');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['tasks', 'task-123'])?.sectionId, 'tradeflowkit-tasks');
+  assert.deepEqual(resolveCoreModuleDeepLink('tradeflowkit', ['portal', 'Abcdefghijklmnopqrstuvwxyz012345']), {
+    sectionId: 'tradeflowkit-public-portal',
+    label: 'Customer Portal',
+    redirectPath: '/public/tradeflowkit/customers/Abcdefghijklmnopqrstuvwxyz012345',
+  });
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['clients', 'client-123'])?.sectionId, 'tradeflowkit-directory');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['m', 'tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');

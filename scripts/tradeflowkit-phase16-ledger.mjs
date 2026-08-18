@@ -143,10 +143,15 @@ function classifyPage(path) {
     );
   }
   if (['/privacy', '/terms', '/sms-consent', '/delete-account', '/guide'].includes(path)) {
+    const platformPage = path === '/guide'
+      ? 'apps/web/src/app/how-it-works/page.tsx'
+      : path === '/delete-account'
+        ? 'apps/web/src/app/app/page.tsx'
+        : `apps/web/src/app${path}/page.tsx`;
     return outcome(
       SHARED,
       'platform_navigation',
-      ['apps/web/src/app/privacy/page.tsx', 'apps/web/src/app/terms/page.tsx'],
+      [platformPage, 'apps/web/src/middleware.ts'],
       ['apps/web/e2e/operatoros-final-acceptance.spec.ts'],
       'The platform owns legal, account, and ecosystem guidance surfaces.',
     );
@@ -173,7 +178,7 @@ function classifyPage(path) {
     return outcome(
       SHARED,
       'business_directory',
-      ['apps/web/src/components/module-shells/BusinessDirectory.tsx'],
+      ['apps/web/src/app/modules/[slug]/[...path]/page.tsx', 'apps/web/src/app/modules/[slug]/[...path]/route-map.ts', 'apps/web/src/components/module-shells/BusinessDirectory.tsx'],
       directoryEvidence,
       'Shared Directory provides the tenant contact workspace.',
     );
@@ -182,7 +187,7 @@ function classifyPage(path) {
     return outcome(
       ACTIVE,
       'restored_operations',
-      ['apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx'],
+      ['apps/web/src/app/modules/[slug]/[...path]/page.tsx', 'apps/web/src/app/modules/[slug]/[...path]/route-map.ts', 'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx'],
       workManagementEvidence,
       'The consolidated work-management surface provides persisted workflows, job tasks, and tenant activity.',
     );
@@ -191,7 +196,7 @@ function classifyPage(path) {
     return outcome(
       ACTIVE,
       'retention',
-      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx'],
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/app/modules/[slug]/[...path]/page.tsx', 'apps/web/src/app/modules/[slug]/[...path]/route-map.ts', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx'],
       ['apps/api/test/tradeflowkit-retention.test.ts', 'apps/api/test/tradeflowkit-retention-static.test.ts'],
       'Bounded archived-record listing and dependency-safe restore are active; permanent purge stays prohibited.',
     );
@@ -208,10 +213,13 @@ function classifyPage(path) {
     path === '/settings' ||
     path === '/analytics'
   ) {
+    const routeTargets = path.startsWith('/portal/')
+      ? ['apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx', 'apps/web/src/middleware.ts']
+      : ['apps/web/src/app/modules/[slug]/page.tsx', 'apps/web/src/app/modules/[slug]/[...path]/page.tsx', 'apps/web/src/app/modules/[slug]/[...path]/route-map.ts'];
     return outcome(
       ACTIVE,
       'lead_to_cash',
-      ['apps/web/src/components/module-shells/TradeFlowKitShell.tsx'],
+      [...routeTargets, 'apps/web/src/components/module-shells/TradeFlowKitShell.tsx'],
       workflowEvidence,
       'The shared runtime has a persistent equivalent, subject to endpoint-level gaps below.',
     );

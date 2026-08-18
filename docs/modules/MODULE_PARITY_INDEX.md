@@ -1,5 +1,18 @@
 # OperatorOS module parity index
 
+## TradeFlowKit executable-route and SEO overlay (2026-08-17)
+
+TradeFlowKit retains its current product-truth state while every currently
+active/shared source UI route now names an executable Next application target.
+Stable module URLs expose workflows, team tasks, recurring jobs, and activity;
+legacy public customer-portal and platform-policy paths resolve before the
+module authentication gate without weakening tenant or token controls. The
+control report contains zero TradeFlowKit findings after removing 26 prior
+`ROUTE_NOT_CRAWLABLE` records. Public messaging-policy pages are now included
+in the sitemap and shared canonical/social metadata contract. The remaining
+global route/control failures are owned by other modules, and TradeFlowKit's
+947 blocked product-truth capabilities still prevent any state-5 promotion.
+
 ## Phase 50 business-operations route-application overlay
 
 TechDeck, PulseDesk, FaultlineLab, SnapProofOS, CallCommand AI, and OutCall retain their prior source/local parity states and functional scope while their major product areas now have stable refresh-safe URLs in the shared application structure. Each keeps a distinct product theme and its existing tenant, role, provider, audit, data, and safety boundaries. Compiled local acceptance covers every canonical owner route, compatibility redirects, representative durable records and workflows, same-tab history, focused loading, responsive layouts, and unsuppressed accessibility checks across all six modules. This is not a state-5 promotion: deployment, public authenticated acceptance, live providers, production migration/backup/rollback, and OutCall production activation remain open. See `docs/phase-50/BUSINESS-OPERATIONS-ROUTE-MIGRATION.md`.

@@ -33,12 +33,51 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'TradeFlowKit could not complete that action.';
 }
 
+export type TradeFlowKitWorkView = 'all' | 'jobs' | 'workflows' | 'tasks' | 'recurring' | 'activity';
+
+const viewCopy: Record<TradeFlowKitWorkView, { eyebrow: string; title: string; description: string }> = {
+  all: {
+    eyebrow: 'Restored operations workspace',
+    title: 'Workflows, team tasks, and activity',
+    description: 'Coordinate jobs and team tasks through the workflow stages that match how your business delivers work.',
+  },
+  jobs: {
+    eyebrow: 'Scheduled service work',
+    title: 'Job workflow and recurring schedules',
+    description: 'Move jobs through approved stages and manage repeat work through the shared, audited scheduler.',
+  },
+  workflows: {
+    eyebrow: 'Workflow studio',
+    title: 'Workflow templates and job stages',
+    description: 'Define reusable job or task stages and apply them to persisted organization work.',
+  },
+  tasks: {
+    eyebrow: 'Team execution',
+    title: 'Organization task queue',
+    description: 'Search and update canonical job-scoped tasks across the current organization.',
+  },
+  recurring: {
+    eyebrow: 'Scheduled automation',
+    title: 'Recurring job schedules',
+    description: 'Create, pause, resume, and review repeat work enqueued by the shared audited scheduler.',
+  },
+  activity: {
+    eyebrow: 'Operational history',
+    title: 'Recent TradeFlowKit activity',
+    description: 'Review recorded job, task, recurring-work, and workflow changes for this organization.',
+  },
+};
+
 export default function TradeFlowKitWorkManagement({
   tenantKey,
   canManage,
+  view = 'all',
+  recordId,
 }: {
   tenantKey: string;
   canManage: boolean;
+  view?: TradeFlowKitWorkView;
+  recordId?: string;
 }) {
   const [workflows, setWorkflows] = useState<TradeFlowKitWorkflow[]>([]);
   const [tasks, setTasks] = useState<TradeFlowKitTask[]>([]);
@@ -174,20 +213,22 @@ export default function TradeFlowKitWorkManagement({
     () => jobWorkflows.flatMap(workflow => workflow.stages.map(stage => ({ ...stage, workflowName: workflow.name }))),
     [jobWorkflows],
   );
+  const copy = viewCopy[view];
 
   return (
     <section
       id="tradeflowkit-work-management"
       className="tfk-panel tfk-work"
       data-testid="tradeflowkit-work-management"
+      data-view={view}
       tabIndex={-1}
     >
       <style>{css}</style>
       <header className="tfk-work-heading">
         <div>
-          <div className="tfk-work-eyebrow"><Workflow size={15} /> Restored operations workspace</div>
-          <h2>Workflows, team tasks, and activity</h2>
-          <p>Coordinate jobs and team tasks through the workflow stages that match how your business delivers work.</p>
+          <div className="tfk-work-eyebrow"><Workflow size={15} /> {copy.eyebrow}</div>
+          <h2>{copy.title}</h2>
+          <p>{copy.description}</p>
         </div>
         <button type="button" onClick={() => void load()} disabled={loading || pending}>Refresh</button>
       </header>
@@ -206,7 +247,7 @@ export default function TradeFlowKitWorkManagement({
             <Metric label="Recent events" value={activity.length} />
           </div>
 
-          <section className="tfk-work-section" aria-labelledby="tfk-workflow-heading">
+          <section id="tradeflowkit-workflows" className="tfk-work-section tfk-workflows-route" aria-labelledby="tfk-workflow-heading" data-testid="tradeflowkit-workflows-route" tabIndex={-1}>
             <div className="tfk-work-section-heading">
               <div><GitBranch size={18} /><div><h3 id="tfk-workflow-heading">Workflow templates</h3><p>Admins define reusable job or task stages, with every change safely tracked.</p></div></div>
             </div>
@@ -276,7 +317,7 @@ export default function TradeFlowKitWorkManagement({
             )}
           </section>
 
-          <section className="tfk-work-section" aria-labelledby="tfk-job-board-heading">
+          <section id="tradeflowkit-job-workflow" className="tfk-work-section tfk-job-workflow-route" aria-labelledby="tfk-job-board-heading" data-testid="tradeflowkit-job-workflow-route" tabIndex={-1}>
             <div className="tfk-work-section-heading">
               <div><Workflow size={18} /><div><h3 id="tfk-job-board-heading">Job workflow board</h3><p>Move jobs through your approved workflow and keep each job status current.</p></div></div>
             </div>
@@ -302,7 +343,7 @@ export default function TradeFlowKitWorkManagement({
             )}
           </section>
 
-          <section className="tfk-work-section" aria-labelledby="tfk-recurring-heading">
+          <section id="tradeflowkit-recurring-jobs" className="tfk-work-section tfk-recurring-route" aria-labelledby="tfk-recurring-heading" data-testid="tradeflowkit-recurring-route" tabIndex={-1}>
             <div className="tfk-work-section-heading">
               <div><Repeat2 size={18} /><div><h3 id="tfk-recurring-heading">Recurring jobs</h3><p>Schedule repeat work through the shared worker so each due run creates one persisted, audited job.</p></div></div>
             </div>
@@ -344,7 +385,7 @@ export default function TradeFlowKitWorkManagement({
             )}
           </section>
 
-          <section className="tfk-work-section" aria-labelledby="tfk-team-task-heading">
+          <section id="tradeflowkit-tasks" className="tfk-work-section tfk-tasks-route" aria-labelledby="tfk-team-task-heading" data-testid="tradeflowkit-tasks-route" tabIndex={-1}>
             <div className="tfk-work-section-heading">
               <div><CheckCircle2 size={18} /><div><h3 id="tfk-team-task-heading">Team tasks</h3><p>Search, assign, and manage job tasks across the current workspace.</p></div></div>
               <div className="tfk-task-filters">
@@ -355,7 +396,7 @@ export default function TradeFlowKitWorkManagement({
             {tasks.length === 0 ? <div className="tfk-work-state">No job tasks match this view. Create a task from the operations board.</div> : (
               <div className="tfk-team-tasks">
                 {tasks.map(task => (
-                  <article key={task.id} data-testid={`tradeflowkit-team-task-${task.id}`}>
+                  <article key={task.id} className={recordId === task.id ? 'selected' : undefined} aria-current={recordId === task.id ? 'true' : undefined} data-testid={`tradeflowkit-team-task-${task.id}`}>
                     <div><strong>{task.title}</strong><span>{task.jobTitle ?? 'Job'} · {task.customerName ?? 'Customer'} · v{task.version}</span></div>
                     <select
                       aria-label={`Status for ${task.title}`}
@@ -375,7 +416,7 @@ export default function TradeFlowKitWorkManagement({
             )}
           </section>
 
-          <section className="tfk-work-section" aria-labelledby="tfk-activity-heading">
+          <section id="tradeflowkit-activity" className="tfk-work-section tfk-activity-route" aria-labelledby="tfk-activity-heading" data-testid="tradeflowkit-activity-route" tabIndex={-1}>
             <div className="tfk-work-section-heading">
               <div><Activity size={18} /><div><h3 id="tfk-activity-heading">Recent activity</h3><p>See the latest job, task, and workflow changes made by your team.</p></div></div>
             </div>
@@ -467,8 +508,14 @@ const css = `
   .tfk-task-filters label { display: flex; align-items: center; gap: 5px; border: 1px solid color-mix(in srgb, var(--tfk-primary) 20%, transparent); border-radius: 7px; padding-left: 8px; background: #fff; }
   .tfk-task-filters label input { border: 0; }
   .tfk-team-tasks article { display: grid; grid-template-columns: minmax(0,1fr) 150px auto; }
+  .tfk-team-tasks article.selected { border-color: var(--tfk-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tfk-primary) 18%, transparent); }
   .tfk-activity-list > div { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--tfk-primary) 10%, transparent); }
   .tfk-activity-list small { display: block; color: #789189; margin-top: 2px; }
+  .tfk-work[data-view="jobs"] :is(.tfk-workflows-route,.tfk-tasks-route,.tfk-activity-route),
+  .tfk-work[data-view="workflows"] :is(.tfk-recurring-route,.tfk-tasks-route,.tfk-activity-route),
+  .tfk-work[data-view="tasks"] :is(.tfk-workflows-route,.tfk-job-workflow-route,.tfk-recurring-route,.tfk-activity-route),
+  .tfk-work[data-view="recurring"] :is(.tfk-workflows-route,.tfk-job-workflow-route,.tfk-tasks-route,.tfk-activity-route),
+  .tfk-work[data-view="activity"] :is(.tfk-workflows-route,.tfk-job-workflow-route,.tfk-recurring-route,.tfk-tasks-route) { display: none; }
   .spin { animation: tfk-work-spin 1s linear infinite; }
   @keyframes tfk-work-spin { to { transform: rotate(360deg); } }
   @media (max-width: 820px) {

@@ -46,7 +46,7 @@
     "ui_route": 35,
     "visual_contract": 1
   },
-  "capabilityDigestSha256": "5b7412df7c02246d17b8a501bd0c42c4815295887407ffe2ecbcdfd735fdced3",
+  "capabilityDigestSha256": "ee3e8ac1c5335ded6fdbe0412d0f9f4d2bc4fa35ab65f8c145ed88b14864cec6",
   "capabilities": [
     {
       "capabilityId": "tradeflowkit.api_endpoint.00d2c745a9fc0d49",
@@ -20764,7 +20764,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
-        "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        "apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx",
+        "apps/web/src/components/module-shells/TradeFlowKitShell.tsx",
+        "apps/web/src/middleware.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/tradeflowkit-revenue-flow.test.ts",
@@ -21848,6 +21850,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -21891,6 +21896,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -21915,6 +21923,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -21939,6 +21950,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -21963,6 +21977,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
       ],
       "automatedEvidence": [
@@ -21986,6 +22003,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22010,6 +22030,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22034,6 +22057,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22058,6 +22084,9 @@
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/app/privacy/page.tsx",
         "apps/web/src/app/terms/page.tsx"
       ],
@@ -22082,6 +22111,9 @@
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/app/privacy/page.tsx",
         "apps/web/src/app/terms/page.tsx"
       ],
@@ -22106,6 +22138,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22130,6 +22165,9 @@
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/BusinessDirectory.tsx"
       ],
       "automatedEvidence": [
@@ -22154,6 +22192,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22178,6 +22219,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22202,6 +22246,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22226,6 +22273,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22250,6 +22300,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22274,6 +22327,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22298,6 +22354,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22323,6 +22382,9 @@
       "blockerCode": null,
       "currentTargets": [
         "apps/api/src/routes/tradeflowkit-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
       ],
       "automatedEvidence": [
@@ -22347,6 +22409,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22371,6 +22436,9 @@
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/app/privacy/page.tsx",
         "apps/web/src/app/terms/page.tsx"
       ],
@@ -22395,6 +22463,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22459,6 +22530,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
       ],
       "automatedEvidence": [
@@ -22501,6 +22575,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22525,6 +22602,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22549,6 +22629,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22573,6 +22656,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
       ],
       "automatedEvidence": [
@@ -22597,6 +22683,9 @@
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
       ],
       "automatedEvidence": [
@@ -22620,6 +22709,9 @@
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/app/privacy/page.tsx",
         "apps/web/src/app/terms/page.tsx"
       ],
@@ -22644,6 +22736,9 @@
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
+        "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/app/modules/[slug]/page.tsx",
         "apps/web/src/app/privacy/page.tsx",
         "apps/web/src/app/terms/page.tsx"
       ],

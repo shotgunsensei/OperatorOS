@@ -1,5 +1,46 @@
 # OperatorOS implementation status
 
+## TradeFlowKit route, public compatibility, and SEO closure - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-17)
+
+- TradeFlowKit's persisted workflow templates, job workflow board, team-task
+  queue, recurring schedules, and tenant activity are now available at stable,
+  refresh-safe module URLs: `/workflows`, `/tasks`, `/recurring-jobs`, and
+  `/activity`. Jobs, payments, analytics, and shared Directory records retain
+  their own navigation targets instead of being collapsed under unrelated
+  routes. Dashboard quick links keep every restored work area discoverable on
+  mobile without changing the existing four-item mobile navigation contract.
+- Source-compatible record paths continue to resolve through the shared route
+  application. Task record paths select the requested persisted task, and the
+  legacy high-entropy `/portal/:token` customer link is rewritten before the
+  authenticated module gate to the canonical non-enumerating public portal.
+  TradeFlowKit-hosted `/privacy`, `/terms`, `/sms-consent`, `/guide`, and
+  `/delete-account` paths redirect to the appropriate OperatorOS-owned surface.
+- The generated parity compiler now associates active TradeFlowKit UI routes
+  with their executable Next route and route-map files. The control audit fell
+  from 118 to 92 findings, removing all 26 TradeFlowKit
+  `ROUTE_NOT_CRAWLABLE` findings; the resulting report contains zero
+  TradeFlowKit findings. The 92 remaining findings belong to other modules and
+  keep the global control gate correctly red.
+- Public SEO coverage now includes `/messaging`, `/sms-consent`,
+  `/msg_privacy`, and `/msg_terms` in the sitemap and gives each page canonical
+  Open Graph/Twitter metadata through the shared public metadata builder. The
+  existing `robots.txt`, `llms.txt`, social image, distinct marketing metadata,
+  and JSON-LD implementation remains intact.
+- Focused route/runtime/SEO/work-management tests PASS (21/21), web TypeScript
+  PASS, and the Phase 16 ledger verifier PASS with 35 source pages, 194 API
+  routes, 40 tables, 8 provider/config references, zero unclassified entries,
+  and zero Phase 16 gaps. Current generated product truth still reports 947
+  blocked TradeFlowKit capabilities, so this route closure is not a state-5 or
+  full-product certification claim.
+- Replit now exposes only the supervised public port `5000 -> 80`; the API and
+  Next ports remain internal. The prior additional `5001 -> 3001` and
+  `5002 -> 3000` mappings bypassed the readiness-gated public gateway and broke
+  the repository's deployment contract. The unified supervisor and its
+  intentional startup gateway remain otherwise unchanged. Frozen install,
+  four-target typecheck, the production build, and the combined
+  preflight/unified-runtime suite PASS (12/12). Remote-main and deployed
+  release-identity evidence are recorded only after final reconciliation.
+
 ## Phase 53 tenant messenger - SOURCE/LOCAL ACCEPTED / DEPLOYMENT PENDING (2026-08-16)
 
 - OperatorOS now owns a tenant-private messenger in the title bar of the

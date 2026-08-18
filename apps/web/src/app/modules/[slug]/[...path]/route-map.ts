@@ -29,7 +29,10 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/contacts': { sectionId: 'tradeflowkit-directory', label: 'Shared Contacts' },
     '/sites': { sectionId: 'tradeflowkit-directory', label: 'Shared Sites' },
     '/jobs': { sectionId: 'tradeflowkit-operations', label: 'Jobs' },
-    '/tasks': { sectionId: 'tradeflowkit-operations', label: 'Tasks' },
+    '/workflows': { sectionId: 'tradeflowkit-workflows', label: 'Workflows' },
+    '/tasks': { sectionId: 'tradeflowkit-tasks', label: 'Team Tasks' },
+    '/recurring-jobs': { sectionId: 'tradeflowkit-recurring-jobs', label: 'Recurring Jobs' },
+    '/activity': { sectionId: 'tradeflowkit-activity', label: 'Activity' },
     '/quotes': { sectionId: 'tradeflowkit-revenue-flow', label: 'Quotes' },
     '/quotes/new': { sectionId: 'tradeflowkit-revenue-flow', label: 'New Quote' },
     '/invoices': { sectionId: 'tradeflowkit-revenue-flow', label: 'Invoices' },
@@ -357,6 +360,18 @@ export function resolveCoreModuleDeepLink(
   pathSegments: readonly string[],
 ): CoreModuleDeepLinkTarget | null {
   if (
+    slug === 'tradeflowkit' &&
+    pathSegments.length === 2 &&
+    pathSegments[0] === 'portal' &&
+    /^[A-Za-z0-9_-]{32,64}$/.test(pathSegments[1] ?? '')
+  ) {
+    return {
+      sectionId: 'tradeflowkit-public-portal',
+      label: 'Customer Portal',
+      redirectPath: `/public/tradeflowkit/customers/${encodeURIComponent(pathSegments[1])}`,
+    };
+  }
+  if (
     pathSegments.length === 0 ||
     pathSegments.some((segment) => !SAFE_PATH_SEGMENT.test(segment))
   ) {
@@ -377,7 +392,8 @@ export function resolveCoreModuleDeepLink(
   }
   if (slug === 'tradeflowkit' && pathSegments.length === 2) {
     const [resource] = pathSegments;
-    if (resource === 'jobs' || resource === 'tasks') return { sectionId: 'tradeflowkit-operations', label: resource === 'jobs' ? 'Job Record' : 'Task Record' };
+    if (resource === 'jobs') return { sectionId: 'tradeflowkit-operations', label: 'Job Record' };
+    if (resource === 'tasks') return { sectionId: 'tradeflowkit-tasks', label: 'Task Record' };
     if (resource === 'leads') return { sectionId: 'tradeflowkit-lead-center', label: 'Lead Record' };
     if (resource === 'clients') return { sectionId: 'tradeflowkit-directory', label: 'Directory Organization' };
     if (['customers', 'quotes', 'invoices', 'payments'].includes(resource)) return { sectionId: 'tradeflowkit-revenue-flow', label: 'Revenue Record' };

@@ -97,6 +97,23 @@ test('module host rewrites preserve deep paths and reserve auth/ops endpoints', 
   assert.match(catchAll, /module-deep-link-not-found/);
 });
 
+test('TradeFlowKit legacy public routes resolve before the module authentication gate', () => {
+  const middleware = read('apps/web/src/middleware.ts');
+
+  assert.match(middleware, /function tradeFlowKitPublicDestination/);
+  assert.match(middleware, /const legacyPortal =/);
+  assert.match(middleware, /\[A-Za-z0-9_-\]\{32,64\}/);
+  assert.match(middleware, /`\/public\/tradeflowkit\/customers\/\$\{legacyPortal\[1\]\}`/);
+  assert.match(middleware, /function tradeFlowKitPlatformDestination/);
+  for (const path of ['/privacy', '/terms', '/sms-consent', '/guide', '/delete-account']) {
+    assert.match(middleware, new RegExp(`'${path.replace('/', '\\/')}'`));
+  }
+  assert.ok(
+    middleware.indexOf("context.module?.slug === 'tradeflowkit'") < middleware.indexOf("!req.cookies.has(AUTH_COOKIE)"),
+    'public TradeFlowKit compatibility routes must run before the module auth gate',
+  );
+});
+
 test('production CORS is registered and browser requests must also match the target host', () => {
   const api = read('apps/api/src/index.ts');
   const originPolicy = read('apps/api/src/lib/request-origin.ts');

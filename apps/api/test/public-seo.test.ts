@@ -13,7 +13,7 @@ function read(relativePath: string): string {
 
 test('public SEO · sitemap lists only the intended indexable routes', () => {
   const sitemap = read('src/app/sitemap.ts');
-  for (const path of ['/', '/pricing', '/modules', '/ecosystem', '/how-it-works', '/privacy', '/terms']) {
+  for (const path of ['/', '/pricing', '/modules', '/ecosystem', '/how-it-works', '/messaging', '/sms-consent', '/msg_privacy', '/msg_terms', '/privacy', '/terms']) {
     assert.match(sitemap, new RegExp(`path: '${path.replace(/\//g, '\\/')}'`));
   }
   for (const privatePath of ['/app', '/admin', '/sso', '/invites', '/portfolio', '/john']) {
@@ -37,6 +37,10 @@ test('public SEO · every primary marketing route has distinct metadata', () => 
     ['/how-it-works', read('src/app/how-it-works/layout.tsx')],
     ['/ecosystem', read('src/app/ecosystem/layout.tsx')],
     ['/modules', read('src/app/modules/layout.tsx')],
+    ['/messaging', read('src/app/messaging/page.tsx')],
+    ['/sms-consent', read('src/app/sms-consent/page.tsx')],
+    ['/msg_privacy', read('src/app/msg_privacy/page.tsx')],
+    ['/msg_terms', read('src/app/msg_terms/page.tsx')],
     ['/privacy', read('src/app/privacy/page.tsx')],
     ['/terms', read('src/app/terms/page.tsx')],
   ]);

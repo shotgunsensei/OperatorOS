@@ -10,8 +10,13 @@ import {
   BarChart3,
   Bell,
   BriefcaseBusiness,
+  CalendarClock,
   ClipboardList,
+  ContactRound,
+  CreditCard,
   FileText,
+  GitBranch,
+  ListChecks,
   Receipt,
   Search,
   Settings,
@@ -53,6 +58,10 @@ type TradeFlowKitScreen =
   | 'leads'
   | 'customers'
   | 'jobs'
+  | 'workflows'
+  | 'tasks'
+  | 'recurring'
+  | 'activity'
   | 'quotes'
   | 'invoices'
   | 'payments'
@@ -112,6 +121,26 @@ const pageCopy: Record<TradeFlowKitScreen, { eyebrow: string; title: string; des
     title: 'Jobs',
     description: 'Schedule and update real jobs, coordinate tasks, and keep the workflow stage current.',
   },
+  workflows: {
+    eyebrow: 'Workflow studio',
+    title: 'Workflows',
+    description: 'Define reusable job and task stages, then move active work through the approved delivery process.',
+  },
+  tasks: {
+    eyebrow: 'Team execution',
+    title: 'Team tasks',
+    description: 'Search and update the job-scoped work assigned across this organization without losing record context.',
+  },
+  recurring: {
+    eyebrow: 'Scheduled automation',
+    title: 'Recurring jobs',
+    description: 'Create, pause, resume, and review repeat work enqueued by the shared audited scheduler.',
+  },
+  activity: {
+    eyebrow: 'Operational history',
+    title: 'Activity',
+    description: 'Review tenant-scoped job, task, recurring-work, and workflow changes recorded by TradeFlowKit.',
+  },
   quotes: {
     eyebrow: 'Revenue documents',
     title: 'Quotes',
@@ -157,7 +186,11 @@ function resolveRoute(routePath?: string): RouteState {
   const intent = segments[1] === 'new' ? 'new' : undefined;
   if (resource === 'leads') return { screen: 'leads', recordId };
   if (resource === 'customers') return { screen: 'customers', recordId };
-  if (resource === 'jobs' || resource === 'tasks') return { screen: 'jobs', recordId };
+  if (resource === 'jobs') return { screen: 'jobs', recordId };
+  if (resource === 'workflows') return { screen: 'workflows', recordId };
+  if (resource === 'tasks') return { screen: 'tasks', recordId };
+  if (resource === 'recurring-jobs') return { screen: 'recurring', recordId };
+  if (resource === 'activity') return { screen: 'activity' };
   if (resource === 'quotes') return { screen: 'quotes', recordId, intent };
   if (resource === 'invoices') return { screen: 'invoices', recordId, intent };
   if (resource === 'payments') return { screen: 'payments', recordId };
@@ -332,9 +365,15 @@ function TradeFlowKitScreen({
         <QuickLink href={hrefFor('/leads')} Icon={ClipboardList} title="Lead pipeline" body="Capture and qualify real service opportunities." />
         <QuickLink href={hrefFor('/customers')} Icon={Users} title="Customer records" body="Open persisted customer and service history." />
         <QuickLink href={hrefFor('/jobs')} Icon={BriefcaseBusiness} title="Jobs and tasks" body="Coordinate scheduled work and task completion." />
+        <QuickLink href={hrefFor('/workflows')} Icon={GitBranch} title="Workflows" body="Manage reusable stages and job workflow assignment." />
+        <QuickLink href={hrefFor('/tasks')} Icon={ListChecks} title="Team tasks" body="Open the organization-wide task queue." />
+        <QuickLink href={hrefFor('/recurring-jobs')} Icon={CalendarClock} title="Recurring jobs" body="Schedule and monitor repeat service work." />
+        <QuickLink href={hrefFor('/activity')} Icon={Activity} title="Activity" body="Review persisted operational history." />
         <QuickLink href={hrefFor('/quotes')} Icon={FileText} title="Quotes" body="Prepare customer quotes and track responses." />
         <QuickLink href={hrefFor('/invoices')} Icon={Receipt} title="Invoices" body="Issue invoices and record payment history." />
+        <QuickLink href={hrefFor('/payments')} Icon={CreditCard} title="Payments" body="Review balances and authoritative customer payments." />
         <QuickLink href={hrefFor('/analytics')} Icon={BarChart3} title="Analytics" body="Review metrics calculated from persisted records." />
+        <QuickLink href={hrefFor('/directory')} Icon={ContactRound} title="Business Directory" body="Reuse tenant-scoped organizations, contacts, and sites." />
       </div>
     </>;
   }
@@ -343,7 +382,11 @@ function TradeFlowKitScreen({
     const view: TradeFlowKitRevenueView = screen;
     return <TradeFlowKitRevenueFlow tenantKey={tenantKey} canManage={canManage} view={view} recordId={recordId} intent={intent} routePrefix={hrefFor('')} />;
   }
-  if (screen === 'jobs') return <><TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="jobs" recordId={recordId} routePrefix={hrefFor('')} /><TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} /></>;
+  if (screen === 'jobs') return <><TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="jobs" recordId={recordId} routePrefix={hrefFor('')} /><TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="jobs" /></>;
+  if (screen === 'workflows') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="workflows" recordId={recordId} />;
+  if (screen === 'tasks') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="tasks" recordId={recordId} />;
+  if (screen === 'recurring') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="recurring" recordId={recordId} />;
+  if (screen === 'activity') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="activity" />;
   if (screen === 'analytics') return <TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="analytics" routePrefix={hrefFor('')} />;
   if (screen === 'directory') return <section id="tradeflowkit-directory" tabIndex={-1}><BusinessDirectory moduleSlug="tradeflowkit" tenantKey={tenantKey} canArchive={canManage} /></section>;
   if (screen === 'trash') return <TradeFlowKitTrash tenantKey={tenantKey} canManage={canManage} />;

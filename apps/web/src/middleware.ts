@@ -96,8 +96,23 @@ function isOperationalExempt(pathname: string): boolean {
   return false;
 }
 
-function isPublicTradeFlowKitDocumentPath(pathname: string): boolean {
-  return /^\/public\/tradeflowkit\/(quotes|invoices|customers)\/[A-Za-z0-9_-]{32,64}$/.test(pathname);
+function tradeFlowKitPublicDestination(pathname: string): string | null {
+  if (/^\/public\/tradeflowkit\/(quotes|invoices|customers)\/[A-Za-z0-9_-]{32,64}$/.test(pathname)) {
+    return pathname;
+  }
+  const legacyPortal = /^\/portal\/([A-Za-z0-9_-]{32,64})\/?$/.exec(pathname);
+  return legacyPortal ? `/public/tradeflowkit/customers/${legacyPortal[1]}` : null;
+}
+
+function tradeFlowKitPlatformDestination(pathname: string): string | null {
+  const destinations: Record<string, string> = {
+    '/privacy': buildPublicUrl('/privacy', 'root'),
+    '/terms': buildPublicUrl('/terms', 'root'),
+    '/sms-consent': buildPublicUrl('/sms-consent', 'root'),
+    '/guide': buildPublicUrl('/how-it-works', 'root'),
+    '/delete-account': buildPublicUrl('/app?page=settings', 'app'),
+  };
+  return destinations[pathname.replace(/\/$/, '')] ?? null;
 }
 
 function techDeckPublicDestination(pathname: string): string | null {
@@ -420,8 +435,15 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isOperationalExempt(pathname)) return withAuthSecurityHeaders(NextResponse.next());
-  if (isPublicTradeFlowKitDocumentPath(pathname) && context.module?.slug === 'tradeflowkit') {
-    return withAuthSecurityHeaders(NextResponse.next());
+  if (context.module?.slug === 'tradeflowkit') {
+    const publicDocument = tradeFlowKitPublicDestination(pathname);
+    if (publicDocument) {
+      return withAuthSecurityHeaders(publicDocument === pathname ? NextResponse.next() : rewriteTo(publicDocument, req));
+    }
+    const platformDestination = tradeFlowKitPlatformDestination(pathname);
+    if (platformDestination) {
+      return withAuthSecurityHeaders(NextResponse.redirect(new URL(platformDestination), 307));
+    }
   }
   if (context.module?.slug === 'techdeck') {
     const destination = techDeckPublicDestination(pathname);

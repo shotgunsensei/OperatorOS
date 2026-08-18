@@ -1462,22 +1462,41 @@ function applyCurrentRestorationMappings(definition, capabilities) {
     'jobs.scheduledEnd',
   ]);
   return capabilities.map((capability) => {
-    if (!recurringOutcomeTitles.has(capability.title)) return capability;
-    return {
-      ...capability,
-      state: 'ACTIVE_NATIVE',
-      blockerCode: null,
-      currentTargets: [
-        'apps/api/src/lib/shared-schedules-exports.ts',
-        'apps/api/src/routes/tradeflowkit-recurring-routes.ts',
-        'apps/api/src/schema.ts',
-        'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx',
-      ],
-      automatedEvidence: [
-        'apps/api/test/tradeflowkit-recurring-jobs.test.ts',
-      ],
-      note: 'Phase 24 restores recurring job creation through the typed shared scheduler. The TradeFlowKit adapter preserves due times, recurrence, series identity, scheduled start/end, tenant scope, audit, idempotent replay, optimistic updates, and an accessible persisted management surface.',
-    };
+    let mapped = capability;
+    if (recurringOutcomeTitles.has(capability.title)) {
+      mapped = {
+        ...capability,
+        state: 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [
+          'apps/api/src/lib/shared-schedules-exports.ts',
+          'apps/api/src/routes/tradeflowkit-recurring-routes.ts',
+          'apps/api/src/schema.ts',
+          'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx',
+        ],
+        automatedEvidence: [
+          'apps/api/test/tradeflowkit-recurring-jobs.test.ts',
+        ],
+        note: 'Phase 24 restores recurring job creation through the typed shared scheduler. The TradeFlowKit adapter preserves due times, recurrence, series identity, scheduled start/end, tenant scope, audit, idempotent replay, optimistic updates, and an accessible persisted management surface.',
+      };
+    }
+
+    const active = mapped.state === 'ACTIVE_NATIVE' || mapped.state === 'ACTIVE_SHARED_EQUIVALENT';
+    const routeTargets = active && mapped.type === 'ui_route'
+      ? [
+          'apps/web/src/app/modules/[slug]/page.tsx',
+          'apps/web/src/app/modules/[slug]/[...path]/page.tsx',
+          'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+        ]
+      : active && mapped.type === 'public_flow' && mapped.title === '/portal/:token'
+        ? [
+            'apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx',
+            'apps/web/src/middleware.ts',
+          ]
+        : [];
+    return routeTargets.length === 0
+      ? mapped
+      : { ...mapped, currentTargets: [...new Set([...mapped.currentTargets, ...routeTargets])].sort() };
   });
 }
 

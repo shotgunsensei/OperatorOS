@@ -3,11 +3,13 @@ import Link from 'next/link';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import SmsConsentForm from '@/components/marketing/SmsConsentForm';
 import { brand } from '@/lib/brand';
+import { buildPublicMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: 'OperatorOS SMS Communications',
   description: 'Optional public opt-in for OperatorOS service-related SMS communications.',
-};
+  path: '/sms-consent',
+});
 
 export default function SmsConsentPage() {
   return (

@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { brand } from '@/lib/brand';
+import { buildPublicMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPublicMetadata({
   title: 'OperatorOS Messaging Program',
   description: 'Reviewer-friendly details for the optional OperatorOS service SMS program.',
-};
+  path: '/messaging',
+});
 
 const sections = [
   ['1. Program Purpose', <>OperatorOS sends consent-based, service-related SMS communications connected to account activity, requested support, scheduled calls, service updates, workflow or status updates, and other operational communications a user specifically requests. The service program does not authorize marketing messages.</>],

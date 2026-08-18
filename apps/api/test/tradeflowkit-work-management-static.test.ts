@@ -18,7 +18,14 @@ test('TradeFlowKit work-management UI calls real APIs, exposes states, and disab
 
   assert.match(shell, /<TradeFlowKitWorkManagement/);
   assert.match(shell, /canManage=\{canManageModule\}/);
+  for (const route of ['workflows', 'tasks', 'recurring-jobs', 'activity']) {
+    assert.match(shell, new RegExp(`/${route}`));
+  }
   assert.match(component, /data-testid="tradeflowkit-work-management"/);
+  assert.match(component, /data-testid="tradeflowkit-workflows-route"/);
+  assert.match(component, /data-testid="tradeflowkit-tasks-route"/);
+  assert.match(component, /data-testid="tradeflowkit-recurring-route"/);
+  assert.match(component, /data-testid="tradeflowkit-activity-route"/);
   assert.match(component, /data-testid="tradeflowkit-work-management-loading"/);
   assert.match(component, /data-testid="tradeflowkit-work-management-error"/);
   assert.match(component, /No workflows yet/);

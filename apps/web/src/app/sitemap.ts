@@ -7,6 +7,10 @@ const PUBLIC_ROUTES = [
   { path: '/modules', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/ecosystem', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/how-it-works', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/messaging', changeFrequency: 'yearly', priority: 0.4 },
+  { path: '/sms-consent', changeFrequency: 'yearly', priority: 0.4 },
+  { path: '/msg_privacy', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/msg_terms', changeFrequency: 'yearly', priority: 0.3 },
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.3 },
   { path: '/terms', changeFrequency: 'yearly', priority: 0.3 },
 ] as const;
