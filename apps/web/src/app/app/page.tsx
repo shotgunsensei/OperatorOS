@@ -81,16 +81,6 @@ function AppContent() {
     return () => window.removeEventListener('popstate', restoreRoute);
   }, []);
 
-  useEffect(() => {
-    if (loading || !user) return;
-    let pending: string | null = null;
-    try { pending = sessionStorage.getItem('operatoros.pendingInviteToken'); } catch {}
-    if (pending) {
-      // Canonical invite URL post-split lives under /app/*.
-      window.location.replace(`/app/invites/${encodeURIComponent(pending)}`);
-    }
-  }, [loading, user]);
-
   if (loading) {
     return <OperatorLoader />;
   }

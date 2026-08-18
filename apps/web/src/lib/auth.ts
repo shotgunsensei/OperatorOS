@@ -57,6 +57,12 @@ export const authApi = {
   register: (email: string, password: string, name: string) =>
     apiFetch('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name }) }),
 
+  registerWithInvite: (token: string, password: string, name: string) =>
+    apiFetch('/auth/register-with-invite', {
+      method: 'POST',
+      body: JSON.stringify({ token, password, name }),
+    }),
+
   login: (email: string, password: string) =>
     apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 

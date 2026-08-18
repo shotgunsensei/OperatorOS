@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
 import { colors } from '../SaasLayout';
@@ -10,21 +10,10 @@ interface RegisterPageProps {
   onSwitch: (page: 'login') => void;
 }
 
-// Set by the invite landing page when an unauthenticated visitor hits
-// /invites/<token>. Pre-filling email here means a brand-new user doesn't
-// have to remember which address the invite was sent to.
-const PENDING_INVITE_EMAIL_KEY = 'operatoros.pendingInviteEmail';
-
 export default function RegisterPage({ onSwitch }: RegisterPageProps) {
   const { register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  useEffect(() => {
-    try {
-      const parked = sessionStorage.getItem(PENDING_INVITE_EMAIL_KEY);
-      if (parked) setEmail(parked);
-    } catch {}
-  }, []);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

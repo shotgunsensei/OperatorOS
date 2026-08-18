@@ -26,6 +26,7 @@ export async function writeAudit(entry: AuditEntry, request?: any, executor: Pic
   };
   await executor.insert(adminAuditLogs).values({
     adminId: entry.actorUserId,
+    actorEmailSnapshot: request?.user?.email ?? null,
     action: entry.action,
     targetUserId: entry.targetType === 'user' || entry.targetType === 'tenant_user'
       ? (entry.targetId ?? null)

@@ -377,14 +377,19 @@ function registerAdminSurface(app: FastifyInstance, prefix: string) {
       ? await db.select().from(adminAuditLogs).where(where).orderBy(desc(adminAuditLogs.createdAt)).limit(limit).offset(offset)
       : await db.select().from(adminAuditLogs).orderBy(desc(adminAuditLogs.createdAt)).limit(limit).offset(offset);
 
-    const actorIds = [...new Set(logs.map(row => row.adminId).filter(Boolean))];
+    const actorIds = [...new Set(logs
+      .map(row => row.adminId)
+      .filter((id): id is string => typeof id === 'string'))];
     const actorRows = actorIds.length
       ? await db.select(SAFE_USER_SELECT).from(users).where(inArray(users.id, actorIds))
       : [];
     const actorById = new Map(actorRows.map(row => [row.id, row]));
 
     return {
-      logs: logs.map(log => ({ ...log, actor: actorById.get(log.adminId) ?? null })),
+      logs: logs.map(log => ({
+        ...log,
+        actor: log.adminId ? (actorById.get(log.adminId) ?? null) : null,
+      })),
       total: logs.length,
       limit,
       offset,

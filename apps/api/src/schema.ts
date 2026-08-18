@@ -383,7 +383,8 @@ export const usageTracking = pgTable('usage_tracking', {
 
 export const adminAuditLogs = pgTable('admin_audit_logs', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-  adminId: varchar('admin_id', { length: 36 }).notNull().references(() => users.id),
+  adminId: varchar('admin_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  actorEmailSnapshot: text('actor_email_snapshot'),
   action: text('action').notNull(),
   targetUserId: varchar('target_user_id', { length: 36 }),
   details: jsonb('details').$type<Record<string, unknown>>(),

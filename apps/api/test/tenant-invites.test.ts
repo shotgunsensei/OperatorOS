@@ -117,7 +117,7 @@ test('email mismatch on accept → 403 INVITE_EMAIL_MISMATCH', async () => {
   assert.equal(r.json().code, 'INVITE_EMAIL_MISMATCH');
 });
 
-test('happy path: invitee accepts, joins as member, second accept is 409', async () => {
+test('happy path: invitee accepts, joins as member, and a same-user retry is idempotent', async () => {
   const create = await app.inject({
     method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
     headers: bearer(owner),
@@ -139,8 +139,10 @@ test('happy path: invitee accepts, joins as member, second accept is 409', async
     method: 'POST', url: `/v1/invites/${token}/accept`,
     headers: bearer(invitee),
   });
-  assert.equal(replay.statusCode, 409);
-  assert.equal(replay.json().code, 'INVITE_ALREADY_ACCEPTED');
+  assert.equal(replay.statusCode, 200);
+  assert.equal(replay.json().tenantId, tenantA.id);
+  assert.equal(replay.json().membership.id, mem.id);
+  assert.equal(replay.json().alreadyAccepted, true);
 });
 
 test('viewer invite persists a distinct read-only tenant membership', async () => {

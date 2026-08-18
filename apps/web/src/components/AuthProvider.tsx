@@ -23,6 +23,7 @@ interface AuthContextType {
   authError: { code: string; message: string } | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  registerWithInvite: (token: string, password: string, name: string) => Promise<{ tenantId: string; tenantName?: string | null }>;
   logout: () => Promise<void>;
   logoutEverywhere: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -35,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   authError: null,
   login: async () => {},
   register: async () => {},
+  registerWithInvite: async () => ({ tenantId: '' }),
   logout: async () => {},
   logoutEverywhere: async () => {},
   refresh: async () => {},
@@ -129,6 +131,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     throw { code: 'REGISTRATION_SUBMITTED', error: 'If this email is new, your account has been created. Please sign in to continue.' };
   };
 
+  const registerWithInvite = async (token: string, password: string, name: string) => {
+    setAuthError(null);
+    const data = await authApi.registerWithInvite(token, password, name);
+    setActiveTenantId(data.tenantId ?? data.user?.currentTenantId ?? null);
+    setUser(data.user);
+    return { tenantId: data.tenantId, tenantName: data.tenantName ?? null };
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
@@ -149,7 +159,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, authError, login, register, logout, logoutEverywhere, refresh, clearAuthError }}>
+    <AuthContext.Provider value={{ user, loading, authError, login, register, registerWithInvite, logout, logoutEverywhere, refresh, clearAuthError }}>
       {children}
     </AuthContext.Provider>
   );

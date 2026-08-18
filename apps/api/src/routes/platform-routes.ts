@@ -27,7 +27,7 @@ import type { FastifyInstance } from 'fastify';
 import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
-  tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
+  tenants, tenantUsers, users, modules, tenantModules, tenantEntitlements, tenantUserModuleAccess,
   moduleCallLogs, moduleStudySessions, moduleAutomations, moduleScaffolds, moduleWorkflowItems,
   techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   addonSubscriptions, entitlementOverrides, billingEvents, adminAuditLogs,
@@ -40,6 +40,8 @@ import {
   brandforgeCalendarItems, brandforgeCopyAssets, brandforgeCampaignMetrics,
   brandforgeGenerations, brandforgeCampaigns, brandforgePersonas,
   brandforgeBrands, brandforgeWorkspaceSettings,
+  passwordResetTokens, adminNotes, ssoHandoffTokens, revokedSessionTokens,
+  usageTracking, aiPromptTemplates, aiActionsLog,
 } from '../schema.js';
 import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
@@ -114,6 +116,111 @@ async function existingOutCallTables(executor: SqlExecutor): Promise<Set<string>
     FROM pg_catalog.pg_tables
     WHERE schemaname = current_schema() AND tablename LIKE 'outcall_%'`);
   return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
+/**
+ * Permanently removes one tenant and every tenant-owned product row.
+ *
+ * Keep this as the single cascade used by both the direct tenant delete and
+ * user deletion of owned personal tenants. The caller owns the surrounding
+ * transaction and is responsible for billing/ownership guards and audit.
+ */
+async function deleteTenantOwnedData(executor: any, tenantId: string): Promise<void> {
+  await executor.execute(sql`SET LOCAL operatoros.tenant_hard_delete = 'on'`);
+  await executor.execute(sql`DELETE FROM snapproof_exports WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM snapproof_custody_events WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM snapproof_comments WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM snapproof_findings WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM snapproof_reports WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM snapproof_evidence_items WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM snapproof_cases WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM snapproof_settings WHERE tenant_id = ${tenantId}`);
+  const studyForgeTables = await existingStudyForgeTables(executor);
+  if (studyForgeTables.has('studyforge_card_progress')) await executor.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_quiz_attempts')) await executor.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_cards')) await executor.execute(sql`DELETE FROM studyforge_cards WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_questions')) await executor.execute(sql`DELETE FROM studyforge_questions WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_plan_sessions')) await executor.execute(sql`DELETE FROM studyforge_plan_sessions WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_decks')) await executor.execute(sql`DELETE FROM studyforge_decks WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_quizzes')) await executor.execute(sql`DELETE FROM studyforge_quizzes WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_plans')) await executor.execute(sql`DELETE FROM studyforge_plans WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_generations')) await executor.execute(sql`DELETE FROM studyforge_generations WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_sources')) await executor.execute(sql`DELETE FROM studyforge_sources WHERE tenant_id = ${tenantId}`);
+  if (studyForgeTables.has('studyforge_subjects')) await executor.execute(sql`DELETE FROM studyforge_subjects WHERE tenant_id = ${tenantId}`);
+  const launchKitTables = await existingLaunchKitTables(executor);
+  if (launchKitTables.has('launchkit_exports')) await executor.execute(sql`DELETE FROM launchkit_exports WHERE tenant_id = ${tenantId}`);
+  if (launchKitTables.has('launchkit_artifacts')) await executor.execute(sql`DELETE FROM launchkit_artifacts WHERE tenant_id = ${tenantId}`);
+  if (launchKitTables.has('launchkit_tasks')) await executor.execute(sql`DELETE FROM launchkit_tasks WHERE tenant_id = ${tenantId}`);
+  if (launchKitTables.has('launchkit_milestones')) await executor.execute(sql`DELETE FROM launchkit_milestones WHERE tenant_id = ${tenantId}`);
+  if (launchKitTables.has('launchkit_phases')) await executor.execute(sql`DELETE FROM launchkit_phases WHERE tenant_id = ${tenantId}`);
+  if (launchKitTables.has('launchkit_generations')) await executor.execute(sql`DELETE FROM launchkit_generations WHERE tenant_id = ${tenantId}`);
+  if (launchKitTables.has('launchkit_launches')) await executor.execute(sql`DELETE FROM launchkit_launches WHERE tenant_id = ${tenantId}`);
+  const callCommandTables = await existingCallCommandTables(executor);
+  if (callCommandTables.has('callcommand_followups')) await executor.execute(sql`DELETE FROM callcommand_followups WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_events')) await executor.execute(sql`DELETE FROM callcommand_events WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_calls')) await executor.execute(sql`DELETE FROM callcommand_calls WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_suppressions')) await executor.execute(sql`DELETE FROM callcommand_suppressions WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_consents')) await executor.execute(sql`DELETE FROM callcommand_consents WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_transfer_targets')) await executor.execute(sql`DELETE FROM callcommand_transfer_targets WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_profiles')) await executor.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_channels')) await executor.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id = ${tenantId}`);
+  const ninjamationTables = await existingNinjamationTables(executor);
+  if (ninjamationTables.has('ninjamation_generations')) await executor.execute(sql`DELETE FROM ninjamation_generations WHERE tenant_id = ${tenantId}`);
+  if (ninjamationTables.has('ninjamation_downloads')) await executor.execute(sql`DELETE FROM ninjamation_downloads WHERE tenant_id = ${tenantId}`);
+  if (ninjamationTables.has('ninjamation_reviews')) await executor.execute(sql`DELETE FROM ninjamation_reviews WHERE tenant_id = ${tenantId}`);
+  if (ninjamationTables.has('ninjamation_script_versions')) await executor.execute(sql`DELETE FROM ninjamation_script_versions WHERE tenant_id = ${tenantId}`);
+  if (ninjamationTables.has('ninjamation_scripts')) await executor.execute(sql`DELETE FROM ninjamation_scripts WHERE tenant_id = ${tenantId}`);
+  const outCallTables = await existingOutCallTables(executor);
+  if (outCallTables.has('outcall_events')) await executor.execute(sql`DELETE FROM outcall_events WHERE tenant_id = ${tenantId}`);
+  if (outCallTables.has('outcall_call_requests')) await executor.execute(sql`DELETE FROM outcall_call_requests WHERE tenant_id = ${tenantId}`);
+  if (outCallTables.has('outcall_triggers')) await executor.execute(sql`DELETE FROM outcall_triggers WHERE tenant_id = ${tenantId}`);
+  if (outCallTables.has('outcall_profiles')) await executor.execute(sql`DELETE FROM outcall_profiles WHERE tenant_id = ${tenantId}`);
+  if (outCallTables.has('outcall_settings')) await executor.execute(sql`DELETE FROM outcall_settings WHERE tenant_id = ${tenantId}`);
+  await executor.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, tenantId));
+  await executor.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, tenantId));
+  await executor.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, tenantId));
+  await executor.delete(moduleScaffolds).where(eq(moduleScaffolds.tenantId, tenantId));
+  await executor.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, tenantId));
+  await executor.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, tenantId));
+  await executor.delete(techdeckTicketSequences).where(eq(techdeckTicketSequences.tenantId, tenantId));
+  await executor.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, tenantId));
+  await executor.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, tenantId));
+  await executor.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.tenantId, tenantId));
+  await executor.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.tenantId, tenantId));
+  await executor.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.tenantId, tenantId));
+  await executor.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.tenantId, tenantId));
+  await executor.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.tenantId, tenantId));
+  await executor.delete(ninjaPoolOnlineRooms).where(eq(ninjaPoolOnlineRooms.tenantId, tenantId));
+  await executor.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.tenantId, tenantId));
+  await executor.delete(brandforgeCalendarItems).where(eq(brandforgeCalendarItems.tenantId, tenantId));
+  await executor.delete(brandforgeCopyAssets).where(eq(brandforgeCopyAssets.tenantId, tenantId));
+  await executor.delete(brandforgeCampaignMetrics).where(eq(brandforgeCampaignMetrics.tenantId, tenantId));
+  await executor.delete(brandforgeGenerations).where(eq(brandforgeGenerations.tenantId, tenantId));
+  await executor.delete(brandforgeCampaigns).where(eq(brandforgeCampaigns.tenantId, tenantId));
+  await executor.delete(brandforgePersonas).where(eq(brandforgePersonas.tenantId, tenantId));
+  await executor.delete(brandforgeBrands).where(eq(brandforgeBrands.tenantId, tenantId));
+  await executor.delete(brandforgeWorkspaceSettings).where(eq(brandforgeWorkspaceSettings.tenantId, tenantId));
+  await executor.execute(sql`DELETE FROM shared_notifications WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_outbox_messages WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_attachment_blobs WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_attachments WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_notification_templates WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_jobs WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_webhook_receipts WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_usage_events WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_activity_events WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_idempotency_keys WHERE tenant_id = ${tenantId}`);
+  await executor.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, tenantId));
+  await executor.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, tenantId));
+  await executor.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, tenantId));
+  await executor.delete(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, tenantId));
+  await executor.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, tenantId));
+  await executor.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, tenantId));
+  await executor.delete(tenantModules).where(eq(tenantModules.tenantId, tenantId));
+  await executor.delete(tenantInvites).where(eq(tenantInvites.tenantId, tenantId));
+  await executor.delete(tenantUsers).where(eq(tenantUsers.tenantId, tenantId));
+  await executor.update(users).set({ currentTenantId: null }).where(eq(users.currentTenantId, tenantId));
+  await executor.delete(tenants).where(eq(tenants.id, tenantId));
 }
 
 // Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
@@ -464,12 +571,13 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     },
   );
 
-  // Task #81: hard-delete tenant (transactional). Refuses with 409
-  // TENANT_HAS_DEPENDENTS if any of the following exist:
+  // Task #81: hard-delete tenant (transactional). Members and module grants
+  // are owned dependents and are removed by the same confirmed transaction.
+  // Only live billing state blocks deletion because removing the local tenant
+  // must never leave a provider subscription charging without an owner.
+  // Refuses with 409 TENANT_HAS_ACTIVE_BILLING when either exists:
   //   - active or trialing addon_subscriptions for the tenant
-  //   - launchable tenant_modules (status enabled/trial/purchased/beta)
-  //   - members other than the calling super_admin (i.e. anyone whose
-  //     own platform role is NOT super_admin)
+  //   - active or trialing platform subscriptions for the tenant
   // Caller must pass `?confirm=<slug>` matching the tenant's slug —
   // a typed-confirmation guard against fat-finger DELETEs.
   app.delete<{ Params: { id: string }; Querystring: { confirm?: string } }>(
@@ -519,10 +627,10 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         nonAdminMembers: nonAdminMembers.length,
         activeSubscriptions: activeSubsRows.length,
       };
-      if (dependents.activeAddons > 0 || dependents.launchableModules > 0 || dependents.nonAdminMembers > 0 || dependents.activeSubscriptions > 0) {
+      if (dependents.activeAddons > 0 || dependents.activeSubscriptions > 0) {
         return reply.code(409).send({
-          error: 'Tenant has dependents that block hard-delete.',
-          code: 'TENANT_HAS_DEPENDENTS',
+          error: 'Cancel and reconcile active tenant billing before permanent deletion.',
+          code: 'TENANT_HAS_ACTIVE_BILLING',
           dependents,
         });
       }
@@ -562,101 +670,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           //   - module shell tables (Task #72): module_call_logs,
           //     module_study_sessions, module_automations, module_scaffolds,
           //     ninja_pool_practice_sessions
-          await tx.execute(sql`SET LOCAL operatoros.tenant_hard_delete = 'on'`);
-          await tx.execute(sql`DELETE FROM snapproof_exports WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM snapproof_custody_events WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM snapproof_comments WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM snapproof_findings WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM snapproof_reports WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM snapproof_evidence_items WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM snapproof_cases WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM snapproof_settings WHERE tenant_id = ${id}`);
-          const studyForgeTables = await existingStudyForgeTables(tx);
-          if (studyForgeTables.has('studyforge_card_progress')) await tx.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_quiz_attempts')) await tx.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_cards')) await tx.execute(sql`DELETE FROM studyforge_cards WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_questions')) await tx.execute(sql`DELETE FROM studyforge_questions WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_plan_sessions')) await tx.execute(sql`DELETE FROM studyforge_plan_sessions WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_decks')) await tx.execute(sql`DELETE FROM studyforge_decks WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_quizzes')) await tx.execute(sql`DELETE FROM studyforge_quizzes WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_plans')) await tx.execute(sql`DELETE FROM studyforge_plans WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_generations')) await tx.execute(sql`DELETE FROM studyforge_generations WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_sources')) await tx.execute(sql`DELETE FROM studyforge_sources WHERE tenant_id = ${id}`);
-          if (studyForgeTables.has('studyforge_subjects')) await tx.execute(sql`DELETE FROM studyforge_subjects WHERE tenant_id = ${id}`);
-          const launchKitTables = await existingLaunchKitTables(tx);
-          if (launchKitTables.has('launchkit_exports')) await tx.execute(sql`DELETE FROM launchkit_exports WHERE tenant_id = ${id}`);
-          if (launchKitTables.has('launchkit_artifacts')) await tx.execute(sql`DELETE FROM launchkit_artifacts WHERE tenant_id = ${id}`);
-          if (launchKitTables.has('launchkit_tasks')) await tx.execute(sql`DELETE FROM launchkit_tasks WHERE tenant_id = ${id}`);
-          if (launchKitTables.has('launchkit_milestones')) await tx.execute(sql`DELETE FROM launchkit_milestones WHERE tenant_id = ${id}`);
-          if (launchKitTables.has('launchkit_phases')) await tx.execute(sql`DELETE FROM launchkit_phases WHERE tenant_id = ${id}`);
-          if (launchKitTables.has('launchkit_generations')) await tx.execute(sql`DELETE FROM launchkit_generations WHERE tenant_id = ${id}`);
-          if (launchKitTables.has('launchkit_launches')) await tx.execute(sql`DELETE FROM launchkit_launches WHERE tenant_id = ${id}`);
-          const callCommandTables = await existingCallCommandTables(tx);
-          if (callCommandTables.has('callcommand_followups')) await tx.execute(sql`DELETE FROM callcommand_followups WHERE tenant_id = ${id}`);
-          if (callCommandTables.has('callcommand_events')) await tx.execute(sql`DELETE FROM callcommand_events WHERE tenant_id = ${id}`);
-          if (callCommandTables.has('callcommand_calls')) await tx.execute(sql`DELETE FROM callcommand_calls WHERE tenant_id = ${id}`);
-          if (callCommandTables.has('callcommand_suppressions')) await tx.execute(sql`DELETE FROM callcommand_suppressions WHERE tenant_id = ${id}`);
-          if (callCommandTables.has('callcommand_consents')) await tx.execute(sql`DELETE FROM callcommand_consents WHERE tenant_id = ${id}`);
-          if (callCommandTables.has('callcommand_transfer_targets')) await tx.execute(sql`DELETE FROM callcommand_transfer_targets WHERE tenant_id = ${id}`);
-          if (callCommandTables.has('callcommand_profiles')) await tx.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id = ${id}`);
-          if (callCommandTables.has('callcommand_channels')) await tx.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id = ${id}`);
-          const ninjamationTables = await existingNinjamationTables(tx);
-          if (ninjamationTables.has('ninjamation_generations')) await tx.execute(sql`DELETE FROM ninjamation_generations WHERE tenant_id = ${id}`);
-          if (ninjamationTables.has('ninjamation_downloads')) await tx.execute(sql`DELETE FROM ninjamation_downloads WHERE tenant_id = ${id}`);
-          if (ninjamationTables.has('ninjamation_reviews')) await tx.execute(sql`DELETE FROM ninjamation_reviews WHERE tenant_id = ${id}`);
-          if (ninjamationTables.has('ninjamation_script_versions')) await tx.execute(sql`DELETE FROM ninjamation_script_versions WHERE tenant_id = ${id}`);
-          if (ninjamationTables.has('ninjamation_scripts')) await tx.execute(sql`DELETE FROM ninjamation_scripts WHERE tenant_id = ${id}`);
-          const outCallTables = await existingOutCallTables(tx);
-          if (outCallTables.has('outcall_events')) await tx.execute(sql`DELETE FROM outcall_events WHERE tenant_id = ${id}`);
-          if (outCallTables.has('outcall_call_requests')) await tx.execute(sql`DELETE FROM outcall_call_requests WHERE tenant_id = ${id}`);
-          if (outCallTables.has('outcall_triggers')) await tx.execute(sql`DELETE FROM outcall_triggers WHERE tenant_id = ${id}`);
-          if (outCallTables.has('outcall_profiles')) await tx.execute(sql`DELETE FROM outcall_profiles WHERE tenant_id = ${id}`);
-          if (outCallTables.has('outcall_settings')) await tx.execute(sql`DELETE FROM outcall_settings WHERE tenant_id = ${id}`);
-          await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
-          await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
-          await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
-          await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.tenantId, id));
-          await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, id));
-          await tx.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, id));
-          await tx.delete(techdeckTicketSequences).where(eq(techdeckTicketSequences.tenantId, id));
-          await tx.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, id));
-          await tx.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, id));
-          await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.tenantId, id));
-          await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.tenantId, id));
-          await tx.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.tenantId, id));
-          await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.tenantId, id));
-          await tx.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.tenantId, id));
-          await tx.delete(ninjaPoolOnlineRooms).where(eq(ninjaPoolOnlineRooms.tenantId, id));
-          await tx.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.tenantId, id));
-          await tx.delete(brandforgeCalendarItems).where(eq(brandforgeCalendarItems.tenantId, id));
-          await tx.delete(brandforgeCopyAssets).where(eq(brandforgeCopyAssets.tenantId, id));
-          await tx.delete(brandforgeCampaignMetrics).where(eq(brandforgeCampaignMetrics.tenantId, id));
-          await tx.delete(brandforgeGenerations).where(eq(brandforgeGenerations.tenantId, id));
-          await tx.delete(brandforgeCampaigns).where(eq(brandforgeCampaigns.tenantId, id));
-          await tx.delete(brandforgePersonas).where(eq(brandforgePersonas.tenantId, id));
-          await tx.delete(brandforgeBrands).where(eq(brandforgeBrands.tenantId, id));
-          await tx.delete(brandforgeWorkspaceSettings).where(eq(brandforgeWorkspaceSettings.tenantId, id));
-          await tx.execute(sql`DELETE FROM shared_notifications WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_outbox_messages WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_attachment_blobs WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_attachments WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_notification_templates WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_jobs WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_webhook_receipts WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_usage_events WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_activity_events WHERE tenant_id = ${id}`);
-          await tx.execute(sql`DELETE FROM shared_idempotency_keys WHERE tenant_id = ${id}`);
-          await tx.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, id));
-          await tx.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, id));
-          await tx.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, id));
-          await tx.delete(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, id));
-          await tx.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, id));
-          await tx.delete(tenantModules).where(eq(tenantModules.tenantId, id));
-          await tx.delete(tenantInvites).where(eq(tenantInvites.tenantId, id));
-          await tx.delete(tenantUsers).where(eq(tenantUsers.tenantId, id));
-          await tx.update(users).set({ currentTenantId: null })
-            .where(eq(users.currentTenantId, id));
-          await tx.delete(tenants).where(eq(tenants.id, id));
+          await deleteTenantOwnedData(tx, id);
         });
       } catch (err: any) {
         // Drizzle wraps everything in a SQL transaction, so on throw the
@@ -1675,13 +1689,18 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       : await db.select().from(adminAuditLogs).orderBy(desc(adminAuditLogs.createdAt)).limit(limit).offset(offset);
 
     // Hydrate actor names.
-    const actorIds = [...new Set(rows.map(r => r.adminId))];
+    const actorIds = [...new Set(rows
+      .map(r => r.adminId)
+      .filter((id): id is string => typeof id === 'string'))];
     const actorRows = actorIds.length === 0 ? [] :
       await db.select({ id: users.id, email: users.email, name: users.name })
         .from(users).where(inArray(users.id, actorIds));
     const actorById = Object.fromEntries(actorRows.map(u => [u.id, u]));
     return {
-      logs: rows.map(r => ({ ...r, actor: actorById[r.adminId] ?? null })),
+      logs: rows.map(r => ({
+        ...r,
+        actor: r.adminId ? (actorById[r.adminId] ?? null) : null,
+      })),
       total: rows.length,
       limit,
       offset,
@@ -2169,13 +2188,34 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (target.status !== 'deleted') {
         return reply.code(400).send({ error: 'User must be soft-deleted first before hard delete', code: 'USER_NOT_SOFT_DELETED' });
       }
-      const [{ value: wsCount }]   = await db.select({ value: count() }).from(saasWorkspaces).where(eq(saasWorkspaces.ownerId, id));
-      const [{ value: projCount }] = await db.select({ value: count() }).from(saasProjects).where(eq(saasProjects.userId, id));
-      if (wsCount > 0 || projCount > 0) {
-        return reply.code(400).send({
-          error: 'Cannot hard delete user with existing workspaces or projects. Clean up their data first.',
-          code: 'USER_HAS_RESIDUAL_DATA',
-          remaining: { workspaces: wsCount, projects: projCount },
+      const ownedTenants = await db.select().from(tenants).where(eq(tenants.ownerUserId, id));
+      const ownedCompanyTenants = ownedTenants.filter(tenant => tenant.type === 'company');
+      if (ownedCompanyTenants.length > 0) {
+        return reply.code(409).send({
+          error: 'Transfer or permanently delete company tenants owned by this user first.',
+          code: 'USER_OWNS_COMPANY_TENANTS',
+          ownedCompanyTenantCount: ownedCompanyTenants.length,
+        });
+      }
+      const activeBillingStatuses: ('active' | 'trialing')[] = ['active', 'trialing'];
+      const [activeUserSubscriptions, activeUserAddons] = await Promise.all([
+        db.select({ id: subscriptions.id }).from(subscriptions).where(and(
+          eq(subscriptions.userId, id),
+          inArray(subscriptions.status, activeBillingStatuses),
+        )),
+        db.select({ id: addonSubscriptions.id }).from(addonSubscriptions).where(and(
+          eq(addonSubscriptions.userId, id),
+          inArray(addonSubscriptions.status, activeBillingStatuses),
+        )),
+      ]);
+      if (activeUserSubscriptions.length > 0 || activeUserAddons.length > 0) {
+        return reply.code(409).send({
+          error: 'Cancel and reconcile active billing before permanently deleting this user.',
+          code: 'USER_HAS_ACTIVE_BILLING',
+          activeBilling: {
+            subscriptions: activeUserSubscriptions.length,
+            addons: activeUserAddons.length,
+          },
         });
       }
       const beforeSnapshot = pickSafe(target, [...USER_SAFE_FIELDS]);
@@ -2186,6 +2226,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           // from erasing module history while leaving the account.
           await tx.insert(adminAuditLogs).values({
             adminId: admin.id,
+            actorEmailSnapshot: admin.email,
             action: 'user_hard_deleted',
             targetUserId: id,
             tenantId: null,
@@ -2199,6 +2240,27 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
             ipAddress: request.ip ?? null,
           });
           (request as any)[AUDIT_FLAG] = true;
+          // A real account always owns a personal tenant. Purge those owned
+          // workspaces in the same transaction so the user-delete action does
+          // not dead-end on free module grants or their owner membership.
+          for (const personalTenant of ownedTenants) {
+            await tx.insert(adminAuditLogs).values({
+              adminId: admin.id,
+              actorEmailSnapshot: admin.email,
+              action: 'tenant.deleted',
+              targetUserId: id,
+              tenantId: personalTenant.id,
+              details: {
+                targetType: 'tenant',
+                targetId: personalTenant.id,
+                before: pickSafe(personalTenant, [...TENANT_SAFE_FIELDS]),
+                after: null,
+                cascadeFromUserDelete: true,
+              },
+              ipAddress: request.ip ?? null,
+            });
+            await deleteTenantOwnedData(tx, personalTenant.id);
+          }
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.userId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.userId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.userId, id));
@@ -2261,12 +2323,61 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.userId, id));
           await tx.execute(sql`UPDATE shared_usage_events SET user_id = NULL WHERE user_id = ${id}`);
           await tx.execute(sql`UPDATE shared_activity_events SET actor_user_id = NULL WHERE actor_user_id = ${id}`);
-          await tx.delete(activityFeed).where(eq(activityFeed.userId, id));
-          await tx.delete(saasTasks).where(eq(saasTasks.userId, id));
-          await tx.delete(notes).where(eq(notes.userId, id));
-          await tx.delete(workspaceMemberships).where(eq(workspaceMemberships.userId, id));
+          // Delete the legacy SaaS ownership graph from the leaves upward.
+          // This covers rows created by collaborators inside a workspace the
+          // target owns as well as projects directly authored by the target.
+          await tx.execute(sql`DELETE FROM notes
+            WHERE user_id=${id}
+               OR workspace_id IN (SELECT id FROM saas_workspaces WHERE owner_id=${id})
+               OR project_id IN (
+                 SELECT id FROM saas_projects
+                 WHERE user_id=${id}
+                    OR workspace_id IN (SELECT id FROM saas_workspaces WHERE owner_id=${id})
+               )`);
+          await tx.execute(sql`DELETE FROM activity_feed
+            WHERE user_id=${id}
+               OR workspace_id IN (SELECT id FROM saas_workspaces WHERE owner_id=${id})`);
+          await tx.execute(sql`DELETE FROM saas_tasks
+            WHERE user_id=${id}
+               OR project_id IN (
+                 SELECT id FROM saas_projects
+                 WHERE user_id=${id}
+                    OR workspace_id IN (SELECT id FROM saas_workspaces WHERE owner_id=${id})
+               )`);
+          await tx.execute(sql`DELETE FROM workspace_memberships
+            WHERE user_id=${id}
+               OR workspace_id IN (SELECT id FROM saas_workspaces WHERE owner_id=${id})`);
+          await tx.execute(sql`DELETE FROM saas_projects
+            WHERE user_id=${id}
+               OR workspace_id IN (SELECT id FROM saas_workspaces WHERE owner_id=${id})`);
+          await tx.delete(saasWorkspaces).where(eq(saasWorkspaces.ownerId, id));
+          await tx.delete(aiActionsLog).where(eq(aiActionsLog.userId, id));
+          await tx.delete(aiPromptTemplates).where(eq(aiPromptTemplates.userId, id));
+          await tx.delete(usageTracking).where(eq(usageTracking.userId, id));
+          await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
+          await tx.delete(ssoHandoffTokens).where(eq(ssoHandoffTokens.userId, id));
+          await tx.delete(revokedSessionTokens).where(eq(revokedSessionTokens.userId, id));
+          await tx.delete(adminNotes).where(or(eq(adminNotes.adminId, id), eq(adminNotes.targetUserId, id)));
+          await tx.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.userId, id));
+          await tx.delete(tenantUsers).where(eq(tenantUsers.userId, id));
+          await tx.delete(tenantInvites).where(or(
+            eq(tenantInvites.invitedByUserId, id),
+            eq(tenantInvites.email, target.email.toLowerCase()),
+          ));
+          await tx.delete(entitlementOverrides).where(or(
+            eq(entitlementOverrides.userId, id),
+            eq(entitlementOverrides.createdByAdminId, id),
+          ));
+          await tx.delete(addonSubscriptions).where(eq(addonSubscriptions.userId, id));
           await tx.delete(billingEvents).where(eq(billingEvents.userId, id));
           await tx.delete(subscriptions).where(eq(subscriptions.userId, id));
+          // Release v54 retains audit history while removing the FK to the
+          // purged identity. The snapshot is deliberately captured before
+          // the user row disappears.
+          await tx.update(adminAuditLogs).set({
+            adminId: null,
+            actorEmailSnapshot: target.email,
+          }).where(eq(adminAuditLogs.adminId, id));
           await tx.delete(users).where(eq(users.id, id));
         });
       } catch (err: any) {
@@ -2365,7 +2476,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         const d = (r.details ?? {}) as Record<string, unknown>;
         return d.slug === slug;
       });
-      const adminIds = [...new Set(matches.map(r => r.adminId))];
+      const adminIds = [...new Set(matches
+        .map(r => r.adminId)
+        .filter((id): id is string => typeof id === 'string'))];
       const adminMap: Record<string, { email: string; name: string | null }> = {};
       for (const uid of adminIds) {
         const [u] = await db.select({ email: users.email, name: users.name })
@@ -2378,8 +2491,10 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           id: r.id,
           createdAt: r.createdAt,
           adminId: r.adminId,
-          adminEmail: adminMap[r.adminId]?.email ?? null,
-          adminName: adminMap[r.adminId]?.name ?? null,
+          adminEmail: r.adminId
+            ? (adminMap[r.adminId]?.email ?? r.actorEmailSnapshot ?? null)
+            : (r.actorEmailSnapshot ?? null),
+          adminName: r.adminId ? (adminMap[r.adminId]?.name ?? null) : null,
           previousCents: typeof d.previousCents === 'number' ? d.previousCents : null,
           nextCents: typeof d.nextCents === 'number' ? d.nextCents : null,
         };

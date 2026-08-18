@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ArrowRight, CheckCircle2, KeyRound, Layers3, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
 import OperatorLogo from '../brand/OperatorLogo';
@@ -9,8 +9,6 @@ import { brand } from '@/lib/brand';
 interface LoginPageProps {
   onSwitch: (page: 'register' | 'forgot-password') => void;
 }
-
-const PENDING_INVITE_EMAIL_KEY = 'operatoros.pendingInviteEmail';
 
 const BENEFITS = [
   { icon: KeyRound, title: 'Sign in once', body: 'Your account and organization access follow you into every unlocked app.' },
@@ -24,13 +22,6 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    try {
-      const parked = sessionStorage.getItem(PENDING_INVITE_EMAIL_KEY);
-      if (parked) setEmail(parked);
-    } catch {}
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

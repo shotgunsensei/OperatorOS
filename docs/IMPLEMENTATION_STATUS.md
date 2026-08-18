@@ -1,5 +1,63 @@
 # OperatorOS implementation status
 
+## Tenant invitation onboarding and administrative removal repair - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-18)
+
+- The invitation page now keeps account creation, sign-in, and tenant joining
+  on one exact OperatorOS platform host. It no longer stores an invitation in
+  origin-scoped `sessionStorage` and redirects through a host that cannot read
+  it. A new user chooses a name and password on the invitation page; the API
+  derives the email from the opaque token and atomically creates the account,
+  the invited membership, the accepted invitation state, the active tenant
+  selection, audit evidence, and a host-only platform session. This direct
+  company-invite path does not create an unwanted personal tenant. Generic
+  self-registration retains the existing personal/free-account behavior and
+  can still reconcile an exact pending business invitation.
+- Existing invited users sign in on the same page. Acceptance uses
+  transaction-level serialization and is idempotent for the invited account,
+  so browser/network retries return the existing membership rather than a
+  false `INVITE_ALREADY_ACCEPTED` failure. Email mismatch, expiry, unavailable
+  tenant, and wrong-account states remain fail closed and user-readable.
+- A missed invitation is recovered during generic registration, the next
+  platform login, or `/auth/me` only when an exact active pending invite exists
+  for the normalized email, the non-owner role is bounded, and the active
+  tenant owner has the same non-public business domain. This preserves the
+  administrator-authored grant needed for the Xodus `@xodus-is.com` workflow;
+  it is not domain discovery or unrestricted suffix-based auto-join.
+- Confirmed tenant hard-delete now cascades ordinary members, invitations,
+  free/paid module assignment rows, tenant entitlements, and tenant-owned
+  product data in one transaction. Active/trialing platform subscriptions or
+  add-ons remain the only tenant billing blocker. The Platform Command dialog
+  describes the cascade and required billing reconciliation instead of the
+  prior generic dependent failure.
+- User hard-delete now removes owned personal tenants through the same full
+  tenant cascade, plus user-owned module data, workspaces/projects/tasks/notes,
+  memberships, sessions, password-reset/SSO state, usage, and non-live billing
+  rows. Active user billing remains blocked; owned company tenants must first
+  be transferred or explicitly deleted; self-delete and last-super-admin
+  controls are unchanged. Release v54 adds and backfills
+  `admin_audit_logs.actor_email_snapshot`, makes the live actor reference
+  nullable with `ON DELETE SET NULL`, and therefore retains audit history after
+  an identity purge.
+- Disposable PostgreSQL 16 verification: `corepack pnpm db:apply` applied and
+  verified all 54 ordered operations in 18,929 ms with final step
+  `identity_onboarding_integrity`; an immediate supported-root reapply verified
+  the same release in 1,963 ms. Focused invitation/onboarding tests pass
+  3/3, tenant hard-delete tests pass 7/7, user hard-delete/audit-retention tests
+  pass 2/2, and the adjacent auth/invite regression rerun passes 15/15. The
+  release/auth-shell static suite passes 40 with 6 expected skips because no
+  web server was running. API and web TypeScript both pass. The repository
+  lint command passes with zero warnings, and `corepack pnpm build:production`
+  passes the FaultlineLab compiler, API/runner/web/native typechecks, API and
+  runner builds, and optimized Next.js production build.
+- The complete API aggregate reports 1,170 pass, 13 fail, and 6 intentional
+  HTTP-only skips across 1,189 tests. Every v54 invitation/removal test passes.
+  The 13 failures are existing stale module-shell/source-snapshot assertions
+  in BrandForgeOS, customer-experience, TechDeck, TorqueShed, Ninja Pool Hall,
+  PulseDesk, Replit runtime, and TradeFlowKit contracts; none execute or assert
+  this invitation/removal change. Production backup/apply, deployment,
+  authenticated deployed-browser acceptance, and rollback remain open. No
+  production data was changed.
+
 ## TradeFlowKit route, public compatibility, and SEO closure - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-17)
 
 - TradeFlowKit's persisted workflow templates, job workflow board, team-task

@@ -339,7 +339,15 @@ export function sanitizeUser(user: any) {
 }
 
 export async function logAudit(userId: string, action: string, targetUserId?: string, details?: Record<string, unknown>, ipAddress?: string) {
-  await db.insert(adminAuditLogs).values({ adminId: userId, action, targetUserId, details, ipAddress });
+  const [actor] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  await db.insert(adminAuditLogs).values({
+    adminId: userId,
+    actorEmailSnapshot: actor?.email ?? null,
+    action,
+    targetUserId,
+    details,
+    ipAddress,
+  });
 }
 
 export async function logUserActivity(userId: string, action: string, entityType: string, entityId?: string, metadata?: Record<string, unknown>) {

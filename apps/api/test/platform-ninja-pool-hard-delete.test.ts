@@ -14,6 +14,7 @@ import {
   ninjaPoolMatchSessions,
   ninjaPoolPlayerProfiles,
   ninjaPoolPracticeSessions,
+  saasWorkspaces,
   tenants,
   users,
 } from '../src/schema.js';
@@ -41,15 +42,13 @@ const bearer = () => ({
 });
 
 async function createDeletedTarget() {
-  const [target] = await db.insert(users).values({
-    email: `${uniqueId('nph-delete')}@test.local`,
-    passwordHash: 'x',
+  const target = await createTestUser();
+  const [deleted] = await db.update(users).set({
     name: 'Ninja Pool Delete Target',
-    role: 'user',
     status: 'deleted',
     deletedAt: new Date(),
-  }).returning();
-  return target;
+  }).where(eq(users.id, target.id)).returning();
+  return deleted;
 }
 
 interface SeededModuleRows {
@@ -190,6 +189,7 @@ after(async () => {
 
 test('user hard-delete removes native module rows and commits its audit atomically', async () => {
   const target = await createDeletedTarget();
+  const personalTenantId = target.currentTenantId!;
   const moduleRows = await seedModuleRows(target.id);
   const [practice] = await db.insert(ninjaPoolPracticeSessions).values({
     tenantId: admin.currentTenantId,
@@ -197,7 +197,26 @@ test('user hard-delete removes native module rows and commits its audit atomical
     shots: 4,
     objectBallsPocketed: 3,
   }).returning();
+  const [personalPractice] = await db.insert(ninjaPoolPracticeSessions).values({
+    tenantId: personalTenantId,
+    userId: target.id,
+    shots: 3,
+    objectBallsPocketed: 2,
+  }).returning();
+  const [workspace] = await db.insert(saasWorkspaces).values({
+    ownerId: target.id,
+    tenantId: personalTenantId,
+    name: 'Delete Lifecycle Workspace',
+    slug: uniqueId('delete-workspace'),
+  }).returning();
   const structured = await seedStructuredPoolRows(target.id);
+  const [targetAuthoredAudit] = await db.insert(adminAuditLogs).values({
+    adminId: target.id,
+    actorEmailSnapshot: target.email,
+    action: 'target_preexisting_audit',
+    targetUserId: target.id,
+    tenantId: personalTenantId,
+  }).returning();
 
   try {
     const response = await app.inject({
@@ -208,8 +227,16 @@ test('user hard-delete removes native module rows and commits its audit atomical
 
     assert.equal(response.statusCode, 200, response.body);
     assert.equal((await db.select().from(users).where(eq(users.id, target.id))).length, 0);
+    assert.equal((await db.select().from(tenants).where(eq(tenants.id, personalTenantId))).length, 0,
+      'owned personal tenant must be removed with the user');
     assert.equal((await db.select().from(ninjaPoolPracticeSessions)
       .where(eq(ninjaPoolPracticeSessions.id, practice.id))).length, 0);
+    assert.equal((await db.select().from(ninjaPoolPracticeSessions)
+      .where(eq(ninjaPoolPracticeSessions.id, personalPractice.id))).length, 0,
+      'personal-tenant product rows must be cascaded');
+    assert.equal((await db.select().from(saasWorkspaces)
+      .where(eq(saasWorkspaces.id, workspace.id))).length, 0,
+      'legacy workspace dependents must no longer block user deletion');
     assert.equal((await db.select().from(ninjaPoolPlayerProfiles)
       .where(eq(ninjaPoolPlayerProfiles.id, structured.profileId))).length, 0);
     assert.equal((await db.select().from(ninjaPoolMatchSessions)
@@ -225,16 +252,23 @@ test('user hard-delete removes native module rows and commits its audit atomical
     ));
     assert.equal(audits.length, 1);
     assert.equal((audits[0].details as Record<string, unknown>).targetId, target.id);
+    const [retainedAudit] = await db.select().from(adminAuditLogs)
+      .where(eq(adminAuditLogs.id, targetAuthoredAudit.id));
+    assert.ok(retainedAudit, 'historical audit event must survive the identity purge');
+    assert.equal(retainedAudit.adminId, null);
+    assert.equal(retainedAudit.actorEmailSnapshot, target.email);
   } finally {
     await cleanupModuleRows(moduleRows);
     await cleanupStructuredPoolRows(target.id);
     await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.id, practice.id));
+    await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.id, personalPractice.id));
+    await db.delete(saasWorkspaces).where(eq(saasWorkspaces.id, workspace.id));
     await db.delete(adminAuditLogs).where(eq(adminAuditLogs.targetUserId, target.id));
     await db.delete(users).where(eq(users.id, target.id));
   }
 });
 
-test('user hard-delete rolls module cleanup and audit back when a later FK blocks deletion', async () => {
+test('user hard-delete refuses company-tenant ownership before destructive work begins', async () => {
   const target = await createDeletedTarget();
   const moduleRows = await seedModuleRows(target.id);
   const [practice] = await db.insert(ninjaPoolPracticeSessions).values({
@@ -259,8 +293,8 @@ test('user hard-delete rolls module cleanup and audit back when a later FK block
       headers: bearer(),
     });
 
-    assert.equal(response.statusCode, 500, response.body);
-    assert.equal(response.json().code, 'USER_DELETE_FAILED');
+    assert.equal(response.statusCode, 409, response.body);
+    assert.equal(response.json().code, 'USER_OWNS_COMPANY_TENANTS');
     assert.equal((await db.select().from(users).where(eq(users.id, target.id))).length, 1);
     assert.equal((await db.select().from(ninjaPoolPracticeSessions)
       .where(eq(ninjaPoolPracticeSessions.id, practice.id))).length, 1);
@@ -276,13 +310,13 @@ test('user hard-delete rolls module cleanup and audit back when a later FK block
       eq(adminAuditLogs.targetUserId, target.id),
       eq(adminAuditLogs.action, 'user_hard_deleted'),
     ));
-    assert.equal(audits.length, 0, 'failed transaction must not retain its audit row');
+    assert.equal(audits.length, 0, 'ownership precondition must reject before writing a delete audit');
   } finally {
     await cleanupModuleRows(moduleRows);
     await cleanupStructuredPoolRows(target.id);
     await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.id, practice.id));
     await db.delete(tenants).where(eq(tenants.id, ownedTenant.id));
     await db.delete(adminAuditLogs).where(eq(adminAuditLogs.targetUserId, target.id));
-    await db.delete(users).where(eq(users.id, target.id));
+    await cleanupUser(target.id);
   }
 });
