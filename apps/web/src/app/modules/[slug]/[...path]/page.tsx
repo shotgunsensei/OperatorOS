@@ -8,10 +8,10 @@ import {
 } from './route-map';
 
 interface ModuleDeepLinkPageProps {
-  params: {
+  params: Promise<{
     slug: string;
     path: string[];
-  };
+  }>;
 }
 
 /**
@@ -20,27 +20,28 @@ interface ModuleDeepLinkPageProps {
  * live native workflow are dispatched into a shell section; all other paths
  * get an explicit module-local recovery state.
  */
-export default function ModuleDeepLinkPage({ params }: ModuleDeepLinkPageProps) {
-  const module = getModuleBySlug(params.slug);
+export default async function ModuleDeepLinkPage({ params }: ModuleDeepLinkPageProps) {
+  const { slug, path } = await params;
+  const module = getModuleBySlug(slug);
 
   // Preserve the root boundary's canonical unknown/inactive module states.
   if (!module || module.status !== 'active') {
-    return <ModuleHost slug={params.slug} />;
+    return <ModuleHost slug={slug} />;
   }
 
-  const target = resolveCoreModuleDeepLink(params.slug, params.path);
+  const target = resolveCoreModuleDeepLink(slug, path);
   if (target) {
     if (target.redirectPath) redirect(target.redirectPath);
     return (
       <ModuleHost
-        slug={params.slug}
+        slug={slug}
         initialSectionId={target.sectionId}
-        initialRoutePath={formatModuleDeepPath(params.path)}
+        initialRoutePath={formatModuleDeepPath(path)}
       />
     );
   }
 
-  const requestedPath = formatModuleDeepPath(params.path);
+  const requestedPath = formatModuleDeepPath(path);
   return (
     <ModuleState
       testId="module-deep-link-not-found"

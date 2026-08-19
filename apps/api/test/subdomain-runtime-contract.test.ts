@@ -39,6 +39,13 @@ test('production module paths redirect to canonical subdomains while local paths
   assert.match(middleware, /new URL\(module\.productionBaseUrl\)/);
   assert.match(middleware, /NextResponse\.redirect\(destination, 308\)/);
   assert.match(middleware, /canonicalizeProductionModulePath\(req, context\)/);
+  assert.match(middleware, /function canonicalizePrefixedModuleHostPath/);
+  assert.match(middleware, /pathname\.slice\(localPrefix\.length\)/);
+  assert.ok(
+    middleware.indexOf('canonicalizePrefixedModuleHostPath(req, context)') <
+      middleware.indexOf('!req.cookies.has(AUTH_COOKIE)'),
+    'module-host prefix canonicalization must happen before the auth/SSO gate',
+  );
   assert.match(registry, /function supportsLocalModuleFallback/);
   assert.match(registry, /host\.endsWith\('\.replit\.dev'\)/);
   assert.match(registry, /requestedLocalSlug && supportsLocalModuleFallback\(host\)/);
@@ -48,6 +55,10 @@ test('shared Next deployment proxies the API host and public readiness paths to 
   const nextConfig = read('apps/web/next.config.js');
   const middleware = read('apps/web/src/middleware.ts');
   const api = read('apps/api/src/index.ts');
+  const beforeFiles = nextConfig.slice(
+    nextConfig.indexOf('beforeFiles:'),
+    nextConfig.indexOf('afterFiles:'),
+  );
 
   assert.match(nextConfig, /beforeFiles:\s*\[/);
   assert.match(nextConfig, /type:\s*'host',\s*value:\s*'api\.operatoros\.net'/);
@@ -55,8 +66,8 @@ test('shared Next deployment proxies the API host and public readiness paths to 
     nextConfig,
     /beforeFiles:\s*\[[\s\S]*source:\s*'\/:path\*'[\s\S]*destination:\s*`\$\{apiUrl\}\/\:path\*`/,
   );
-  assert.match(nextConfig, /source:\s*'\/healthz'[\s\S]*destination:\s*`\$\{apiUrl\}\/healthz`/);
-  assert.match(nextConfig, /source:\s*'\/readyz'[\s\S]*destination:\s*`\$\{apiUrl\}\/readyz`/);
+  assert.match(beforeFiles, /source:\s*'\/healthz'[\s\S]*destination:\s*`\$\{apiUrl\}\/healthz`/);
+  assert.match(beforeFiles, /source:\s*'\/readyz'[\s\S]*destination:\s*`\$\{apiUrl\}\/readyz`/);
   assert.match(middleware, /pathname === '\/healthz'/);
   assert.match(middleware, /pathname === '\/readyz'/);
   assert.match(middleware, /context\.host === API_HOST\) return NextResponse\.next\(\)/);
@@ -87,6 +98,9 @@ test('module host rewrites preserve deep paths and reserve auth/ops endpoints', 
   const middleware = read('apps/web/src/middleware.ts');
   const catchAll = read('apps/web/src/app/modules/[slug]/[...path]/page.tsx');
 
+  assert.match(middleware, /context\.surface !== 'module' \|\| !context\.module/);
+  assert.match(middleware, /const localPrefix = `\/modules\/\$\{context\.module\.slug\}`/);
+  assert.match(middleware, /hostRelativePath \|\| context\.module\.launchPath \|\| '\/'/);
   assert.match(middleware, /context\.surface === 'module' && pathname !== '\/'/);
   assert.match(middleware, /`\/modules\/\$\{context\.module\.slug\}\$\{modulePath\}`/);
   for (const reserved of ['/sso', '/logout', '/healthz', '/readyz']) {
@@ -95,6 +109,16 @@ test('module host rewrites preserve deep paths and reserve auth/ops endpoints', 
   assert.match(catchAll, /resolveCoreModuleDeepLink/);
   assert.match(catchAll, /initialSectionId=\{target\.sectionId\}/);
   assert.match(catchAll, /module-deep-link-not-found/);
+});
+
+test('module SSO preserves the exact clean deep link and query through code exchange', () => {
+  const middleware = read('apps/web/src/middleware.ts');
+  const login = read('apps/web/src/app/login/page.tsx');
+
+  assert.match(middleware, /`\$\{origin\}\$\{req\.nextUrl\.pathname\}\$\{req\.nextUrl\.search \|\| ''\}`/);
+  assert.match(middleware, /url\.searchParams\.set\('next', target\)/);
+  assert.match(login, /returnTo: next/);
+  assert.match(login, /window\.location\.replace\(safeDestination\)/);
 });
 
 test('TradeFlowKit legacy public routes resolve before the module authentication gate', () => {

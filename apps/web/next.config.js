@@ -121,10 +121,9 @@ const nextConfig = {
             has: [{ type: 'host', value: 'api.operatoros.net' }],
             destination: `${apiUrl}/:path*`,
           },
-        ],
-        afterFiles: [
           // Every registered platform/module host advertises /healthz. Keep
-          // that endpoint public and backed by the API health handler.
+          // operational endpoints public and unconditional. These belong in
+          // beforeFiles so no current or future app route can shadow them.
           {
             source: '/healthz',
             destination: `${apiUrl}/healthz`,
@@ -133,6 +132,8 @@ const nextConfig = {
             source: '/readyz',
             destination: `${apiUrl}/readyz`,
           },
+        ],
+        afterFiles: [
           {
             source: '/api/:path*',
             destination: `${apiUrl}/v1/:path*`,

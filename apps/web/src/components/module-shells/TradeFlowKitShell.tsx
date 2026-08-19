@@ -212,10 +212,9 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
   const platformAdmin = hasPlatformAdminAuthority(user);
   const adapterRole = platformAdmin ? 'admin' : activeRole ?? 'member';
   const route = resolveRoute(routePath || pathname);
-  // All embedded and source-compatible entry points navigate through the
-  // canonical record-capable module route. Relative root links (for example
-  // `/jobs`) are not OperatorOS routes and caused broken Next prefetches from
-  // `/app/apps/tradeflowkit`.
+  // Embedded and source-compatible entry points use the stable local fallback
+  // route. On tradeflowkit.operatoros.net middleware canonicalizes this prefix
+  // to the clean host-relative path before auth and internal module rewriting.
   const routePrefix = '/modules/tradeflowkit';
 
   useEffect(() => {

@@ -111,6 +111,7 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123'])?.sectionId, 'tradeflowkit-lead-center');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['jobs', 'job-123'])?.sectionId, 'tradeflowkit-operations');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['tasks', 'task-123'])?.sectionId, 'tradeflowkit-tasks');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['customers', 'customer-123'])?.sectionId, 'tradeflowkit-revenue-flow');
   assert.deepEqual(resolveCoreModuleDeepLink('tradeflowkit', ['portal', 'Abcdefghijklmnopqrstuvwxyz012345']), {
     sectionId: 'tradeflowkit-public-portal',
     label: 'Customer Portal',
@@ -165,6 +166,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const outCallShell = readRepoFile('apps/web/src/components/module-shells/OutCallWorkspace.tsx');
 
   assert.match(catchAllPage, /resolveCoreModuleDeepLink/);
+  assert.match(catchAllPage, /const \{ slug, path \} = await params/);
   assert.match(catchAllPage, /initialSectionId=\{target\.sectionId\}/);
   assert.match(catchAllPage, /module-deep-link-not-found/);
   assert.match(catchAllPage, /actionHref="\/"/);

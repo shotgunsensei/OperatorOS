@@ -1,17 +1,19 @@
 import ModuleHost from './ModuleHost';
 
 interface ModuleFallbackPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
-  searchParams?: {
+  }>;
+  searchParams?: Promise<{
     host?: string;
-  };
+  }>;
 }
 
-export default function ModuleFallbackPage({
+export default async function ModuleFallbackPage({
   params,
   searchParams,
 }: ModuleFallbackPageProps) {
-  return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />;
+  const { slug } = await params;
+  const query = searchParams ? await searchParams : undefined;
+  return <ModuleHost slug={slug} requestedHost={query?.host} />;
 }

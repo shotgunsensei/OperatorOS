@@ -209,6 +209,28 @@ function canonicalizeProductionModulePath(
   return withAuthSecurityHeaders(NextResponse.redirect(destination, 308));
 }
 
+function canonicalizePrefixedModuleHostPath(
+  req: NextRequest,
+  context: ResolvedOperatorOSModuleContext,
+): NextResponse | null {
+  if (context.surface !== 'module' || !context.module) return null;
+
+  // Native shells use the stable local fallback prefix so they also work on
+  // localhost and Replit preview. On the canonical module host that prefix is
+  // redundant: leaving it in place makes the module rewrite prepend it again
+  // (`/modules/tradeflowkit/modules/tradeflowkit/...`) and lands on the
+  // module-local 404. Canonicalize before auth so SSO also preserves the clean
+  // public deep link rather than returning to the prefixed compatibility URL.
+  const localPrefix = `/modules/${context.module.slug}`;
+  const pathname = req.nextUrl.pathname;
+  if (pathname !== localPrefix && !pathname.startsWith(`${localPrefix}/`)) return null;
+
+  const destination = req.nextUrl.clone();
+  const hostRelativePath = pathname.slice(localPrefix.length);
+  destination.pathname = hostRelativePath || context.module.launchPath || '/';
+  return withAuthSecurityHeaders(NextResponse.redirect(destination, 308));
+}
+
 function canonicalizeLegacyAppPath(
   req: NextRequest,
   context: ResolvedOperatorOSModuleContext,
@@ -406,6 +428,9 @@ export async function middleware(req: NextRequest) {
 
   const legacyAppRedirect = canonicalizeLegacyAppPath(req, context);
   if (legacyAppRedirect) return legacyAppRedirect;
+
+  const prefixedModuleHostRedirect = canonicalizePrefixedModuleHostPath(req, context);
+  if (prefixedModuleHostRedirect) return prefixedModuleHostRedirect;
 
   // `/modules/<slug>` is a loopback/preview development convenience only.
   // Production root/app requests move to the module's canonical subdomain.
