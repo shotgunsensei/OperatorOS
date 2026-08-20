@@ -4,8 +4,8 @@
   "sourceCommit": "26bded38c13b5b6361d407462c68052b0c30613d",
   "importedAtUtc": "2026-07-13T19:58:44.2545200Z",
   "trackedFileCount": 336,
-  "fileCount": 259,
-  "totalBytes": 3400008,
+  "fileCount": 258,
+  "totalBytes": 3175525,
   "maxFileSizeMb": 25,
   "excludedFiles": [
     {
@@ -315,8 +315,12 @@
     {
       "path": "attached_assets/snapproof_1775232296667.png",
       "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
     }
   ],
   "highConfidenceSecretFindings": 0,
-  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+  "policy": "tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded"
 }

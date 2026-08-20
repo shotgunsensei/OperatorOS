@@ -226,6 +226,8 @@ export const tenantApi = {
     apiFetch(`/tenants/${tenantId}/invites/${inviteId}/link`),
   acceptInvite: (token: string) =>
     apiFetch(`/invites/${token}/accept`, { method: 'POST' }),
+  declineInvite: (token: string) =>
+    apiFetch(`/invites/${token}/decline`, { method: 'POST' }),
   // Public read used by the invite landing page to fetch the invitee's
   // email (for pre-fill) and tenant name without requiring auth.
   peekInvite: (token: string) =>

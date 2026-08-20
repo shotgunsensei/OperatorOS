@@ -9,6 +9,7 @@
  *   POST   /v1/tenants/:tenantId/invites              body { email, role }
  *   DELETE /v1/tenants/:tenantId/invites/:inviteId
  *   POST   /v1/invites/:token/accept                  (auth)
+ *   POST   /v1/invites/:token/decline                 (auth)
  *   GET    /v1/tenants/:tenantId/users/:userId/module-access
  *   POST   /v1/tenants/:tenantId/users/:userId/module-access  body { moduleSlug, accessLevel }
  *   GET    /v1/tenants/:tenantId/modules               (read-only catalog for the tenant)
@@ -36,13 +37,14 @@ import { sendInviteEmail, buildInviteAcceptUrl } from '../lib/email-service.js';
 import { isTenantOwner } from '../lib/rbac.js';
 import {
   acceptTenantInvitationWithDatabase,
+  declineTenantInvitationWithDatabase,
   isTenantInviteToken,
   TenantInvitationError,
 } from '../lib/tenant-invitations.js';
 
 const INVITE_TTL_DAYS = 14;
 const TENANT_USER_SAFE_FIELDS = ['id', 'tenantId', 'userId', 'role'] as const;
-const TENANT_INVITE_SAFE_FIELDS = ['id', 'tenantId', 'email', 'role', 'expiresAt', 'acceptedAt'] as const;
+const TENANT_INVITE_SAFE_FIELDS = ['id', 'tenantId', 'email', 'role', 'expiresAt', 'acceptedAt', 'declinedAt'] as const;
 const TENANT_SAFE_FIELDS = ['id', 'name', 'slug', 'type', 'status'] as const;
 
 function badRequest(reply: any, msg: string) {
@@ -244,9 +246,13 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
     { preHandler: [requireTenantAdmin] },
     async (request) => {
       const { tenantId } = request.params;
-      // Show only pending (unaccepted) invites.
+      // Show only invitations that still await the recipient's decision.
       const rows = await db.select().from(tenantInvites)
-        .where(and(eq(tenantInvites.tenantId, tenantId), isNull(tenantInvites.acceptedAt)));
+        .where(and(
+          eq(tenantInvites.tenantId, tenantId),
+          isNull(tenantInvites.acceptedAt),
+          isNull(tenantInvites.declinedAt),
+        ));
       return { invites: rows };
     },
   );
@@ -309,7 +315,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         tenantName: tenantRow?.name ?? 'your workspace',
         inviterName: actor.name ?? actor.email,
         inviterEmail: actor.email,
-        role: invite.role as 'owner' | 'admin' | 'member',
+        role: invite.role as 'owner' | 'admin' | 'member' | 'viewer',
         acceptUrl: buildInviteAcceptUrl(invite.token),
         expiresAt: invite.expiresAt,
       });
@@ -348,6 +354,12 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
           code: 'INVITE_ALREADY_ACCEPTED',
         });
       }
+      if (invite.declinedAt) {
+        return reply.code(409).send({
+          error: 'Invite was declined',
+          code: 'INVITE_DECLINED',
+        });
+      }
       if (invite.expiresAt.getTime() < Date.now()) {
         return reply.code(410).send({ error: 'Invite has expired', code: 'INVITE_EXPIRED' });
       }
@@ -357,7 +369,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         tenantName: tenantRow?.name ?? 'your workspace',
         inviterName: actor.name ?? actor.email,
         inviterEmail: actor.email,
-        role: invite.role as 'owner' | 'admin' | 'member',
+        role: invite.role as 'owner' | 'admin' | 'member' | 'viewer',
         acceptUrl: buildInviteAcceptUrl(invite.token),
         expiresAt: invite.expiresAt,
       });
@@ -401,6 +413,12 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         return reply.code(409).send({
           error: 'Invite already accepted',
           code: 'INVITE_ALREADY_ACCEPTED',
+        });
+      }
+      if (invite.declinedAt) {
+        return reply.code(409).send({
+          error: 'Invite was declined',
+          code: 'INVITE_DECLINED',
         });
       }
       if (invite.expiresAt.getTime() < Date.now()) {
@@ -452,8 +470,9 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       if (!invite) return notFound(reply, 'INVITE_NOT_FOUND', 'Invite not found');
       const [tenant] = await db.select({ name: tenants.name })
         .from(tenants).where(eq(tenants.id, invite.tenantId)).limit(1);
-      let status: 'pending' | 'expired' | 'accepted' = 'pending';
+      let status: 'pending' | 'expired' | 'accepted' | 'declined' = 'pending';
       if (invite.acceptedAt) status = 'accepted';
+      else if (invite.declinedAt) status = 'declined';
       else if (invite.expiresAt.getTime() < Date.now()) status = 'expired';
       return {
         email: invite.email,
@@ -479,6 +498,28 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
           ipAddress: request.ip,
         }));
         return accepted;
+      } catch (error) {
+        if (error instanceof TenantInvitationError) {
+          return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: { token: string } }>(
+    '/v1/invites/:token/decline',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const user = (request as any).user;
+      const { token } = request.params;
+      try {
+        return await db.transaction(tx => declineTenantInvitationWithDatabase(tx, {
+          token,
+          user,
+          request,
+          ipAddress: request.ip,
+        }));
       } catch (error) {
         if (error instanceof TenantInvitationError) {
           return reply.code(error.statusCode).send({ error: error.message, code: error.code });

@@ -80,6 +80,7 @@ if ($trackedFiles.Count -eq 0) {
 
 $excludedDirectoryPattern = '(^|/)(\.git|\.agents|\.openai|\.migration-backup|\.backup|backups?|\.replit-artifact|attached_assets|mockup-sandbox|design-audit|node_modules|dist|build|\.next|coverage|\.cache|\.turbo|\.vercel|playwright-report|test-results|tmp|temp|uploads?)(/|$)'
 $excludedFilePattern = '(?i)(^|/)(\.env($|\.)|\.replit(?:ignore)?($|\.)|id_rsa(\.pub)?$|id_ed25519(\.pub)?$|credentials\.json$|service-account[^/]*\.json$)|(?i)\.(pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|log)$'
+$excludedDependencyLockPattern = '(?i)(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|bun\.lockb?|pnpm-lock(?: \(\d+\))?\.yaml)$'
 $maxFileBytes = [int64]$MaxFileSizeMb * 1MB
 
 $secretPatterns = [ordered]@{
@@ -114,6 +115,10 @@ foreach ($trackedFile in $trackedFiles) {
       $matchesExplicitExclusion = $true
       break
     }
+  }
+  if ($relative -match $excludedDependencyLockPattern) {
+    $excluded.Add([pscustomobject]@{ path = $relative; reason = 'dependency lockfile excluded from non-installable historical snapshot' })
+    continue
   }
   if ($matchesExplicitExclusion -or $relative -match $excludedDirectoryPattern -or $relative -match $excludedFilePattern) {
     $excluded.Add([pscustomobject]@{ path = $relative; reason = 'excluded path or sensitive filename' })
@@ -216,7 +221,7 @@ $manifest = [ordered]@{
     [ordered]@{ path = $_.path; reason = $_.reason }
   })
   highConfidenceSecretFindings = 0
-  policy = 'tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded'
+  policy = 'tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded'
 }
 $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $destinationRoot 'SOURCE_SNAPSHOT.json') -Encoding utf8
 

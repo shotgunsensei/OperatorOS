@@ -4,8 +4,8 @@
   "sourceCommit": "46877aae35565149ccf4f4988dd94627fc6bb92b",
   "importedAtUtc": "2026-07-13T19:58:38.9659712Z",
   "trackedFileCount": 610,
-  "fileCount": 451,
-  "totalBytes": 7903535,
+  "fileCount": 450,
+  "totalBytes": 7569185,
   "maxFileSizeMb": 25,
   "excludedFiles": [
     {
@@ -643,8 +643,12 @@
     {
       "path": "attached_assets/Pasted-You-are-now-acting-as-a-senior-full-stack-product-engin_1777766944660.txt",
       "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
     }
   ],
   "highConfidenceSecretFindings": 0,
-  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+  "policy": "tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded"
 }

@@ -4,8 +4,8 @@
   "sourceCommit": "30bd1abc05846926e97bc7b26c5b7d6625e8f161",
   "importedAtUtc": "2026-07-13T19:58:43.9588209Z",
   "trackedFileCount": 331,
-  "fileCount": 256,
-  "totalBytes": 1173062,
+  "fileCount": 255,
+  "totalBytes": 949789,
   "maxFileSizeMb": 25,
   "excludedFiles": [
     {
@@ -307,8 +307,12 @@
     {
       "path": "attached_assets/Pasted-Build-a-production-ready-SaaS-app-called-NinjaLaunchKit_1777766193707.txt",
       "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
     }
   ],
   "highConfidenceSecretFindings": 0,
-  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+  "policy": "tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded"
 }

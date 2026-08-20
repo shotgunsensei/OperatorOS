@@ -11,13 +11,18 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 54);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 55);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 54);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 54);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 55);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 55);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'identity_onboarding_integrity');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'tenant_invitation_consent');
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tenant_invitation_consent')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'identity_onboarding_integrity'),
+    'explicit invitation consent must be an additive release step after v54',
+  );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'identity_onboarding_integrity')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tenant_messenger_tables'),
@@ -286,6 +291,9 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_sms_consent_records'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_sms_consent_events'\)/);
+  assert.match(releaseSource, /column_name = 'declined_at'/);
+  assert.match(releaseSource, /conname = 'tenant_invites_single_decision_check'/);
+  assert.match(releaseSource, /to_regclass\('public\.idx_tenant_invites_pending'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
 

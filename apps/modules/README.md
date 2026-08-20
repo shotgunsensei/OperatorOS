@@ -9,6 +9,37 @@ The `source/` trees are migration inputs and rollback/audit references. Their
 standalone web servers, login routes, sessions, billing endpoints, and deploy
 configuration are not started by the OperatorOS workspace.
 
+## Historical retention and deployment scope
+
+The source trees deliberately retain useful product code, screenshots, schemas,
+and provenance manifests, but they are non-installable archives. The root
+`pnpm-lock.yaml` is the only dependency graph allowed to influence GitHub,
+Replit, CI, or a production build. Imported npm, Yarn, Bun, and pnpm lockfiles
+are omitted because their standalone dependency graphs are stale, unreviewed,
+and outside OperatorOS release authority. Root `.npmrc` also prevents npm from
+regenerating an untracked `package-lock.json` for a provider scanner to ingest.
+
+`.replit` hides `apps/modules` from the default Replit file tree and excludes it
+from Replit package guessing. Hiding is workspace organization, not an access
+control or a claim that Replit's security scanner honors the same setting. The
+executable deployment boundary is enforced separately by
+`scripts/verify-deployment-scope.mjs`, the root workspace definition, the
+frozen deployment build, and the Phase 39 security gate.
+
+Removed dependency locks remain recoverable from Git history without keeping
+them in the current deployment snapshot. To inspect one without restoring or
+installing it:
+
+```powershell
+git log --all -- apps/modules/<slug>/source/pnpm-lock.yaml
+git show <commit>:apps/modules/<slug>/source/pnpm-lock.yaml
+```
+
+Do not install or execute a historical source tree. Restore a historical file
+only on a scoped research branch, and remove it again before merging into a
+deployable branch. `scripts/import-module-snapshot.ps1` applies this retention
+policy to all future imports.
+
 ## Intended Boundary
 
 Modules placed here are child products of OperatorOS. They may own:

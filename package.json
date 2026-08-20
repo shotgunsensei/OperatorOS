@@ -36,6 +36,7 @@
     "verify:data-fabric:phase38": "node scripts/phase38-data-fabric-report.mjs && node --test scripts/phase38/data-fabric-contract.test.mjs",
     "phase39:sbom:write": "node scripts/phase39/generate-sbom.mjs",
     "phase39:security": "node scripts/phase39/security-scan.mjs",
+    "verify:deployment-scope": "node scripts/verify-deployment-scope.mjs",
     "phase39:recovery": "node scripts/phase39/recovery-rehearsal.mjs",
     "verify:hardening:phase39": "node scripts/phase39/generate-sbom.mjs && node scripts/phase39/security-scan.mjs && node --test scripts/phase39/*.test.mjs && pnpm --filter @operatoros/api exec tsx --test --test-concurrency=1 test/phase39-production-hardening.test.ts test/production-env-preflight.test.ts",
     "verify:outcall:phase37": "node scripts/phase20-product-truth.mjs && node scripts/phase37-outcall-source-gate.mjs && node --test scripts/phase37/outcall-source-gate.test.mjs scripts/phase20-product-truth.test.mjs",
@@ -107,7 +108,7 @@
     "dev:runner": "pnpm --dir apps/runner-gateway dev",
     "dev:web": "pnpm --dir apps/web dev",
     "build": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web build",
-    "build:production": "pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build",
+    "build:production": "pnpm verify:deployment-scope && pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build",
     "start": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web start",
     "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web --filter ./apps/torqueshed-native typecheck"
   },

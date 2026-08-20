@@ -1,0 +1,116 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const dependencyLockNames = new Set([
+  'package-lock.json',
+  'npm-shrinkwrap.json',
+  'yarn.lock',
+  'bun.lock',
+  'bun.lockb',
+]);
+
+export function isDependencyLockfile(file) {
+  const normalized = file.replaceAll('\\', '/');
+  const name = basename(normalized).toLowerCase();
+  return dependencyLockNames.has(name) || /^pnpm-lock(?: \(\d+\))?\.yaml$/i.test(name);
+}
+
+function repositoryFiles(root = repositoryRoot) {
+  const result = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) throw new Error(result.stderr || 'git ls-files failed');
+  return result.stdout
+    .split('\0')
+    .filter(Boolean)
+    .map((file) => file.replaceAll('\\', '/'))
+    .filter((file) => existsSync(join(root, file)));
+}
+
+export function evaluateDeploymentScope({ files, gitignore, npmrc, replit, workspace, importer, packageJson }) {
+  const issues = [];
+  const lockfiles = files.filter(isDependencyLockfile).sort();
+  const disallowedLockfiles = lockfiles.filter((file) => file !== 'pnpm-lock.yaml');
+
+  if (!lockfiles.includes('pnpm-lock.yaml')) issues.push('root pnpm-lock.yaml is missing');
+  if (disallowedLockfiles.length > 0) {
+    issues.push(`non-authoritative dependency lockfiles are present: ${disallowedLockfiles.join(', ')}`);
+  }
+  if (packageJson.packageManager !== 'pnpm@10.34.5') {
+    issues.push('packageManager must pin pnpm@10.34.5');
+  }
+  if (/apps\/modules\/(?:\*|[^\s"']+)\/source/.test(workspace)) {
+    issues.push('historical module source is included in the pnpm workspace');
+  }
+
+  const requiredIgnoreRules = [
+    '/package-lock.json',
+    '/apps/modules/*/source/**/package-lock.json',
+    '/apps/modules/*/source/**/pnpm-lock*.yaml',
+  ];
+  for (const rule of requiredIgnoreRules) {
+    if (!gitignore.includes(rule)) issues.push(`.gitignore is missing ${rule}`);
+  }
+  if (!/^package-lock\s*=\s*false\s*$/m.test(npmrc)) {
+    issues.push('.npmrc does not prevent npm from regenerating package-lock.json');
+  }
+
+  if (!/\$excludedDependencyLockPattern\s*=/.test(importer)
+    || !/dependency lockfile excluded from non-installable historical snapshot/.test(importer)) {
+    issues.push('snapshot importer does not exclude dependency lockfiles');
+  }
+
+  const externalPorts = [...replit.matchAll(/^externalPort\s*=\s*(\d+)$/gm)]
+    .map((match) => Number(match[1]));
+  if (externalPorts.length !== 1 || externalPorts[0] !== 80) {
+    issues.push(`Replit must expose only the supervised public port 80; found ${externalPorts.join(', ') || 'none'}`);
+  }
+  if (!/^hidden\s*=\s*\[[^\]]*"apps\/modules"[^\]]*\]$/m.test(replit)) {
+    issues.push('Replit file tree does not hide historical apps/modules evidence');
+  }
+  if (!/\[packager\][\s\S]*?ignoredPaths\s*=\s*\[[^\]]*"apps\/modules"[^\]]*\]/.test(replit)) {
+    issues.push('Replit packager does not ignore historical apps/modules evidence');
+  }
+  if (!/\[packager\.features\][\s\S]*?enabledForHosting\s*=\s*false/.test(replit)) {
+    issues.push('Replit automatic hosting package installation is not disabled');
+  }
+  if (!/npm exec --yes --package=pnpm@10\.34\.5 -- pnpm install --frozen-lockfile/.test(replit)) {
+    issues.push('Replit deployment does not use the frozen authoritative pnpm graph');
+  }
+  if (!/run\s*=\s*\["node", "scripts\/start-unified-runtime\.mjs"\]/.test(replit)) {
+    issues.push('Replit deployment does not use the readiness-gated supervisor');
+  }
+
+  return {
+    pass: issues.length === 0,
+    authoritativeLockfile: 'pnpm-lock.yaml',
+    discoveredLockfiles: lockfiles,
+    disallowedLockfiles,
+    externalPorts,
+    issues,
+  };
+}
+
+export function inspectDeploymentScope(root = repositoryRoot) {
+  const read = (path) => readFileSync(join(root, path), 'utf8');
+  const packageJson = JSON.parse(read('package.json'));
+  return evaluateDeploymentScope({
+    files: repositoryFiles(root),
+    gitignore: read('.gitignore'),
+    npmrc: read('.npmrc'),
+    replit: read('.replit'),
+    workspace: read('pnpm-workspace.yaml'),
+    importer: read('scripts/import-module-snapshot.ps1'),
+    packageJson,
+  });
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const result = inspectDeploymentScope();
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  if (!result.pass) process.exitCode = 1;
+}

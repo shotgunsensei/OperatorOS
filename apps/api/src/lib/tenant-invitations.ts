@@ -1,24 +1,9 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { tenantInvites, tenants, tenantUsers, users } from '../schema.js';
 import { writeAudit } from './audit.js';
 
 type DatabaseExecutor = typeof db | any;
-
-const PUBLIC_EMAIL_DOMAINS = new Set([
-  'aol.com',
-  'gmail.com',
-  'gmx.com',
-  'hotmail.com',
-  'icloud.com',
-  'live.com',
-  'mail.com',
-  'msn.com',
-  'outlook.com',
-  'proton.me',
-  'protonmail.com',
-  'yahoo.com',
-]);
 
 const INVITE_TOKEN_PATTERN = /^[a-f0-9]{48}$/;
 
@@ -26,6 +11,7 @@ export type TenantInvitationFailureCode =
   | 'INVITE_NOT_FOUND'
   | 'INVITE_EXPIRED'
   | 'INVITE_ALREADY_ACCEPTED'
+  | 'INVITE_DECLINED'
   | 'INVITE_EMAIL_MISMATCH'
   | 'INVITE_TENANT_UNAVAILABLE';
 
@@ -52,30 +38,19 @@ export interface InvitationAcceptance {
   alreadyAccepted: boolean;
 }
 
-export interface PendingInvitationReconciliation {
-  joinedTenantIds: string[];
-  currentTenantId: string | null;
+export interface InvitationDecline {
+  tenantId: string;
+  tenantName: string;
+  alreadyDeclined: boolean;
+}
+
+export interface InvitationRegistrationContext {
+  invite: typeof tenantInvites.$inferSelect;
+  tenant: typeof tenants.$inferSelect;
 }
 
 export function isTenantInviteToken(value: unknown): value is string {
   return typeof value === 'string' && INVITE_TOKEN_PATTERN.test(value);
-}
-
-function emailDomain(email: string): string | null {
-  const separator = email.lastIndexOf('@');
-  if (separator <= 0 || separator === email.length - 1) return null;
-  return email.slice(separator + 1).trim().toLowerCase();
-}
-
-function isSameBusinessDomain(inviteeEmail: string, ownerEmail: string): boolean {
-  const inviteeDomain = emailDomain(inviteeEmail);
-  const ownerDomain = emailDomain(ownerEmail);
-  return Boolean(
-    inviteeDomain &&
-    ownerDomain &&
-    inviteeDomain === ownerDomain &&
-    !PUBLIC_EMAIL_DOMAINS.has(inviteeDomain),
-  );
 }
 
 async function lockInvite(executor: DatabaseExecutor, token: string): Promise<void> {
@@ -84,6 +59,45 @@ async function lockInvite(executor: DatabaseExecutor, token: string): Promise<vo
 
 async function lockMembership(executor: DatabaseExecutor, tenantId: string, userId: string): Promise<void> {
   await executor.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'tenant-membership:' + tenantId + ':' + userId}))`);
+}
+
+/**
+ * Validate and lock an invitation before creating a new account from its
+ * email link. Account creation remains separate from the later explicit
+ * accept/decline decision.
+ */
+export async function getPendingTenantInvitationForRegistrationWithDatabase(
+  executor: DatabaseExecutor,
+  token: string,
+): Promise<InvitationRegistrationContext> {
+  if (!isTenantInviteToken(token)) {
+    throw new TenantInvitationError(404, 'INVITE_NOT_FOUND', 'Invite not found');
+  }
+
+  await lockInvite(executor, token);
+  const [invite] = await executor.select().from(tenantInvites)
+    .where(eq(tenantInvites.token, token)).limit(1);
+  if (!invite) throw new TenantInvitationError(404, 'INVITE_NOT_FOUND', 'Invite not found');
+  if (invite.acceptedAt) {
+    throw new TenantInvitationError(409, 'INVITE_ALREADY_ACCEPTED', 'Invite already accepted');
+  }
+  if (invite.declinedAt) {
+    throw new TenantInvitationError(409, 'INVITE_DECLINED', 'Invite has been declined');
+  }
+  if (invite.expiresAt.getTime() < Date.now()) {
+    throw new TenantInvitationError(410, 'INVITE_EXPIRED', 'Invite has expired');
+  }
+
+  const [tenant] = await executor.select().from(tenants)
+    .where(eq(tenants.id, invite.tenantId)).limit(1);
+  if (!tenant || tenant.status !== 'active') {
+    throw new TenantInvitationError(
+      409,
+      'INVITE_TENANT_UNAVAILABLE',
+      'The organization for this invite is not currently available',
+    );
+  }
+  return { invite, tenant };
 }
 
 /**
@@ -103,8 +117,6 @@ export async function acceptTenantInvitationWithDatabase(
     user: InvitationUser;
     request?: any;
     ipAddress?: string | null;
-    action?: 'tenant_invite_accepted' | 'tenant_invite_registered' | 'tenant_invite_auto_accepted';
-    setCurrentTenant?: boolean;
   },
 ): Promise<InvitationAcceptance> {
   if (!isTenantInviteToken(input.token)) {
@@ -116,6 +128,9 @@ export async function acceptTenantInvitationWithDatabase(
     .where(eq(tenantInvites.token, input.token)).limit(1);
   if (!invite) {
     throw new TenantInvitationError(404, 'INVITE_NOT_FOUND', 'Invite not found');
+  }
+  if (invite.declinedAt) {
+    throw new TenantInvitationError(409, 'INVITE_DECLINED', 'Invite has been declined');
   }
   if (invite.email.toLowerCase() !== input.user.email.toLowerCase()) {
     throw new TenantInvitationError(
@@ -145,11 +160,9 @@ export async function acceptTenantInvitationWithDatabase(
     if (!existingMembership) {
       throw new TenantInvitationError(409, 'INVITE_ALREADY_ACCEPTED', 'Invite already accepted');
     }
-    if (input.setCurrentTenant !== false) {
-      await executor.update(users)
-        .set({ currentTenantId: invite.tenantId, updatedAt: new Date() })
-        .where(eq(users.id, input.user.id));
-    }
+    await executor.update(users)
+      .set({ currentTenantId: invite.tenantId, updatedAt: new Date() })
+      .where(eq(users.id, input.user.id));
     return {
       membership: existingMembership,
       tenantId: invite.tenantId,
@@ -172,18 +185,20 @@ export async function acceptTenantInvitationWithDatabase(
   const acceptedAt = new Date();
   await executor.update(tenantInvites)
     .set({ acceptedAt })
-    .where(and(eq(tenantInvites.id, invite.id), isNull(tenantInvites.acceptedAt)));
-  if (input.setCurrentTenant !== false) {
-    await executor.update(users)
-      .set({ currentTenantId: invite.tenantId, updatedAt: acceptedAt })
-      .where(eq(users.id, input.user.id));
-  }
+    .where(and(
+      eq(tenantInvites.id, invite.id),
+      isNull(tenantInvites.acceptedAt),
+      isNull(tenantInvites.declinedAt),
+    ));
+  await executor.update(users)
+    .set({ currentTenantId: invite.tenantId, updatedAt: acceptedAt })
+    .where(eq(users.id, input.user.id));
   await writeAudit({
     actorUserId: input.user.id,
     tenantId: invite.tenantId,
     targetType: 'tenant_user',
     targetId: membership.id,
-    action: input.action ?? 'tenant_invite_accepted',
+    action: 'tenant_invite_accepted',
     before: null,
     after: {
       id: membership.id,
@@ -204,53 +219,62 @@ export async function acceptTenantInvitationWithDatabase(
 }
 
 /**
- * Recover an invitation that was missed after normal account creation.
- *
- * This is deliberately narrower than generic "domain auto-join": an active,
- * unexpired invitation must exist for the account's exact normalized email,
- * the tenant owner's domain must match, public mailbox domains are excluded,
- * and owner-role invitations still require the opaque link. Those conditions
- * preserve an administrator-authored grant without turning an email suffix
- * into tenant authority.
+ * Record an authenticated recipient's explicit refusal without changing
+ * tenant membership or active-tenant selection. Same-recipient retries are
+ * idempotent; an accepted invitation cannot later be reclassified as declined.
  */
-export async function reconcilePendingBusinessInvitationsWithDatabase(
+export async function declineTenantInvitationWithDatabase(
   executor: DatabaseExecutor,
-  input: { user: InvitationUser; request?: any; ipAddress?: string | null },
-): Promise<PendingInvitationReconciliation> {
-  const normalizedEmail = input.user.email.trim().toLowerCase();
-  await executor.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'tenant-invite-email:' + normalizedEmail}))`);
-  const pendingInvites = await executor.select().from(tenantInvites).where(and(
-    eq(tenantInvites.email, normalizedEmail),
-    isNull(tenantInvites.acceptedAt),
-  )).orderBy(desc(tenantInvites.createdAt));
-
-  const joinedTenantIds: string[] = [];
-  for (const invite of pendingInvites) {
-    if (invite.expiresAt.getTime() < Date.now() || invite.role === 'owner') continue;
-    const [tenant] = await executor.select().from(tenants)
-      .where(eq(tenants.id, invite.tenantId)).limit(1);
-    if (!tenant || tenant.status !== 'active') continue;
-    const [owner] = await executor.select({ email: users.email }).from(users)
-      .where(eq(users.id, tenant.ownerUserId)).limit(1);
-    if (!owner || !isSameBusinessDomain(normalizedEmail, owner.email)) continue;
-
-    const accepted = await acceptTenantInvitationWithDatabase(executor, {
-      token: invite.token,
-      user: input.user,
-      request: input.request,
-      ipAddress: input.ipAddress,
-      action: 'tenant_invite_auto_accepted',
-      setCurrentTenant: false,
-    });
-    if (!joinedTenantIds.includes(accepted.tenantId)) joinedTenantIds.push(accepted.tenantId);
+  input: { token: string; user: InvitationUser; request?: any; ipAddress?: string | null },
+): Promise<InvitationDecline> {
+  if (!isTenantInviteToken(input.token)) {
+    throw new TenantInvitationError(404, 'INVITE_NOT_FOUND', 'Invite not found');
   }
 
-  const currentTenantId = joinedTenantIds[0] ?? null;
-  if (currentTenantId) {
-    await executor.update(users)
-      .set({ currentTenantId, updatedAt: new Date() })
-      .where(eq(users.id, input.user.id));
+  await lockInvite(executor, input.token);
+  const [invite] = await executor.select().from(tenantInvites)
+    .where(eq(tenantInvites.token, input.token)).limit(1);
+  if (!invite) throw new TenantInvitationError(404, 'INVITE_NOT_FOUND', 'Invite not found');
+  if (invite.email.toLowerCase() !== input.user.email.toLowerCase()) {
+    throw new TenantInvitationError(
+      403,
+      'INVITE_EMAIL_MISMATCH',
+      'This invite was issued to a different email address',
+    );
   }
-  return { joinedTenantIds, currentTenantId };
+
+  const [tenant] = await executor.select().from(tenants)
+    .where(eq(tenants.id, invite.tenantId)).limit(1);
+  const tenantName = tenant?.name ?? 'the organization';
+  if (invite.acceptedAt) {
+    throw new TenantInvitationError(409, 'INVITE_ALREADY_ACCEPTED', 'Invite already accepted');
+  }
+  if (invite.declinedAt) {
+    return { tenantId: invite.tenantId, tenantName, alreadyDeclined: true };
+  }
+  if (invite.expiresAt.getTime() < Date.now()) {
+    throw new TenantInvitationError(410, 'INVITE_EXPIRED', 'Invite has expired');
+  }
+
+  const declinedAt = new Date();
+  await executor.update(tenantInvites)
+    .set({ declinedAt })
+    .where(and(
+      eq(tenantInvites.id, invite.id),
+      isNull(tenantInvites.acceptedAt),
+      isNull(tenantInvites.declinedAt),
+    ));
+  await writeAudit({
+    actorUserId: input.user.id,
+    tenantId: invite.tenantId,
+    targetType: 'tenant_invite',
+    targetId: invite.id,
+    action: 'tenant_invite_declined',
+    before: null,
+    after: { id: invite.id, email: invite.email, role: invite.role, declinedAt },
+    ipAddress: input.ipAddress ?? null,
+  }, input.request, executor);
+
+  return { tenantId: invite.tenantId, tenantName, alreadyDeclined: false };
 }
 

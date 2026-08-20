@@ -4,8 +4,8 @@
   "sourceCommit": "508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75",
   "importedAtUtc": "2026-08-11T03:28:38.8515883Z",
   "trackedFileCount": 280,
-  "fileCount": 165,
-  "totalBytes": 8299558,
+  "fileCount": 179,
+  "totalBytes": 8055580,
   "maxFileSizeMb": 25,
   "excludedFiles": [
     {
@@ -467,8 +467,16 @@
     {
       "path": "artifacts/torqueshed/.replit-artifact/artifact.toml",
       "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "pnpm-lock (1).yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
     }
   ],
   "highConfidenceSecretFindings": 0,
-  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+  "policy": "tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded; 15 unique recovered historical artifacts retained"
 }

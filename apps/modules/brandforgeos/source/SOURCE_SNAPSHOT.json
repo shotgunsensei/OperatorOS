@@ -4,8 +4,8 @@
   "sourceCommit": "5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e",
   "importedAtUtc": "2026-07-13T19:58:37.1314549Z",
   "trackedFileCount": 348,
-  "fileCount": 272,
-  "totalBytes": 1254117,
+  "fileCount": 271,
+  "totalBytes": 1031572,
   "maxFileSizeMb": 25,
   "excludedFiles": [
     {
@@ -311,8 +311,12 @@
     {
       "path": "attached_assets/Pasted-You-are-upgrading-an-existing-SaaS-application-called-B_1775097860426.txt",
       "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
     }
   ],
   "highConfidenceSecretFindings": 0,
-  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+  "policy": "tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded"
 }

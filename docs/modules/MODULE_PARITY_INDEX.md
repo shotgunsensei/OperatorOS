@@ -1,5 +1,30 @@
 # OperatorOS module parity index
 
+## Dependency/archive-scope overlay (2026-08-20)
+
+All module parity states remain unchanged. Historical `apps/modules/*/source`
+trees continue to retain product and migration evidence but are explicitly
+non-installable: their generated dependency locks are omitted from the current
+tree, future imports exclude them, and the production build fails if a second
+dependency graph or public internal Replit port appears. The root frozen pnpm
+graph remains the sole release authority. Source/local security, provenance,
+type, lint, and production-build gates pass; merge, publish, and Replit provider
+rescan remain open and no module receives a production or state-5 promotion.
+
+## Release v55 invitation-consent overlay (2026-08-20)
+
+The shared identity layer now gives every account a default single-owner tenant
+and separates authentication from organization membership consent. A new or
+existing invited user remains in the current/default tenant until explicitly
+joining; decline creates no membership or active-tenant change. The public
+invite route accepts the expected anonymous identity `401` without restarting
+central auth, while protected routes retain the existing fail-closed behavior.
+Release v55 adds durable decline state and removes invitation auto-reconciliation
+from generic auth paths. Focused database, auth-boundary, typecheck, production
+build, and 3/3 optimized-browser evidence pass locally. No module is promoted
+or demoted, and production apply/deployment acceptance remains open. This
+overlay supersedes only the invitation behavior in the v54 overlay below.
+
 ## Release v54 identity/onboarding overlay (2026-08-18)
 
 The shared OperatorOS account and tenant layer now completes invitations on a

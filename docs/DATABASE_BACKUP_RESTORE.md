@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 54 ordered step identifiers without secrets
+`db:plan` is read-only and prints 55 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -39,6 +39,19 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+Release v55 appends `tenant_invitation_consent` after the v54 identity and
+onboarding integrity step. It adds nullable `tenant_invites.declined_at`, a
+constraint preventing the same invitation from being both accepted and
+declined, and a partial index for pending invitations. Before production apply,
+require a verified backup covering users, tenants, memberships, invitations,
+sessions, entitlements, billing, and audit history; after apply reconcile
+pending, accepted, and declined invitation counts. The additive objects may
+remain during application rollback, but an unpatched v54 application ignores
+`declined_at` and could accept a declined invite. Do not route invite traffic
+to v54. Retain the v55 guards, disable invite accept/decline endpoints, or
+restore and validate a pre-v55 database in a new database before switching
+traffic.
 
 Release v44 appends `callcommand_complete_product_tables` after the v43 Ninja
 Launch Kit step. Before applying it, require a verified backup that covers
@@ -85,6 +98,16 @@ body-free messenger audit events. Application rollback retains these additive
 tables and returns traffic to the prior artifact. Do not drop v53 tables,
 truncate history, or treat presence cleanup as a database rollback. Database
 rollback remains restore into a new database, validate, and switch traffic.
+
+### Release v55 disposable rehearsal (2026-08-20)
+
+On an empty isolated PostgreSQL 16 Docker database, the supported root
+`corepack pnpm db:apply` path completed and verified all 55 ordered operations
+in 17,724 ms with final step `tenant_invitation_consent`. An immediate second
+run verified the same release in 1,751 ms. Focused invitation/onboarding/email
+acceptance passed 21/21, including pending, accepted, declined, exact-email,
+membership, active-tenant, retry, and audit behavior. No production database
+was contacted or modified.
 
 ### Release v54 disposable rehearsal (2026-08-18)
 

@@ -1,5 +1,23 @@
 # Cross-module readiness report
 
+## Release v55 tenant invitation consent overlay (2026-08-20)
+
+OperatorOS remains the sole identity, session, tenant, membership, role, and
+audit authority. Every new account has a real default single-owner tenant, and
+invitation account creation or sign-in grants no company access until the exact
+recipient explicitly joins. Decline is durable, creates no membership, and
+does not switch the active tenant. Generic auth no longer auto-accepts exact or
+same-domain invitations. The fresh-browser anonymous `401` is now handled as an
+expected invite state instead of a logout/return loop, without changing child
+module or protected-route authorization. Release v55 and the focused
+database/auth/optimized-browser suites pass locally. The complete API aggregate
+is 1,175 pass, 15 unrelated worktree failures, and 6 intentional HTTP-only
+skips, so no broad-green claim is made. No child module gains new authority or
+changes readiness state. Production backup/apply, deployment,
+real-email, deployed-browser, monitoring, and rollback gates remain open. This
+overlay supersedes the v54 invitation semantics below while retaining its
+deletion and audit-history controls.
+
 ## Release v54 tenant onboarding and removal overlay (2026-08-18)
 
 Shared identity and tenant onboarding now keeps invitation account creation

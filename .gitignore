@@ -21,3 +21,19 @@ playwright-report/
 build/
 !apps/torqueshed-native/src/app/build/
 !apps/torqueshed-native/src/app/build/**
+
+# pnpm-lock.yaml at the repository root is the only deployment lockfile.
+# Historical module source is retained as non-installable evidence; its package
+# manager locks stay recoverable from Git history instead of becoming scanner or
+# deployment inputs again.
+/package-lock.json
+/npm-shrinkwrap.json
+/yarn.lock
+/bun.lock
+/bun.lockb
+/apps/modules/*/source/**/package-lock.json
+/apps/modules/*/source/**/npm-shrinkwrap.json
+/apps/modules/*/source/**/yarn.lock
+/apps/modules/*/source/**/bun.lock
+/apps/modules/*/source/**/bun.lockb
+/apps/modules/*/source/**/pnpm-lock*.yaml

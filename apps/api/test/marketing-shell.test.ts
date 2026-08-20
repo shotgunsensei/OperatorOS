@@ -325,6 +325,10 @@ test('marketing shell · invite authentication remains on the invitation page', 
 
   assert.match(invitePage, /registerWithInvite\(token, password, name\)/);
   assert.match(invitePage, /tenantApi\.acceptInvite\(token\)/);
+  assert.match(invitePage, /tenantApi\.declineInvite\(token\)/);
+  assert.match(invitePage, /data-testid="panel-invite-decision"/);
+  assert.match(invitePage, /data-testid="button-invite-accept"/);
+  assert.match(invitePage, /data-testid="button-invite-decline"/);
   assert.doesNotMatch(handoffSources, /sessionStorage\.setItem\([^\n]*pendingInvite/);
   assert.doesNotMatch(consolePage, /sessionStorage\.getItem\(['"]operatoros\.pendingInviteToken['"]\)/);
   assert.doesNotMatch(
@@ -340,7 +344,7 @@ test('marketing shell · /app/* server-side auth gate (middleware)', () => {
   // and 307-redirecting cookie-less requests to `/`. Critical
   // exemptions: `/app` itself (login surface — gating it would loop
   // the "Launch console" CTA) and `/app/invites/:token` (the invite
-  // page runs its own pre-auth sessionStorage handoff).
+  // page runs its own same-origin authentication and consent flow).
   const src = read('src/middleware.ts');
   assert.match(src, /matcher:[\s\S]*['"]\/app\/:path\*['"]/);
   assert.match(src, /token/, 'middleware should check the auth cookie issued by /v1/auth/login');

@@ -2,6 +2,25 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current release v55 invitation-consent overlay
+
+Every OperatorOS account retains a real default single-owner tenant. Invitation
+account creation and existing-account sign-in authenticate the exact recipient
+but do not join or select the inviting tenant. The recipient must explicitly
+join or decline: join transactionally writes the bounded invited membership and
+selects that tenant; decline writes no membership and leaves the current tenant
+unchanged. The invitation route now tolerates its expected anonymous identity
+`401`, eliminating the first-open navigation loop without weakening protected
+app routes. Generic auth paths no longer auto-reconcile invitations by email or
+domain. Release v55 is additive and locally verified, including 3/3 optimized
+production-build browser cases. The complete API aggregate is 1,175 pass, 15
+unrelated worktree failures, and 6 intentional HTTP-only skips; no broad-green
+claim is made. This shared-platform correction changes no module parity state.
+Production migration, deployment, delivered-email, and
+deployed-browser acceptance remain open. This overlay supersedes the v54
+invitation behavior described below; v54 deletion and audit-retention decisions
+remain in force.
+
 ## Current release v54 identity/onboarding overlay
 
 OperatorOS invitation onboarding now remains inside the shared identity and

@@ -1121,11 +1121,13 @@ export async function ensureTenantTables() {
       token TEXT NOT NULL UNIQUE,
       invited_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
       accepted_at TIMESTAMP,
+      declined_at TIMESTAMP,
       expires_at TIMESTAMP NOT NULL,
       created_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_tenant_invites_tenant ON tenant_invites(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_tenant_invites_email  ON tenant_invites(email);
+    ALTER TABLE tenant_invites ADD COLUMN IF NOT EXISTS declined_at TIMESTAMP;
     UPDATE tenant_invites SET role = CASE role
       WHEN 'tenant_admin' THEN 'admin'
       WHEN 'billing_admin' THEN 'admin'

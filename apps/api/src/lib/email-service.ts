@@ -21,7 +21,7 @@ export interface InviteEmailInput {
   tenantName: string;
   inviterName: string;
   inviterEmail: string;
-  role: 'owner' | 'admin' | 'member';
+  role: 'owner' | 'admin' | 'member' | 'viewer';
   acceptUrl: string;
   expiresAt: Date;
 }
@@ -47,8 +47,11 @@ function inviteText(input: InviteEmailInput): string {
     `${input.inviterName} (${input.inviterEmail}) has invited you to join the`,
     `"${input.tenantName}" workspace on OperatorOS as a ${input.role}.`,
     ``,
-    `Accept the invite here:`,
+    `Review the invitation here:`,
     input.acceptUrl,
+    ``,
+    `After you sign in or create your OperatorOS account, you can choose to`,
+    `join or decline. Your existing workspace remains unchanged unless you join.`,
     ``,
     `This invite expires on ${expires}.`,
     ``,
@@ -73,12 +76,16 @@ function inviteHtml(input: InviteEmailInput): string {
   <p>
     <a href="${escapeAttr(input.acceptUrl)}"
        style="display:inline-block;padding:10px 18px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">
-      Accept invite
+      Review invitation
     </a>
   </p>
   <p style="color:#555;font-size:13px;">
     Or paste this link into your browser:<br/>
     <a href="${escapeAttr(input.acceptUrl)}">${escapeHtml(input.acceptUrl)}</a>
+  </p>
+  <p style="color:#555;font-size:13px;">
+    After you sign in or create your OperatorOS account, you can choose to join
+    or decline. Your existing workspace remains unchanged unless you join.
   </p>
   <p style="color:#555;font-size:13px;">This invite expires on ${escapeHtml(expires)}.</p>
   <p style="color:#888;font-size:12px;">If you weren't expecting this email you can safely ignore it.</p>

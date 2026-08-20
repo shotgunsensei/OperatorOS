@@ -69,6 +69,7 @@ interface SnapshotManifest {
   totalBytes: number;
   highConfidenceSecretFindings: number;
   excludedFiles: Array<{ path: string; reason: string }>;
+  policy: string;
 }
 
 function walkFiles(root: string): string[] {
@@ -87,7 +88,21 @@ function walkFiles(root: string): string[] {
 
 function assertSnapshotMatchesIndex(sourceRoot: string): void {
   const relativeRoot = relative(repositoryRoot, sourceRoot).replaceAll('\\', '/');
-  execFileSync('git', ['diff', '--quiet', '--', relativeRoot], { cwd: repositoryRoot });
+  const diff = execFileSync('git', ['diff', '--name-status', '--', relativeRoot], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+  });
+  for (const line of diff.split(/\r?\n/).filter(Boolean)) {
+    const [status, path] = line.split('\t');
+    const expectedManifestUpdate = status === 'M' && path.endsWith('/SOURCE_SNAPSHOT.json');
+    const expectedLockRemoval = status === 'D'
+      && /\/(?:package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|bun\.lockb?|pnpm-lock(?: \(\d+\))?\.yaml)$/i.test(`/${path}`);
+    assert.equal(
+      expectedManifestUpdate || expectedLockRemoval,
+      true,
+      `unexpected uncommitted source-snapshot change: ${line}`,
+    );
+  }
   const untracked = execFileSync(
     'git',
     ['ls-files', '--others', '--exclude-standard', '--', relativeRoot],
@@ -97,7 +112,7 @@ function assertSnapshotMatchesIndex(sourceRoot: string): void {
 }
 
 const forbiddenDirectory = /(^|\/)(?:\.git|\.agents|\.openai|\.migration-backup|\.backup|backups?|\.replit-artifact|mockup-sandbox|design-audit|node_modules|dist|build|\.next|coverage|\.cache|\.turbo|\.vercel|playwright-report|test-results|tmp|temp|uploads?)(\/|$)/i;
-const forbiddenFile = /(^|\/)(?:\.env(?:\..*)?|\.replit(?:ignore)?(?:\..*)?|id_rsa(?:\.pub)?|id_ed25519(?:\.pub)?|credentials\.json|service-account[^/]*\.json)$|\.(?:pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|log)$/i;
+const forbiddenFile = /(^|\/)(?:\.env(?:\..*)?|\.replit(?:ignore)?(?:\..*)?|id_rsa(?:\.pub)?|id_ed25519(?:\.pub)?|credentials\.json|service-account[^/]*\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|bun\.lockb?|pnpm-lock(?: \(\d+\))?\.yaml)$|\.(?:pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|log)$/i;
 const highConfidenceSecrets = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /AKIA[0-9A-Z]{16}/,
@@ -121,6 +136,11 @@ for (const snapshot of snapshots) {
     assert.equal(manifest.sourceRemote, snapshot.remote);
     assert.equal(manifest.highConfidenceSecretFindings, 0);
     assert.ok(manifest.excludedFiles.length > 0, 'snapshot records its exclusions');
+    assert.match(manifest.policy, /dependency locks/);
+    assert.ok(
+      manifest.excludedFiles.some((file) => /pnpm-lock(?: \(\d+\))?\.yaml$/i.test(file.path)),
+      'snapshot records the intentionally removed historical dependency lock',
+    );
 
     const files = walkFiles(sourceRoot);
     const importedFiles = files.filter((file) => file !== manifestPath);
