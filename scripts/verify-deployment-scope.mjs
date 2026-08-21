@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -18,17 +18,52 @@ export function isDependencyLockfile(file) {
   return dependencyLockNames.has(name) || /^pnpm-lock(?: \(\d+\))?\.yaml$/i.test(name);
 }
 
+export function findFilesystemDependencyLockfiles(root = repositoryRoot) {
+  const lockfiles = [];
+  const recordLocks = (directory, recursive) => {
+    if (!existsSync(directory)) return;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const full = join(directory, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) {
+        if (recursive) recordLocks(full, true);
+        continue;
+      }
+      if (entry.isFile() && isDependencyLockfile(entry.name)) {
+        lockfiles.push(relative(root, full).replaceAll('\\', '/'));
+      }
+    }
+  };
+
+  // The root is the only executable install boundary, so inspect its files but
+  // never recurse into node_modules or build output. Historical source trees
+  // are the only other place where ignored locks are forbidden.
+  recordLocks(root, false);
+  const modulesRoot = join(root, 'apps', 'modules');
+  if (existsSync(modulesRoot)) {
+    for (const moduleEntry of readdirSync(modulesRoot, { withFileTypes: true })) {
+      if (!moduleEntry.isDirectory() || moduleEntry.isSymbolicLink()) continue;
+      recordLocks(join(modulesRoot, moduleEntry.name, 'source'), true);
+    }
+  }
+  return [...new Set(lockfiles)].sort();
+}
+
 function repositoryFiles(root = repositoryRoot) {
   const result = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
     cwd: root,
     encoding: 'utf8',
   });
   if (result.status !== 0) throw new Error(result.stderr || 'git ls-files failed');
-  return result.stdout
+  const visibleFiles = result.stdout
     .split('\0')
     .filter(Boolean)
     .map((file) => file.replaceAll('\\', '/'))
     .filter((file) => existsSync(join(root, file)));
+  // git intentionally omits ignored files. Merge a bounded filesystem scan so
+  // a package-lock.json left behind by a rejected npm install still fails the
+  // gate and cannot remain as a provider-scanner input.
+  return [...new Set([...visibleFiles, ...findFilesystemDependencyLockfiles(root)])].sort();
 }
 
 export function evaluateDeploymentScope({ files, gitignore, npmrc = '', replit, workspace, importer, packageManagerEnforcer, packageJson }) {
@@ -42,6 +77,12 @@ export function evaluateDeploymentScope({ files, gitignore, npmrc = '', replit, 
   }
   if (packageJson.packageManager !== 'pnpm@10.34.5') {
     issues.push('packageManager must pin pnpm@10.34.5');
+  }
+  const packageManagerEngine = packageJson.devEngines?.packageManager;
+  if (packageManagerEngine?.name !== 'pnpm'
+    || packageManagerEngine?.version !== '10.34.5'
+    || packageManagerEngine?.onFail !== 'error') {
+    issues.push('devEngines.packageManager must reject npm before install and pin pnpm 10.34.5');
   }
   if (/apps\/modules\/(?:\*|[^\s"']+)\/source/.test(workspace)) {
     issues.push('historical module source is included in the pnpm workspace');

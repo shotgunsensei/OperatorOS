@@ -22,7 +22,18 @@ and validates one authoritative root lock plus one supervised public port.
 PR #83 later exposed that `package-lock=false` in root `.npmrc` also disabled
 pnpm's own lockfile handling. The setting is removed; a Node `preinstall` hook
 now enforces pnpm `10.34.5` without mutating lockfile policy, and the exact
-frozen install passes locally. The provider check rerun remains pending.
+frozen install passes locally. The subsequent GitHub run progressed through a
+passing Phase 39 gate and production build before separate parity, unit, API,
+static-control, and exact-host gates failed closed.
+
+PR #84 automated review then identified that npm can write an ignored
+`package-lock.json` before invoking `preinstall`. The package declares an
+error-level `devEngines.packageManager` requirement so npm 11.13.0 rejects the
+repository before installation, while the deployment-scope gate now discovers
+alternate locks through a bounded filesystem scan even when Git ignores them.
+A controlled ignored lock failed the gate, npm created no lock during its
+rejection test, the frozen pnpm install remained current, and all 13 Phase 39
+script tests passed. Push and provider rerun of this follow-up remain open.
 
 The TorqueShed source-count blocker described in the original Phase 39 evidence
 below is now reconciled explicitly: both historical lockfiles were removed, 15

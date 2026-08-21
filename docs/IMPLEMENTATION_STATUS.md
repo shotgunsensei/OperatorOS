@@ -2,14 +2,33 @@
 
 ## Replit dependency scope and historical-source quarantine - SOURCE/LOCAL VERIFIED / REPLIT RESCAN PENDING (2026-08-20)
 
+- PR #84 automated review correctly found that npm writes `package-lock.json`
+  before running `preinstall` and that an ignored root lock was omitted from
+  the gate's Git-visible inventory. The root package now has an error-level
+  `devEngines.packageManager` requirement for pnpm `10.34.5`, which made a real
+  npm 11.13.0 install fail with `EBADDEVENGINES` without creating the lock. The
+  deployment-scope gate also performs a bounded filesystem scan of root files
+  and historical source trees, so an ignored alternate lock fails closed even
+  when the client does not honor `devEngines`. Local correction is verified;
+  follow-up commit, push, and PR #84 rerun remain open.
+
+- The completed GitHub run on the older PR #84 head proves the PR #83 frozen
+  install defect is closed: dependency install, Phase 39 hardening, typecheck,
+  lint, integration apply/reapply, and production build passed. The overall
+  release remained correctly non-green at global parity, two unit assertions,
+  19 API assertions, route-control static dead-button findings, and exact-host
+  browser startup. This follow-up does not conceal or recast those separate
+  parity/release blockers as dependency-scope failures.
+
 - PR #83's first fail-closed release-gate run exposed a configuration defect in
   the npm-regeneration safeguard: root `.npmrc` set `package-lock=false`, which
   pnpm interpreted as prohibiting its own lockfile. That produced the frozen
   install warning and secondary overrides-mismatch error before any release
   test ran. The `.npmrc` setting is removed and replaced by a portable Node
   `preinstall` hook that accepts only pnpm `10.34.5`; the exact frozen install
-  now passes locally with `pnpm-lock.yaml` current. Push and the PR check rerun
-  remain open.
+  passes locally with `pnpm-lock.yaml` current. That correction was pushed as
+  PR #84 commit `015ebe9ed7`; the review follow-up described above remains
+  local.
 
 - The 35 supplied Replit Basic Checks rows were reconciled to 23 unique
   package/version pairs across every tracked dependency lock. The deployable
@@ -25,9 +44,10 @@
   retained file sets; TorqueShed explicitly retains 15 unique recovered
   historical artifacts instead of deleting non-identical evidence.
 - `.gitignore` prevents alternate root locks and historical source locks from
-  returning, while the root `preinstall` hook rejects npm/Yarn installs without
-  disabling pnpm's authoritative lockfile. The tracked-source importer now
-  excludes and records all npm, Yarn, Bun, and pnpm locks.
+  returning; npm `devEngines` rejects supported npm CLIs before install, while
+  the root `preinstall` hook enforces the pinned lifecycle without disabling
+  pnpm's authoritative lockfile. The tracked-source importer now excludes and
+  records all npm, Yarn, Bun, and pnpm locks.
   `apps/modules/README.md` defines the non-installable
   archive/recovery policy. `.replit` hides the historical module area from the
   default file tree, excludes it from package guessing, disables automatic
@@ -35,12 +55,13 @@
   Those Replit settings are organization/package-discovery controls, not a
   claim that a provider scanner honors UI hiding.
 - A new fail-closed `verify:deployment-scope` gate permits only root
-  `pnpm-lock.yaml`, checks the workspace/import/ignore contracts, validates the
+  `pnpm-lock.yaml`, discovers ignored dependency locks through a bounded
+  filesystem scan, checks the workspace/import/ignore contracts, validates the
   frozen Replit build and supervisor, and rejects public internal ports. It is
   now the first production-build stage and is included in the Phase 39 security
   result.
 - Fresh local verification passes: frozen install; full and production pnpm
-  audits at the high threshold; Phase 39 script tests 12/12; Phase 39
+  audits at the high threshold; Phase 39 script tests 13/13; Phase 39
   API/preflight tests 13/13; source provenance and Replit runtime tests 13/13;
   the Phase 39 scan over 1,278 files and 1,257 dependencies with 0 code
   findings, 0 critical, 0 unresolved high, and both exact patched-image

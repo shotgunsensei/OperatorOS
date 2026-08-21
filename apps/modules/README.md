@@ -17,8 +17,10 @@ and provenance manifests, but they are non-installable archives. The root
 Replit, CI, or a production build. Imported npm, Yarn, Bun, and pnpm lockfiles
 are omitted because their standalone dependency graphs are stale, unreviewed,
 and outside OperatorOS release authority. The root `preinstall` hook rejects
-npm/Yarn installs and requires the pinned pnpm lifecycle; `.gitignore` and the
-deployment-scope gate catch any alternate lock that is nevertheless created.
+npm/Yarn installs and requires the pinned pnpm lifecycle; npm `devEngines`
+rejects supported npm CLIs before installation. `.gitignore` and the bounded
+filesystem scan in the deployment-scope gate catch any alternate lock that is
+nevertheless created, including ignored locks.
 
 `.replit` hides `apps/modules` from the default Replit file tree and excludes it
 from Replit package guessing. Hiding is workspace organization, not an access

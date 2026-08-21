@@ -27,8 +27,35 @@ Root `.npmrc` has been removed. `package.json` now uses a portable Node
 `preinstall` hook that accepts only pnpm `10.34.5` and rejects npm, Yarn, an
 older pnpm, or an unidentified lifecycle. This preserves the single-lock policy
 without changing pnpm's lockfile configuration. A local rerun of the exact
-frozen install now reports the lock current and completes the hook. PR rerun
-remains pending until this correction is pushed.
+frozen install reports the lock current and completes the hook. That correction
+was pushed as PR #84 commit `015ebe9ed7`; the review follow-up below supersedes
+its original deployment-scope evidence.
+
+## PR #84 ignored-lock review correction — 2026-08-21
+
+Automated review of commit `015ebe9ed7` correctly identified that npm updates
+`package-lock.json` before it runs `preinstall`, and that the ignored root lock
+was absent from the gate's Git-visible file list. `package.json` now declares
+an error-level `devEngines.packageManager` requirement for pnpm `10.34.5`, so
+supported npm CLIs reject the repository before installation. The portable
+`preinstall` enforcement remains as a second boundary for pnpm and package
+managers that do not implement npm's `devEngines` contract.
+
+The deployment-scope verifier now also merges a bounded filesystem scan with
+the Git-visible inventory. It inspects root files and historical
+`apps/modules/*/source` trees for dependency locks, including ignored files,
+without recursively traversing executable `node_modules` or build output. A
+controlled ignored root `package-lock.json` failed the gate, and a real npm
+11.13.0 install failed with `EBADDEVENGINES` without creating the lock. The
+follow-up commit, push, and PR #84 check rerun remain open.
+
+The GitHub release run against the older `015ebe9ed7` head confirms that the
+original frozen-install blocker is closed: install, Phase 39 hardening,
+typecheck, lint, and production build all passed. The fail-closed release
+contract remained non-green at five later steps: global parity, two unit
+assertions, 19 API assertions, route-control static findings, and exact-host
+browser startup. Those downstream failures are separate release/parity work;
+they are not represented as a passing security or deployment acceptance gate.
 
 ## Finding reconciliation
 
@@ -65,7 +92,8 @@ dependency roots in this table.
 
 - `pnpm-lock.yaml` at the repository root is the only allowed dependency lock.
 - `.gitignore` rejects alternate root locks and all dependency locks below
-  `apps/modules/*/source`; the root `preinstall` hook rejects npm/Yarn installs
+  `apps/modules/*/source`; npm's `devEngines` check rejects supported npm CLIs
+  before install, and the root `preinstall` hook provides lifecycle enforcement
   without changing pnpm's lockfile configuration.
 - `scripts/import-module-snapshot.ps1` excludes dependency locks during future
   tracked-source imports and records each exclusion in `SOURCE_SNAPSHOT.json`.
@@ -73,9 +101,9 @@ dependency roots in this table.
   guessing, ignores the historical module area for package discovery, hides it
   from the default file tree, and exposes only the readiness-gated public port.
 - `scripts/verify-deployment-scope.mjs` fails the production build if another
-  lockfile appears, historical source enters the workspace, the importer or
-  ignore policy regresses, Replit package discovery is re-enabled, or an
-  internal service port becomes public.
+  lockfile appears even when Git ignores it, historical source enters the
+  workspace, the importer or ignore policy regresses, Replit package discovery
+  is re-enabled, or an internal service port becomes public.
 - The Phase 39 security scan includes this deployment-scope result alongside
   dependency audit, secret scan, and SAST results.
 
@@ -89,7 +117,7 @@ dependency roots in this table.
   gate pass.
 - Phase 39 script tests, including package-manager enforcement, deployment
   scope, scanner controls, both patched image regressions, budgets, and SBOM
-  stability: 12/12 pass.
+  stability: 13/13 pass.
 - Phase 39 API/preflight hardening tests: 13/13 pass.
 - Source-snapshot provenance and Replit runtime tests: 13/13 pass.
 - TypeScript, ESLint, and the production build: pass.
