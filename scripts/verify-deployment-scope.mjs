@@ -31,7 +31,7 @@ function repositoryFiles(root = repositoryRoot) {
     .filter((file) => existsSync(join(root, file)));
 }
 
-export function evaluateDeploymentScope({ files, gitignore, npmrc, replit, workspace, importer, packageJson }) {
+export function evaluateDeploymentScope({ files, gitignore, npmrc = '', replit, workspace, importer, packageManagerEnforcer, packageJson }) {
   const issues = [];
   const lockfiles = files.filter(isDependencyLockfile).sort();
   const disallowedLockfiles = lockfiles.filter((file) => file !== 'pnpm-lock.yaml');
@@ -55,8 +55,15 @@ export function evaluateDeploymentScope({ files, gitignore, npmrc, replit, works
   for (const rule of requiredIgnoreRules) {
     if (!gitignore.includes(rule)) issues.push(`.gitignore is missing ${rule}`);
   }
-  if (!/^package-lock\s*=\s*false\s*$/m.test(npmrc)) {
-    issues.push('.npmrc does not prevent npm from regenerating package-lock.json');
+  if (/^(?:package-lock|lockfile)\s*=\s*false\s*$/m.test(npmrc)) {
+    issues.push('.npmrc disables the authoritative pnpm lockfile');
+  }
+  if (packageJson.scripts?.preinstall !== 'node scripts/enforce-pnpm.mjs') {
+    issues.push('preinstall does not enforce the pnpm-only dependency authority');
+  }
+  if (!/REQUIRED_PNPM_VERSION\s*=\s*['"]10\.34\.5['"]/.test(packageManagerEnforcer)
+    || !/corepack pnpm install --frozen-lockfile/.test(packageManagerEnforcer)) {
+    issues.push('package-manager enforcement does not require the pinned frozen pnpm install');
   }
 
   if (!/\$excludedDependencyLockPattern\s*=/.test(importer)
@@ -98,13 +105,15 @@ export function evaluateDeploymentScope({ files, gitignore, npmrc, replit, works
 export function inspectDeploymentScope(root = repositoryRoot) {
   const read = (path) => readFileSync(join(root, path), 'utf8');
   const packageJson = JSON.parse(read('package.json'));
+  const npmrcPath = join(root, '.npmrc');
   return evaluateDeploymentScope({
     files: repositoryFiles(root),
     gitignore: read('.gitignore'),
-    npmrc: read('.npmrc'),
+    npmrc: existsSync(npmrcPath) ? readFileSync(npmrcPath, 'utf8') : '',
     replit: read('.replit'),
     workspace: read('pnpm-workspace.yaml'),
     importer: read('scripts/import-module-snapshot.ps1'),
+    packageManagerEnforcer: read('scripts/enforce-pnpm.mjs'),
     packageJson,
   });
 }

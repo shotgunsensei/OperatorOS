@@ -15,9 +15,14 @@ non-executable historical source locks while retaining their recovery path in
 Git history. Future source imports exclude dependency locks, Replit automatic
 package guessing/hosting installation is disabled for the historical module
 area, and the production build now begins with a fail-closed deployment-scope
-gate. The refreshed security result scans 1,277 files with zero code findings,
+gate. The refreshed security result scans 1,278 files with zero code findings,
 audits 1,257 dependencies with zero critical and zero unresolved high findings,
 and validates one authoritative root lock plus one supervised public port.
+
+PR #83 later exposed that `package-lock=false` in root `.npmrc` also disabled
+pnpm's own lockfile handling. The setting is removed; a Node `preinstall` hook
+now enforces pnpm `10.34.5` without mutating lockfile policy, and the exact
+frozen install passes locally. The provider check rerun remains pending.
 
 The TorqueShed source-count blocker described in the original Phase 39 evidence
 below is now reconciled explicitly: both historical lockfiles were removed, 15

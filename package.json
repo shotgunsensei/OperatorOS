@@ -5,6 +5,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.34.5",
   "scripts": {
+    "preinstall": "node scripts/enforce-pnpm.mjs",
     "preflight:production": "node scripts/production-env-preflight.mjs",
     "preflight:revenue:torqueshed": "node scripts/production-env-preflight.mjs --revenue-ready && pnpm stripe:provision:torqueshed -- --mode live --validate",
     "verify:production": "node scripts/verify-production-runtime.mjs",

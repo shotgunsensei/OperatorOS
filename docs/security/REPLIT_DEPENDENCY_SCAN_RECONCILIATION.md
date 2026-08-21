@@ -14,6 +14,22 @@ removed from the current tree. They remain recoverable from Git history. The
 source code and provenance needed for migration, audit, and historical
 reference remain in place.
 
+## PR #83 frozen-install correction — 2026-08-21
+
+The first PR #83 `verify-release` run stopped during `pnpm install
+--frozen-lockfile`. The original npm-regeneration safeguard used
+`package-lock=false` in root `.npmrc`; pnpm consumes npm configuration and
+interpreted that setting as prohibiting its own lockfile, so the frozen install
+could not read `pnpm-lock.yaml` and emitted a secondary overrides-mismatch
+message.
+
+Root `.npmrc` has been removed. `package.json` now uses a portable Node
+`preinstall` hook that accepts only pnpm `10.34.5` and rejects npm, Yarn, an
+older pnpm, or an unidentified lifecycle. This preserves the single-lock policy
+without changing pnpm's lockfile configuration. A local rerun of the exact
+frozen install now reports the lock current and completes the hook. PR rerun
+remains pending until this correction is pushed.
+
 ## Finding reconciliation
 
 | Replit package/version | Reported severity | Current deployable state |
@@ -49,8 +65,8 @@ dependency roots in this table.
 
 - `pnpm-lock.yaml` at the repository root is the only allowed dependency lock.
 - `.gitignore` rejects alternate root locks and all dependency locks below
-  `apps/modules/*/source`; `.npmrc` prevents npm from regenerating the obsolete
-  root lock as an untracked Replit scanner input.
+  `apps/modules/*/source`; the root `preinstall` hook rejects npm/Yarn installs
+  without changing pnpm's lockfile configuration.
 - `scripts/import-module-snapshot.ps1` excludes dependency locks during future
   tracked-source imports and records each exclusion in `SOURCE_SNAPSHOT.json`.
 - `.replit` disables automatic hosting package installation and package
@@ -69,10 +85,11 @@ dependency roots in this table.
 - Full and production pnpm audits at high threshold: exit 0, no actionable
   advisories or actions, 0 critical, and 0 unresolved high. Audit metadata
   continues to disclose the two exact patched `image-size` highs.
-- Phase 39 security scan: 1,277 files, 0 findings, 1,257 dependencies, scope
+- Phase 39 security scan: 1,278 files, 0 findings, 1,257 dependencies, scope
   gate pass.
-- Phase 39 script tests, including deployment scope, scanner controls, both
-  patched image regressions, budgets, and SBOM stability: 11/11 pass.
+- Phase 39 script tests, including package-manager enforcement, deployment
+  scope, scanner controls, both patched image regressions, budgets, and SBOM
+  stability: 12/12 pass.
 - Phase 39 API/preflight hardening tests: 13/13 pass.
 - Source-snapshot provenance and Replit runtime tests: 13/13 pass.
 - TypeScript, ESLint, and the production build: pass.

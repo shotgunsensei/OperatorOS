@@ -2,6 +2,15 @@
 
 ## Replit dependency scope and historical-source quarantine - SOURCE/LOCAL VERIFIED / REPLIT RESCAN PENDING (2026-08-20)
 
+- PR #83's first fail-closed release-gate run exposed a configuration defect in
+  the npm-regeneration safeguard: root `.npmrc` set `package-lock=false`, which
+  pnpm interpreted as prohibiting its own lockfile. That produced the frozen
+  install warning and secondary overrides-mismatch error before any release
+  test ran. The `.npmrc` setting is removed and replaced by a portable Node
+  `preinstall` hook that accepts only pnpm `10.34.5`; the exact frozen install
+  now passes locally with `pnpm-lock.yaml` current. Push and the PR check rerun
+  remain open.
+
 - The 35 supplied Replit Basic Checks rows were reconciled to 23 unique
   package/version pairs across every tracked dependency lock. The deployable
   root pnpm graph already resolves the reported packages to reviewed versions,
@@ -16,9 +25,10 @@
   retained file sets; TorqueShed explicitly retains 15 unique recovered
   historical artifacts instead of deleting non-identical evidence.
 - `.gitignore` prevents alternate root locks and historical source locks from
-  returning, while `.npmrc` prevents npm from regenerating an untracked root
-  lock. The tracked-source importer now excludes and records all npm, Yarn,
-  Bun, and pnpm locks. `apps/modules/README.md` defines the non-installable
+  returning, while the root `preinstall` hook rejects npm/Yarn installs without
+  disabling pnpm's authoritative lockfile. The tracked-source importer now
+  excludes and records all npm, Yarn, Bun, and pnpm locks.
+  `apps/modules/README.md` defines the non-installable
   archive/recovery policy. `.replit` hides the historical module area from the
   default file tree, excludes it from package guessing, disables automatic
   hosting package installation, and exposes only supervised port `5000 -> 80`.
@@ -30,9 +40,9 @@
   now the first production-build stage and is included in the Phase 39 security
   result.
 - Fresh local verification passes: frozen install; full and production pnpm
-  audits at the high threshold; Phase 39 script tests 11/11; Phase 39
+  audits at the high threshold; Phase 39 script tests 12/12; Phase 39
   API/preflight tests 13/13; source provenance and Replit runtime tests 13/13;
-  the Phase 39 scan over 1,277 files and 1,257 dependencies with 0 code
+  the Phase 39 scan over 1,278 files and 1,257 dependencies with 0 code
   findings, 0 critical, 0 unresolved high, and both exact patched-image
   exceptions intact; TypeScript; ESLint; and the optimized production build.
 - Git merge/push, Replit publish, and provider rescan were not performed. The
