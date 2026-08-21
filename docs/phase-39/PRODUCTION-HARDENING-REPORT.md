@@ -8,6 +8,24 @@ Phase 39 hardens the cumulative OperatorOS platform without retiring user outcom
 
 The work also repaired production-artifact acceptance infrastructure discovered by the clean-database sweep: the release workflow now supplies the disposable admin bootstrap secret; browser subprocess output cannot deadlock the runtime; exact-host TLS test traffic is explicit; canceled Next.js RSC prefetches are distinguished from application failures; deterministic AI/payment adapters require a three-part disposable-CI guard; and Ninja Launch Kit exposes both the Phase 34 complete-kit product and the earlier persisted execution/readiness workspace rather than silently replacing either one.
 
+### 2026-08-20 deployment-scope addendum
+
+Replit dependency reconciliation removed one obsolete root npm lock and ten
+non-executable historical source locks while retaining their recovery path in
+Git history. Future source imports exclude dependency locks, Replit automatic
+package guessing/hosting installation is disabled for the historical module
+area, and the production build now begins with a fail-closed deployment-scope
+gate. The refreshed security result scans 1,277 files with zero code findings,
+audits 1,257 dependencies with zero critical and zero unresolved high findings,
+and validates one authoritative root lock plus one supervised public port.
+
+The TorqueShed source-count blocker described in the original Phase 39 evidence
+below is now reconciled explicitly: both historical lockfiles were removed, 15
+non-identical recovered artifacts were retained as historical evidence, and the
+manifest records the resulting 179-file retained set. This is a retention and
+scanner-boundary correction, not a parity promotion. Replit publish and
+provider rescan remain unperformed.
+
 ## Security controls and evidence
 
 | Boundary | Implemented control | Local evidence |

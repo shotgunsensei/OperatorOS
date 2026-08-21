@@ -1,6 +1,6 @@
 /**
- * End-to-end tenant invitation onboarding: both generic registration recovery
- * and direct invite registration attach a new user to the intended tenant.
+ * End-to-end tenant invitation onboarding: new and existing accounts retain
+ * their default tenant until the invited user explicitly accepts.
  *
  * This test stitches together the real HTTP surface (auth + tenant-admin +
  * module-routes) into a single Fastify instance and drives the journey
@@ -14,11 +14,11 @@
  *                         no per-user grant for the invitee
  *      A third module lives in OTHER tenant; it must never leak.
  *   2. Owner POST /v1/tenants/:id/invites for invitee@... .
- *   3. Brand-new user POST /v1/auth/register with that exact pending business
- *      invite email. Registration recovers the missed link and joins the
- *      tenant while retaining the generic anti-enumeration response.
+ *   3. Brand-new user POST /v1/auth/register with that exact invite email.
+ *      Registration creates only the user's default tenant and keeps the
+ *      invitation pending.
  *   4. New user POST /v1/auth/login and receives a host-only session cookie.
- *   5. Retrying the invitation acceptance is idempotent.
+ *   5. The user explicitly accepts; retrying acceptance is idempotent.
  *   7. Owner POST .../users/:userId/module-access for grantedMod (level=user).
  *   8. New user GET /v1/me/modules with the cookie from step 4 → asserts the
  *      explicit grant plus only canonical free companions appear
@@ -127,7 +127,7 @@ const ownerBearer = () => ({
   authorization: `Bearer ${signToken({ userId: owner.id, email: owner.email, role: owner.role, sessionType: 'platform' })}`,
 });
 
-test('missed-link registration recovers an exact same-business-domain invite and launchpad remains tenant-safe', async () => {
+test('generic registration preserves the default tenant until explicit invitation acceptance', async () => {
   inviteeEmail = `${uniqueId('e2e-invitee')}@test.local`;
 
   // 1. Owner creates an invite for the future member.
@@ -154,14 +154,21 @@ test('missed-link registration recovers an exact same-business-domain invite and
   const [registeredUser] = await db.select().from(users).where(eq(users.email, inviteeEmail));
   assert.ok(registeredUser, 'registration must persist the invited user');
   inviteeUserIds.push(registeredUser.id);
-  assert.equal(registeredUser.currentTenantId, tenantA.id, 'pending business invite becomes the active tenant');
-  const [recoveredMembership] = await db.select().from(tenantUsers).where(and(
+  assert.notEqual(registeredUser.currentTenantId, tenantA.id, 'registration must not switch into an invited tenant');
+  const [personalTenant] = await db.select().from(tenants).where(and(
+    eq(tenants.ownerUserId, registeredUser.id),
+    eq(tenants.type, 'personal'),
+  ));
+  assert.ok(personalTenant, 'every new account owns a default tenant');
+  assert.equal(registeredUser.currentTenantId, personalTenant.id);
+  const [prematureMembership] = await db.select().from(tenantUsers).where(and(
     eq(tenantUsers.tenantId, tenantA.id),
     eq(tenantUsers.userId, registeredUser.id),
   ));
-  assert.equal(recoveredMembership?.role, 'member', 'exact pending invite is accepted during account creation');
-  const [acceptedInvite] = await db.select().from(tenantInvites).where(eq(tenantInvites.token, inviteToken));
-  assert.ok(acceptedInvite?.acceptedAt, 'recovered invite is no longer left pending');
+  assert.equal(prematureMembership, undefined, 'registration must not grant invited tenant membership');
+  const [pendingInvite] = await db.select().from(tenantInvites).where(eq(tenantInvites.token, inviteToken));
+  assert.equal(pendingInvite?.acceptedAt, null);
+  assert.equal(pendingInvite?.declinedAt, null);
 
   // 3. New user logs in via /v1/auth/login. The generic registration response
   //    intentionally carries neither user identity nor credentials, so login
@@ -175,23 +182,33 @@ test('missed-link registration recovers an exact same-business-domain invite and
   const inviteeUserId = loginBody.user.id as string;
   assert.equal(inviteeUserId, registeredUser.id);
   assert.ok(inviteeUserId, 'login must return the authenticated user id');
+  assert.equal(loginBody.user.currentTenantId, personalTenant.id, 'login must preserve the existing tenant choice');
+  assert.ok(!('onboarding' in loginBody), 'login must not auto-accept pending invitations');
   const loginCookie = loginRes.cookies.find((c: any) => c.name === 'operatoros_session');
   assert.ok(loginCookie, 'login must set the host-only OperatorOS session cookie');
 
-  // 4. A browser/network retry after the successful recovery is idempotent.
+  // 4. The recipient explicitly accepts from the emailed link.
   const acceptRes = await app.inject({
     method: 'POST', url: `/v1/invites/${inviteToken}/accept`,
     cookies: { operatoros_session: loginCookie.value },
   });
   assert.equal(acceptRes.statusCode, 200, `accept: ${acceptRes.body}`);
   assert.equal(acceptRes.json().tenantId, tenantA.id);
-  assert.equal(acceptRes.json().alreadyAccepted, true);
+  assert.equal(acceptRes.json().alreadyAccepted, false);
   // Membership row exists with role=member.
   const [mem] = await db.select().from(tenantUsers).where(and(
     eq(tenantUsers.tenantId, tenantA.id),
     eq(tenantUsers.userId, inviteeUserId),
   ));
   assert.equal(mem.role, 'member');
+  const [acceptedUser] = await db.select().from(users).where(eq(users.id, inviteeUserId));
+  assert.equal(acceptedUser.currentTenantId, tenantA.id, 'acceptance switches to the inviting tenant');
+  const retry = await app.inject({
+    method: 'POST', url: `/v1/invites/${inviteToken}/accept`,
+    cookies: { operatoros_session: loginCookie.value },
+  });
+  assert.equal(retry.statusCode, 200, retry.body);
+  assert.equal(retry.json().alreadyAccepted, true);
 
   // 5. Owner explicitly grants the invitee access to grantedMod.
   const grantRes = await app.inject({
@@ -233,7 +250,7 @@ test('missed-link registration recovers an exact same-business-domain invite and
   }
 });
 
-test('invite link creates the account, membership, active tenant, and session in one transaction', async () => {
+test('invite link creates a normal account first and joins only after explicit acceptance', async () => {
   const email = `${uniqueId('direct-invitee')}@test.local`;
   const inviteRes = await app.inject({
     method: 'POST',
@@ -253,35 +270,50 @@ test('invite link creates the account, membership, active tenant, and session in
   const body = registerRes.json();
   inviteeUserIds.push(body.user.id);
   assert.equal(body.user.email, email);
-  assert.equal(body.user.currentTenantId, tenantA.id);
-  assert.equal(body.tenantId, tenantA.id);
-  assert.equal(body.membership.role, 'member');
+  assert.equal(body.user.currentTenantId, body.personalTenantId);
+  assert.equal(body.invitation.tenantName, tenantA.name);
+  assert.equal(body.invitation.role, 'member');
+  assert.equal(body.invitation.status, 'pending');
   const sessionCookie = registerRes.cookies.find((cookie: any) => cookie.name === 'operatoros_session');
   assert.ok(sessionCookie, 'direct invite registration must issue the host-only session cookie');
 
-  const memberships = await db.select().from(tenantUsers).where(and(
+  const membershipsBeforeConsent = await db.select().from(tenantUsers).where(and(
     eq(tenantUsers.tenantId, tenantA.id),
     eq(tenantUsers.userId, body.user.id),
   ));
-  assert.equal(memberships.length, 1, 'invite registration creates exactly one tenant membership');
+  assert.equal(membershipsBeforeConsent.length, 0, 'account creation must not grant invited tenant membership');
 
   const personalTenants = await db.select().from(tenants).where(and(
     eq(tenants.ownerUserId, body.user.id),
     eq(tenants.type, 'personal'),
   ));
-  assert.equal(personalTenants.length, 0,
-    'direct company invitation must not create an unwanted personal tenant');
+  assert.equal(personalTenants.length, 1, 'invite registration creates the same default tenant as ordinary registration');
+  assert.equal(personalTenants[0].id, body.personalTenantId);
 
-  const acceptRetry = await app.inject({
+  const accept = await app.inject({
     method: 'POST',
     url: `/v1/invites/${token}/accept`,
+    cookies: { operatoros_session: sessionCookie.value },
+  });
+  assert.equal(accept.statusCode, 200, accept.body);
+  assert.equal(accept.json().alreadyAccepted, false);
+  assert.equal(accept.json().tenantId, tenantA.id);
+  const membershipsAfterConsent = await db.select().from(tenantUsers).where(and(
+    eq(tenantUsers.tenantId, tenantA.id),
+    eq(tenantUsers.userId, body.user.id),
+  ));
+  assert.equal(membershipsAfterConsent.length, 1);
+  assert.equal(membershipsAfterConsent[0].role, 'member');
+
+  const acceptRetry = await app.inject({
+    method: 'POST', url: `/v1/invites/${token}/accept`,
     cookies: { operatoros_session: sessionCookie.value },
   });
   assert.equal(acceptRetry.statusCode, 200, acceptRetry.body);
   assert.equal(acceptRetry.json().alreadyAccepted, true);
 });
 
-test('an existing same-business-domain account is attached on its next authenticated login', async () => {
+test('an existing account signs in without joining and accepts from the invitation page', async () => {
   const email = `${uniqueId('existing-invitee')}@test.local`;
   const password = 'ExistingInviteePassword9!';
   const registerRes = await app.inject({
@@ -309,14 +341,81 @@ test('an existing same-business-domain account is attached on its next authentic
     payload: { email, password },
   });
   assert.equal(loginRes.statusCode, 200, loginRes.body);
-  assert.equal(loginRes.json().user.currentTenantId, tenantA.id);
-  assert.deepEqual(loginRes.json().onboarding.joinedTenantIds, [tenantA.id]);
-  const memberships = await db.select().from(tenantUsers).where(and(
+  assert.equal(loginRes.json().user.currentTenantId, createdUser.currentTenantId);
+  assert.ok(!('onboarding' in loginRes.json()));
+  const membershipsBeforeConsent = await db.select().from(tenantUsers).where(and(
     eq(tenantUsers.tenantId, tenantA.id),
     eq(tenantUsers.userId, createdUser.id),
   ));
-  assert.equal(memberships.length, 1);
-  const [invite] = await db.select().from(tenantInvites)
+  assert.equal(membershipsBeforeConsent.length, 0);
+  const [pendingInvite] = await db.select().from(tenantInvites)
     .where(eq(tenantInvites.token, inviteRes.json().invite.token));
-  assert.ok(invite.acceptedAt, 'login reconciliation must clear the pending invitation');
+  assert.equal(pendingInvite.acceptedAt, null, 'login must leave the invitation pending');
+
+  const loginCookie = loginRes.cookies.find((cookie: any) => cookie.name === 'operatoros_session');
+  assert.ok(loginCookie);
+  const acceptRes = await app.inject({
+    method: 'POST',
+    url: `/v1/invites/${inviteRes.json().invite.token}/accept`,
+    cookies: { operatoros_session: loginCookie.value },
+  });
+  assert.equal(acceptRes.statusCode, 200, acceptRes.body);
+  const membershipsAfterConsent = await db.select().from(tenantUsers).where(and(
+    eq(tenantUsers.tenantId, tenantA.id),
+    eq(tenantUsers.userId, createdUser.id),
+  ));
+  assert.equal(membershipsAfterConsent.length, 1);
+});
+
+test('a newly created account can decline and remain in its default tenant', async () => {
+  const email = `${uniqueId('declining-invitee')}@test.local`;
+  const inviteRes = await app.inject({
+    method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
+    headers: ownerBearer(),
+    payload: { email, role: 'member' },
+  });
+  assert.equal(inviteRes.statusCode, 200, inviteRes.body);
+  const token: string = inviteRes.json().invite.token;
+
+  const registerRes = await app.inject({
+    method: 'POST', url: '/v1/auth/register-with-invite',
+    payload: { token, password: 'DeclineInvitePassword9!', name: 'Declining Invitee' },
+  });
+  assert.equal(registerRes.statusCode, 201, registerRes.body);
+  const registered = registerRes.json();
+  inviteeUserIds.push(registered.user.id);
+  const sessionCookie = registerRes.cookies.find((cookie: any) => cookie.name === 'operatoros_session');
+  assert.ok(sessionCookie);
+
+  const declineRes = await app.inject({
+    method: 'POST', url: `/v1/invites/${token}/decline`,
+    cookies: { operatoros_session: sessionCookie.value },
+  });
+  assert.equal(declineRes.statusCode, 200, declineRes.body);
+  assert.equal(declineRes.json().alreadyDeclined, false);
+
+  const [userAfterDecline] = await db.select().from(users).where(eq(users.id, registered.user.id));
+  assert.equal(userAfterDecline.currentTenantId, registered.personalTenantId);
+  const targetMemberships = await db.select().from(tenantUsers).where(and(
+    eq(tenantUsers.tenantId, tenantA.id),
+    eq(tenantUsers.userId, registered.user.id),
+  ));
+  assert.equal(targetMemberships.length, 0);
+  const [declinedInvite] = await db.select().from(tenantInvites).where(eq(tenantInvites.token, token));
+  assert.equal(declinedInvite.acceptedAt, null);
+  assert.ok(declinedInvite.declinedAt);
+
+  const retry = await app.inject({
+    method: 'POST', url: `/v1/invites/${token}/decline`,
+    cookies: { operatoros_session: sessionCookie.value },
+  });
+  assert.equal(retry.statusCode, 200, retry.body);
+  assert.equal(retry.json().alreadyDeclined, true);
+
+  const acceptAfterDecline = await app.inject({
+    method: 'POST', url: `/v1/invites/${token}/accept`,
+    cookies: { operatoros_session: sessionCookie.value },
+  });
+  assert.equal(acceptAfterDecline.statusCode, 409, acceptAfterDecline.body);
+  assert.equal(acceptAfterDecline.json().code, 'INVITE_DECLINED');
 });

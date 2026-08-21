@@ -145,6 +145,39 @@ test('resend on an accepted invite → 409 INVITE_ALREADY_ACCEPTED', async () =>
   assert.equal(r.json().code, 'INVITE_ALREADY_ACCEPTED');
 });
 
+test('resend on a declined invite → 409 INVITE_DECLINED', async () => {
+  const create = await app.inject({
+    method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
+    headers: bearer(owner),
+    payload: { email: `task30-declined-${Date.now()}@example.com`, role: 'member' },
+  });
+  const inviteId = create.json().invite.id;
+  await db.update(tenantInvites).set({ declinedAt: new Date() })
+    .where(eq(tenantInvites.id, inviteId));
+
+  const response = await app.inject({
+    method: 'POST', url: `/v1/tenants/${tenantA.id}/invites/${inviteId}/resend`,
+    headers: bearer(owner),
+  });
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().code, 'INVITE_DECLINED');
+});
+
+test('email invite URL opens the canonical browser invitation page', async () => {
+  const previous = process.env.OPERATOROS_BASE_URL;
+  process.env.OPERATOROS_BASE_URL = 'https://operatoros.net';
+  try {
+    const { buildInviteAcceptUrl } = await import('../src/lib/email-service.js');
+    assert.equal(
+      buildInviteAcceptUrl('abc123'),
+      'https://operatoros.net/invites/abc123',
+    );
+  } finally {
+    if (previous === undefined) delete process.env.OPERATOROS_BASE_URL;
+    else process.env.OPERATOROS_BASE_URL = previous;
+  }
+});
+
 test('resend rejects non-admin callers with 403 TENANT_ROLE_INSUFFICIENT', async () => {
   // Guard regression: the resend route must keep its requireTenantAdmin
   // pre-handler. Owner creates an invite, then a `member` of the same

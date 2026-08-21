@@ -1,5 +1,91 @@
 # OperatorOS implementation status
 
+## Replit dependency scope and historical-source quarantine - SOURCE/LOCAL VERIFIED / REPLIT RESCAN PENDING (2026-08-20)
+
+- The 35 supplied Replit Basic Checks rows were reconciled to 23 unique
+  package/version pairs across every tracked dependency lock. The deployable
+  root pnpm graph already resolves the reported packages to reviewed versions,
+  except `image-size@1.2.1`, which remains an exact locally patched transitive
+  dependency because upstream currently has no patched release. Most Replit
+  rows came from the obsolete root `package-lock.json` or historical module
+  snapshot locks rather than the deployment graph.
+- The stale npm lock and ten module-source pnpm locks were removed from the
+  candidate tree while remaining recoverable from Git history. Historical
+  product code, schemas, assets, source commits, and exclusion provenance are
+  retained. All nine affected `SOURCE_SNAPSHOT.json` manifests now match the
+  retained file sets; TorqueShed explicitly retains 15 unique recovered
+  historical artifacts instead of deleting non-identical evidence.
+- `.gitignore` prevents alternate root locks and historical source locks from
+  returning, while `.npmrc` prevents npm from regenerating an untracked root
+  lock. The tracked-source importer now excludes and records all npm, Yarn,
+  Bun, and pnpm locks. `apps/modules/README.md` defines the non-installable
+  archive/recovery policy. `.replit` hides the historical module area from the
+  default file tree, excludes it from package guessing, disables automatic
+  hosting package installation, and exposes only supervised port `5000 -> 80`.
+  Those Replit settings are organization/package-discovery controls, not a
+  claim that a provider scanner honors UI hiding.
+- A new fail-closed `verify:deployment-scope` gate permits only root
+  `pnpm-lock.yaml`, checks the workspace/import/ignore contracts, validates the
+  frozen Replit build and supervisor, and rejects public internal ports. It is
+  now the first production-build stage and is included in the Phase 39 security
+  result.
+- Fresh local verification passes: frozen install; full and production pnpm
+  audits at the high threshold; Phase 39 script tests 11/11; Phase 39
+  API/preflight tests 13/13; source provenance and Replit runtime tests 13/13;
+  the Phase 39 scan over 1,277 files and 1,257 dependencies with 0 code
+  findings, 0 critical, 0 unresolved high, and both exact patched-image
+  exceptions intact; TypeScript; ESLint; and the optimized production build.
+- Git merge/push, Replit publish, and provider rescan were not performed. The
+  supplied Replit rows remain provider-status unresolved until an exact
+  candidate commit is published and rescanned. A version-only scan may retain
+  `image-size@1.2.1`; the in-repository patch and executable regressions are the
+  current mitigation because `2.0.2` is affected as well. Full reconciliation
+  is recorded in `docs/security/REPLIT_DEPENDENCY_SCAN_RECONCILIATION.md`.
+
+## Tenant invitation consent and default workspace - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-20)
+
+- Release v55 supersedes the v54 invitation onboarding decisions below. Every
+  ordinary account now creates or retains its real single-owner default tenant.
+  Creating an account from an invitation and signing in as an existing user
+  authenticate the exact invited email, but neither action grants company
+  membership or changes the active tenant.
+- The invitation page is an intentional anonymous surface. Its expected first
+  `/api/auth/me` `401` no longer triggers the protected-app logout/return loop
+  shown on first browser open. After account creation or sign-in, the recipient
+  must choose **Join organization** or **Decline invitation**. Join creates or
+  reuses the invited role and selects the inviting tenant in one transaction;
+  decline records a durable decision, creates no membership, and leaves the
+  current tenant unchanged. Same-user retries are idempotent, while wrong-email,
+  expired, inactive-tenant, accepted, and declined states fail closed.
+- Generic registration, login, session refresh, and `/auth/me` no longer
+  reconcile invitations by email or business domain. Invitation emails use
+  review-and-consent language, and active tenant-administration lists exclude
+  accepted and declined invitations without removing their audit evidence.
+- Release v55 adds `tenant_invites.declined_at`, a mutual-exclusion constraint
+  for acceptance versus decline, and a partial pending-invitation index through
+  the ordered root database-release contract. On an empty disposable PostgreSQL
+  16 database, the supported apply path verified all 55 operations in 17,724 ms;
+  immediate reapply verified the same release in 1,751 ms. No production data
+  was changed.
+- Focused invitation/onboarding/email PostgreSQL acceptance passes 21/21; the
+  adjacent auth, session, SSO, and tenant boundary suite passes 43/43; and the
+  release/auth-shell static suite passes 35 with 6 expected HTTP-only skips.
+  Workspace typecheck and the configured optimized production build pass. A
+  dedicated production-build Chromium suite passes 3/3: fresh anonymous open
+  remains stable, new-account join assigns and selects the inviting tenant only
+  after consent, and existing-account decline performs no tenant switch.
+- The complete API aggregate was exercised against a fresh release-v55
+  database: 1,175 pass, 15 fail, and 6 intentional HTTP-only skips across 1,196
+  tests. Every invitation, email, onboarding, auth-boundary, membership, and
+  tenant-switch assertion passes. The 15 failures are outside this change in
+  the worktree's existing module source-snapshot, route-shell, UI-copy, release
+  identity, and mapping assertions; therefore no broad-green claim is made.
+- These results are source/local evidence. Production backup/apply,
+  reconciliation, deployment, real delivered-email link acceptance, deployed
+  exact-host create/login/join/decline browser runs, monitoring, and rollback
+  remain open. ADR-0044 defines the consent boundary and the unsafe-v54 rollback
+  caveat.
+
 ## Tenant invitation onboarding and administrative removal repair - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-18)
 
 - The invitation page now keeps account creation, sign-in, and tenant joining

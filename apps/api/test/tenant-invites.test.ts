@@ -1,7 +1,7 @@
 /**
  * Gate 3 — Tenant invites lifecycle.
  *
- * Covers create / list / accept (auth, email-mismatch, expiry) / revoke.
+ * Covers create / list / accept / decline (auth, email-mismatch, expiry) / revoke.
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -115,6 +115,13 @@ test('email mismatch on accept → 403 INVITE_EMAIL_MISMATCH', async () => {
   });
   assert.equal(r.statusCode, 403);
   assert.equal(r.json().code, 'INVITE_EMAIL_MISMATCH');
+
+  const decline = await app.inject({
+    method: 'POST', url: `/v1/invites/${token}/decline`,
+    headers: bearer(invitee),
+  });
+  assert.equal(decline.statusCode, 403);
+  assert.equal(decline.json().code, 'INVITE_EMAIL_MISMATCH');
 });
 
 test('happy path: invitee accepts, joins as member, and a same-user retry is idempotent', async () => {
@@ -168,6 +175,75 @@ test('viewer invite persists a distinct read-only tenant membership', async () =
     assert.equal(membership.role, 'viewer');
   } finally {
     await cleanupUser(viewer.id);
+  }
+});
+
+test('invitee can decline without membership or tenant switching and retries are idempotent', async () => {
+  const decliningUser = await createTestUser();
+  try {
+    const originalTenantId = decliningUser.currentTenantId;
+    const create = await app.inject({
+      method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
+      headers: bearer(owner),
+      payload: { email: decliningUser.email, role: 'member' },
+    });
+    assert.equal(create.statusCode, 200, create.body);
+    const invite = create.json().invite;
+
+    const decline = await app.inject({
+      method: 'POST', url: `/v1/invites/${invite.token}/decline`,
+      headers: bearer(decliningUser),
+    });
+    assert.equal(decline.statusCode, 200, decline.body);
+    assert.equal(decline.json().tenantId, tenantA.id);
+    assert.equal(decline.json().alreadyDeclined, false);
+
+    const [stored] = await db.select().from(tenantInvites).where(eq(tenantInvites.id, invite.id));
+    assert.equal(stored.acceptedAt, null);
+    assert.ok(stored.declinedAt);
+    const memberships = await db.select().from(tenantUsers).where(and(
+      eq(tenantUsers.userId, decliningUser.id),
+      eq(tenantUsers.tenantId, tenantA.id),
+    ));
+    assert.equal(memberships.length, 0);
+    const [unchangedUser] = await db.select().from(users).where(eq(users.id, decliningUser.id));
+    assert.equal(unchangedUser.currentTenantId, originalTenantId);
+
+    const retry = await app.inject({
+      method: 'POST', url: `/v1/invites/${invite.token}/decline`,
+      headers: bearer(decliningUser),
+    });
+    assert.equal(retry.statusCode, 200, retry.body);
+    assert.equal(retry.json().alreadyDeclined, true);
+
+    const accept = await app.inject({
+      method: 'POST', url: `/v1/invites/${invite.token}/accept`,
+      headers: bearer(decliningUser),
+    });
+    assert.equal(accept.statusCode, 409, accept.body);
+    assert.equal(accept.json().code, 'INVITE_DECLINED');
+
+    const peek = await app.inject({ method: 'GET', url: `/v1/invites/${invite.token}/peek` });
+    assert.equal(peek.statusCode, 200, peek.body);
+    assert.equal(peek.json().status, 'declined');
+
+    const list = await app.inject({
+      method: 'GET', url: `/v1/tenants/${tenantA.id}/invites`, headers: bearer(owner),
+    });
+    assert.equal(list.statusCode, 200, list.body);
+    assert.ok(!list.json().invites.some((row: any) => row.id === invite.id));
+
+    const reinvite = await app.inject({
+      method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
+      headers: bearer(owner),
+      payload: { email: decliningUser.email, role: 'member' },
+    });
+    assert.equal(reinvite.statusCode, 200, reinvite.body);
+    assert.notEqual(reinvite.json().invite.token, invite.token);
+    assert.equal(reinvite.json().invite.acceptedAt, null);
+    assert.equal(reinvite.json().invite.declinedAt, null);
+  } finally {
+    await cleanupUser(decliningUser.id);
   }
 });
 

@@ -2,6 +2,10 @@
 
 - Status: Accepted for release v54 source/local candidate
 - Date: 2026-08-18
+- Superseded in part: ADR-0044 replaces invitation auto-recovery and
+  direct-to-company registration with a default tenant plus explicit recipient
+  join/decline consent. Exact-host, transactional acceptance, deletion, and
+  audit-retention decisions remain accepted.
 
 ## Context
 

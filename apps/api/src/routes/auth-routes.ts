@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
-import { users, passwordResetTokens, revokedSessionTokens, tenantInvites } from '../schema.js';
+import { users, passwordResetTokens, revokedSessionTokens } from '../schema.js';
 import { eq, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 import {
@@ -27,9 +27,8 @@ import {
 } from '../../../../packages/auth/index.js';
 import { enforcePlatformPublicAuthHost } from '../lib/public-auth-host.js';
 import {
-  acceptTenantInvitationWithDatabase,
+  getPendingTenantInvitationForRegistrationWithDatabase,
   isTenantInviteToken,
-  reconcilePendingBusinessInvitationsWithDatabase,
   TenantInvitationError,
 } from '../lib/tenant-invitations.js';
 
@@ -111,11 +110,6 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
       const { tenant } = await ensurePersonalTenantWithDatabase(tx, createdUser);
       await ensureFreeAccountAppsWithDatabase(tx, tenant.id, createdUser.id);
-      await reconcilePendingBusinessInvitationsWithDatabase(tx, {
-        user: createdUser,
-        request,
-        ipAddress: request.ip,
-      });
       return createdUser;
     });
 
@@ -127,12 +121,10 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return reply.code(202).send({ ok: true });
   });
 
-  // Invitation-specific registration is a single password-and-join
-  // transaction. The opaque token proves possession of the invitation
-  // capability for the invited address,
-  // so the browser never has to carry invitation state through the separate
-  // auth.operatoros.net sessionStorage origin or ask a new user to sign in a
-  // second time immediately after choosing a password.
+  // Invitation-specific registration creates a normal OperatorOS account and
+  // its default personal tenant in one transaction. Possession of the opaque
+  // invite link proves the invited email, but does not grant tenant access:
+  // the authenticated recipient must explicitly accept or decline next.
   app.post('/v1/auth/register-with-invite', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
@@ -152,9 +144,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const passwordHash = await hashPassword(password);
     try {
       const created = await db.transaction(async tx => {
-        const [invite] = await tx.select().from(tenantInvites)
-          .where(eq(tenantInvites.token, token)).limit(1);
-        if (!invite) throw new TenantInvitationError(404, 'INVITE_NOT_FOUND', 'Invite not found');
+        const invitation = await getPendingTenantInvitationForRegistrationWithDatabase(tx, token);
+        const invite = invitation.invite;
 
         const normalizedEmail = invite.email.trim().toLowerCase();
         const [existing] = await tx.select({ id: users.id }).from(users)
@@ -180,21 +171,26 @@ export async function registerAuthRoutes(app: FastifyInstance) {
           throw conflict;
         }
 
-        const acceptance = await acceptTenantInvitationWithDatabase(tx, {
-          token,
-          user: createdUser,
-          request,
-          ipAddress: request.ip,
-          action: 'tenant_invite_registered',
-        });
+        const { tenant: personalTenant } = await ensurePersonalTenantWithDatabase(tx, createdUser);
+        await ensureFreeAccountAppsWithDatabase(tx, personalTenant.id, createdUser.id);
         const [updatedUser] = await tx.select().from(users)
           .where(eq(users.id, createdUser.id)).limit(1);
-        return { user: updatedUser, acceptance };
+        return {
+          user: updatedUser,
+          personalTenantId: personalTenant.id,
+          invitation: {
+            tenantName: invitation.tenant.name,
+            role: invite.role,
+          },
+        };
       });
 
       await logUserActivity(created.user.id, 'registered', 'user', created.user.id, {
-        source: 'tenant_invite',
-        tenantId: created.acceptance.tenantId,
+        source: 'tenant_invite_pending_consent',
+      });
+      await logAudit(created.user.id, 'user_registered', created.user.id, {
+        email: created.user.email,
+        source: 'tenant_invite_pending_consent',
       });
       const sessionToken = signToken({
         userId: created.user.id,
@@ -206,9 +202,12 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       reply.setCookie(SESSION_COOKIE_NAME, sessionToken, getSessionCookieOptions());
       return reply.code(201).send({
         user: sanitizeUser(created.user),
-        tenantId: created.acceptance.tenantId,
-        tenantName: created.acceptance.tenantName,
-        membership: created.acceptance.membership,
+        personalTenantId: created.personalTenantId,
+        invitation: {
+          tenantName: created.invitation.tenantName,
+          role: created.invitation.role,
+          status: 'pending',
+        },
       });
     } catch (error: any) {
       if (error instanceof TenantInvitationError) {
@@ -274,29 +273,21 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     await resetFailedLogins(user.id);
-    const loginState = await db.transaction(async tx => {
-      await tx.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
-      const onboarding = await reconcilePendingBusinessInvitationsWithDatabase(tx, {
-        user,
-        request,
-        ipAddress: request.ip,
-      });
-      const [refreshedUser] = await tx.select().from(users).where(eq(users.id, user.id)).limit(1);
-      return { user: refreshedUser, onboarding };
-    });
+    await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+    const [refreshedUser] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
     await logAudit(user.id, 'login_success', user.id, { email: normalizedEmail }, request.ip);
 
     const token = signToken({
-      userId: loginState.user.id,
-      email: loginState.user.email,
-      role: loginState.user.role,
-      tokenVersion: loginState.user.tokenVersion,
+      userId: refreshedUser.id,
+      email: refreshedUser.email,
+      role: refreshedUser.role,
+      tokenVersion: refreshedUser.tokenVersion,
       sessionType: 'platform',
     });
 
     reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
 
-    return { user: sanitizeUser(loginState.user), onboarding: loginState.onboarding };
+    return { user: sanitizeUser(refreshedUser) };
   });
 
   const logoutHandler = async (request: any, reply: any) => {
@@ -341,19 +332,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
   const meHandler = async (request: any) => {
     const session = (request as any).authSession;
-    let authoritativeUser = (request as any).user;
-    if (session?.sessionType === 'platform') {
-      authoritativeUser = await db.transaction(async tx => {
-        await reconcilePendingBusinessInvitationsWithDatabase(tx, {
-          user: authoritativeUser,
-          request,
-          ipAddress: request.ip,
-        });
-        const [refreshed] = await tx.select().from(users)
-          .where(eq(users.id, authoritativeUser.id)).limit(1);
-        return refreshed;
-      });
-    }
+    const authoritativeUser = (request as any).user;
     const user = sanitizeUser(authoritativeUser) as Record<string, unknown>;
     if (session?.sessionType === 'module' && session.tenantId && session.moduleId) {
       user.currentTenantId = session.tenantId;

@@ -808,6 +808,7 @@ export const tenantInvites = pgTable('tenant_invites', {
   token: text('token').notNull().unique(),
   invitedByUserId: varchar('invited_by_user_id', { length: 36 }).notNull().references(() => users.id),
   acceptedAt: timestamp('accepted_at'),
+  declinedAt: timestamp('declined_at'),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [

@@ -1,5 +1,22 @@
 # OperatorOS ecosystem final E2E acceptance report
 
+## Release v55 invitation-consent overlay — 2026-08-20
+
+Verdict: **SOURCE/LOCAL ACCEPTED — DEPLOYMENT PENDING**.
+
+An optimized production-build Chromium suite passes 3/3 invitation journeys.
+It proves that a fresh anonymous email-link open can receive `/api/auth/me` 401
+without navigating or reloading; a new invited user creates an account in a
+default tenant and joins/switches to the inviting tenant only after clicking
+Join; and an existing invited user signs in, declines, and remains in the
+current tenant without a tenant-switch call. Separate disposable-PostgreSQL
+tests prove exact-email enforcement, create/login non-membership, transactional
+acceptance, idempotency, decline permanence, pending-list behavior, and audit
+state. The browser suite uses controlled API fixtures and does not prove a real
+mailer or deployed environment. Production backup/apply, delivered-link tests,
+deployed exact-host create/login/join/decline, tenant reconciliation,
+monitoring, and rollback remain human-controlled gates.
+
 ## Phase 53 tenant messenger overlay — 2026-08-16
 
 Verdict: **SOURCE/LOCAL ACCEPTED — DEPLOYMENT PENDING**.

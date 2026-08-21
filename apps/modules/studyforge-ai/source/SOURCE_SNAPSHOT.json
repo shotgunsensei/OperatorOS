@@ -4,8 +4,8 @@
   "sourceCommit": "a607a9f34442b1d0f6bfffbf0293609529494825",
   "importedAtUtc": "2026-07-13T19:58:44.0434196Z",
   "trackedFileCount": 298,
-  "fileCount": 224,
-  "totalBytes": 924929,
+  "fileCount": 223,
+  "totalBytes": 704639,
   "maxFileSizeMb": 25,
   "excludedFiles": [
     {
@@ -303,8 +303,12 @@
     {
       "path": "attached_assets/Pasted-Build-a-complete-production-ready-SaaS-web-app-called-S_1777766858284.txt",
       "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
     }
   ],
   "highConfidenceSecretFindings": 0,
-  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+  "policy": "tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded"
 }

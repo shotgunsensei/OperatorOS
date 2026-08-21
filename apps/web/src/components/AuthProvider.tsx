@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { authApi, setActiveTenantId } from '@/lib/auth';
+import { shouldRestartCentralAuth } from '@/lib/auth-navigation';
 
 interface User {
   id: string;
@@ -23,7 +24,7 @@ interface AuthContextType {
   authError: { code: string; message: string } | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  registerWithInvite: (token: string, password: string, name: string) => Promise<{ tenantId: string; tenantName?: string | null }>;
+  registerWithInvite: (token: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   logoutEverywhere: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -36,24 +37,18 @@ const AuthContext = createContext<AuthContextType>({
   authError: null,
   login: async () => {},
   register: async () => {},
-  registerWithInvite: async () => ({ tenantId: '' }),
+  registerWithInvite: async () => {},
   logout: async () => {},
   logoutEverywhere: async () => {},
   refresh: async () => {},
   clearAuthError: () => {},
 });
 
-function shouldRestartCentralAuth(): boolean {
-  if (typeof window === 'undefined') return false;
-  const host = window.location.hostname.toLowerCase();
-  const path = window.location.pathname;
-  if (host === 'auth.operatoros.net' || host === 'api.operatoros.net') return false;
-  if (host === 'operatoros.net') return path === '/app' || path.startsWith('/app/');
-  return host === 'app.operatoros.net' || host.endsWith('.operatoros.net');
-}
-
 function restartCentralAuthAfterInvalidSession(): boolean {
-  if (!shouldRestartCentralAuth()) return false;
+  if (
+    typeof window === 'undefined' ||
+    !shouldRestartCentralAuth(window.location.hostname, window.location.pathname)
+  ) return false;
   const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   window.location.replace(`/logout?reauth=1&return_to=${encodeURIComponent(returnTo)}`);
   return true;
@@ -134,9 +129,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const registerWithInvite = async (token: string, password: string, name: string) => {
     setAuthError(null);
     const data = await authApi.registerWithInvite(token, password, name);
-    setActiveTenantId(data.tenantId ?? data.user?.currentTenantId ?? null);
+    setActiveTenantId(data.user?.currentTenantId ?? data.personalTenantId ?? null);
     setUser(data.user);
-    return { tenantId: data.tenantId, tenantName: data.tenantName ?? null };
   };
 
   const logout = async () => {

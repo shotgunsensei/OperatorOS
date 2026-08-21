@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { inspectDeploymentScope } from '../verify-deployment-scope.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const outputPath = join(repositoryRoot, 'build', 'phase39', 'security-scan.json');
@@ -112,6 +113,7 @@ export function runSecurityScan() {
     findings.push(...scanText(file, content, runtimePrefixes.some(prefix => file.startsWith(prefix))));
   }
   const dependencyAudit = auditDependencies();
+  const deploymentScope = inspectDeploymentScope(repositoryRoot);
   const result = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -119,7 +121,8 @@ export function runSecurityScan() {
     scannedFiles,
     findings,
     dependencyAudit,
-    passed: findings.length === 0 && dependencyAudit.pass,
+    deploymentScope,
+    passed: findings.length === 0 && dependencyAudit.pass && deploymentScope.pass,
   };
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`);
@@ -128,6 +131,6 @@ export function runSecurityScan() {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const result = runSecurityScan();
-  process.stdout.write(`${JSON.stringify({ passed: result.passed, scannedFiles: result.scannedFiles, findings: result.findings.length, dependencyAudit: result.dependencyAudit, artifact: 'build/phase39/security-scan.json' }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ passed: result.passed, scannedFiles: result.scannedFiles, findings: result.findings.length, dependencyAudit: result.dependencyAudit, deploymentScope: result.deploymentScope, artifact: 'build/phase39/security-scan.json' }, null, 2)}\n`);
   if (!result.passed) process.exitCode = 1;
 }

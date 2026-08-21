@@ -4,8 +4,8 @@
   "sourceCommit": "cca75338d04ed35b89f28d614eb51559735aa32f",
   "importedAtUtc": "2026-07-27T14:29:14.9566723Z",
   "trackedFileCount": 263,
-  "fileCount": 184,
-  "totalBytes": 2855775,
+  "fileCount": 183,
+  "totalBytes": 2625073,
   "maxFileSizeMb": 25,
   "excludedFiles": [
     {
@@ -323,8 +323,12 @@
     {
       "path": "attached_assets/Screenshot_20260322-032243_1774164388706.png",
       "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "dependency lockfile excluded from non-installable historical snapshot"
     }
   ],
   "highConfidenceSecretFindings": 0,
-  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+  "policy": "tracked-files-only; dependency locks, generated artifacts, local data, private keys, credentials, and environment files excluded"
 }

@@ -1,6 +1,15 @@
 modules = ["nodejs-20", "web", "python-3.11", "postgresql-16"]
 run = "npm run dev"
-hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist", "apps/modules"]
+
+[packager]
+language = "nodejs"
+ignoredPaths = ["apps/modules", "docs", "build"]
+
+[packager.features]
+packageSearch = false
+guessImports = false
+enabledForHosting = false
 
 [nix]
 channel = "stable-24_05"
@@ -8,14 +17,6 @@ channel = "stable-24_05"
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
-
-[[ports]]
-localPort = 5002
-externalPort = 3001
 
 [env]
 PORT = "5000"

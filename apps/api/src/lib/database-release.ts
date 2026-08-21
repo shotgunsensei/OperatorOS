@@ -50,6 +50,7 @@ import { ensureTorqueShedSettlementContract } from './torqueshed-settlement-db-i
 import { ensureTorqueShedReservationContract } from './torqueshed-reservation-db-init.js';
 import { ensureTenantMessengerTables } from './tenant-messenger-db-init.js';
 import { ensureIdentityOnboardingIntegrity } from './identity-onboarding-db-init.js';
+import { ensureTenantInvitationConsent } from './tenant-invitation-consent-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -118,6 +119,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   torqueshed_reservation_contract: ensureTorqueShedReservationContract,
   tenant_messenger_tables: ensureTenantMessengerTables,
   identity_onboarding_integrity: ensureIdentityOnboardingIntegrity,
+  tenant_invitation_consent: ensureTenantInvitationConsent,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -308,6 +310,21 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       ,to_regclass('public.tenant_messenger_presence') IS NOT NULL AS tenant_messenger_presence
       ,to_regclass('public.tenant_messenger_presence_connections') IS NOT NULL AS tenant_messenger_presence_connections
       ,to_regclass('public.tenant_messenger_events') IS NOT NULL AS tenant_messenger_events
+      ,EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'tenant_invites'
+          AND column_name = 'declined_at'
+      )
+      AND EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'tenant_invites_single_decision_check'
+          AND conrelid = 'public.tenant_invites'::regclass
+      )
+      AND to_regclass('public.idx_tenant_invites_pending') IS NOT NULL
+      AS tenant_invitation_consent
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})
