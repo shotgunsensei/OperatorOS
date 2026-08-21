@@ -3,6 +3,21 @@ import { fileURLToPath } from 'node:url';
 
 export const REQUIRED_PNPM_VERSION = '10.34.5';
 export const MINIMUM_REPLIT_PROVIDER_PNPM_VERSION = '10.26.0';
+export const OBSERVED_REPLIT_SECURITY_SCAN = Object.freeze({
+  pnpmVersion: '10.26.1',
+  nodeVersion: 'v24.12.0',
+  platform: 'linux',
+  arch: 'x64',
+});
+export const REPLIT_PROVIDER_ENVIRONMENT_KEYS = Object.freeze([
+  'REPL_ID',
+  'REPL_OWNER',
+  'REPL_SLUG',
+  'REPL_IMAGE',
+  'REPL_LANGUAGE',
+  'REPLIT_DEPLOYMENT',
+  'REPLIT_DOMAINS',
+]);
 
 function parseVersion(version = '') {
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
@@ -18,13 +33,27 @@ function compareVersions(left, right) {
 
 export function isReplitProviderInstallEnvironment(
   environment = {},
-  runtime = { platform: process.platform, execPath: process.execPath },
+  runtime = {
+    platform: process.platform,
+    arch: process.arch,
+    execPath: process.execPath,
+    nodeVersion: process.version,
+  },
+  userAgent = environment.npm_config_user_agent ?? '',
 ) {
-  const replId = String(environment.REPL_ID ?? '').trim();
   const developmentDomain = String(environment.REPLIT_DEV_DOMAIN ?? '').trim();
+  const replitEnvironmentSignal = REPLIT_PROVIDER_ENVIRONMENT_KEYS.some(
+    (key) => String(environment[key] ?? '').trim().length > 0,
+  );
   const providerNixNode = runtime.platform === 'linux'
     && String(runtime.execPath ?? '').startsWith('/nix/store/');
-  return developmentDomain.length === 0 && (replId.length > 0 || providerNixNode);
+  const escapedObservedPnpmVersion = OBSERVED_REPLIT_SECURITY_SCAN.pnpmVersion.replaceAll('.', '\\.');
+  const observedSecurityScanToolchain = runtime.platform === OBSERVED_REPLIT_SECURITY_SCAN.platform
+    && runtime.arch === OBSERVED_REPLIT_SECURITY_SCAN.arch
+    && runtime.nodeVersion === OBSERVED_REPLIT_SECURITY_SCAN.nodeVersion
+    && new RegExp(`^pnpm/${escapedObservedPnpmVersion}(?:\\s|$)`).test(String(userAgent).trim());
+  return developmentDomain.length === 0
+    && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain);
 }
 
 export function evaluatePackageManager(userAgent = '', { allowReplitProviderVersion = false } = {}) {
@@ -56,7 +85,7 @@ export function enforcePackageManager(
   environment = process.env,
 ) {
   const result = evaluatePackageManager(userAgent, {
-    allowReplitProviderVersion: isReplitProviderInstallEnvironment(environment),
+    allowReplitProviderVersion: isReplitProviderInstallEnvironment(environment, undefined, userAgent),
   });
   if (result.mode === 'replit-provider-scan') {
     process.stderr.write(
@@ -65,7 +94,8 @@ export function enforcePackageManager(
     );
   } else if (!result.pass) {
     process.stderr.write(
-      `[package-manager] OperatorOS requires pnpm ${REQUIRED_PNPM_VERSION}. `
+      `[package-manager] OperatorOS requires pnpm ${REQUIRED_PNPM_VERSION}; detected ${result.detected} `
+      + `on node/${process.version} ${process.platform} ${process.arch}. `
       + 'Run: corepack pnpm install --frozen-lockfile\n',
     );
   }

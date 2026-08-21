@@ -111,7 +111,11 @@ export function evaluateDeploymentScope({ files, gitignore, npmrc = '', replit, 
   }
   if (!/MINIMUM_REPLIT_PROVIDER_PNPM_VERSION\s*=\s*['"]10\.26\.0['"]/.test(packageManagerEnforcer)
     || !/REPL_ID/.test(packageManagerEnforcer)
+    || !/REPLIT_DEPLOYMENT/.test(packageManagerEnforcer)
     || !/REPLIT_DEV_DOMAIN/.test(packageManagerEnforcer)
+    || !/OBSERVED_REPLIT_SECURITY_SCAN/.test(packageManagerEnforcer)
+    || !/pnpmVersion:\s*['"]10\.26\.1['"]/.test(packageManagerEnforcer)
+    || !/nodeVersion:\s*['"]v24\.12\.0['"]/.test(packageManagerEnforcer)
     || !/nix\/store/.test(packageManagerEnforcer)
     || !/replit-provider-scan/.test(packageManagerEnforcer)) {
     issues.push('package-manager enforcement does not bound the Replit provider-scan compatibility path');

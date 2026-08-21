@@ -1,6 +1,6 @@
 # OperatorOS implementation status
 
-## Replit publish-scan pnpm recursion repair - SOURCE/LOCAL VERIFIED / GITHUB SYNC TARGET / REPUBLISH PENDING (2026-08-21)
+## Replit publish-scan package-manager repair - SOURCE/LOCAL VERIFIED / REPUBLISH PENDING (2026-08-21)
 
 - GitHub `main` had advanced to Replit's empty publication-marker commit
   `9cb875ef9e1430500df69753ac466173457bb75d` when Replit attempted deployment
@@ -11,6 +11,14 @@
   database apply, runtime supervisor, or health checks ran. The marker has no
   file diff; its tree is identical to source-bearing parent
   `9f48a036e2ac55bcf748d98bef54d42c12801c4f`.
+- Source repair `0da3c627947979f85d40588b6a13362e7450a262` stopped the
+  recursion and was pushed to GitHub main. A second Replit attempt for the same
+  deployment ID, build `ddc1c1f3-1299-49d7-a5df-64a8d995d191`, then completed
+  resolution from the authoritative lock and ran the root `preinstall`. It
+  failed only because the provider security-scan container exposed neither of
+  the initially recognized runtime signals, so the guard rejected its bundled
+  `pnpm/10.26.1`. The second attempt still did not reach `.replit` build,
+  release-v55 apply, runtime start, or health checks.
 - The provider used Nix Node `24.12.0` even though `.replit` requests
   `nodejs-20`. Its bundled pnpm recursively invoked `pnpm add pnpm@10.34.5` to
   self-install the root `packageManager` version. The nested process chain
@@ -21,10 +29,14 @@
 - `pnpm-workspace.yaml` now disables pnpm's automatic package-manager version
   management. The ordinary local/CI `preinstall` boundary still rejects every
   non-exact package manager. A bounded exception accepts pnpm `10.26.0` or
-  newer within major 10 only when execution is in a Replit provider context:
-  `REPL_ID` without the editor-only `REPLIT_DEV_DOMAIN`, or the observed
-  provider Nix Node path without that editor domain. The interactive Replit
-  editor does not receive the exception.
+  newer within major 10 only when execution is in a Replit provider context.
+  Preferred evidence is one of Replit's documented provider/deployment
+  variables or the resolved provider Nix Node path, always without the
+  editor-only `REPLIT_DEV_DOMAIN`. When the security scanner strips those
+  signals, the fallback requires the exact twice-observed provider tuple:
+  `pnpm/10.26.1`, Node `v24.12.0`, Linux `x64`. Adjacent pnpm/Node versions,
+  other platforms, and the interactive Replit editor do not receive the
+  fallback.
 - The compatibility path is pre-build scan input only. `.replit` still invokes
   exact `pnpm@10.34.5`, performs `pnpm install --frozen-lockfile`, and then runs
   the production build. `package.json` still rejects npm through error-level
@@ -34,13 +46,21 @@
   across the exact provider-command simulation.
 - Focused evidence: the deployment-scope suite passes 6/6; the exact Replit
   command shape passes under provider-like pnpm `10.26.1` without self-install
-  recursion or lockfile change; the same unpinned pnpm fails outside Replit;
-  and exact pnpm `10.34.5` frozen install passes. The cumulative Phase 39 gate
+  recursion or lockfile change; and exact pnpm `10.34.5` frozen install passes.
+  A Linux Node 24.12 container accepts the exact stripped-environment scan
+  fingerprint while rejecting pnpm 10.26.2; unit coverage also rejects changed
+  Node versions, architectures, and editor context. The cumulative Phase 39 gate
   passes 14/14 script checks and 13/13 API/preflight checks, scans 1,278 files
   with zero code findings, audits 1,257 dependencies with zero critical and
   zero unresolved high findings, and retains both exact patched-image
   exceptions. Four-target TypeScript, repository ESLint with zero warnings,
   and the optimized production build with 32 generated routes pass.
+- GitHub fail-closed run `32523778218` for `0da3c62` passed clean checkout,
+  pinned install, browser install, and read-only migration planning, then
+  failed in the aggregate release-contract step. Its parity/release artifact
+  upload separately exhausted five GitHub artifact-service retries. This is a
+  distinct non-green CI result and is not evidence that the Replit provider
+  scan or production deployment passed.
 - Public checks after the failed attempt returned `200` from `/readyz` and
   `/api/health` on both root and app hosts, but identify the prior release:
   commit `399f4d2cb64ecf9511d7c82e8066c332c31ac7eb`, build

@@ -27,6 +27,11 @@ be assumed to carry into the deployment.
       Replit's Corepack cache. This avoids the Node 20.20
       `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING` failure before application code
       starts.
+- [ ] The provider-owned pre-build security scan may use its bundled pnpm
+      `10.26.1` under Node `24.12.0`; it must finish the root `preinstall`
+      without package-manager self-install recursion and then proceed to the
+      checked-in `.replit` build. The deployment build must still switch to the
+      exact pnpm `10.34.5` frozen install above.
 - [ ] `APP_ENV=production` and `NODE_ENV=production` in the deployment
       environment.
 - [ ] `DATABASE_URL` points to the production PostgreSQL authority.

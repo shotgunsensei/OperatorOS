@@ -36,7 +36,9 @@ build = ["bash", "npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen
   importer: "$excludedDependencyLockPattern = 'lock'\ndependency lockfile excluded from non-installable historical snapshot",
   packageManagerEnforcer: `const REQUIRED_PNPM_VERSION = '10.34.5';
 const MINIMUM_REPLIT_PROVIDER_PNPM_VERSION = '10.26.0';
-const REPL_ID = 'bounded'; const REPLIT_DEV_DOMAIN = 'editor-only';
+const OBSERVED_REPLIT_SECURITY_SCAN = { pnpmVersion: '10.26.1', nodeVersion: 'v24.12.0', platform: 'linux', arch: 'x64' };
+const REPLIT_PROVIDER_ENVIRONMENT_KEYS = ['REPL_ID', 'REPLIT_DEPLOYMENT'];
+const REPLIT_DEV_DOMAIN = 'editor-only';
 const providerNode = '/nix/store/provider-node/bin/node';
 const mode = 'replit-provider-scan';
 corepack pnpm install --frozen-lockfile`,
@@ -70,20 +72,44 @@ test('package-manager enforcement keeps exact pnpm authoritative and bounds the 
   assert.equal(evaluatePackageManager('').pass, false);
 });
 
-test('Replit provider detection excludes the interactive editor', () => {
+test('Replit provider detection uses provider evidence and excludes the interactive editor', () => {
   assert.equal(isReplitProviderInstallEnvironment({ REPL_ID: 'provider-build' }), true);
+  assert.equal(isReplitProviderInstallEnvironment({ REPLIT_DEPLOYMENT: '1' }), true);
   assert.equal(isReplitProviderInstallEnvironment({}, {
     platform: 'linux',
     execPath: '/nix/store/provider-node/bin/node',
   }), true);
+  const scanRuntime = {
+    platform: 'linux',
+    arch: 'x64',
+    execPath: '/usr/local/bin/node',
+    nodeVersion: 'v24.12.0',
+  };
+  const scanUserAgent = 'pnpm/10.26.1 npm/? node/v24.12.0 linux x64';
+  assert.equal(isReplitProviderInstallEnvironment({}, scanRuntime, scanUserAgent), true);
+  assert.equal(isReplitProviderInstallEnvironment(
+    {},
+    scanRuntime,
+    'pnpm/10.26.2 npm/? node/v24.12.0 linux x64',
+  ), false);
+  assert.equal(isReplitProviderInstallEnvironment({}, {
+    ...scanRuntime,
+    nodeVersion: 'v24.12.1',
+  }, scanUserAgent), false);
+  assert.equal(isReplitProviderInstallEnvironment({}, {
+    ...scanRuntime,
+    arch: 'arm64',
+  }, scanUserAgent), false);
   assert.equal(isReplitProviderInstallEnvironment({
     REPL_ID: 'interactive-editor',
     REPLIT_DEV_DOMAIN: 'example.replit.dev',
   }), false);
   assert.equal(isReplitProviderInstallEnvironment({ REPLIT_DEV_DOMAIN: 'example.replit.dev' }, {
     platform: 'linux',
+    arch: 'x64',
     execPath: '/nix/store/editor-node/bin/node',
-  }), false);
+    nodeVersion: 'v24.12.0',
+  }, scanUserAgent), false);
   assert.equal(isReplitProviderInstallEnvironment({}), false);
 });
 

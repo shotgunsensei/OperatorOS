@@ -4,11 +4,14 @@
 
 Verdict: **PUBLISH FAILED BEFORE BUILD — PRIOR V54 RELEASE STILL LIVE**.
 
-Replit deployment `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` attempted GitHub
-main's empty `9cb875e` publication marker, whose tree matches source-bearing
-v55 parent `9f48a03`, but failed while provider pnpm recursively self-installed
-during the publish security scan. No repository build, database
-apply, runtime start, or deployed browser test ran. Subsequent public root/app
+Replit deployment `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` first attempted
+GitHub main's empty `9cb875e` publication marker, whose tree matches
+source-bearing v55 parent `9f48a03`, but failed while provider pnpm recursively
+self-installed during the publish security scan. After source repair `0da3c62`,
+build `ddc1c1f3` completed package resolution/installation without recursion
+and then failed at the root `preinstall` because the stripped scan environment
+did not match the initial provider predicate. No repository build, database
+apply, runtime start, or deployed browser test ran in either attempt. Subsequent public root/app
 `/readyz` and `/api/health` checks returned 200 and identified the still-live
 commit `399f4d2`, build `e15147cfd811c794a780887f`, and database release v54.
 The source hotfix prevents provider self-install recursion while retaining the

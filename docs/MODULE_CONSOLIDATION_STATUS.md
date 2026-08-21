@@ -5,12 +5,14 @@ Baseline refreshed: 2026-08-08
 ## Current Replit publish-scan overlay — 2026-08-21
 
 GitHub main's empty Replit marker `9cb875e` (same tree as source-bearing parent
-`9f48a03`) did not become production-live: deployment `0a34bd3d` failed in its
-provider security-scan dependency install before the repository build or
-release-v55 apply. The provider pnpm
-self-install recursed under Nix Node 24.12.0 until worker-thread creation
-failed. The source hotfix disables pnpm self-version management, permits only a
-bounded Replit provider pnpm 10.26+ major-10 scan path, and preserves the exact
+`9f48a03`) did not become production-live: deployment `0a34bd3d` first failed
+when provider pnpm recursively self-installed, then build `ddc1c1f3` proved
+that recursion was closed but failed at the source `preinstall` because the
+security scanner stripped the initially recognized environment signals. Both
+attempts stopped before the repository build or release-v55 apply. The
+follow-up source hotfix adds an exact pnpm 10.26.1 / Node 24.12.0 / Linux x64
+fallback for that stripped provider container, permits only a bounded Replit
+provider pnpm 10.26+ major-10 scan path, and preserves the exact
 10.34.5 frozen deployment build plus all alternate-lock controls. Focused,
 hardening, type, lint, and production-build gates pass locally. Production
 continues to identify commit `399f4d2`, build `e15147cfd811c794a780887f`, and

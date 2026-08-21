@@ -4,11 +4,13 @@
 
 All module parity states remain unchanged. GitHub main's empty Replit marker
 `9cb875e` (same tree as source-bearing parent `9f48a03`) did not become
-production-live because deployment `0a34bd3d` failed during its
+production-live because deployment `0a34bd3d` failed twice during its
 provider-owned direct pnpm install, before the repository build or release-v55
-apply. The provider package-manager self-install recursed until Nix Node 24.12
-could not create another worker thread. The source hotfix prevents that
-self-bootstrap, accepts only a bounded Replit provider pnpm 10.26+ major-10
+apply. The first build recursed in package-manager self-install; build
+`ddc1c1f3` proved recursion closed and then exposed a stripped-environment
+`preinstall` detection gap. The follow-up accepts the exact observed pnpm
+10.26.1 / Node 24.12.0 / Linux x64 scanner fallback and retains the bounded
+Replit provider pnpm 10.26+ major-10
 scan path, and preserves exact pnpm 10.34.5 plus the frozen sole-root-lock
 deployment build. Local hardening, type, lint, and optimized build gates pass;
 production still identifies `399f4d2` / database v54. Republish, exact release

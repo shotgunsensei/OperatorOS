@@ -4,9 +4,12 @@
 
 No module readiness state changes. GitHub main's empty Replit marker `9cb875e`
 (same tree as source-bearing parent `9f48a03`) reached deployment `0a34bd3d`,
-which failed in the provider security-scan install before the OperatorOS build,
-release-v55 apply, or any module/runtime acceptance. The
-bounded pnpm provider-scan hotfix passes locally and preserves exact pnpm
+whose first build recursed during provider pnpm self-install. Follow-up build
+`ddc1c1f3` proved recursion closed and then failed at the root `preinstall`
+because the security scanner stripped the initially recognized Replit signals.
+Both attempts stopped before the OperatorOS build, release-v55 apply, or any
+module/runtime acceptance. The exact stripped-toolchain fallback and bounded
+pnpm provider-scan hotfix pass locally and preserve exact pnpm
 10.34.5 frozen release authority. Public root/app readiness remains 200 on the
 prior `399f4d2` / database-v54 release. Republish, exact release
 identity, v55 backup/apply, cross-host auth, and deployed module/browser gates

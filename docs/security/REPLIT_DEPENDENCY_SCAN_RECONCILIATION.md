@@ -2,8 +2,7 @@
 
 ## Status
 
-**SOURCE/LOCAL VERIFIED; GITHUB-SYNCHRONIZED HOTFIX TARGET; REPLIT REPUBLISH
-PENDING.** The supplied Replit Basic
+**SOURCE/LOCAL VERIFIED; REPLIT REPUBLISH PENDING.** The supplied Replit Basic
 Checks report contained 35 rows representing 23 unique package/version pairs.
 The findings were reconciled against every tracked dependency lock and the
 actual Replit deployment path. Most rows came from an obsolete root
@@ -28,13 +27,25 @@ Nix Node 24.12.0; provider pnpm recursively attempted to install pinned
 `pnpm@10.34.5` through nested `pnpm add pnpm@10.34.5` calls until Node could
 not create another worker thread.
 
+After source repair `0da3c627947979f85d40588b6a13362e7450a262` reached
+GitHub main, Replit retried the same deployment as build
+`ddc1c1f3-1299-49d7-a5df-64a8d995d191`. Resolution completed from the root
+lock, package installation completed, and recursion did not recur. The root
+`preinstall` then rejected `pnpm/10.26.1` because this security-scan container
+did not expose either initially recognized Replit signal. This second failure
+is the local package-manager gate, not a dependency resolution, application
+build, runtime, migration, or health-check failure.
+
 The workspace now sets `managePackageManagerVersions: false`, preventing that
 recursive provider bootstrap. Exact pnpm 10.34.5 remains mandatory everywhere
 except a bounded Replit pre-build provider context. There, pnpm 10.26.0 or a
 newer version within major 10 may perform the ephemeral scan install. The
-exception requires either Replit's documented `REPL_ID` without its
-editor-only `REPLIT_DEV_DOMAIN`, or the observed Linux `/nix/store/` Node path
-without that editor domain. `.replit` subsequently reinstalls the sole graph
+exception prefers Replit's documented provider/deployment variables or the
+observed Linux `/nix/store/` Node path, without the editor-only
+`REPLIT_DEV_DOMAIN`. Because the provider security scan may strip those
+signals, a fallback accepts only its exact observed `pnpm/10.26.1` + Node
+`v24.12.0` + Linux `x64` tuple. It rejects adjacent pnpm and Node versions,
+other architectures/platforms, and editor context. `.replit` subsequently reinstalls the sole graph
 with explicit pnpm 10.34.5 and `--frozen-lockfile`; npm remains rejected by
 `devEngines`, and ignored/alternate locks remain fail-closed inputs.
 
@@ -42,10 +53,14 @@ Local reproduction used provider-like pnpm 10.26.1. The exact Replit
 `pnpm install` command shape completed without recursive self-install and left
 the root lock hash unchanged at
 `5b72b16f727bd8852868b7d9af9e5598ee5f1b861da0afc1d66fc2265f20c6f7`.
-The same version remained rejected outside the provider context, while exact
-10.34.5 frozen install passed. Phase 39 passed 14/14 scripts and 13/13
-API/preflight checks; TypeScript, ESLint, and the 32-route optimized production
-build passed. This proves the hotfix source locally, not Replit acceptance.
+The same version remains rejected outside a recognized provider context unless
+the complete stripped-environment toolchain fingerprint matches. An actual
+Linux Node 24.12 container accepts the exact fingerprint and rejects pnpm
+10.26.2; unit coverage also rejects a changed Node patch, architecture, and
+editor context. Exact 10.34.5 frozen install passed. Phase 39 passed 14/14
+scripts and 13/13 API/preflight checks; TypeScript, ESLint, and the 32-route
+optimized production build passed. This proves the hotfix source locally, not
+Replit acceptance.
 
 Both public hosts remained healthy after the failed attempt, but `/readyz`
 identified commit `399f4d2cb64ecf9511d7c82e8066c332c31ac7eb`, build
