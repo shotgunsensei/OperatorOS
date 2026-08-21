@@ -164,6 +164,14 @@ Open each host in a fresh (logged-out) browser and confirm:
 
 ## Troubleshooting
 
+- **Publish security scan stops in Node `WorkerThreadsTaskRunner` with
+  `uv_thread_create` and repeats `pnpm add pnpm@10.34.5`** — confirm
+  `pnpm-workspace.yaml` retains `managePackageManagerVersions: false` and the
+  deployment-scope gate passes. Replit's direct pre-build scan may use its
+  provider pnpm only through the bounded provider-context exception; the
+  checked-in deployment build must still reinstall explicit pnpm 10.34.5 with
+  `--frozen-lockfile`. Do not remove the `packageManager`, `devEngines`,
+  preinstall, sole-lock, or frozen-build controls to make the scan pass.
 - **Build stops in `.cache/node/corepack/.../pnpm.cjs` with
   `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING`** — confirm the deployed `.replit`
   build command matches source: it must install with

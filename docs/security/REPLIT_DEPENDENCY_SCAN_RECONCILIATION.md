@@ -2,7 +2,8 @@
 
 ## Status
 
-**SOURCE/LOCAL VERIFIED; REPLIT RESCAN PENDING.** The supplied Replit Basic
+**SOURCE/LOCAL VERIFIED; GITHUB-SYNCHRONIZED HOTFIX TARGET; REPLIT REPUBLISH
+PENDING.** The supplied Replit Basic
 Checks report contained 35 rows representing 23 unique package/version pairs.
 The findings were reconciled against every tracked dependency lock and the
 actual Replit deployment path. Most rows came from an obsolete root
@@ -13,6 +14,45 @@ The obsolete npm lock and ten historical source-snapshot pnpm locks have been
 removed from the current tree. They remain recoverable from Git history. The
 source code and provenance needed for migration, audit, and historical
 reference remain in place.
+
+## Replit publish-scan runtime recursion — 2026-08-21
+
+GitHub `main` had advanced to Replit's empty publication-marker commit
+`9cb875ef9e1430500df69753ac466173457bb75d` when Replit started deployment
+`0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` / build
+`e60c962d-76da-4817-a888-a220195bdf4f`. The attempt did not reach the
+repository's `.replit` build. The empty marker's tree is identical to
+source-bearing parent `9f48a036e2ac55bcf748d98bef54d42c12801c4f`.
+Replit's provider-owned publish security scan ran direct `pnpm install` with
+Nix Node 24.12.0; provider pnpm recursively attempted to install pinned
+`pnpm@10.34.5` through nested `pnpm add pnpm@10.34.5` calls until Node could
+not create another worker thread.
+
+The workspace now sets `managePackageManagerVersions: false`, preventing that
+recursive provider bootstrap. Exact pnpm 10.34.5 remains mandatory everywhere
+except a bounded Replit pre-build provider context. There, pnpm 10.26.0 or a
+newer version within major 10 may perform the ephemeral scan install. The
+exception requires either Replit's documented `REPL_ID` without its
+editor-only `REPLIT_DEV_DOMAIN`, or the observed Linux `/nix/store/` Node path
+without that editor domain. `.replit` subsequently reinstalls the sole graph
+with explicit pnpm 10.34.5 and `--frozen-lockfile`; npm remains rejected by
+`devEngines`, and ignored/alternate locks remain fail-closed inputs.
+
+Local reproduction used provider-like pnpm 10.26.1. The exact Replit
+`pnpm install` command shape completed without recursive self-install and left
+the root lock hash unchanged at
+`5b72b16f727bd8852868b7d9af9e5598ee5f1b861da0afc1d66fc2265f20c6f7`.
+The same version remained rejected outside the provider context, while exact
+10.34.5 frozen install passed. Phase 39 passed 14/14 scripts and 13/13
+API/preflight checks; TypeScript, ESLint, and the 32-route optimized production
+build passed. This proves the hotfix source locally, not Replit acceptance.
+
+Both public hosts remained healthy after the failed attempt, but `/readyz`
+identified commit `399f4d2cb64ecf9511d7c82e8066c332c31ac7eb`, build
+`e15147cfd811c794a780887f`, and database release v54. The v55 main candidate
+was not made production-live. A new exact-commit publish, provider rescan,
+release identity check, production backup/apply, and deployed browser gates
+remain required.
 
 ## PR #83 frozen-install correction — 2026-08-21
 
@@ -47,7 +87,8 @@ the Git-visible inventory. It inspects root files and historical
 without recursively traversing executable `node_modules` or build output. A
 controlled ignored root `package-lock.json` failed the gate, and a real npm
 11.13.0 install failed with `EBADDEVENGINES` without creating the lock. The
-follow-up commit, push, and PR #84 check rerun remain open.
+follow-up was merged through PR #84; the first Replit publish of the resulting
+main candidate exposed the provider recursion above.
 
 The GitHub release run against the older `015ebe9ed7` head confirms that the
 original frozen-install blocker is closed: install, Phase 39 hardening,
@@ -115,15 +156,16 @@ dependency roots in this table.
   continues to disclose the two exact patched `image-size` highs.
 - Phase 39 security scan: 1,278 files, 0 findings, 1,257 dependencies, scope
   gate pass.
-- Phase 39 script tests, including package-manager enforcement, deployment
-  scope, scanner controls, both patched image regressions, budgets, and SBOM
-  stability: 13/13 pass.
+- Phase 39 script tests, including package-manager enforcement, the bounded
+  Replit provider path, deployment scope, scanner controls, both patched image
+  regressions, budgets, and SBOM stability: 14/14 pass.
 - Phase 39 API/preflight hardening tests: 13/13 pass.
 - Source-snapshot provenance and Replit runtime tests: 13/13 pass.
 - TypeScript, ESLint, and the production build: pass.
 
 These results prove the source/local candidate tree. They do not mark Replit's
-provider-owned findings resolved. After merge and republish, Replit must rescan
-the exact candidate commit. A version-only scanner may continue to display
-`image-size@1.2.1`; if so, the local patch and regression evidence must be
-reviewed rather than replacing it with `2.0.2`, which is also affected.
+provider-owned findings resolved. After the GitHub-synchronized hotfix is
+republished, Replit must rescan the exact candidate commit. A version-only scanner may
+continue to display `image-size@1.2.1`; if so, the local patch and regression
+evidence must be reviewed rather than replacing it with `2.0.2`, which is also
+affected.

@@ -1,5 +1,17 @@
 # Cross-module readiness report
 
+## Replit publish-scan overlay (2026-08-21)
+
+No module readiness state changes. GitHub main's empty Replit marker `9cb875e`
+(same tree as source-bearing parent `9f48a03`) reached deployment `0a34bd3d`,
+which failed in the provider security-scan install before the OperatorOS build,
+release-v55 apply, or any module/runtime acceptance. The
+bounded pnpm provider-scan hotfix passes locally and preserves exact pnpm
+10.34.5 frozen release authority. Public root/app readiness remains 200 on the
+prior `399f4d2` / database-v54 release. Republish, exact release
+identity, v55 backup/apply, cross-host auth, and deployed module/browser gates
+remain open.
+
 ## Release v55 tenant invitation consent overlay (2026-08-20)
 
 OperatorOS remains the sole identity, session, tenant, membership, role, and

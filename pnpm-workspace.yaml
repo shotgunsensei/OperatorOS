@@ -1,6 +1,13 @@
 packages:
   - "apps/*"
   - "packages/*"
+# Replit's provider-owned publish scan invokes its bundled pnpm before the
+# checked-in deployment build. Let that process use the provider binary instead
+# of recursively self-installing the packageManager version until the container
+# exhausts its Node worker-thread limit. Local/CI installs remain exact-version
+# enforced by preinstall, and .replit still performs the authoritative frozen
+# install with pnpm@10.34.5 before building.
+managePackageManagerVersions: false
 allowBuilds:
   bufferutil: true
   esbuild: true

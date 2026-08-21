@@ -84,6 +84,9 @@ export function evaluateDeploymentScope({ files, gitignore, npmrc = '', replit, 
     || packageManagerEngine?.onFail !== 'error') {
     issues.push('devEngines.packageManager must reject npm before install and pin pnpm 10.34.5');
   }
+  if (!/^managePackageManagerVersions:\s*false\s*$/m.test(workspace)) {
+    issues.push('pnpm must disable recursive package-manager self-install before the Replit provider scan');
+  }
   if (/apps\/modules\/(?:\*|[^\s"']+)\/source/.test(workspace)) {
     issues.push('historical module source is included in the pnpm workspace');
   }
@@ -105,6 +108,13 @@ export function evaluateDeploymentScope({ files, gitignore, npmrc = '', replit, 
   if (!/REQUIRED_PNPM_VERSION\s*=\s*['"]10\.34\.5['"]/.test(packageManagerEnforcer)
     || !/corepack pnpm install --frozen-lockfile/.test(packageManagerEnforcer)) {
     issues.push('package-manager enforcement does not require the pinned frozen pnpm install');
+  }
+  if (!/MINIMUM_REPLIT_PROVIDER_PNPM_VERSION\s*=\s*['"]10\.26\.0['"]/.test(packageManagerEnforcer)
+    || !/REPL_ID/.test(packageManagerEnforcer)
+    || !/REPLIT_DEV_DOMAIN/.test(packageManagerEnforcer)
+    || !/nix\/store/.test(packageManagerEnforcer)
+    || !/replit-provider-scan/.test(packageManagerEnforcer)) {
+    issues.push('package-manager enforcement does not bound the Replit provider-scan compatibility path');
   }
 
   if (!/\$excludedDependencyLockPattern\s*=/.test(importer)

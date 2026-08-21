@@ -1,5 +1,56 @@
 # OperatorOS implementation status
 
+## Replit publish-scan pnpm recursion repair - SOURCE/LOCAL VERIFIED / GITHUB SYNC TARGET / REPUBLISH PENDING (2026-08-21)
+
+- GitHub `main` had advanced to Replit's empty publication-marker commit
+  `9cb875ef9e1430500df69753ac466173457bb75d` when Replit attempted deployment
+  `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` / build
+  `e60c962d-76da-4817-a888-a220195bdf4f`. Replit failed during its
+  provider-owned **Running Security Scan -> Installing packages -> pnpm
+  install** stage, before the checked-in deployment build, release-v55
+  database apply, runtime supervisor, or health checks ran. The marker has no
+  file diff; its tree is identical to source-bearing parent
+  `9f48a036e2ac55bcf748d98bef54d42c12801c4f`.
+- The provider used Nix Node `24.12.0` even though `.replit` requests
+  `nodejs-20`. Its bundled pnpm recursively invoked `pnpm add pnpm@10.34.5` to
+  self-install the root `packageManager` version. The nested process chain
+  exhausted the container's worker-thread/process allowance and terminated at
+  Node's `uv_thread_create` assertion. The repeated pnpm errors are the
+  recursive call stack unwinding; they are not dependency, lockfile, OperatorOS
+  build, or application-runtime failures.
+- `pnpm-workspace.yaml` now disables pnpm's automatic package-manager version
+  management. The ordinary local/CI `preinstall` boundary still rejects every
+  non-exact package manager. A bounded exception accepts pnpm `10.26.0` or
+  newer within major 10 only when execution is in a Replit provider context:
+  `REPL_ID` without the editor-only `REPLIT_DEV_DOMAIN`, or the observed
+  provider Nix Node path without that editor domain. The interactive Replit
+  editor does not receive the exception.
+- The compatibility path is pre-build scan input only. `.replit` still invokes
+  exact `pnpm@10.34.5`, performs `pnpm install --frozen-lockfile`, and then runs
+  the production build. `package.json` still rejects npm through error-level
+  `devEngines`; alternate/ignored locks still fail the deployment-scope gate;
+  and the sole root lock hash remained
+  `5b72b16f727bd8852868b7d9af9e5598ee5f1b861da0afc1d66fc2265f20c6f7`
+  across the exact provider-command simulation.
+- Focused evidence: the deployment-scope suite passes 6/6; the exact Replit
+  command shape passes under provider-like pnpm `10.26.1` without self-install
+  recursion or lockfile change; the same unpinned pnpm fails outside Replit;
+  and exact pnpm `10.34.5` frozen install passes. The cumulative Phase 39 gate
+  passes 14/14 script checks and 13/13 API/preflight checks, scans 1,278 files
+  with zero code findings, audits 1,257 dependencies with zero critical and
+  zero unresolved high findings, and retains both exact patched-image
+  exceptions. Four-target TypeScript, repository ESLint with zero warnings,
+  and the optimized production build with 32 generated routes pass.
+- Public checks after the failed attempt returned `200` from `/readyz` and
+  `/api/health` on both root and app hosts, but identify the prior release:
+  commit `399f4d2cb64ecf9511d7c82e8066c332c31ac7eb`, build
+  `e15147cfd811c794a780887f`, and database release v54. Therefore production
+  stayed available and was not partially upgraded. This repair is not live;
+  after GitHub synchronization it requires a new Replit publish from the exact
+  hotfix commit, provider scan/build completion, v55 backup/apply evidence,
+  exact release-identity confirmation, and deployed invitation/browser
+  acceptance.
+
 ## Replit dependency scope and historical-source quarantine - SOURCE/LOCAL VERIFIED / REPLIT RESCAN PENDING (2026-08-20)
 
 - PR #84 automated review correctly found that npm writes `package-lock.json`
@@ -9,8 +60,10 @@
   npm 11.13.0 install fail with `EBADDEVENGINES` without creating the lock. The
   deployment-scope gate also performs a bounded filesystem scan of root files
   and historical source trees, so an ignored alternate lock fails closed even
-  when the client does not honor `devEngines`. Local correction is verified;
-  follow-up commit, push, and PR #84 rerun remain open.
+  when the client does not honor `devEngines`. The follow-up was merged through
+  PR #84 at source commit `9f48a03`; Replit's later empty `9cb875e`
+  publication marker changed no files, and the subsequent publish attempt
+  failed in the provider pnpm recursion described above.
 
 - The completed GitHub run on the older PR #84 head proves the PR #83 frozen
   install defect is closed: dependency install, Phase 39 hardening, typecheck,
@@ -27,8 +80,8 @@
   test ran. The `.npmrc` setting is removed and replaced by a portable Node
   `preinstall` hook that accepts only pnpm `10.34.5`; the exact frozen install
   passes locally with `pnpm-lock.yaml` current. That correction was pushed as
-  PR #84 commit `015ebe9ed7`; the review follow-up described above remains
-  local.
+  PR #84 commit `015ebe9ed7`; the ignored-lock review follow-up was subsequently
+  merged to `main` through PR #84.
 
 - The 35 supplied Replit Basic Checks rows were reconciled to 23 unique
   package/version pairs across every tracked dependency lock. The deployable
@@ -66,12 +119,14 @@
   the Phase 39 scan over 1,278 files and 1,257 dependencies with 0 code
   findings, 0 critical, 0 unresolved high, and both exact patched-image
   exceptions intact; TypeScript; ESLint; and the optimized production build.
-- Git merge/push, Replit publish, and provider rescan were not performed. The
-  supplied Replit rows remain provider-status unresolved until an exact
-  candidate commit is published and rescanned. A version-only scan may retain
-  `image-size@1.2.1`; the in-repository patch and executable regressions are the
-  current mitigation because `2.0.2` is affected as well. Full reconciliation
-  is recorded in `docs/security/REPLIT_DEPENDENCY_SCAN_RECONCILIATION.md`.
+- The dependency-scope work is merged and pushed. The first Replit publish of
+  that main candidate failed before its dependency rescan or repository build
+  could complete, so the supplied rows remain provider-status unresolved until
+  the GitHub-synchronized hotfix is published and rescanned. A version-only scan
+  may retain `image-size@1.2.1`; the in-repository patch and executable
+  regressions are the current mitigation because `2.0.2` is affected as well.
+  Full reconciliation is recorded in
+  `docs/security/REPLIT_DEPENDENCY_SCAN_RECONCILIATION.md`.
 
 ## Tenant invitation consent and default workspace - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-20)
 

@@ -9,7 +9,10 @@ import {
   inspectDeploymentScope,
   isDependencyLockfile,
 } from '../verify-deployment-scope.mjs';
-import { evaluatePackageManager } from '../enforce-pnpm.mjs';
+import {
+  evaluatePackageManager,
+  isReplitProviderInstallEnvironment,
+} from '../enforce-pnpm.mjs';
 
 const compliantFixture = {
   files: ['package.json', 'pnpm-lock.yaml', 'apps/modules/example/source/package.json'],
@@ -29,9 +32,14 @@ externalPort = 80
 [deployment]
 run = ["node", "scripts/start-unified-runtime.mjs"]
 build = ["bash", "npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen-lockfile"]`,
-  workspace: 'packages:\n  - apps/*\n  - packages/*\n',
+  workspace: 'packages:\n  - apps/*\n  - packages/*\nmanagePackageManagerVersions: false\n',
   importer: "$excludedDependencyLockPattern = 'lock'\ndependency lockfile excluded from non-installable historical snapshot",
-  packageManagerEnforcer: "const REQUIRED_PNPM_VERSION = '10.34.5'; corepack pnpm install --frozen-lockfile",
+  packageManagerEnforcer: `const REQUIRED_PNPM_VERSION = '10.34.5';
+const MINIMUM_REPLIT_PROVIDER_PNPM_VERSION = '10.26.0';
+const REPL_ID = 'bounded'; const REPLIT_DEV_DOMAIN = 'editor-only';
+const providerNode = '/nix/store/provider-node/bin/node';
+const mode = 'replit-provider-scan';
+corepack pnpm install --frozen-lockfile`,
   packageJson: {
     packageManager: 'pnpm@10.34.5',
     devEngines: {
@@ -41,11 +49,42 @@ build = ["bash", "npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen
   },
 };
 
-test('package-manager enforcement accepts only the pinned pnpm lifecycle', () => {
-  assert.equal(evaluatePackageManager('pnpm/10.34.5 npm/? node/v24.16.0 win32 x64').pass, true);
-  assert.equal(evaluatePackageManager('pnpm/10.34.4 npm/? node/v24.16.0 win32 x64').pass, false);
+test('package-manager enforcement keeps exact pnpm authoritative and bounds the Replit scan exception', () => {
+  const exact = evaluatePackageManager('pnpm/10.34.5 npm/? node/v24.16.0 win32 x64');
+  assert.equal(exact.pass, true);
+  assert.equal(exact.mode, 'pinned');
+  assert.equal(evaluatePackageManager('pnpm/10.26.1 npm/? node/v24.12.0 linux x64').pass, false);
+  assert.equal(evaluatePackageManager(
+    'pnpm/10.26.1 npm/? node/v24.12.0 linux x64',
+    { allowReplitProviderVersion: true },
+  ).mode, 'replit-provider-scan');
+  assert.equal(evaluatePackageManager(
+    'pnpm/10.25.0 npm/? node/v24.12.0 linux x64',
+    { allowReplitProviderVersion: true },
+  ).pass, false);
+  assert.equal(evaluatePackageManager(
+    'pnpm/11.0.0 npm/? node/v24.12.0 linux x64',
+    { allowReplitProviderVersion: true },
+  ).pass, false);
   assert.equal(evaluatePackageManager('npm/11.6.2 node/v24.16.0 win32 x64').pass, false);
   assert.equal(evaluatePackageManager('').pass, false);
+});
+
+test('Replit provider detection excludes the interactive editor', () => {
+  assert.equal(isReplitProviderInstallEnvironment({ REPL_ID: 'provider-build' }), true);
+  assert.equal(isReplitProviderInstallEnvironment({}, {
+    platform: 'linux',
+    execPath: '/nix/store/provider-node/bin/node',
+  }), true);
+  assert.equal(isReplitProviderInstallEnvironment({
+    REPL_ID: 'interactive-editor',
+    REPLIT_DEV_DOMAIN: 'example.replit.dev',
+  }), false);
+  assert.equal(isReplitProviderInstallEnvironment({ REPLIT_DEV_DOMAIN: 'example.replit.dev' }, {
+    platform: 'linux',
+    execPath: '/nix/store/editor-node/bin/node',
+  }), false);
+  assert.equal(isReplitProviderInstallEnvironment({}), false);
 });
 
 test('dependency lock classifier recognizes duplicate historical lock names', () => {
