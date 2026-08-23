@@ -64,8 +64,12 @@ export function isReplitProviderInstallEnvironment(
       && runtime.nodeVersion === toolchain.nodeVersion
       && new RegExp(`^pnpm/${escapedPnpmVersion}(?:\\s|$)`).test(String(userAgent).trim());
   });
-  return developmentDomain.length === 0
-    && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain);
+  const strippedProviderSecurityScan = observedSecurityScanToolchain
+    && !replitEnvironmentSignal
+    && !providerNixNode;
+  return (developmentDomain.length === 0
+    && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain))
+    || strippedProviderSecurityScan;
 }
 
 export function evaluatePackageManager(userAgent = '', { allowReplitProviderVersion = false } = {}) {
