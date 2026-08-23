@@ -87,6 +87,10 @@ test('Replit provider detection uses provider evidence and excludes the interact
   };
   const scanUserAgent = 'pnpm/10.26.1 npm/? node/v24.12.0 linux x64';
   assert.equal(isReplitProviderInstallEnvironment({}, scanRuntime, scanUserAgent), true);
+  assert.equal(isReplitProviderInstallEnvironment({}, {
+    ...scanRuntime,
+    nodeVersion: 'v20.20.0',
+  }, 'pnpm/10.26.1 npm/? node/v20.20.0 linux x64'), true);
   assert.equal(isReplitProviderInstallEnvironment(
     {},
     scanRuntime,
@@ -110,7 +114,12 @@ test('Replit provider detection uses provider evidence and excludes the interact
     execPath: '/nix/store/editor-node/bin/node',
     nodeVersion: 'v24.12.0',
   }, scanUserAgent), false);
-  assert.equal(isReplitProviderInstallEnvironment({}), false);
+  assert.equal(isReplitProviderInstallEnvironment({}, {
+    platform: 'linux',
+    arch: 'x64',
+    execPath: '/usr/local/bin/node',
+    nodeVersion: 'v20.20.0',
+  }, ''), false);
 });
 
 test('dependency lock classifier recognizes duplicate historical lock names', () => {

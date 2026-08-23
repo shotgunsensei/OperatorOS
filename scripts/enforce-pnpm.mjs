@@ -9,6 +9,16 @@ export const OBSERVED_REPLIT_SECURITY_SCAN = Object.freeze({
   platform: 'linux',
   arch: 'x64',
 });
+export const CURRENT_REPLIT_SECURITY_SCAN = Object.freeze({
+  pnpmVersion: '10.26.1',
+  nodeVersion: 'v20.20.0',
+  platform: 'linux',
+  arch: 'x64',
+});
+export const REPLIT_SECURITY_SCAN_TOOLCHAINS = Object.freeze([
+  OBSERVED_REPLIT_SECURITY_SCAN,
+  CURRENT_REPLIT_SECURITY_SCAN,
+]);
 export const REPLIT_PROVIDER_ENVIRONMENT_KEYS = Object.freeze([
   'REPL_ID',
   'REPL_OWNER',
@@ -47,11 +57,13 @@ export function isReplitProviderInstallEnvironment(
   );
   const providerNixNode = runtime.platform === 'linux'
     && String(runtime.execPath ?? '').startsWith('/nix/store/');
-  const escapedObservedPnpmVersion = OBSERVED_REPLIT_SECURITY_SCAN.pnpmVersion.replaceAll('.', '\\.');
-  const observedSecurityScanToolchain = runtime.platform === OBSERVED_REPLIT_SECURITY_SCAN.platform
-    && runtime.arch === OBSERVED_REPLIT_SECURITY_SCAN.arch
-    && runtime.nodeVersion === OBSERVED_REPLIT_SECURITY_SCAN.nodeVersion
-    && new RegExp(`^pnpm/${escapedObservedPnpmVersion}(?:\\s|$)`).test(String(userAgent).trim());
+  const observedSecurityScanToolchain = REPLIT_SECURITY_SCAN_TOOLCHAINS.some((toolchain) => {
+    const escapedPnpmVersion = toolchain.pnpmVersion.replaceAll('.', '\\.');
+    return runtime.platform === toolchain.platform
+      && runtime.arch === toolchain.arch
+      && runtime.nodeVersion === toolchain.nodeVersion
+      && new RegExp(`^pnpm/${escapedPnpmVersion}(?:\\s|$)`).test(String(userAgent).trim());
+  });
   return developmentDomain.length === 0
     && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain);
 }
