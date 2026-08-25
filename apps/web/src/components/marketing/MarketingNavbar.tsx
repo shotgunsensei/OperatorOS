@@ -31,7 +31,8 @@ const NAV_LINKS: NavLink[] = [
  *   - Signed in   -> "Open console" (-> /app)
  *   - Signed out  -> "Sign in" + "Launch OperatorOS"
  *
- * Mobile (< 768px): collapses links into a hamburger drawer.
+ * Compact/tablet (< 1024px): collapses links into a hamburger drawer so the
+ * complete navigation never overflows an intermediate-width viewport.
  */
 export default function MarketingNavbar() {
   const { user, loading } = useAuth();
@@ -105,11 +106,11 @@ export default function MarketingNavbar() {
           border-color: var(--brand-border-strong);
           background: var(--brand-bg-glass-hover);
         }
-        @media (max-width: 767px) {
+        @media (max-width: 1023px) {
           .operatoros-nav-desktop { display: none !important; }
           .operatoros-nav-mobile-toggle { display: inline-flex !important; }
         }
-        @media (min-width: 768px) {
+        @media (min-width: 1024px) {
           .operatoros-nav-mobile-drawer { display: none !important; }
           .operatoros-nav-mobile-toggle { display: none !important; }
         }

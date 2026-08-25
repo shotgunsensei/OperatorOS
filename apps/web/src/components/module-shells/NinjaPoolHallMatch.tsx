@@ -49,7 +49,15 @@ import {
   rerackAndBreak,
 } from '@/lib/ninja-pool-hall/rules';
 import { chooseBotShot, createSeededRandom } from '@/lib/ninja-pool-hall/bot';
-import { sfxClack, sfxCue, sfxLose, sfxPocket, sfxWin, unlockAudio, vibrate } from '@/lib/ninja-pool-hall/audio';
+import {
+  sfxClack,
+  sfxCue,
+  sfxLose,
+  sfxPocket,
+  sfxWin,
+  unlockAudio,
+  vibrate,
+} from '@/lib/ninja-pool-hall/audio';
 import type { Ball, GameState, Shot, Vec2 } from '@/lib/ninja-pool-hall/types';
 import { visualQualityProfile } from '@/lib/ninja-pool-hall/performance';
 
@@ -60,9 +68,22 @@ interface Props {
 }
 
 const BALL_COLORS: Record<number, string> = {
-  0: '#f8fafc', 1: '#facc15', 2: '#2563eb', 3: '#dc2626', 4: '#7c3aed',
-  5: '#f97316', 6: '#16a34a', 7: '#7f1d1d', 8: '#050505', 9: '#facc15',
-  10: '#2563eb', 11: '#dc2626', 12: '#7c3aed', 13: '#f97316', 14: '#16a34a', 15: '#7f1d1d',
+  0: '#f8fafc',
+  1: '#facc15',
+  2: '#2563eb',
+  3: '#dc2626',
+  4: '#7c3aed',
+  5: '#f97316',
+  6: '#16a34a',
+  7: '#7f1d1d',
+  8: '#050505',
+  9: '#facc15',
+  10: '#2563eb',
+  11: '#dc2626',
+  12: '#7c3aed',
+  13: '#f97316',
+  14: '#16a34a',
+  15: '#7f1d1d',
 };
 
 function actionId(prefix: string): string {
@@ -72,15 +93,24 @@ function actionId(prefix: string): string {
 function formatDate(value: string): string {
   const date = new Date(value);
   return Number.isFinite(date.getTime())
-    ? date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    ? date.toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
     : value;
 }
 
-function initialState(profile: NinjaPoolProfile, mode: NinjaPoolMatchMode, opponentName: string): GameState {
-  return makeInitialGameState(
-    makeInitialBalls(),
-    [profile.displayName, mode === 'bot' ? 'CPU' : opponentName],
-  );
+function initialState(
+  profile: NinjaPoolProfile,
+  mode: NinjaPoolMatchMode,
+  opponentName: string,
+): GameState {
+  return makeInitialGameState(makeInitialBalls(), [
+    profile.displayName,
+    mode === 'bot' ? 'CPU' : opponentName,
+  ]);
 }
 
 function canvasPoint(canvas: HTMLCanvasElement, clientX: number, clientY: number): Vec2 {
@@ -125,13 +155,15 @@ function drawBall(ctx: CanvasRenderingContext2D, ball: Ball, pos: Vec2): void {
 }
 
 function stateParity(local: GameState, server: GameState): boolean {
-  return local.currentPlayer === server.currentPlayer
-    && local.shotCount === server.shotCount
-    && local.groupsAssigned === server.groupsAssigned
-    && local.players[0].group === server.players[0].group
-    && local.players[1].group === server.players[1].group
-    && (local.gameOver?.winner ?? null) === (server.gameOver?.winner ?? null)
-    && (local.pendingChoice?.type ?? null) === (server.pendingChoice?.type ?? null);
+  return (
+    local.currentPlayer === server.currentPlayer &&
+    local.shotCount === server.shotCount &&
+    local.groupsAssigned === server.groupsAssigned &&
+    local.players[0].group === server.players[0].group &&
+    local.players[1].group === server.players[1].group &&
+    (local.gameOver?.winner ?? null) === (server.gameOver?.winner ?? null) &&
+    (local.pendingChoice?.type ?? null) === (server.pendingChoice?.type ?? null)
+  );
 }
 
 export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props) {
@@ -141,12 +173,16 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
   const [opponentName, setOpponentName] = useState(mode === 'bot' ? 'CPU' : 'Player 2');
   const [match, setMatch] = useState<NinjaPoolMatch | null>(null);
   const [matches, setMatches] = useState<NinjaPoolMatch[]>([]);
-  const [gameState, setGameState] = useState<GameState>(() => initialState(profile, mode, opponentName));
+  const [gameState, setGameState] = useState<GameState>(() =>
+    initialState(profile, mode, opponentName),
+  );
   const [animationFrame, setAnimationFrame] = useState<SimulationFrame | null>(null);
   const [aimPoint, setAimPoint] = useState<Vec2>({ x: 650, y: TABLE_HEIGHT / 2 });
   const [power, setPower] = useState(0.58);
   const [calledPocket, setCalledPocket] = useState(0);
-  const [status, setStatus] = useState('Start a structured 8-ball match. Results are saved as unverified local-play evidence.');
+  const [status, setStatus] = useState(
+    'Start a structured 8-ball match. Results are saved as unverified local-play evidence.',
+  );
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [animating, setAnimating] = useState(false);
@@ -157,38 +193,47 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
 
   const preferences: NinjaPoolPreferences = match?.rulesSettings ?? profile.preferences;
   const active = match?.status === 'active';
-  const cueBall = useMemo(() => gameState.balls.find((ball) => ball.id === 0) ?? null, [gameState.balls]);
+  const cueBall = useMemo(
+    () => gameState.balls.find((ball) => ball.id === 0) ?? null,
+    [gameState.balls],
+  );
   const playerOnEight = playerHasClearedGroup(gameState, gameState.currentPlayer);
   const requiresCalledPocket = preferences.callShotOn8 && playerOnEight;
-  const humanCanShoot = active
-    && !recoveryRequired
-    && !animating
-    && !saving
-    && !gameState.gameOver
-    && !gameState.pendingChoice
-    && (mode === 'local' || gameState.currentPlayer === 0);
+  const humanCanShoot =
+    active &&
+    !recoveryRequired &&
+    !animating &&
+    !saving &&
+    !gameState.gameOver &&
+    !gameState.pendingChoice &&
+    (mode === 'local' || gameState.currentPlayer === 0);
 
-  const loadMatches = useCallback(async (discoverActive = false) => {
-    setLoading(true);
-    try {
-      const response = await moduleShellApi.ninjaPoolHall.listMatches(20);
-      setMatches(response.matches);
-      if (discoverActive && !match) {
-        const existing = response.matches.find((candidate) => candidate.status === 'active');
-        if (existing) {
-          setMatch(existing);
-          setRecoveryRequired(true);
-          onMatchPath(existing.id);
-          setStatus('A logical match summary was recovered. Physical ball positions are not trusted after reload; end it before starting another.');
+  const loadMatches = useCallback(
+    async (discoverActive = false) => {
+      setLoading(true);
+      try {
+        const response = await moduleShellApi.ninjaPoolHall.listMatches(20);
+        setMatches(response.matches);
+        if (discoverActive && !match) {
+          const existing = response.matches.find((candidate) => candidate.status === 'active');
+          if (existing) {
+            setMatch(existing);
+            setRecoveryRequired(true);
+            onMatchPath(existing.id);
+            setStatus(
+              'A logical match summary was recovered. Physical ball positions are not trusted after reload; end it before starting another.',
+            );
+          }
         }
+        setError(null);
+      } catch (cause: any) {
+        setError(cause?.error || cause?.message || 'Unable to load match history.');
+      } finally {
+        setLoading(false);
       }
-      setError(null);
-    } catch (cause: any) {
-      setError(cause?.error || cause?.message || 'Unable to load match history.');
-    } finally {
-      setLoading(false);
-    }
-  }, [match, onMatchPath]);
+    },
+    [match, onMatchPath],
+  );
 
   useEffect(() => {
     void loadMatches(true);
@@ -217,7 +262,12 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
     ctx.fillRect(PLAY_LEFT, PLAY_TOP, PLAY_RIGHT - PLAY_LEFT, PLAY_BOTTOM - PLAY_TOP);
     ctx.strokeStyle = 'rgba(248,113,113,.48)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(PLAY_LEFT - 4, PLAY_TOP - 4, PLAY_RIGHT - PLAY_LEFT + 8, PLAY_BOTTOM - PLAY_TOP + 8);
+    ctx.strokeRect(
+      PLAY_LEFT - 4,
+      PLAY_TOP - 4,
+      PLAY_RIGHT - PLAY_LEFT + 8,
+      PLAY_BOTTOM - PLAY_TOP + 8,
+    );
     for (const pocket of POCKETS) {
       ctx.fillStyle = '#000';
       ctx.beginPath();
@@ -257,28 +307,40 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
       ctx.fillStyle = 'rgba(3,7,18,.58)';
       ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
     }
-  }, [active, aimPoint, animationFrame, gameState, humanCanShoot, preferences.aimGuide, recoveryRequired]);
+  }, [
+    active,
+    aimPoint,
+    animationFrame,
+    gameState,
+    humanCanShoot,
+    preferences.aimGuide,
+    recoveryRequired,
+  ]);
 
   useEffect(() => drawTable(), [drawTable]);
 
-  const playFrames = useCallback((frames: SimulationFrame[], ticks: number) => new Promise<void>((resolve) => {
-    if (frames.length === 0) return resolve();
-    const quality = visualQualityProfile();
-    const duration = Math.max(480, Math.min(4_000, ticks * 4 * quality.durationScale));
-    const startedAt = performance.now();
-    const step = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / duration);
-      const index = Math.min(frames.length - 1, Math.floor(progress * frames.length));
-      setAnimationFrame(frames[index] ?? frames.at(-1)!);
-      if (progress >= 1) {
-        animationRef.current = null;
-        resolve();
-      } else {
+  const playFrames = useCallback(
+    (frames: SimulationFrame[], ticks: number) =>
+      new Promise<void>((resolve) => {
+        if (frames.length === 0) return resolve();
+        const quality = visualQualityProfile();
+        const duration = Math.max(480, Math.min(4_000, ticks * 4 * quality.durationScale));
+        const startedAt = performance.now();
+        const step = (now: number) => {
+          const progress = Math.min(1, (now - startedAt) / duration);
+          const index = Math.min(frames.length - 1, Math.floor(progress * frames.length));
+          setAnimationFrame(frames[index] ?? frames.at(-1)!);
+          if (progress >= 1) {
+            animationRef.current = null;
+            resolve();
+          } else {
+            animationRef.current = requestAnimationFrame(step);
+          }
+        };
         animationRef.current = requestAnimationFrame(step);
-      }
-    };
-    animationRef.current = requestAnimationFrame(step);
-  }), []);
+      }),
+    [],
+  );
 
   const startMatch = useCallback(async () => {
     setStarting(true);
@@ -293,7 +355,9 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
       onMatchPath(created.id);
       if (created.recovered) {
         setRecoveryRequired(true);
-        setStatus('An active match already exists. Physical table state cannot be reconstructed from the bounded server summary.');
+        setStatus(
+          'An active match already exists. Physical table state cannot be reconstructed from the bounded server summary.',
+        );
       } else {
         setGameState(initialState(profile, mode, mode === 'bot' ? 'CPU' : opponentName));
         setRecoveryRequired(false);
@@ -325,76 +389,100 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
     }
   }, [loadMatches, match, onMatchPath]);
 
-  const executeShot = useCallback(async (shot: Shot, shooterSeat: 0 | 1) => {
-    if (!match || match.status !== 'active' || recoveryRequired || animating || saving) return;
-    const before = gameState;
-    setAnimating(true);
-    setError(null);
-    setStatus(shooterSeat === 1 && mode === 'bot' ? 'CPU is shooting…' : 'Shot in motion…');
-    try {
-      unlockAudio();
-      sfxCue(shot.power, preferences.sound);
-      vibrate(Math.floor(15 + shot.power * 25), preferences.vibration);
-      const quality = visualQualityProfile();
-      const simulation = simulateShot(before, shot, {
-        tableSpeed: preferences.tableSpeed,
-        recordFrames: true,
-        frameInterval: quality.frameInterval,
-      });
-      await playFrames(simulation.frames, simulation.ticks);
-      if (simulation.events.pocketed.length > 0) sfxPocket(preferences.sound);
-      else if (simulation.events.firstContact !== null) sfxClack(shot.power, preferences.sound);
-      const resolved = applyShotResult(
-        before,
-        simulation.finalState,
-        simulation.events,
-        preferences,
-        shot.calledPocket === undefined ? undefined : { calledPocket: shot.calledPocket },
-      );
-      setSaving(true);
-      const input: NinjaPoolShotInput = {
-        expectedVersion: match.version,
-        clientShotId: actionId('shot'),
-        shooterSeat,
-        ...(shot.calledPocket === undefined ? {} : { calledPocket: shot.calledPocket }),
-        ...(simulation.events.pocketed.includes(8)
-          ? { eightPocket: pocketIndexAt(simulation.finalState.balls.find((ball) => ball.id === 8)!.pos) }
-          : {}),
-        events: simulation.events,
-      };
-      const response = await moduleShellApi.ninjaPoolHall.saveMatchShot(match.id, input);
-      if (!stateParity(resolved.state, response.match.logicalState)) {
-        throw new Error('Server rule projection did not match the local deterministic result.');
+  const executeShot = useCallback(
+    async (shot: Shot, shooterSeat: 0 | 1) => {
+      if (!match || match.status !== 'active' || recoveryRequired || animating || saving) return;
+      const before = gameState;
+      setAnimating(true);
+      setError(null);
+      setStatus(shooterSeat === 1 && mode === 'bot' ? 'CPU is shooting…' : 'Shot in motion…');
+      try {
+        unlockAudio();
+        sfxCue(shot.power, preferences.sound);
+        vibrate(Math.floor(15 + shot.power * 25), preferences.vibration);
+        const quality = visualQualityProfile();
+        const simulation = simulateShot(before, shot, {
+          tableSpeed: preferences.tableSpeed,
+          recordFrames: true,
+          frameInterval: quality.frameInterval,
+        });
+        await playFrames(simulation.frames, simulation.ticks);
+        if (simulation.events.pocketed.length > 0) sfxPocket(preferences.sound);
+        else if (simulation.events.firstContact !== null) sfxClack(shot.power, preferences.sound);
+        const resolved = applyShotResult(
+          before,
+          simulation.finalState,
+          simulation.events,
+          preferences,
+          shot.calledPocket === undefined ? undefined : { calledPocket: shot.calledPocket },
+        );
+        setSaving(true);
+        const input: NinjaPoolShotInput = {
+          expectedVersion: match.version,
+          clientShotId: actionId('shot'),
+          shooterSeat,
+          ...(shot.calledPocket === undefined ? {} : { calledPocket: shot.calledPocket }),
+          ...(simulation.events.pocketed.includes(8)
+            ? {
+                eightPocket: pocketIndexAt(
+                  simulation.finalState.balls.find((ball) => ball.id === 8)!.pos,
+                ),
+              }
+            : {}),
+          events: simulation.events,
+        };
+        const response = await moduleShellApi.ninjaPoolHall.saveMatchShot(match.id, input);
+        if (!stateParity(resolved.state, response.match.logicalState)) {
+          throw new Error('Server rule projection did not match the local deterministic result.');
+        }
+        setMatch(response.match);
+        setGameState(resolved.state);
+        setAnimationFrame(null);
+        if (resolved.state.gameOver) {
+          const winner = resolved.state.gameOver.winner;
+          const winnerName = winner === null ? 'No one' : resolved.state.players[winner].name;
+          setStatus(`${winnerName} wins — ${resolved.state.gameOver.reason}`);
+          if (mode === 'bot') {
+            if (winner === 0) sfxWin(preferences.sound);
+            else sfxLose(preferences.sound);
+          } else sfxWin(preferences.sound);
+          onMatchPath(response.match.id);
+          await loadMatches();
+        } else if (resolved.state.pendingChoice) {
+          setStatus('A rules choice is required before the next shot.');
+        } else {
+          const notes = response.outcome.potNotes?.join(' · ');
+          setStatus(
+            notes || `${resolved.state.players[resolved.state.currentPlayer].name}'s turn.`,
+          );
+        }
+      } catch (cause: any) {
+        setAnimationFrame(null);
+        setRecoveryRequired(true);
+        setError(
+          cause?.error ||
+            cause?.message ||
+            'The shot could not be reconciled. End or reload this match.',
+        );
+        setStatus('Physical state is no longer trusted after an uncertain save.');
+      } finally {
+        setSaving(false);
+        setAnimating(false);
       }
-      setMatch(response.match);
-      setGameState(resolved.state);
-      setAnimationFrame(null);
-      if (resolved.state.gameOver) {
-        const winner = resolved.state.gameOver.winner;
-        const winnerName = winner === null ? 'No one' : resolved.state.players[winner].name;
-        setStatus(`${winnerName} wins — ${resolved.state.gameOver.reason}`);
-        if (mode === 'bot') {
-          if (winner === 0) sfxWin(preferences.sound);
-          else sfxLose(preferences.sound);
-        } else sfxWin(preferences.sound);
-        onMatchPath(response.match.id);
-        await loadMatches();
-      } else if (resolved.state.pendingChoice) {
-        setStatus('A rules choice is required before the next shot.');
-      } else {
-        const notes = response.outcome.potNotes?.join(' · ');
-        setStatus(notes || `${resolved.state.players[resolved.state.currentPlayer].name}'s turn.`);
-      }
-    } catch (cause: any) {
-      setAnimationFrame(null);
-      setRecoveryRequired(true);
-      setError(cause?.error || cause?.message || 'The shot could not be reconciled. End or reload this match.');
-      setStatus('Physical state is no longer trusted after an uncertain save.');
-    } finally {
-      setSaving(false);
-      setAnimating(false);
-    }
-  }, [animating, gameState, loadMatches, match, mode, onMatchPath, playFrames, preferences, recoveryRequired, saving]);
+    },
+    [
+      animating,
+      gameState,
+      loadMatches,
+      match,
+      mode,
+      onMatchPath,
+      playFrames,
+      preferences,
+      recoveryRequired,
+      saving,
+    ],
+  );
 
   const takeHumanShot = useCallback(() => {
     if (!humanCanShoot || !cueBall) return;
@@ -404,15 +492,28 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
       setStatus('Aim farther away from the cue ball.');
       return;
     }
-    void executeShot({
-      angle: Math.atan2(dy, dx),
-      power,
-      ...(requiresCalledPocket ? { calledPocket } : {}),
-    }, gameState.currentPlayer);
-  }, [aimPoint, calledPocket, cueBall, executeShot, gameState.currentPlayer, humanCanShoot, power, requiresCalledPocket]);
+    void executeShot(
+      {
+        angle: Math.atan2(dy, dx),
+        power,
+        ...(requiresCalledPocket ? { calledPocket } : {}),
+      },
+      gameState.currentPlayer,
+    );
+  }, [
+    aimPoint,
+    calledPocket,
+    cueBall,
+    executeShot,
+    gameState.currentPlayer,
+    humanCanShoot,
+    power,
+    requiresCalledPocket,
+  ]);
 
   useEffect(() => {
-    if (mode !== 'bot' || !active || recoveryRequired || animating || saving || gameState.gameOver) return;
+    if (mode !== 'bot' || !active || recoveryRequired || animating || saving || gameState.gameOver)
+      return;
     if (gameState.pendingChoice?.chooser === 1 && match) {
       botTimerRef.current = window.setTimeout(async () => {
         try {
@@ -434,7 +535,10 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
     }
     if (gameState.currentPlayer !== 1 || gameState.pendingChoice) return;
     botTimerRef.current = window.setTimeout(() => {
-      const shot = chooseBotShot(gameState, createSeededRandom(3 + gameState.shotCount * 17 + gameState.currentPlayer));
+      const shot = chooseBotShot(
+        gameState,
+        createSeededRandom(3 + gameState.shotCount * 17 + gameState.currentPlayer),
+      );
       void executeShot(shot, 1);
     }, 850);
     return () => {
@@ -442,28 +546,36 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
     };
   }, [active, animating, executeShot, gameState, match, mode, recoveryRequired, saving]);
 
-  const resolveChoice = useCallback(async (action: 'accept' | 'rerack') => {
-    if (!match || !gameState.pendingChoice) return;
-    setSaving(true);
-    try {
-      const response = await moduleShellApi.ninjaPoolHall.resolveMatchChoice(match.id, {
-        expectedVersion: match.version,
-        clientActionId: actionId('choice'),
-        action,
-      });
-      const next = action === 'accept'
-        ? acceptTable(gameState)
-        : rerackAndBreak(gameState, makeInitialBalls());
-      setMatch(response.match);
-      setGameState(next);
-      setStatus(action === 'accept' ? 'Table accepted. Continue play.' : 'Rack reset. The chooser breaks again.');
-    } catch (cause: any) {
-      setRecoveryRequired(true);
-      setError(cause?.error || cause?.message || 'Unable to save the rules choice.');
-    } finally {
-      setSaving(false);
-    }
-  }, [gameState, match]);
+  const resolveChoice = useCallback(
+    async (action: 'accept' | 'rerack') => {
+      if (!match || !gameState.pendingChoice) return;
+      setSaving(true);
+      try {
+        const response = await moduleShellApi.ninjaPoolHall.resolveMatchChoice(match.id, {
+          expectedVersion: match.version,
+          clientActionId: actionId('choice'),
+          action,
+        });
+        const next =
+          action === 'accept'
+            ? acceptTable(gameState)
+            : rerackAndBreak(gameState, makeInitialBalls());
+        setMatch(response.match);
+        setGameState(next);
+        setStatus(
+          action === 'accept'
+            ? 'Table accepted. Continue play.'
+            : 'Rack reset. The chooser breaks again.',
+        );
+      } catch (cause: any) {
+        setRecoveryRequired(true);
+        setError(cause?.error || cause?.message || 'Unable to save the rules choice.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [gameState, match],
+  );
 
   const pointerAim = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!humanCanShoot) return;
@@ -472,9 +584,9 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
       const placement = findFreeSpot(gameState, point);
       setGameState((current) => ({
         ...current,
-        balls: current.balls.map((ball) => ball.id === 0
-          ? { ...ball, pos: placement, vel: { x: 0, y: 0 }, inPocket: false }
-          : ball),
+        balls: current.balls.map((ball) =>
+          ball.id === 0 ? { ...ball, pos: placement, vel: { x: 0, y: 0 }, inPocket: false } : ball,
+        ),
       }));
       setAimPoint({ x: placement.x + 150, y: placement.y });
       setStatus('Cue ball placed. Drag or tap again to aim.');
@@ -495,22 +607,33 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
         <div className="nphm-error" role="alert">
           <AlertTriangle size={18} />
           <span>{error}</span>
-          <button type="button" onClick={() => void loadMatches(true)}><RefreshCw size={15} /> Reload</button>
+          <button type="button" onClick={() => void loadMatches(true)}>
+            <RefreshCw size={15} /> Reload
+          </button>
         </div>
       )}
       <div className="nphm-layout">
         <div className="nphm-card">
           <header className="nphm-toolbar">
             <div>
-              <span>{mode === 'bot' ? <Bot size={14} /> : <Users size={14} />} SYS::{mode === 'bot' ? 'CPU_MATCH' : 'HOT_SEAT'}</span>
+              <span>
+                {mode === 'bot' ? <Bot size={14} /> : <Users size={14} />} SYS::
+                {mode === 'bot' ? 'CPU_MATCH' : 'HOT_SEAT'}
+              </span>
               <h2>{mode === 'bot' ? 'Vs CPU' : 'Local two-player'}</h2>
               <p>{status}</p>
             </div>
             <div className="nphm-score" aria-label="Match score">
               {[0, 1].map((seat) => (
-                <article key={seat} className={gameState.currentPlayer === seat && active ? 'active' : ''}>
+                <article
+                  key={seat}
+                  className={gameState.currentPlayer === seat && active ? 'active' : ''}
+                >
                   <strong>{gameState.players[seat as 0 | 1].name}</strong>
-                  <span>{gameState.players[seat as 0 | 1].group ?? 'open'}{ballsLeft(seat as 0 | 1) !== null ? ` · ${ballsLeft(seat as 0 | 1)} left` : ''}</span>
+                  <span>
+                    {gameState.players[seat as 0 | 1].group ?? 'open'}
+                    {ballsLeft(seat as 0 | 1) !== null ? ` · ${ballsLeft(seat as 0 | 1)} left` : ''}
+                  </span>
                 </article>
               ))}
             </div>
@@ -522,7 +645,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
               height={TABLE_HEIGHT}
               tabIndex={0}
               data-testid="ninja-pool-match-table"
-              aria-label="Ninja Pool Hall 8-ball table. Touch or click to aim."
+              aria-label="Operator Pool Hall 8-ball table. Touch or click to aim."
               onPointerDown={(event) => {
                 event.currentTarget.setPointerCapture(event.pointerId);
                 pointerAim(event);
@@ -540,56 +663,172 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
             {(!active || recoveryRequired) && (
               <div className="nphm-overlay">
                 {match?.status === 'completed' ? <Trophy size={36} /> : <CircleDot size={36} />}
-                <strong>{recoveryRequired ? 'Match recovery required' : match?.status === 'completed' ? 'Match complete' : 'Table ready'}</strong>
-                <span>{recoveryRequired
-                  ? 'OperatorOS retained the logical result trail, not continuous ball coordinates. End this match before starting a fresh table.'
-                  : 'Start a real rules-driven local match. All saved outcomes remain clearly labeled client-reported.'}</span>
+                <strong>
+                  {recoveryRequired
+                    ? 'Match recovery required'
+                    : match?.status === 'completed'
+                      ? 'Match complete'
+                      : 'Table ready'}
+                </strong>
+                <span>
+                  {recoveryRequired
+                    ? 'OperatorOS retained the logical result trail, not continuous ball coordinates. End this match before starting a fresh table.'
+                    : 'Start a real rules-driven local match. All saved outcomes remain clearly labeled client-reported.'}
+                </span>
                 {recoveryRequired && match?.status === 'active' ? (
                   <button type="button" onClick={() => void abandon()} disabled={ending}>
-                    {ending ? <Loader2 className="nphm-spin" size={17} /> : <RotateCcw size={17} />} End recovered match
+                    {ending ? <Loader2 className="nphm-spin" size={17} /> : <RotateCcw size={17} />}{' '}
+                    End recovered match
                   </button>
                 ) : (
                   <div className="nphm-start">
                     {mode === 'local' && !active && (
-                      <label>Player 2 name<input value={opponentName} maxLength={40} onChange={(event) => setOpponentName(event.target.value)} /></label>
+                      <label>
+                        Player 2 name
+                        <input
+                          value={opponentName}
+                          maxLength={40}
+                          onChange={(event) => setOpponentName(event.target.value)}
+                        />
+                      </label>
                     )}
-                    <button type="button" onClick={() => void startMatch()} disabled={starting || (mode === 'local' && !opponentName.trim())} data-testid="ninja-pool-start-match">
-                      {starting ? <Loader2 className="nphm-spin" size={17} /> : <Play size={17} />} {starting ? 'Starting…' : 'Start match'}
+                    <button
+                      type="button"
+                      onClick={() => void startMatch()}
+                      disabled={starting || (mode === 'local' && !opponentName.trim())}
+                      data-testid="ninja-pool-start-match"
+                    >
+                      {starting ? <Loader2 className="nphm-spin" size={17} /> : <Play size={17} />}{' '}
+                      {starting ? 'Starting…' : 'Start match'}
                     </button>
                   </div>
                 )}
               </div>
             )}
           </div>
-          {gameState.pendingChoice && active && !recoveryRequired && (mode === 'local' || gameState.pendingChoice.chooser === 0) && (
-            <div className="nphm-choice">
-              <strong>{gameState.pendingChoice.type === '8OnBreak' ? '8-ball made on the break' : 'Break requirements not met'}</strong>
-              <span>{gameState.players[gameState.pendingChoice.chooser].name} chooses the table outcome.</span>
-              <button type="button" onClick={() => void resolveChoice('accept')} disabled={saving}>Accept table</button>
-              <button type="button" onClick={() => void resolveChoice('rerack')} disabled={saving}>Re-rack</button>
-            </div>
-          )}
-          <div className="nphm-controls">
-            <label>Shot power <b>{Math.round(power * 100)}%</b><input type="range" min="0.08" max="1" step="0.01" value={power} disabled={!humanCanShoot} onChange={(event) => setPower(Number(event.target.value))} /></label>
-            {requiresCalledPocket && humanCanShoot && (
-              <label>Called 8-ball pocket<select value={calledPocket} onChange={(event) => setCalledPocket(Number(event.target.value))}>{POCKETS.map((_, index) => <option key={index} value={index}>Pocket {index + 1}</option>)}</select></label>
+          {gameState.pendingChoice &&
+            active &&
+            !recoveryRequired &&
+            (mode === 'local' || gameState.pendingChoice.chooser === 0) && (
+              <div className="nphm-choice">
+                <strong>
+                  {gameState.pendingChoice.type === '8OnBreak'
+                    ? '8-ball made on the break'
+                    : 'Break requirements not met'}
+                </strong>
+                <span>
+                  {gameState.players[gameState.pendingChoice.chooser].name} chooses the table
+                  outcome.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void resolveChoice('accept')}
+                  disabled={saving}
+                >
+                  Accept table
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void resolveChoice('rerack')}
+                  disabled={saving}
+                >
+                  Re-rack
+                </button>
+              </div>
             )}
-            <button type="button" className="primary" onClick={takeHumanShot} disabled={!humanCanShoot} data-testid="ninja-pool-match-shoot">
-              {animating || saving ? <Loader2 className="nphm-spin" size={18} /> : <CircleDot size={18} />} {animating ? 'Balls moving…' : saving ? 'Saving…' : 'Take shot'}
+          <div className="nphm-controls">
+            <label>
+              Shot power <b>{Math.round(power * 100)}%</b>
+              <input
+                type="range"
+                min="0.08"
+                max="1"
+                step="0.01"
+                value={power}
+                disabled={!humanCanShoot}
+                onChange={(event) => setPower(Number(event.target.value))}
+              />
+            </label>
+            {requiresCalledPocket && humanCanShoot && (
+              <label>
+                Called 8-ball pocket
+                <select
+                  value={calledPocket}
+                  onChange={(event) => setCalledPocket(Number(event.target.value))}
+                >
+                  {POCKETS.map((_, index) => (
+                    <option key={index} value={index}>
+                      Pocket {index + 1}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button
+              type="button"
+              className="primary"
+              onClick={takeHumanShot}
+              disabled={!humanCanShoot}
+              data-testid="ninja-pool-match-shoot"
+            >
+              {animating || saving ? (
+                <Loader2 className="nphm-spin" size={18} />
+              ) : (
+                <CircleDot size={18} />
+              )}{' '}
+              {animating ? 'Balls moving…' : saving ? 'Saving…' : 'Take shot'}
             </button>
-            <button type="button" onClick={() => void abandon()} disabled={!active || animating || saving || ending}><RotateCcw size={17} /> End match</button>
+            <button
+              type="button"
+              onClick={() => void abandon()}
+              disabled={!active || animating || saving || ending}
+            >
+              <RotateCcw size={17} /> End match
+            </button>
           </div>
-          <div className="nphm-boundary"><ShieldCheck size={17} /><span><b>Verified result:</b> Rules and result history are tracked automatically, while physical shot details come from this device. These results never power a competitive leaderboard or rewards.</span></div>
+          <div className="nphm-boundary">
+            <ShieldCheck size={17} />
+            <span>
+              <b>Verified result:</b> Rules and result history are tracked automatically, while
+              physical shot details come from this device. These results never power a competitive
+              leaderboard or rewards.
+            </span>
+          </div>
         </div>
         <aside className="nphm-history">
-          <header><span><History size={16} /> Match history</span><button type="button" onClick={() => void loadMatches()} aria-label="Refresh match history"><RefreshCw className={loading ? 'nphm-spin' : ''} size={15} /></button></header>
-          {loading && matches.length === 0 ? <p>Loading results…</p> : matches.length === 0 ? <p>No structured matches yet.</p> : matches.map((item) => (
-            <article key={item.id}>
-              <div><strong>{item.mode === 'bot' ? 'Vs CPU' : `Vs ${item.opponentName}`}</strong><time>{formatDate(item.startedAt)}</time></div>
-              <span>{item.status}{item.result ? ` · ${item.result.replace('_', ' ')}` : ''}</span>
-              <small>{item.shotCount} shots · {item.evidence.replaceAll('_', ' ')}</small>
-            </article>
-          ))}
+          <header>
+            <span>
+              <History size={16} /> Match history
+            </span>
+            <button
+              type="button"
+              onClick={() => void loadMatches()}
+              aria-label="Refresh match history"
+            >
+              <RefreshCw className={loading ? 'nphm-spin' : ''} size={15} />
+            </button>
+          </header>
+          {loading && matches.length === 0 ? (
+            <p>Loading results…</p>
+          ) : matches.length === 0 ? (
+            <p>No structured matches yet.</p>
+          ) : (
+            matches.map((item) => (
+              <article key={item.id}>
+                <div>
+                  <strong>{item.mode === 'bot' ? 'Vs CPU' : `Vs ${item.opponentName}`}</strong>
+                  <time>{formatDate(item.startedAt)}</time>
+                </div>
+                <span>
+                  {item.status}
+                  {item.result ? ` · ${item.result.replace('_', ' ')}` : ''}
+                </span>
+                <small>
+                  {item.shotCount} shots · {item.evidence.replaceAll('_', ' ')}
+                </small>
+              </article>
+            ))
+          )}
         </aside>
       </div>
     </section>

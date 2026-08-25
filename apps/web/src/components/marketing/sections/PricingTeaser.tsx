@@ -61,7 +61,7 @@ export default function PricingTeaser() {
             OperatorOS is free. Build the paid app stack you need.
           </h2>
           <p style={{ fontSize: 14, lineHeight: 1.55, color: brand.textSecondary, margin: 0 }}>
-            TorqueShed, FaultlineLab, and Ninja Pool Hall are free with any account. Add TradeFlowKit, PulseDesk, or TechDeck for 5 seats and one free companion module.
+            TorqueShed, FaultlineLab, and Operator Pool Hall are free with any account. Add TradeFlowKit, PulseDesk, or TechDeck for 5 seats and one selectable companion application.
           </p>
         </div>
         <style>{`

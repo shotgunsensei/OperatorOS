@@ -266,7 +266,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/exports': { sectionId: 'launchkit-exports', label: 'Exports' },
     '/settings': { sectionId: 'launchkit-account', label: 'Settings' },
     '/account': { sectionId: 'launchkit-account', label: 'Plan and Usage', redirectPath: '/settings' },
-    '/admin': { sectionId: 'launchkit-admin', label: 'Ninja Launch Kit Administration', redirectPath: '/settings' },
+    '/admin': { sectionId: 'launchkit-admin', label: 'Deploy Ops Administration', redirectPath: '/settings' },
     '/pricing': { sectionId: 'launchkit-account', label: 'OperatorOS Plan', redirectPath: '/settings' },
   },
   'callcommand-ai': {
@@ -331,7 +331,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/billing': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing', redirectPath: '/settings' },
     '/checkout/success': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status', redirectPath: '/settings' },
     '/checkout/cancel': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status', redirectPath: '/settings' },
-    '/admin': { sectionId: 'ninjamation-admin', label: 'Ninjamation Administration', redirectPath: '/settings' },
+    '/admin': { sectionId: 'ninjamation-admin', label: 'Script Ops Administration', redirectPath: '/settings' },
   },
   outcall: {
     '/dashboard': { sectionId: 'outcall-overview-route', label: 'Overview', redirectPath: '/' },

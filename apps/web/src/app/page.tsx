@@ -19,7 +19,7 @@ import { serializeJsonLd, softwareApplicationJsonLd } from '@/lib/seo';
  * Marketing home — Phase 2.
  *
  * Renders the full public homepage in section order:
- *   Hero → Command Orbit → Platform Positioning → Module Gateway Grid
+ *   Hero → Platform Positioning → Module Gateway Grid → Command Orbit
  *   → How It Works → Final CTA.
  *
  * Signed-in visitors are auto-redirected to `/app` so the home URL
@@ -37,9 +37,9 @@ function HomeBody() {
   return (
     <>
       <Hero />
-      <CommandOrbit />
       <PlatformPositioning />
       <ModuleGatewayGrid />
+      <CommandOrbit />
       <HowItWorks />
       <PricingTeaser />
       <TrustSection />

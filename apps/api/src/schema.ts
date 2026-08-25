@@ -1156,7 +1156,7 @@ export type DirectorySiteRow = typeof directorySites.$inferSelect;
 // Task #72 — module shell persistence tables
 //
 // The four polished module first-screens (CallCommand AI, StudyForge AI,
-// Ninjamation, Ninja Launch Kit) used to keep all user activity in
+// Script Ops and Deploy Ops (stable internal schemas retain their original identifiers) used to keep all user activity in
 // component state. These tables persist that activity per-tenant so it
 // survives a refresh and shows up in the activity feed where appropriate.
 // All four tables are tenant-scoped and read/written exclusively through
@@ -2007,7 +2007,7 @@ export const pulsedeskMigrationRefs = pgTable('pulsedesk_migration_refs', {
 }, (t) => [uniqueIndex('uq_pulsedesk_migration_source').on(t.tenantId, t.sourceType, t.sourceId)]);
 
 /**
- * First shared-runtime Ninja Pool Hall workflow.
+ * First shared-runtime Operator Pool Hall workflow (stable internal namespace retained).
  *
  * Physics and ball state remain local to the browser. This table stores only
  * bounded personal practice-rack summaries; it is not an authoritative

@@ -18,7 +18,7 @@ export default function MarketingModulesPage() {
     <MarketingLayout testId="page-marketing-modules">
       <ModuleGatewayGrid
         heading="Choose the operating lane you need now."
-        subheading="Start with one core product, then expand with included and companion modules that already share your team, billing, and access."
+        subheading="Start with one main module, then expand with companion applications that already share your team, billing, tenant, and access authority."
         testId="page-modules-grid"
         headingLevel="h1"
       />

@@ -6,6 +6,8 @@ import {
   getEcosystemModule,
   getAllModules,
   getActiveModules,
+  getCompanionApplications,
+  getMainModules,
   getModuleUrl,
   getModulesByCategory,
   detectOperatorOSHost,
@@ -22,20 +24,40 @@ test('ecosystem registry loads with modules and platform domains', () => {
   assert.deepEqual(Object.keys(reg.platformDomains).sort(), ['api', 'app', 'auth', 'root']);
 });
 
-test('techdeck module exists, leads the ordering, and uses only its canonical URL', () => {
+test('main modules lead in the canonical TradeFlowKit, PulseDesk, TechDeck order', () => {
   const td = getEcosystemModule('techdeck');
   assert.ok(td, 'techdeck module is present');
   assert.equal(td!.ecosystemUrl, 'https://techdeck.operatoros.net');
   assert.equal(getModuleUrl('techdeck'), 'https://techdeck.operatoros.net');
-  assert.equal('legacyUrl' in td!, false);
-  assert.equal(getAllModules()[0].slug, 'techdeck', 'techdeck is ordered first');
+  assert.deepEqual(td!.legacyUrls, []);
+  assert.deepEqual(getMainModules().map(module => module.slug), [
+    'tradeflowkit',
+    'pulsedesk',
+    'techdeck',
+  ]);
+  assert.deepEqual(getAllModules().slice(0, 3).map(module => module.slug), [
+    'tradeflowkit',
+    'pulsedesk',
+    'techdeck',
+  ]);
+  assert.ok(getCompanionApplications().every(module => module.applicationType === 'companion-application'));
 });
 
-test('renamed modules map slug -> ecosystem subdomain correctly', () => {
+test('renamed applications preserve stable slugs while canonicalizing display names and hosts', () => {
   assert.equal(getModuleUrl('brandforgeos'), 'https://brandforgeos.operatoros.net');
   assert.equal(getModuleUrl('studyforge-ai'), 'https://studyforge-ai.operatoros.net');
-  assert.equal(getModuleUrl('ninja-launch-kit'), 'https://ninjalaunchkit.operatoros.net');
   assert.equal(getModuleUrl('callcommand-ai'), 'https://callcommand-ai.operatoros.net');
+
+  const pool = getEcosystemModule('ninja-pool-hall');
+  const deploy = getEcosystemModule('ninja-launch-kit');
+  const scripts = getEcosystemModule('ninjamation');
+  assert.deepEqual(
+    [pool?.name, pool?.ecosystemUrl, deploy?.name, deploy?.ecosystemUrl, scripts?.name, scripts?.ecosystemUrl],
+    ['Operator Pool Hall', 'https://operatorpoolhall.operatoros.net', 'Deploy Ops', 'https://deployops.operatoros.net', 'Script Ops', 'https://scriptops.operatoros.net'],
+  );
+  assert.deepEqual(pool?.legacyUrls, ['https://ninja-pool-hall.operatoros.net']);
+  assert.deepEqual(deploy?.legacyUrls, ['https://ninjalaunchkit.operatoros.net']);
+  assert.deepEqual(scripts?.legacyUrls, ['https://ninjamation.operatoros.net']);
 });
 
 test('torqueshed is retained in the ecosystem (additive)', () => {
@@ -111,8 +133,16 @@ test('detectOperatorOSHost classifies ecosystem and foreign hosts', () => {
   const brand = detectOperatorOSHost('brandforgeos.operatoros.net');
   assert.equal(brand.matchedModuleSlug, 'brandforgeos', 'subdomain label maps to catalog slug');
 
-  const launchKit = detectOperatorOSHost('ninjalaunchkit.operatoros.net');
-  assert.equal(launchKit.matchedModuleSlug, 'ninja-launch-kit');
+  for (const [host, slug] of [
+    ['operatorpoolhall.operatoros.net', 'ninja-pool-hall'],
+    ['deployops.operatoros.net', 'ninja-launch-kit'],
+    ['scriptops.operatoros.net', 'ninjamation'],
+    ['ninja-pool-hall.operatoros.net', 'ninja-pool-hall'],
+    ['ninjalaunchkit.operatoros.net', 'ninja-launch-kit'],
+    ['ninjamation.operatoros.net', 'ninjamation'],
+  ] as const) {
+    assert.equal(detectOperatorOSHost(host).matchedModuleSlug, slug);
+  }
 
   // Foreign hosts (Replit dev, localhost) must be safe and inert.
   for (const h of ['workspace.janeway.replit.dev', 'localhost', '']) {

@@ -1,12 +1,14 @@
-# Ninja Pool Hall Module
+# Operator Pool Hall module
 
 ## Consolidated Runtime Status
 
-Ninja Pool Hall is an active free-account module in the unified OperatorOS
-deployment. Phase 10B provides three single-device workflows: Free Shoot,
+Operator Pool Hall is an active free-account companion application in the
+unified OperatorOS deployment. Its stable internal slug remains
+`ninja-pool-hall`. Phase 10B provides three single-device workflows: Free Shoot,
 CPU 8-ball, and local hot-seat 8-ball:
 
-- production host: `https://ninja-pool-hall.operatoros.net`
+- canonical production host: `https://operatorpoolhall.operatoros.net`
+- redirect-only legacy host: `https://ninja-pool-hall.operatoros.net`
 - local/module fallback: `/modules/ninja-pool-hall`
 - command-center route: `/app/apps/ninja-pool-hall`
 - UI shell: `apps/web/src/components/module-shells/NinjaPoolHallShell.tsx`

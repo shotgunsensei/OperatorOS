@@ -65,9 +65,9 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
 };
 const POLISHED_SHELL_NAMES: Record<string, string> = {
   techdeck: 'TechDeck', pulsedesk: 'PulseDesk', tradeflowkit: 'TradeFlowKit',
-  'studyforge-ai': 'StudyForge AI', 'ninja-launch-kit': 'Ninja Launch Kit',
-  'callcommand-ai': 'CallCommand AI', ninjamation: 'Ninjamation', outcall: 'OutCall',
-  'ninja-pool-hall': 'Ninja Pool Hall', torqueshed: 'TorqueShed', faultlinelab: 'FaultlineLab',
+  'studyforge-ai': 'StudyForge AI', 'ninja-launch-kit': 'Deploy Ops',
+  'callcommand-ai': 'CallCommand AI', ninjamation: 'Script Ops', outcall: 'OutCall',
+  'ninja-pool-hall': 'Operator Pool Hall', torqueshed: 'TorqueShed', faultlinelab: 'FaultlineLab',
   brandforgeos: 'BrandForgeOS', snapproofos: 'SnapProofOS',
 };
 

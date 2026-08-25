@@ -1,6 +1,6 @@
 /**
  * Playwright coverage for four launchable polished module first-screens
- * (CallCommand AI, Ninjamation, StudyForge AI, Ninja Launch Kit) end-to-end
+ * (CallCommand AI, Script Ops, StudyForge AI, Deploy Ops) end-to-end
  * for an Elite-plan tenant member, plus:
  *   - the "Back to My Apps" link is present on every shell route
  *   - a non-entitled tenant member sees the `app-shell-not-accessible`

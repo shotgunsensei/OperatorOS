@@ -1,8 +1,8 @@
-# Ninja Pool Hall native engine slice
+# Operator Pool Hall native engine slice
 
 `physics.ts`, `types.ts`, `rules.ts`, `bot.ts`, and `audio.ts` are exact
 promoted copies from the quarantined
-Ninja Pool Hall snapshot at commit `62439c4018ec551ce2891800351200c8ab2cb9e7`:
+The stable `ninja-pool-hall` engine slice originated from the historical application snapshot at commit `62439c4018ec551ce2891800351200c8ab2cb9e7`:
 
 `apps/modules/ninja-pool-hall/source/artifacts/pool/src/lib/`
 

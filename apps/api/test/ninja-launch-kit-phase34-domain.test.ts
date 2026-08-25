@@ -64,8 +64,8 @@ test('each entitled export format produces complete valid bytes and correct wate
     if (format === 'json') assert.equal(JSON.parse(result.content).visualPromos.length, 9);
   }
   const free = exportProductKit({ title: template.name, input, content, visuals: generateVisualPromos(input, content, 'free'), plan: 'free', format: 'txt' });
-  assert.match(free.content, /Generated with Ninja Launch Kit/);
-  assert.doesNotMatch(exportProductKit({ title: template.name, input, content, visuals, plan: 'agency', format: 'txt' }).content, /Generated with Ninja Launch Kit/);
+  assert.match(free.content, /Generated with Deploy Ops/);
+  assert.doesNotMatch(exportProductKit({ title: template.name, input, content, visuals, plan: 'agency', format: 'txt' }).content, /Generated with Deploy Ops/);
 });
 
 test('shared AI output is schema-validated and provider failure records deterministic fallback', async () => {

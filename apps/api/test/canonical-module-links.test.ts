@@ -26,11 +26,14 @@ test('portfolio links use canonical OperatorOS module subdomains', () => {
   }
 });
 
-test('Ninja Pool Hall fails closed instead of using its retired app-path fallback', () => {
+test('Operator Pool Hall keeps its stable slug and legacy env alias while using the canonical host', () => {
   const module = MODULE_CATALOG_BY_SLUG['ninja-pool-hall'];
   assert.ok(module);
   assert.equal(module.internal, false);
-  assert.deepEqual(module.envUrlKeys, ['NINJA_POOL_HALL_URL']);
+  assert.equal(module.name, 'Operator Pool Hall');
+  assert.equal(module.canonicalBaseUrl, 'https://operatorpoolhall.operatoros.net');
+  assert.deepEqual(module.envUrlKeys, ['OPERATOR_POOL_HALL_URL', 'NINJA_POOL_HALL_URL']);
+  assert.deepEqual(module.legacyBaseUrls, ['https://ninja-pool-hall.operatoros.net']);
 });
 
 test('TechDeck SSO return URL fallback uses its canonical module host', () => {

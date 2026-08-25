@@ -9,7 +9,7 @@ import type {
   VerifyResult,
   VerifyCheckResult,
 } from '../../../packages/sdk/src/index.js';
-import { validatePatchPaths, MAX_PATCH_SIZE } from '../../../packages/sdk/src/index.js';
+import { MODULE_CATALOG, validatePatchPaths, MAX_PATCH_SIZE } from '../../../packages/sdk/src/index.js';
 import type { WebSocketMessage } from '../../../packages/sdk/src/events.js';
 import { getProfile, getProfileImage, getVerifyPlan, listProfiles } from '../../../packages/profiles/src/index.js';
 import {
@@ -1605,24 +1605,12 @@ function logCapabilityBanner(): void {
   const ssoOn = !!resolveSsoCodeSecret();
   const bootstrapAdminOn = !!process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL;
 
-  const moduleUrlEnv: Record<string, string> = {
-    tradeflowkit: 'TRADEFLOWKIT_URL',
-    torqueshed: 'TORQUESHED_URL',
-    techdeck: 'TECHDECK_URL',
-    pulsedesk: 'PULSEDESK_URL',
-    faultlinelab: 'FAULTLINELAB_URL',
-    'ninja-pool-hall': 'NINJA_POOL_HALL_URL',
-    brandforgeos: 'BRANDFORGEOS_URL',
-    snapproofos: 'SNAPPROOFOS_URL',
-    'studyforge-ai': 'STUDYFORGE_AI_URL',
-    'ninja-launch-kit': 'NINJA_LAUNCH_KIT_URL',
-    'callcommand-ai': 'CALLCOMMAND_AI_URL',
-    ninjamation: 'NINJAMATION_URL',
-    outcall: 'OUTCALL_URL',
-  };
-  const moduleEntries = Object.entries(moduleUrlEnv);
-  const configuredModules = moduleEntries.filter(([, k]) => !!process.env[k]).map(([s]) => s);
-  const missingModules = moduleEntries.filter(([, k]) => !process.env[k]).map(([s]) => s);
+  const moduleEntries = MODULE_CATALOG.map(module => ({
+    slug: module.slug,
+    configured: module.envUrlKeys.some(key => !!process.env[key]),
+  }));
+  const configuredModules = moduleEntries.filter(entry => entry.configured).map(entry => entry.slug);
+  const missingModules = moduleEntries.filter(entry => !entry.configured).map(entry => entry.slug);
 
   console.info('');
   console.info('  OperatorOS capability banner');

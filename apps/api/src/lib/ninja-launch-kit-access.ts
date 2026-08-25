@@ -43,7 +43,7 @@ export async function consumeNinjaLaunchGeneration(args: { tenantId: string; use
     RETURNING generation_count
   `);
   if (!result.rows[0]) {
-    throw Object.assign(new Error('Ninja Launch Kit monthly generation limit reached for this OperatorOS entitlement'), {
+    throw Object.assign(new Error('Deploy Ops monthly generation limit reached for this OperatorOS entitlement'), {
       statusCode: 402,
       code: 'NINJA_LAUNCH_KIT_GENERATION_LIMIT_REACHED',
     });

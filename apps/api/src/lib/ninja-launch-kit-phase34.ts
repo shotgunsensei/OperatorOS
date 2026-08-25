@@ -241,7 +241,7 @@ export function generateVisualPromos(input: NinjaLaunchInput, content: NinjaLaun
         `Tools: ${definition.tools.join(', ')}`,
         `CTA: ${input.desiredAction}`,
         'Use only owner-approved claims, imagery, logos, and destination links.',
-        plan === 'agency' ? 'White-label delivery: remove Ninja Launch Kit attribution before client handoff.' : 'Retain Ninja Launch Kit attribution where the current plan requires it.',
+        plan === 'agency' ? 'White-label delivery: remove Deploy Ops attribution before client handoff.' : 'Retain Deploy Ops attribution where the current plan requires it.',
       ].join('\n'),
     };
   });
@@ -269,7 +269,7 @@ function renderSections(title: string, input: NinjaLaunchInput, content: NinjaLa
 }
 
 export function exportProductKit(args: { title: string; input: NinjaLaunchInput; content: NinjaLaunchContent; visuals: NinjaLaunchVisualBrief[]; plan: NinjaLaunchPlan; format: NinjaLaunchExportFormat }) {
-  const watermark = NINJA_LAUNCH_PLAN_LIMITS[args.plan].watermarked ? '\n\nGenerated with Ninja Launch Kit — OperatorOS.' : '';
+  const watermark = NINJA_LAUNCH_PLAN_LIMITS[args.plan].watermarked ? '\n\nGenerated with Deploy Ops — OperatorOS.' : '';
   const payload = {
     schemaVersion: 1,
     title: args.title,

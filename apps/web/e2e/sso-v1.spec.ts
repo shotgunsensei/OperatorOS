@@ -2068,7 +2068,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     assertNoCredentialQuery(modulePage.url());
   });
 
-  test('Ninja Launch Kit persists reviewed launch execution, evidence readiness, exports, and deep-link reauthentication', async ({ page, request }) => {
+  test('Deploy Ops persists reviewed release execution, evidence readiness, exports, and deep-link reauthentication', async ({ page, request }) => {
     test.setTimeout(210_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -2111,7 +2111,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByTestId('button-launchkit-create').click();
     const created = await (await createResponse).json() as { launch: { id: string } };
     const launchId = created.launch.id;
-    const launchUrl = `https://ninjalaunchkit.operatoros.net/launches/${launchId}`;
+    const launchUrl = `https://deployops.operatoros.net/launches/${launchId}`;
     await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
     await expect(modulePage.getByTestId('text-launchkit-readiness')).not.toHaveText('100%');
 
@@ -2201,7 +2201,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
     await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
     await capturePhase20Evidence(modulePage, 'ninja-launch-kit-completed', { width: 1440, height: 1000 });
-    await assertHostOnlySession(modulePage.context(), 'ninjalaunchkit.operatoros.net');
+    await assertHostOnlySession(modulePage.context(), 'deployops.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });
@@ -2458,7 +2458,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     assertNoCredentialQuery(modulePage.url());
   });
 
-  test('Ninja Pool Hall persists profile and real CPU/hot-seat shot trails across deep links and global reauthentication', async ({ page, request }) => {
+  test('Operator Pool Hall persists profile and real CPU/hot-seat shot trails across deep links and global reauthentication', async ({ page, request }) => {
     test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -2484,7 +2484,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     assertNoCredentialQuery(modulePage.url());
 
     await modulePage.getByRole('button', { name: 'Profile', exact: true }).click();
-    await expect(modulePage).toHaveURL('https://ninja-pool-hall.operatoros.net/profile');
+    await expect(modulePage).toHaveURL('https://operatorpoolhall.operatoros.net/profile');
     const displayName = modulePage.getByLabel('Display name');
     await displayName.fill('Phase 10B Table Ninja');
     await Promise.all([
@@ -2524,7 +2524,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.locator('.nphm-history article').filter({ hasText: 'abandoned' }).first()).toBeVisible();
 
     await modulePage.setViewportSize({ width: 390, height: 844 });
-    await expect(modulePage.getByRole('navigation', { name: 'Ninja Pool Hall navigation' })).toBeVisible();
+    await expect(modulePage.getByRole('navigation', { name: 'Operator Pool Hall navigation' })).toBeVisible();
     await expect(modulePage.getByRole('button', { name: 'Profile', exact: true })).toBeVisible();
 
     await Promise.all([
@@ -2541,22 +2541,22 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     });
     expect(logoutAll.status, logoutAll.body).toBe(200);
 
-    await modulePage.goto('https://ninja-pool-hall.operatoros.net/profile');
+    await modulePage.goto('https://operatorpoolhall.operatoros.net/profile');
     await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
     await modulePage.getByTestId('input-email').fill(identity.email);
     await modulePage.getByTestId('input-password').fill(PASSWORD);
     await Promise.all([
-      modulePage.waitForURL('https://ninja-pool-hall.operatoros.net/profile', { timeout: 30_000 }),
+      modulePage.waitForURL('https://operatorpoolhall.operatoros.net/profile', { timeout: 30_000 }),
       modulePage.getByTestId('button-login').click(),
     ]);
     await expect(modulePage.getByLabel('Display name')).toHaveValue('Phase 10B Table Ninja');
     await capturePhase20Evidence(modulePage, 'ninja-pool-hall-completed', { width: 390, height: 844 });
-    await assertHostOnlySession(modulePage.context(), 'ninja-pool-hall.operatoros.net');
+    await assertHostOnlySession(modulePage.context(), 'operatorpoolhall.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });
 
-  test('Ninjamation persists reviewed automation, audits the approved download, and survives deep-link reauthentication', async ({ page, request }) => {
+  test('Script Ops persists reviewed automation, audits the approved download, and survives deep-link reauthentication', async ({ page, request }) => {
     test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -2608,7 +2608,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       return Number(result.rows[0]?.count ?? 0);
     }).toBe(1);
 
-    const deepUrl = `https://ninjamation.operatoros.net/scripts/${scriptId}`;
+    const deepUrl = `https://scriptops.operatoros.net/scripts/${scriptId}`;
     await modulePage.goto(deepUrl);
     await modulePage.reload();
     await expect(modulePage.getByTestId(`button-ninjamation-script-${scriptId}`)).toContainText(scriptName, { timeout: 30_000 });
@@ -2628,7 +2628,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       modulePage.getByTestId('button-login').click(),
     ]);
     await expect(modulePage.getByTestId(`button-ninjamation-script-${scriptId}`)).toContainText(scriptName, { timeout: 30_000 });
-    await assertHostOnlySession(modulePage.context(), 'ninjamation.operatoros.net');
+    await assertHostOnlySession(modulePage.context(), 'scriptops.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });

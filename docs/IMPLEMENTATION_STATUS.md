@@ -1,5 +1,66 @@
 # OperatorOS implementation status
 
+## Ecosystem identity, hierarchy, and rendered QA refactor - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-22)
+
+- OperatorOS remains the parent authority. The canonical inventory now marks
+  exactly TradeFlowKit, PulseDesk, and TechDeck as **Main Modules**; every other
+  registered product is a **Companion Application** while retaining its
+  independent free, add-on, entitlement, billing, or provider-gated state.
+  Homepage application ordering, `/modules`, `/ecosystem`, pricing copy, the
+  orbit, hero, authenticated launcher fallbacks, and the marketing footer all
+  consume or agree with that hierarchy. The homepage's first application
+  section is the inventory-derived hierarchy grid, with materially larger main
+  module cards and every active companion application represented.
+- Public identity maps stable compatibility slugs `ninja-pool-hall`,
+  `ninja-launch-kit`, and `ninjamation` to **Operator Pool Hall**, **Deploy
+  Ops**, and **Script Ops** at `operatorpoolhall.operatoros.net`,
+  `deployops.operatoros.net`, and `scriptops.operatoros.net`. Database names,
+  API paths, entitlement keys, Stripe keys, release step IDs, and migration
+  provenance remain stable. Legacy hosts are redirect-only aliases: they are
+  accepted for recognition but excluded from exact SSO callback, logout,
+  origin, and newly generated launch registries. Alias SSO requests redirect
+  to a clean canonical entry without transferring code/state query data.
+- The three target product shells, public acquisition pages, metadata, PWA
+  copy, API/user-facing messages, exports, launcher labels, errors, tests, and
+  replacement marketing art now use the new identities. The authenticated
+  Script Ops launcher logo was also replaced with a text-free automation graph
+  so the stable `ninjamation` icon key no longer surfaces ninja imagery.
+  Operator Pool Hall
+  uses deep navy/cyan/blue operations styling; Script Ops uses blue/violet
+  infrastructure-automation styling; Deploy Ops uses cyan/blue/violet release
+  control styling. Footer Modules contains only TradeFlowKit, PulseDesk, and
+  TechDeck, and the Shotgun Ninjas Productions attribution is a real
+  `https://shotgunninjas.com` anchor.
+- Focused source contracts pass 50/50. The isolated-PostgreSQL canonical URL
+  policy passes 6/6. Release-v55 read-only plan and additive apply complete all
+  55 steps on disposable PostgreSQL, and configured production core preflight
+  passes. Root typecheck and targeted ESLint checks for the edited Playwright
+  specifications pass; the repository still defines no lint or formatting
+  release gate. The full production build passes; the optimized web build was
+  rerun after each rendered responsive repair.
+- New rendered identity/hierarchy acceptance passes 5/5 in Chromium: canonical
+  homepage order and complete active inventory, ecosystem section order and
+  labels, exact footer links, Deploy Ops/Script Ops canonical metadata with
+  zero axe violations, and 1440/768/390 reflow across homepage, ecosystem, and
+  both public acquisition surfaces. Anonymous `/api/auth/me` `401` remains the
+  expected fail-closed identity probe and is asserted separately from runtime
+  errors.
+- Exact-host authenticated Phase 51 acceptance exercised the five creative,
+  automation, and game applications across 44 stable routes, history/reload,
+  15 axe scans, desktop/tablet/mobile layout, and server/console error gates.
+  Rendered QA found and fixed two real issues: the marketing header overflowed
+  at exactly 768px, and Deploy Ops overflowed its sidebar content by 29px at
+  tablet width. After the fixes, the four-product aggregate including Deploy
+  Ops passed 4/5 with only the final Pool Hall login rate-limited by repeated
+  harness reuse; randomized forwarded-client isolation plus a fresh runtime
+  then passed Operator Pool Hall 1/1. Local compiled `/healthz` and `/readyz`
+  returned healthy/ready against release v55 and the disposable database.
+- No production database, DNS, provider, Stripe catalog, deployment, publish,
+  commit, or push was performed. Production DNS attachment for the three new
+  hosts, backup/apply, deployed exact-host SSO/browser acceptance, monitoring,
+  rollback, and live provider gates remain open. This refactor changes no
+  module parity state and does not establish state 5.
+
 ## Replit publish-scan package-manager repair - SOURCE/LOCAL VERIFIED / REPUBLISH PENDING (2026-08-21)
 
 - GitHub `main` had advanced to Replit's empty publication-marker commit

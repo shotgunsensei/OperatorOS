@@ -8,6 +8,7 @@ import {
 } from '../sdk/src/ecosystem.js';
 import {
   MODULE_CATALOG_BY_SLUG,
+  type ModuleApplicationType,
   type ModuleCatalogEntry,
   type ModuleCategory,
 } from '../sdk/src/catalog.js';
@@ -23,6 +24,7 @@ import {
 
 export type OperatorOSModuleStatus = 'active' | 'planned' | 'hidden' | 'disabled';
 export type OperatorOSModuleCategory = 'platform' | ModuleCategory;
+export type OperatorOSApplicationType = 'platform' | ModuleApplicationType;
 export type OperatorOSHostSurface = 'root' | 'app' | 'auth' | 'api' | 'module' | 'local-module' | 'unknown';
 export type OperatorOSModuleRouteStatus =
   | 'public'
@@ -46,6 +48,7 @@ export interface OperatorOSModuleRegistryEntry {
   returnUrl: string;
   description: string;
   category: OperatorOSModuleCategory;
+  applicationType: OperatorOSApplicationType;
   entitlementKey: string;
   status: OperatorOSModuleStatus;
   iconName: string;
@@ -55,6 +58,8 @@ export interface OperatorOSModuleRegistryEntry {
   requiresTenant: boolean;
   clientId: string;
   productionBaseUrl: string;
+  /** Redirect-only historical hostnames; never registered SSO origins. */
+  legacyHostnames: readonly string[];
   exactRedirectUris: readonly string[];
   exactLogoutUris: readonly string[];
   exactAllowedOrigins: readonly string[];
@@ -184,6 +189,7 @@ function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry
     returnUrl: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,
     description: module.description,
     category: module.category,
+    applicationType: module.applicationType,
     entitlementKey: module.slug,
     status: testOnlyLaunch ? 'active' : statusFromEcosystem(module.status),
     iconName: module.iconKey,
@@ -193,6 +199,7 @@ function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry
     requiresTenant: true,
     clientId: `operatoros:${module.slug}`,
     productionBaseUrl: baseUrl,
+    legacyHostnames: module.legacyUrls.map(hostnameFromUrl),
     exactRedirectUris: [`${baseUrl}/sso`],
     exactLogoutUris: [`${baseUrl}/logout`],
     exactAllowedOrigins: [baseUrl],
@@ -227,6 +234,7 @@ const OPERATOROS_MODULE: OperatorOSModuleRegistryEntry = Object.freeze({
   returnUrl: DEFAULT_OPERATOROS_APPS_URL,
   description: 'Parent command center, identity, tenant, billing, entitlement, and module launch control plane.',
   category: 'platform',
+  applicationType: 'platform',
   entitlementKey: 'operatoros',
   status: 'active',
   iconName: 'operatoros',
@@ -236,6 +244,7 @@ const OPERATOROS_MODULE: OperatorOSModuleRegistryEntry = Object.freeze({
   requiresTenant: false,
   clientId: 'operatoros:web',
   productionBaseUrl: PLATFORM_DOMAINS.root,
+  legacyHostnames: [],
   exactRedirectUris: [`${PLATFORM_DOMAINS.root}/sso`, `${PLATFORM_DOMAINS.app}/sso`],
   exactLogoutUris: [`${PLATFORM_DOMAINS.root}/logout`, `${PLATFORM_DOMAINS.app}/logout`],
   exactAllowedOrigins: [PLATFORM_DOMAINS.root, PLATFORM_DOMAINS.app, PLATFORM_DOMAINS.auth],
@@ -260,6 +269,9 @@ const MODULES_BY_ID: ReadonlyMap<string, OperatorOSModuleRegistryEntry> = new Ma
 
 const MODULES_BY_HOST: ReadonlyMap<string, OperatorOSModuleRegistryEntry> = new Map([
   ...OPERATOROS_MODULE_REGISTRY.map(module => [module.hostname, module] as const),
+  ...OPERATOROS_MODULE_REGISTRY.flatMap(module =>
+    module.legacyHostnames.map(hostname => [hostname, module] as const),
+  ),
   [ECOSYSTEM_ROOT_DOMAIN, OPERATOROS_MODULE] as const,
   [`www.${ECOSYSTEM_ROOT_DOMAIN}`, OPERATOROS_MODULE] as const,
   [hostnameFromUrl(PLATFORM_DOMAINS.app), OPERATOROS_MODULE] as const,

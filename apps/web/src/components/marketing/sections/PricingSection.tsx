@@ -117,8 +117,8 @@ export default function PricingSection() {
               Build the stack your operation needs.
             </h1>
             <p style={{ color: brand.textSecondary, fontSize: 18, lineHeight: 1.65, margin: '0 0 30px' }}>
-              OperatorOS is free — including TorqueShed, FaultlineLab, and Ninja Pool Hall with any account.
-              Add a fully unlocked core product for 5 operator seats and one companion module at no additional cost.
+              OperatorOS is free — including TorqueShed, FaultlineLab, and Operator Pool Hall with any account.
+              Add a fully unlocked main module for 5 operator seats and one companion application at no additional cost.
             </p>
             <div className="pricing-hero-actions" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
               {!user && (
@@ -180,7 +180,7 @@ export default function PricingSection() {
 
       <section className="pricing-shell" aria-labelledby="core-products-heading" style={{ paddingBottom: 90 }}>
         <header style={{ marginBottom: 30 }}>
-          <h2 id="core-products-heading" style={sectionHeadingStyle}>Choose one fully unlocked core product.</h2>
+          <h2 id="core-products-heading" style={sectionHeadingStyle}>Choose one fully unlocked main module.</h2>
           <p style={sectionCopyStyle}>No feature gates. No bundles to decode. Each product includes the same operator foundation.</p>
         </header>
         <div className="core-product-grid">
@@ -197,8 +197,8 @@ export default function PricingSection() {
                 {[
                   'Fully Unlocked',
                   '5 Seats Included',
-                  'TorqueShed + FaultlineLab + Ninja Pool Hall (free for everyone)',
-                  'Choose 1 free companion module',
+                  'TorqueShed + FaultlineLab + Operator Pool Hall (free for everyone)',
+                  'Choose 1 included companion application',
                   'Extra modules $29/mo',
                   'Extra seats available',
                 ].map(item => (
@@ -219,7 +219,7 @@ export default function PricingSection() {
         <div className="pricing-shell" style={{ paddingTop: 88, paddingBottom: 88 }}>
           <header style={{ marginBottom: 34 }}>
             <h2 style={sectionHeadingStyle}>Build Your Stack</h2>
-            <p style={sectionCopyStyle}>Choose one core product, one included companion module, and any additional capacity your team needs.</p>
+            <p style={sectionCopyStyle}>Choose one main module, one included companion application, and any additional capacity your team needs.</p>
           </header>
           <div className="stack-grid">
             <div style={{ display: 'grid', gap: 28 }}>
@@ -280,7 +280,7 @@ export default function PricingSection() {
               <SummaryRow label={`${additionalSeats} additional seat${additionalSeats === 1 ? '' : 's'}`} value={money(price.additionalSeatsCents)} />
               <div style={{ borderTop: `1px solid ${brand.borderSoft}`, paddingTop: 16 }}>
                 <div style={{ color: brand.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Free With Any Account</div>
-                <div style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.6 }}>TorqueShed · FaultlineLab · Ninja Pool Hall</div>
+                <div style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.6 }}>TorqueShed · FaultlineLab · Operator Pool Hall</div>
               </div>
               {error && <p role="alert" style={{ color: '#ff7b72', fontSize: 13, margin: 0 }}>{error}</p>}
               <button data-testid="stack-checkout-cta" type="button" onClick={continueToCheckout} disabled={busy} className="pricing-control" style={{ ...primaryButtonStyle, border: 0, width: '100%', cursor: busy ? 'wait' : 'pointer' }}>
@@ -297,7 +297,7 @@ export default function PricingSection() {
         <header style={{ marginBottom: 30, display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
             <h2 style={sectionHeadingStyle}>Free with every account</h2>
-            <p style={sectionCopyStyle}>These three apps come with every OperatorOS account at no cost — no paid core product required.</p>
+            <p style={sectionCopyStyle}>These three companion applications come with every OperatorOS account at no cost — no paid main module required.</p>
           </div>
           {!user && (
             <Link href="/login?mode=register" data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>
@@ -314,7 +314,7 @@ export default function PricingSection() {
           ))}
         </div>
         <div style={{ marginTop: 54, padding: '30px', background: brand.bgSecondary, border: `1px solid ${brand.borderSoft}`, borderRadius: 14 }}>
-          <h3 style={{ color: brand.textPrimary, fontSize: 20, margin: '0 0 18px' }}>Choose one companion module at no additional cost</h3>
+          <h3 style={{ color: brand.textPrimary, fontSize: 20, margin: '0 0 18px' }}>Choose one companion application at no additional cost</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {COMPANION_MODULES.map(module => (
               <span key={module.key} style={{ color: brand.textSecondary, padding: '8px 11px', border: `1px solid ${brand.borderSoft}`, borderRadius: 8, fontSize: 13 }}>{module.name}</span>

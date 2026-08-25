@@ -28,8 +28,8 @@ interface ModuleGatewayGridProps {
 const PACKAGE_ORDER: MarketingPackageType[] = ['core', 'included', 'companion'];
 
 export default function ModuleGatewayGrid({
-  heading = 'Tenant-aware modules under one parent platform.',
-  subheading = 'Core products, bundled apps, and companion modules all launch through the same clear OperatorOS command layer.',
+  heading = 'Main modules first. Every companion application connected.',
+  subheading = 'OperatorOS is the parent platform. TradeFlowKit, PulseDesk, and TechDeck lead as main modules; active companion applications follow beneath them.',
   testId = 'marketing-module-grid',
   headingLevel = 'h2',
 }: ModuleGatewayGridProps) {
@@ -50,7 +50,9 @@ export default function ModuleGatewayGrid({
         boxSizing: 'border-box',
       }}
     >
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .operatoros-module-lanes {
           display: grid;
           gap: 26px;
@@ -59,6 +61,14 @@ export default function ModuleGatewayGrid({
           display: grid;
           gap: 18px;
           grid-template-columns: repeat(auto-fit, minmax(276px, 1fr));
+        }
+        .operatoros-module-grid-main {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .operatoros-module-card-main {
+          min-height: 520px !important;
+          border-color: ${brand.borderStrong} !important;
+          box-shadow: 0 24px 80px rgba(0,229,255,0.07);
         }
         .operatoros-module-card {
           transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -102,7 +112,14 @@ export default function ModuleGatewayGrid({
             grid-template-columns: 1fr !important;
           }
         }
-      ` }} />
+        @media (max-width: 980px) {
+          .operatoros-module-grid-main {
+            grid-template-columns: 1fr;
+          }
+        }
+      `,
+        }}
+      />
 
       <div style={{ textAlign: 'center', marginBottom: 46 }}>
         <span
@@ -123,7 +140,7 @@ export default function ModuleGatewayGrid({
           }}
         >
           <Boxes size={14} />
-          Module ecosystem
+          OperatorOS product hierarchy
         </span>
         <HeadingTag
           data-testid={`${testId}-title`}
@@ -138,7 +155,15 @@ export default function ModuleGatewayGrid({
         >
           {heading}
         </HeadingTag>
-        <p style={{ fontSize: 16, lineHeight: 1.6, color: brand.textSecondary, margin: '0 auto', maxWidth: 720 }}>
+        <p
+          style={{
+            fontSize: 16,
+            lineHeight: 1.6,
+            color: brand.textSecondary,
+            margin: '0 auto',
+            maxWidth: 720,
+          }}
+        >
           {subheading}
         </p>
       </div>
@@ -185,11 +210,26 @@ export default function ModuleGatewayGrid({
                             : brand.accentViolet
                       }
                     />
-                    <span style={{ color: brand.textPrimary, fontFamily: brand.fontDisplay, fontSize: 22, fontWeight: 800 }}>
+                    <span
+                      style={{
+                        color: brand.textPrimary,
+                        fontFamily: brand.fontDisplay,
+                        fontSize: 22,
+                        fontWeight: 800,
+                      }}
+                    >
                       {PACKAGE_LABELS[packageType]}
                     </span>
                   </div>
-                  <p style={{ color: brand.textSecondary, fontSize: 14, lineHeight: 1.55, margin: 0, maxWidth: 760 }}>
+                  <p
+                    style={{
+                      color: brand.textSecondary,
+                      fontSize: 14,
+                      lineHeight: 1.55,
+                      margin: 0,
+                      maxWidth: 760,
+                    }}
+                  >
                     {PACKAGE_DESCRIPTIONS[packageType]}
                   </p>
                 </div>
@@ -208,10 +248,14 @@ export default function ModuleGatewayGrid({
                     fontWeight: 800,
                   }}
                 >
-                  {laneModules.length} module{laneModules.length === 1 ? '' : 's'}
+                  {laneModules.length}{' '}
+                  {packageType === 'core' ? 'main module' : 'companion application'}
+                  {laneModules.length === 1 ? '' : 's'}
                 </span>
               </div>
-              <div className="operatoros-module-grid">
+              <div
+                className={`operatoros-module-grid ${packageType === 'core' ? 'operatoros-module-grid-main' : ''}`}
+              >
                 {laneModules.map((module) => (
                   <ModuleCard key={module.slug} module={module} signedIn={!!user} />
                 ))}
@@ -238,13 +282,14 @@ function ModuleCard({ module: m, signedIn }: { module: MarketingModule; signedIn
     <div
       id={`module-${m.slug}`}
       data-testid={`module-gateway-card-${m.slug}`}
-      className="operatoros-module-card"
+      className={`operatoros-module-card ${m.applicationType === 'main-module' ? 'operatoros-module-card-main' : ''}`}
+      data-application-type={m.applicationType}
       style={{
         scrollMarginTop: 96,
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 460,
+        minHeight: m.applicationType === 'main-module' ? 520 : 430,
         borderRadius: 18,
         background: 'linear-gradient(180deg, rgba(18,24,38,0.98), rgba(8,11,18,0.94))',
         border: `1px solid ${brand.borderSoft}`,
@@ -254,7 +299,7 @@ function ModuleCard({ module: m, signedIn }: { module: MarketingModule; signedIn
       <div
         style={{
           position: 'relative',
-          height: 168,
+          height: m.applicationType === 'main-module' ? 218 : 154,
           background: `radial-gradient(circle at 28% 30%, ${packageAccent}24, transparent 34%), ${brand.bgSecondary}`,
           overflow: 'hidden',
         }}
@@ -349,7 +394,7 @@ function ModuleCard({ module: m, signedIn }: { module: MarketingModule; signedIn
             {m.name}
           </h3>
           <p style={{ fontSize: 12, color: brand.textMuted, margin: 0 }}>
-            {m.audience}
+            {m.audience} · {m.accessLabel}
           </p>
         </div>
 
@@ -365,7 +410,15 @@ function ModuleCard({ module: m, signedIn }: { module: MarketingModule; signedIn
             border: `1px solid ${brand.borderSoft}`,
           }}
         >
-          <div style={{ fontSize: 11, color: packageAccent, fontWeight: 800, textTransform: 'uppercase', marginBottom: 5 }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: packageAccent,
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              marginBottom: 5,
+            }}
+          >
             Operator value
           </div>
           <p style={{ fontSize: 12, lineHeight: 1.45, color: brand.textSecondary, margin: 0 }}>

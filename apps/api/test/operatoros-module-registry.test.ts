@@ -73,6 +73,8 @@ test('central module registry entries include the required routing and entitleme
     assert.equal(typeof module.enabled, 'boolean');
     assert.equal(typeof module.requiresSubscription, 'boolean');
     assert.equal(typeof module.requiresTenant, 'boolean');
+    assert.ok(['platform', 'main-module', 'companion-application'].includes(module.applicationType));
+    assert.ok(Array.isArray(module.legacyHostnames));
   }
 });
 
@@ -88,7 +90,13 @@ test('getModuleById and getModuleByHost resolve platform and module hosts', () =
   assert.equal(getModuleByHost('auth.operatoros.net')?.id, 'operatoros');
 
   assert.equal(isKnownModuleHost('callcommand-ai.operatoros.net'), true);
+  assert.equal(isKnownModuleHost('operatorpoolhall.operatoros.net'), true);
+  assert.equal(isKnownModuleHost('deployops.operatoros.net'), true);
+  assert.equal(isKnownModuleHost('scriptops.operatoros.net'), true);
+  // Rename-era aliases remain resolvable only so middleware can redirect them.
+  assert.equal(isKnownModuleHost('ninja-pool-hall.operatoros.net'), true);
   assert.equal(isKnownModuleHost('ninjalaunchkit.operatoros.net'), true);
+  assert.equal(isKnownModuleHost('ninjamation.operatoros.net'), true);
   assert.equal(isKnownModuleHost('unknown.operatoros.net'), false);
   assert.equal(isKnownModuleHost('localhost'), false);
 });
@@ -108,6 +116,8 @@ test('getHostSurface classifies production platform and module hosts', () => {
   assert.equal(getHostSurface('auth.operatoros.net'), 'auth');
   assert.equal(getHostSurface('api.operatoros.net'), 'api');
   assert.equal(getHostSurface('techdeck.operatoros.net'), 'module');
+  assert.equal(getHostSurface('operatorpoolhall.operatoros.net'), 'module');
+  assert.equal(getHostSurface('ninja-pool-hall.operatoros.net'), 'module');
   assert.equal(getHostSurface('unknown.operatoros.net'), 'unknown');
   assert.equal(getHostSurface('localhost'), 'unknown');
 });

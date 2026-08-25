@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 
 /**
- * Additive, idempotent Phase 10B Ninja Pool Hall release.
+ * Additive, idempotent Phase 10B Operator Pool Hall release (stable database namespace retained).
  *
  * Match events are application-append-only. Platform hard-delete remains an
  * explicit audited transaction, so no trigger prevents required account or

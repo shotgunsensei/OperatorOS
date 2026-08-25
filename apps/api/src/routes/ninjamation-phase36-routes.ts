@@ -82,7 +82,7 @@ function fail(reply: FastifyReply, error: unknown) {
 }
 async function moduleId() {
   const result = await db.execute(sql`SELECT id FROM modules WHERE slug=${MODULE_SLUG} LIMIT 1`);
-  if (!result.rows[0]) throw Object.assign(new Error('Ninjamation module registry is unavailable'), { code: 'NINJAMATION_MODULE_UNAVAILABLE' });
+  if (!result.rows[0]) throw Object.assign(new Error('Script Ops module registry is unavailable'), { code: 'NINJAMATION_MODULE_UNAVAILABLE' });
   return String(result.rows[0].id);
 }
 async function activity(request: FastifyRequest, objectType: string, objectId: string, eventType: string, summary: string, metadata: Row = {}) {
@@ -139,7 +139,7 @@ registerSharedJobHandler(SYNC_HANDLER, async (context) => {
 
 export async function registerNinjamationPhase36Routes(app: FastifyInstance) {
   app.get('/v1/public/ninjamation/product', async () => ({
-    product: 'Ninjamation',
+    product: 'Script Ops',
     positioning: 'Reviewed automation scripts and AI-assisted drafts without unsafe web-process execution.',
     repository: { name: NINJAMATION_REPOSITORY, branch: NINJAMATION_REPOSITORY_BRANCH },
     formats: NINJAMATION_LIBRARY_FORMATS,
@@ -298,7 +298,7 @@ export async function registerNinjamationPhase36Routes(app: FastifyInstance) {
     try {
       const input = parseGeneration(request.body), tenantId = tenant(request), userId = actor(request), modId = await moduleId();
       const access = await resolveNinjamationAccess(userId, tenantId);
-      if (!access.limits.aiGeneration) return reply.code(403).send({ error: 'AI generation requires the Ninjamation Pro or Enterprise entitlement', code: 'NINJAMATION_AI_ENTITLEMENT_REQUIRED', requiredPlan: 'pro' });
+      if (!access.limits.aiGeneration) return reply.code(403).send({ error: 'AI drafting requires the Script Ops Pro or Enterprise entitlement', code: 'NINJAMATION_AI_ENTITLEMENT_REQUIRED', requiredPlan: 'pro' });
       const provider = getSharedAiProviderAdapter();
       if (provider.status.state === 'disabled') return reply.code(503).send({ error: 'AI generation is unavailable until the shared provider is configured', code: 'AI_PROVIDER_DISABLED', provider: provider.status });
       const safeRequest = { promptSha256: sha256(input.prompt), language: input.language, name: input.name, category: input.category, riskTier: input.riskTier };

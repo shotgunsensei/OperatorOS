@@ -17,13 +17,13 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   },
   {
     slug: 'core-product-inclusions',
-    question: 'What comes with a core product?',
-    answer: 'Every core product is fully unlocked and includes 5 operator seats and one selectable companion module. TorqueShed, FaultlineLab, and Ninja Pool Hall are already free with any account.',
+    question: 'What comes with a main module?',
+    answer: 'Every main module is fully unlocked and includes 5 operator seats and one selectable companion application. TorqueShed, FaultlineLab, and Operator Pool Hall are already free with any account.',
   },
   {
     slug: 'included-seats',
     question: 'How many seats are included?',
-    answer: 'Each active core product includes 5 operator seats for the tenant.',
+    answer: 'Each active main module includes 5 operator seats for the tenant.',
   },
   {
     slug: 'additional-seats',
@@ -33,17 +33,17 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'included-apps',
     question: 'Which apps are free with any account?',
-    answer: 'TorqueShed, FaultlineLab, and Ninja Pool Hall are free with any OperatorOS account — no paid core product required. Just create a free account to start using them.',
+    answer: 'TorqueShed, FaultlineLab, and Operator Pool Hall are free with any OperatorOS account — no paid main module required. Just create a free account to start using them.',
   },
   {
     slug: 'free-companion',
-    question: 'How does the free companion module work?',
-    answer: 'Choose one eligible companion module for $0. Tenant owners or admins can change that selection inside OperatorOS while the core subscription remains active.',
+    question: 'How does the included companion application work?',
+    answer: 'Choose one eligible companion application for $0. Tenant owners or admins can change that selection inside OperatorOS while the main-module subscription remains active.',
   },
   {
     slug: 'additional-modules',
-    question: 'What do additional modules cost?',
-    answer: 'Every companion module beyond the included selection costs $29 per month.',
+    question: 'What do additional companion applications cost?',
+    answer: 'Every eligible companion application beyond the included selection costs $29 per month.',
   },
   {
     slug: 'pulsedesk-audience',
@@ -53,6 +53,6 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'cancellation',
     question: 'What happens if I cancel?',
-    answer: 'Paid app entitlements and paid seat capacity end with the subscription. OperatorOS remains available as the free command layer — including TorqueShed, FaultlineLab, and Ninja Pool Hall — and billing history stays auditable.',
+    answer: 'Paid app entitlements and paid seat capacity end with the subscription. OperatorOS remains available as the free command layer — including TorqueShed, FaultlineLab, and Operator Pool Hall — and billing history stays auditable.',
   },
 ] as const;

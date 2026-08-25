@@ -39,11 +39,7 @@ import {
   findActivePracticeSummary,
   reconcilePracticeProgress,
 } from '@/lib/ninja-pool-hall/practice-recovery';
-import type {
-  Ball,
-  GameState,
-  Vec2,
-} from '@/lib/ninja-pool-hall/types';
+import type { Ball, GameState, Vec2 } from '@/lib/ninja-pool-hall/types';
 
 const BALL_COLORS: Record<number, string> = {
   0: '#f8fafc',
@@ -98,7 +94,7 @@ function apiError(error: unknown, retry: RetryAction): ActionError {
     message?: string;
   };
   return {
-    message: candidate?.error ?? candidate?.message ?? 'Ninja Pool Hall request failed',
+    message: candidate?.error ?? candidate?.message ?? 'Operator Pool Hall request failed',
     status: candidate?.status,
     code: candidate?.code,
     retry,
@@ -107,22 +103,23 @@ function apiError(error: unknown, retry: RetryAction): ActionError {
 
 function isVersionConflict(error: unknown): boolean {
   const candidate = error as { status?: number; code?: string };
-  return candidate?.status === 409
-    && candidate?.code === 'NINJA_POOL_PRACTICE_VERSION_CONFLICT';
+  return candidate?.status === 409 && candidate?.code === 'NINJA_POOL_PRACTICE_VERSION_CONFLICT';
 }
 
-function sessionFromConflict(
-  error: unknown,
-  expectedId: string,
-): NinjaPoolPracticeSession | null {
+function sessionFromConflict(error: unknown, expectedId: string): NinjaPoolPracticeSession | null {
   const candidate = error as { currentSession?: unknown; session?: unknown };
   const value = candidate?.currentSession ?? candidate?.session;
   if (!value || typeof value !== 'object') return null;
   const row = value as Partial<NinjaPoolPracticeSession>;
   if (row.id !== expectedId) return null;
-  if (row.status !== 'active' && row.status !== 'completed' && row.status !== 'abandoned') return null;
-  if (![row.shots, row.objectBallsPocketed, row.scratches, row.version]
-    .every((field) => Number.isSafeInteger(field))) return null;
+  if (row.status !== 'active' && row.status !== 'completed' && row.status !== 'abandoned')
+    return null;
+  if (
+    ![row.shots, row.objectBallsPocketed, row.scratches, row.version].every((field) =>
+      Number.isSafeInteger(field),
+    )
+  )
+    return null;
   if (typeof row.startedAt !== 'string' || typeof row.updatedAt !== 'string') return null;
   if (row.completedAt !== null && typeof row.completedAt !== 'string') return null;
   return row as NinjaPoolPracticeSession;
@@ -131,7 +128,12 @@ function sessionFromConflict(
 function formatDate(value: string): string {
   const parsed = new Date(value);
   return Number.isFinite(parsed.getTime())
-    ? parsed.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    ? parsed.toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
     : value;
 }
 
@@ -142,14 +144,16 @@ function sessionLabel(session: NinjaPoolPracticeSession): string {
 }
 
 function resetScratchedCue(balls: Ball[]): Ball[] {
-  return balls.map((ball) => ball.id === 0
-    ? {
-      ...ball,
-      inPocket: false,
-      pos: { ...HEAD_SPOT },
-      vel: { x: 0, y: 0 },
-    }
-    : ball);
+  return balls.map((ball) =>
+    ball.id === 0
+      ? {
+          ...ball,
+          inPocket: false,
+          pos: { ...HEAD_SPOT },
+          vel: { x: 0, y: 0 },
+        }
+      : ball,
+  );
 }
 
 function countObjectBallsPocketed(state: GameState): number {
@@ -185,14 +189,7 @@ function drawBall(ctx: CanvasRenderingContext2D, ball: Ball, pos: Vec2): void {
     ctx.fillRect(pos.x - BALL_RADIUS + 2, pos.y - 5, BALL_RADIUS * 2 - 4, 10);
   }
 
-  const highlight = ctx.createRadialGradient(
-    pos.x - 4,
-    pos.y - 5,
-    1,
-    pos.x,
-    pos.y,
-    BALL_RADIUS,
-  );
+  const highlight = ctx.createRadialGradient(pos.x - 4, pos.y - 5, 1, pos.x, pos.y, BALL_RADIUS);
   highlight.addColorStop(0, 'rgba(255,255,255,.72)');
   highlight.addColorStop(0.45, 'rgba(255,255,255,.10)');
   highlight.addColorStop(1, 'rgba(0,0,0,.18)');
@@ -225,7 +222,9 @@ export default function NinjaPoolHallPractice() {
   const [power, setPower] = useState(0.58);
   const [session, setSession] = useState<NinjaPoolPracticeSession | null>(null);
   const [history, setHistory] = useState<NinjaPoolPracticeSession[]>([]);
-  const [pendingProgress, setPendingProgress] = useState<NinjaPoolPracticeProgressInput | null>(null);
+  const [pendingProgress, setPendingProgress] = useState<NinjaPoolPracticeProgressInput | null>(
+    null,
+  );
   const [historyLoading, setHistoryLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [animating, setAnimating] = useState(false);
@@ -234,7 +233,9 @@ export default function NinjaPoolHallPractice() {
   const [reconciling, setReconciling] = useState(false);
   const [recoveryRequired, setRecoveryRequired] = useState(false);
   const [error, setError] = useState<ActionError | null>(null);
-  const [statusMessage, setStatusMessage] = useState('Start a rack, aim on the table, set power, and shoot.');
+  const [statusMessage, setStatusMessage] = useState(
+    'Start a rack, aim on the table, set power, and shoot.',
+  );
 
   const cueBall = useMemo(
     () => gameState.balls.find((ball) => ball.id === 0) ?? null,
@@ -243,14 +244,10 @@ export default function NinjaPoolHallPractice() {
   const objectBallsPocketed = useMemo(() => countObjectBallsPocketed(gameState), [gameState]);
   const active = session?.status === 'active';
   const displayedObjectBallsPocketed = recoveryRequired
-    ? session?.objectBallsPocketed ?? objectBallsPocketed
+    ? (session?.objectBallsPocketed ?? objectBallsPocketed)
     : objectBallsPocketed;
-  const controlsLocked = !active
-    || recoveryRequired
-    || animating
-    || saving
-    || reconciling
-    || pendingProgress !== null;
+  const controlsLocked =
+    !active || recoveryRequired || animating || saving || reconciling || pendingProgress !== null;
 
   const loadHistory = useCallback(async (discoverActive = false) => {
     setHistoryLoading(true);
@@ -268,7 +265,7 @@ export default function NinjaPoolHallPractice() {
           );
         }
       }
-      setError((current) => current?.retry === 'history' ? null : current);
+      setError((current) => (current?.retry === 'history' ? null : current));
     } catch (cause) {
       setError(apiError(cause, 'history'));
     } finally {
@@ -305,7 +302,12 @@ export default function NinjaPoolHallPractice() {
     ctx.fillRect(PLAY_LEFT, PLAY_TOP, PLAY_RIGHT - PLAY_LEFT, PLAY_BOTTOM - PLAY_TOP);
     ctx.strokeStyle = 'rgba(248,113,113,.48)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(PLAY_LEFT - 4, PLAY_TOP - 4, PLAY_RIGHT - PLAY_LEFT + 8, PLAY_BOTTOM - PLAY_TOP + 8);
+    ctx.strokeRect(
+      PLAY_LEFT - 4,
+      PLAY_TOP - 4,
+      PLAY_RIGHT - PLAY_LEFT + 8,
+      PLAY_BOTTOM - PLAY_TOP + 8,
+    );
 
     for (const pocket of POCKETS) {
       ctx.fillStyle = '#000';
@@ -352,7 +354,10 @@ export default function NinjaPoolHallPractice() {
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.moveTo(cuePos.x - direction.x * 24, cuePos.y - direction.y * 24);
-      ctx.lineTo(cuePos.x - direction.x * (94 + power * 50), cuePos.y - direction.y * (94 + power * 50));
+      ctx.lineTo(
+        cuePos.x - direction.x * (94 + power * 50),
+        cuePos.y - direction.y * (94 + power * 50),
+      );
       ctx.stroke();
       ctx.restore();
     }
@@ -372,63 +377,70 @@ export default function NinjaPoolHallPractice() {
     drawTable();
   }, [drawTable]);
 
-  const reconcileSession = useCallback(async (
-    target: NinjaPoolPracticeSession,
-    pending: NinjaPoolPracticeProgressInput | null,
-    conflict?: unknown,
-  ) => {
-    setReconciling(true);
-    setError(null);
-    try {
-      const embedded = sessionFromConflict(conflict, target.id);
-      const response = embedded
-        ? { sessions: [embedded] }
-        : await moduleShellApi.ninjaPoolHall.listPracticeSessions(25);
-      if (!embedded) setHistory(response.sessions.slice(0, 8));
+  const reconcileSession = useCallback(
+    async (
+      target: NinjaPoolPracticeSession,
+      pending: NinjaPoolPracticeProgressInput | null,
+      conflict?: unknown,
+    ) => {
+      setReconciling(true);
+      setError(null);
+      try {
+        const embedded = sessionFromConflict(conflict, target.id);
+        const response = embedded
+          ? { sessions: [embedded] }
+          : await moduleShellApi.ninjaPoolHall.listPracticeSessions(25);
+        if (!embedded) setHistory(response.sessions.slice(0, 8));
 
-      const result = pending
-        ? reconcilePracticeProgress(target.id, pending, response.sessions)
-        : (() => {
-          const current = response.sessions.find((candidate) => candidate.id === target.id);
-          return current
-            ? { kind: 'server-state' as const, session: current }
-            : { kind: 'missing' as const };
-        })();
+        const result = pending
+          ? reconcilePracticeProgress(target.id, pending, response.sessions)
+          : (() => {
+              const current = response.sessions.find((candidate) => candidate.id === target.id);
+              return current
+                ? { kind: 'server-state' as const, session: current }
+                : { kind: 'missing' as const };
+            })();
 
-      if (result.kind === 'committed') {
-        sessionRef.current = result.session;
-        setSession(result.session);
+        if (result.kind === 'committed') {
+          sessionRef.current = result.session;
+          setSession(result.session);
+          setPendingProgress(null);
+          setRecoveryRequired(false);
+          setStatusMessage(
+            result.session.status === 'completed'
+              ? `Rack cleared in ${result.session.shots} shots. The saved summary was reconciled.`
+              : `${result.session.objectBallsPocketed} down · ${15 - result.session.objectBallsPocketed} remaining. The saved shot was reconciled.`,
+          );
+          return;
+        }
+
+        if (result.kind === 'server-state') {
+          sessionRef.current = result.session;
+          setSession(result.session);
+          setPendingProgress(null);
+          const requiresRecovery = result.session.status === 'active';
+          setRecoveryRequired(requiresRecovery);
+          setStatusMessage(
+            requiresRecovery
+              ? 'The server summary changed, but exact table positions are local-only. End the recovered rack before starting another.'
+              : `The server reports this rack as ${result.session.status}. Start a new local rack when ready.`,
+          );
+          return;
+        }
+
         setPendingProgress(null);
-        setRecoveryRequired(false);
-        setStatusMessage(result.session.status === 'completed'
-          ? `Rack cleared in ${result.session.shots} shots. The saved summary was reconciled.`
-          : `${result.session.objectBallsPocketed} down · ${15 - result.session.objectBallsPocketed} remaining. The saved shot was reconciled.`);
-        return;
+        setRecoveryRequired(target.status === 'active');
+        setStatusMessage(
+          'The current summary was not returned. Local shot retry was cleared; reload status or end the recovered rack.',
+        );
+      } catch (cause) {
+        setError(apiError(cause, 'reconcile'));
+      } finally {
+        setReconciling(false);
       }
-
-      if (result.kind === 'server-state') {
-        sessionRef.current = result.session;
-        setSession(result.session);
-        setPendingProgress(null);
-        const requiresRecovery = result.session.status === 'active';
-        setRecoveryRequired(requiresRecovery);
-        setStatusMessage(requiresRecovery
-          ? 'The server summary changed, but exact table positions are local-only. End the recovered rack before starting another.'
-          : `The server reports this rack as ${result.session.status}. Start a new local rack when ready.`);
-        return;
-      }
-
-      setPendingProgress(null);
-      setRecoveryRequired(target.status === 'active');
-      setStatusMessage(
-        'The current summary was not returned. Local shot retry was cleared; reload status or end the recovered rack.',
-      );
-    } catch (cause) {
-      setError(apiError(cause, 'reconcile'));
-    } finally {
-      setReconciling(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const startRack = useCallback(async () => {
     setStarting(true);
@@ -466,32 +478,37 @@ export default function NinjaPoolHallPractice() {
     }
   }, [loadHistory]);
 
-  const saveProgress = useCallback(async (progress: NinjaPoolPracticeProgressInput) => {
-    if (!session) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await moduleShellApi.ninjaPoolHall.savePracticeShot(session.id, progress);
-      sessionRef.current = updated;
-      setSession(updated);
-      setPendingProgress(null);
-      setRecoveryRequired(false);
-      if (updated.status === 'completed') {
-        setStatusMessage(`Rack cleared in ${updated.shots} shots. Clean work.`);
-      } else {
-        setStatusMessage(`${updated.objectBallsPocketed} down · ${15 - updated.objectBallsPocketed} remaining.`);
+  const saveProgress = useCallback(
+    async (progress: NinjaPoolPracticeProgressInput) => {
+      if (!session) return;
+      setSaving(true);
+      setError(null);
+      try {
+        const updated = await moduleShellApi.ninjaPoolHall.savePracticeShot(session.id, progress);
+        sessionRef.current = updated;
+        setSession(updated);
+        setPendingProgress(null);
+        setRecoveryRequired(false);
+        if (updated.status === 'completed') {
+          setStatusMessage(`Rack cleared in ${updated.shots} shots. Clean work.`);
+        } else {
+          setStatusMessage(
+            `${updated.objectBallsPocketed} down · ${15 - updated.objectBallsPocketed} remaining.`,
+          );
+        }
+        await loadHistory();
+      } catch (cause) {
+        if (isVersionConflict(cause)) {
+          await reconcileSession(session, progress, cause);
+        } else {
+          setError(apiError(cause, 'save'));
+        }
+      } finally {
+        setSaving(false);
       }
-      await loadHistory();
-    } catch (cause) {
-      if (isVersionConflict(cause)) {
-        await reconcileSession(session, progress, cause);
-      } else {
-        setError(apiError(cause, 'save'));
-      }
-    } finally {
-      setSaving(false);
-    }
-  }, [loadHistory, reconcileSession, session]);
+    },
+    [loadHistory, reconcileSession, session],
+  );
 
   const playFrames = useCallback((frames: SimulationFrame[], ticks: number) => {
     return new Promise<void>((resolve) => {
@@ -530,13 +547,17 @@ export default function NinjaPoolHallPractice() {
     setStatusMessage('Shot in motion…');
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     try {
-      const result = simulateShot(gameState, {
-        angle: Math.atan2(dy, dx),
-        power,
-      }, {
-        recordFrames: true,
-        frameInterval: 3,
-      });
+      const result = simulateShot(
+        gameState,
+        {
+          angle: Math.atan2(dy, dx),
+          power,
+        },
+        {
+          recordFrames: true,
+          frameInterval: 3,
+        },
+      );
       await playFrames(result.frames, result.ticks);
       const scratched = result.events.pocketed.includes(0);
       const balls = scratched
@@ -601,7 +622,16 @@ export default function NinjaPoolHallPractice() {
     if (error.retry === 'reconcile' && session) {
       void reconcileSession(session, pendingProgress);
     }
-  }, [abandonRack, error, loadHistory, pendingProgress, reconcileSession, saveProgress, session, startRack]);
+  }, [
+    abandonRack,
+    error,
+    loadHistory,
+    pendingProgress,
+    reconcileSession,
+    saveProgress,
+    session,
+    startRack,
+  ]);
 
   const discardUncertainLocalRack = useCallback(() => {
     if (!session) return;
@@ -658,7 +688,9 @@ export default function NinjaPoolHallPractice() {
             </span>
           </div>
           <div className="nph-error-actions">
-            <button type="button" onClick={retry}><RefreshCw size={15} /> Retry</button>
+            <button type="button" onClick={retry}>
+              <RefreshCw size={15} /> Retry
+            </button>
             {error.retry === 'reconcile' && session && (
               <button type="button" onClick={discardUncertainLocalRack}>
                 <RotateCcw size={15} /> Discard local rack
@@ -672,14 +704,22 @@ export default function NinjaPoolHallPractice() {
         <div className="nph-game-card">
           <div className="nph-toolbar">
             <div>
-              <span className="nph-kicker"><Crosshair size={14} /> SYS::FREE_SHOOT</span>
+              <span className="nph-kicker">
+                <Crosshair size={14} /> SYS::FREE_SHOOT
+              </span>
               <h2>Practice rack</h2>
               <p>{statusMessage}</p>
             </div>
             <div className="nph-stats" aria-label="Current rack stats">
-              <span><b>{session?.shots ?? 0}</b> shots</span>
-              <span><b>{displayedObjectBallsPocketed}</b> pocketed</span>
-              <span><b>{session?.scratches ?? 0}</b> scratches</span>
+              <span>
+                <b>{session?.shots ?? 0}</b> shots
+              </span>
+              <span>
+                <b>{displayedObjectBallsPocketed}</b> pocketed
+              </span>
+              <span>
+                <b>{session?.scratches ?? 0}</b> scratches
+              </span>
             </div>
           </div>
 
@@ -689,7 +729,7 @@ export default function NinjaPoolHallPractice() {
               width={TABLE_WIDTH}
               height={TABLE_HEIGHT}
               tabIndex={0}
-              aria-label="Ninja Pool Hall practice table. Touch or click to aim, or use arrow keys. Press Enter or Space to shoot."
+              aria-label="Operator Pool Hall practice table. Touch or click to aim, or use arrow keys. Press Enter or Space to shoot."
               data-testid="ninja-pool-table"
               onPointerDown={(event) => {
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -702,15 +742,25 @@ export default function NinjaPoolHallPractice() {
             />
             {(!active || recoveryRequired) && (
               <div className="nph-table-overlay">
-                {recoveryRequired
-                  ? <RefreshCw className={reconciling ? 'nph-spin' : ''} size={34} />
-                  : session?.status === 'completed' ? <Trophy size={34} /> : <Target size={34} />}
-                <strong>{recoveryRequired
-                  ? 'Session summary recovered'
-                  : session?.status === 'completed' ? 'Rack cleared' : 'Local drill ready'}</strong>
-                <span>{recoveryRequired
-                  ? 'OperatorOS retained the bounded totals, not the ball positions. End this recovered rack cleanly before starting another.'
-                  : 'Physics runs entirely on this device; only bounded rack totals are saved.'}</span>
+                {recoveryRequired ? (
+                  <RefreshCw className={reconciling ? 'nph-spin' : ''} size={34} />
+                ) : session?.status === 'completed' ? (
+                  <Trophy size={34} />
+                ) : (
+                  <Target size={34} />
+                )}
+                <strong>
+                  {recoveryRequired
+                    ? 'Session summary recovered'
+                    : session?.status === 'completed'
+                      ? 'Rack cleared'
+                      : 'Local drill ready'}
+                </strong>
+                <span>
+                  {recoveryRequired
+                    ? 'OperatorOS retained the bounded totals, not the ball positions. End this recovered rack cleanly before starting another.'
+                    : 'Physics runs entirely on this device; only bounded rack totals are saved.'}
+                </span>
                 {recoveryRequired && session ? (
                   <div className="nph-recovery-actions">
                     <button
@@ -719,7 +769,11 @@ export default function NinjaPoolHallPractice() {
                       disabled={ending || reconciling}
                       data-testid="ninja-pool-end-recovered-rack"
                     >
-                      {ending ? <Loader2 className="nph-spin" size={17} /> : <RotateCcw size={17} />}
+                      {ending ? (
+                        <Loader2 className="nph-spin" size={17} />
+                      ) : (
+                        <RotateCcw size={17} />
+                      )}
                       {ending ? 'Ending…' : 'End recovered rack'}
                     </button>
                     <button
@@ -729,14 +783,27 @@ export default function NinjaPoolHallPractice() {
                       disabled={ending || reconciling}
                       data-testid="ninja-pool-refresh-recovered-rack"
                     >
-                      {reconciling ? <Loader2 className="nph-spin" size={17} /> : <RefreshCw size={17} />}
+                      {reconciling ? (
+                        <Loader2 className="nph-spin" size={17} />
+                      ) : (
+                        <RefreshCw size={17} />
+                      )}
                       {reconciling ? 'Checking…' : 'Reload server summary'}
                     </button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => void startRack()} disabled={starting} data-testid="ninja-pool-start">
+                  <button
+                    type="button"
+                    onClick={() => void startRack()}
+                    disabled={starting}
+                    data-testid="ninja-pool-start"
+                  >
                     {starting ? <Loader2 className="nph-spin" size={17} /> : <Play size={17} />}
-                    {starting ? 'Starting…' : session ? 'Start another rack' : 'Start practice rack'}
+                    {starting
+                      ? 'Starting…'
+                      : session
+                        ? 'Start another rack'
+                        : 'Start practice rack'}
                   </button>
                 )}
               </div>
@@ -745,7 +812,9 @@ export default function NinjaPoolHallPractice() {
 
           <div className="nph-controls">
             <label>
-              <span>Shot power <b>{Math.round(power * 100)}%</b></span>
+              <span>
+                Shot power <b>{Math.round(power * 100)}%</b>
+              </span>
               <input
                 type="range"
                 min="0.08"
@@ -764,13 +833,25 @@ export default function NinjaPoolHallPractice() {
               onClick={() => void takeShot()}
               data-testid="ninja-pool-shoot"
             >
-              {animating || saving ? <Loader2 className="nph-spin" size={18} /> : <CircleDot size={18} />}
+              {animating || saving ? (
+                <Loader2 className="nph-spin" size={18} />
+              ) : (
+                <CircleDot size={18} />
+              )}
               {animating ? 'Balls moving…' : saving ? 'Saving…' : 'Take shot'}
             </button>
             <button
               type="button"
               className="nph-secondary"
-              disabled={!active || recoveryRequired || animating || saving || ending || reconciling || pendingProgress !== null}
+              disabled={
+                !active ||
+                recoveryRequired ||
+                animating ||
+                saving ||
+                ending ||
+                reconciling ||
+                pendingProgress !== null
+              }
               onClick={() => void abandonRack()}
               data-testid="ninja-pool-end-rack"
             >
@@ -781,20 +862,32 @@ export default function NinjaPoolHallPractice() {
 
           <div className="nph-boundary">
             <ShieldCheck size={17} />
-            <span><b>Local-first boundary:</b> no WebSocket room, remote opponent, local login, billing, or competitive ranking is active in this slice.</span>
+            <span>
+              <b>Local-first boundary:</b> no WebSocket room, remote opponent, local login, billing,
+              or competitive ranking is active in this slice.
+            </span>
           </div>
         </div>
 
         <aside className="nph-history" data-testid="ninja-pool-practice-history">
           <div className="nph-history-title">
-            <div><History size={17} /><strong>Recent racks</strong></div>
-            <button type="button" onClick={() => void loadHistory(true)} aria-label="Refresh practice history">
+            <div>
+              <History size={17} />
+              <strong>Recent racks</strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadHistory(true)}
+              aria-label="Refresh practice history"
+            >
               <RefreshCw size={15} className={historyLoading ? 'nph-spin' : ''} />
             </button>
           </div>
           {historyLoading && history.length === 0 ? (
             <div className="nph-history-loading" data-testid="ninja-pool-history-loading">
-              {[0, 1, 2].map((item) => <span key={item} />)}
+              {[0, 1, 2].map((item) => (
+                <span key={item} />
+              ))}
             </div>
           ) : history.length === 0 ? (
             <div className="nph-history-empty" data-testid="ninja-pool-history-empty">
@@ -811,7 +904,9 @@ export default function NinjaPoolHallPractice() {
                     <time>{formatDate(item.startedAt)}</time>
                   </div>
                   <strong>{item.objectBallsPocketed}/15 down</strong>
-                  <p>{item.shots} shots · {item.scratches} scratches</p>
+                  <p>
+                    {item.shots} shots · {item.scratches} scratches
+                  </p>
                 </article>
               ))}
             </div>

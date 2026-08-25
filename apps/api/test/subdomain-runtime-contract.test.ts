@@ -14,13 +14,13 @@ const REPLIT_MODULE_HOSTS = {
   'techdeck.operatoros.net': 'techdeck',
   'pulsedesk.operatoros.net': 'pulsedesk',
   'faultlinelab.operatoros.net': 'faultlinelab',
-  'ninja-pool-hall.operatoros.net': 'ninja-pool-hall',
+  'operatorpoolhall.operatoros.net': 'ninja-pool-hall',
   'brandforgeos.operatoros.net': 'brandforgeos',
   'snapproofos.operatoros.net': 'snapproofos',
   'studyforge-ai.operatoros.net': 'studyforge-ai',
-  'ninjalaunchkit.operatoros.net': 'ninja-launch-kit',
+  'deployops.operatoros.net': 'ninja-launch-kit',
   'callcommand-ai.operatoros.net': 'callcommand-ai',
-  'ninjamation.operatoros.net': 'ninjamation',
+  'scriptops.operatoros.net': 'ninjamation',
   'outcall.operatoros.net': 'outcall',
 } as const;
 
@@ -35,6 +35,8 @@ test('production module paths redirect to canonical subdomains while local paths
   const registry = read('packages/modules/registry.ts');
 
   assert.match(middleware, /function canonicalizeProductionModulePath/);
+  assert.match(middleware, /function canonicalizeLegacyModuleHost/);
+  assert.match(middleware, /module\.legacyHostnames\.includes\(context\.host\)/);
   assert.match(middleware, /context\.surface !== 'root' && context\.surface !== 'app'/);
   assert.match(middleware, /new URL\(module\.productionBaseUrl\)/);
   assert.match(middleware, /NextResponse\.redirect\(destination, 308\)/);

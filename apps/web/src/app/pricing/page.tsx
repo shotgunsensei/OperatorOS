@@ -11,7 +11,7 @@ import { buildPublicMetadata, serializeJsonLd } from '@/lib/seo';
 export const metadata: Metadata = buildPublicMetadata({
   title: 'OperatorOS Pricing | Plans, Seats, and Modules',
   description:
-    'Review OperatorOS core products, included seats, free account apps, companion modules, and configuration-driven monthly pricing.',
+    'Review OperatorOS main modules, included seats, free account apps, companion applications, and configuration-driven monthly pricing.',
   path: '/pricing',
 });
 

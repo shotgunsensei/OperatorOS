@@ -8,8 +8,8 @@ import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { brand } from '@/lib/brand';
 import {
   getAllModules,
-  getActiveModules,
-  getPlannedModules,
+  getCompanionApplications,
+  getMainModules,
   type EcosystemModule,
   type EcosystemModuleStatus,
 } from '@operatoros/sdk';
@@ -20,22 +20,24 @@ import {
  * Positions OperatorOS as the central command layer for the whole
  * product ecosystem and renders every registry module as a launch
  * card. All module data is consumed from the foundation's shared SDK
- * helpers (`getAllModules`/`getActiveModules`/`getPlannedModules`) —
+ * helpers (`getAllModules`/`getMainModules`/`getCompanionApplications`) —
  * there is deliberately no second module list defined here so the two
- * surfaces can never drift. TechDeck leads (its `ord`/`first` flag is
- * resolved inside the SDK). Nothing here embeds or implements any module
+ * surfaces can never drift. Nothing here embeds or implements any module
  * app, and every launch uses the canonical OperatorOS subdomain.
  */
 export default function EcosystemPage() {
-  const active = getActiveModules();
-  const planned = getPlannedModules();
+  const mainModules = getMainModules();
+  const companions = getCompanionApplications();
+  const activeCompanions = companions.filter((module) => module.status === 'active');
+  const plannedCompanions = companions.filter((module) => module.status === 'planned');
 
   // Anything the registry surfaces that is neither active nor planned
   // (e.g. a future `beta` status) is preserved under "Additional
   // Modules" with its own badge rather than being hidden.
   const accountedFor = new Set<string>([
-    ...active.map((m) => m.slug),
-    ...planned.map((m) => m.slug),
+    ...mainModules.map((m) => m.slug),
+    ...activeCompanions.map((m) => m.slug),
+    ...plannedCompanions.map((m) => m.slug),
   ]);
   const additional = getAllModules().filter((m) => !accountedFor.has(m.slug));
 
@@ -43,29 +45,38 @@ export default function EcosystemPage() {
     <MarketingLayout testId="page-ecosystem">
       <EcosystemHeader />
       <ModuleSection
-        id="active"
-        eyebrow="Active Modules"
-        title="Live and ready to launch"
-        subtitle="Each module runs on its own operatoros.net subdomain with shared sign-on, billing, and admin — launch straight from the command layer."
-        modules={active}
-        testId="ecosystem-section-active"
+        id="main-modules"
+        eyebrow="Main Modules"
+        title="The three flagship products beneath OperatorOS"
+        subtitle="TradeFlowKit, PulseDesk, and TechDeck receive the strongest visual priority while sharing OperatorOS identity, tenant, billing, entitlement, and launch authority."
+        modules={mainModules}
+        testId="ecosystem-section-main-modules"
+        prominent
       />
-      {planned.length > 0 && (
+      <ModuleSection
+        id="companion-applications"
+        eyebrow="Companion Applications"
+        title="Active specialist applications"
+        subtitle="Every active companion application is listed here after the main modules and launches through its canonical operatoros.net host."
+        modules={activeCompanions}
+        testId="ecosystem-section-companion-applications"
+      />
+      {plannedCompanions.length > 0 && (
         <ModuleSection
           id="planned"
-          eyebrow="Planned / Upcoming Modules"
+          eyebrow="Planned Companion Applications"
           title="On the roadmap"
-          subtitle="Reserved subdomains for modules joining the ecosystem next."
-          modules={planned}
+          subtitle="Reserved product identities that remain visibly unavailable until their activation gates pass."
+          modules={plannedCompanions}
           testId="ecosystem-section-planned"
         />
       )}
       {additional.length > 0 && (
         <ModuleSection
           id="additional"
-          eyebrow="Additional Modules"
+          eyebrow="Additional Applications"
           title="Also in the ecosystem"
-          subtitle="Modules in other lifecycle states, shown with their current status."
+          subtitle="Applications in other lifecycle states, shown with their current status."
           modules={additional}
           testId="ecosystem-section-additional"
         />
@@ -127,11 +138,11 @@ function EcosystemHeader() {
           maxWidth: 680,
         }}
       >
-        One platform, one sign-on, one bill. OperatorOS runs the{' '}
-        <strong style={{ color: brand.textPrimary }}>platform components</strong> — the
-        top-level system areas like app, api, admin, auth, docs, and status — while every
-        unlockable product is a <strong style={{ color: brand.textPrimary }}>module</strong>{' '}
-        that launches from this command layer on its own operatoros.net subdomain.
+        One platform, one sign-on, one bill. OperatorOS is the parent command layer. TradeFlowKit,
+        PulseDesk, and TechDeck are its{' '}
+        <strong style={{ color: brand.textPrimary }}>Main Modules</strong>; every other product
+        follows beneath them as a{' '}
+        <strong style={{ color: brand.textPrimary }}>Companion Application</strong>.
       </p>
     </header>
   );
@@ -144,6 +155,7 @@ function ModuleSection({
   subtitle,
   modules,
   testId,
+  prominent = false,
 }: {
   id: string;
   eyebrow: string;
@@ -151,6 +163,7 @@ function ModuleSection({
   subtitle: string;
   modules: EcosystemModule[];
   testId: string;
+  prominent?: boolean;
 }) {
   return (
     <section
@@ -197,12 +210,14 @@ function ModuleSection({
       <div
         style={{
           display: 'grid',
-          gap: 16,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: prominent ? 22 : 16,
+          gridTemplateColumns: prominent
+            ? 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))'
+            : 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
         }}
       >
         {modules.map((m) => (
-          <ModuleCard key={m.slug} module={m} />
+          <ModuleCard key={m.slug} module={m} prominent={prominent} />
         ))}
       </div>
     </section>
@@ -241,7 +256,7 @@ function statusBadge(status: EcosystemModuleStatus): {
   }
 }
 
-function ModuleCard({ module: m }: { module: EcosystemModule }) {
+function ModuleCard({ module: m, prominent }: { module: EcosystemModule; prominent: boolean }) {
   const badge = statusBadge(m.status);
   const launchable = m.status === 'active';
 
@@ -251,11 +266,15 @@ function ModuleCard({ module: m }: { module: EcosystemModule }) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
-        padding: 22,
-        borderRadius: 14,
-        background: brand.bgElevated,
-        border: `1px solid ${brand.borderSoft}`,
+        gap: prominent ? 16 : 12,
+        padding: prominent ? 28 : 22,
+        minHeight: prominent ? 300 : 240,
+        borderRadius: prominent ? 20 : 14,
+        background: prominent
+          ? 'linear-gradient(145deg, rgba(0,229,255,0.09), rgba(18,24,38,0.98) 48%, rgba(8,11,18,0.98))'
+          : brand.bgElevated,
+        border: `1px solid ${prominent ? brand.borderStrong : brand.borderSoft}`,
+        boxShadow: prominent ? '0 28px 84px rgba(0,229,255,0.08)' : undefined,
       }}
     >
       <div
@@ -270,8 +289,8 @@ function ModuleCard({ module: m }: { module: EcosystemModule }) {
           data-testid={`ecosystem-name-${m.slug}`}
           style={{
             fontFamily: brand.fontDisplay,
-            fontSize: 18,
-            fontWeight: 600,
+            fontSize: prominent ? 24 : 18,
+            fontWeight: prominent ? 800 : 600,
             color: brand.textPrimary,
             margin: 0,
           }}
@@ -310,7 +329,11 @@ function ModuleCard({ module: m }: { module: EcosystemModule }) {
             letterSpacing: '0.04em',
           }}
         >
-          {m.category}
+          {m.category === 'ai'
+            ? 'AI operations'
+            : m.category === 'support'
+              ? 'Service operations'
+              : 'Business operations'}
         </span>
         <span
           style={{
@@ -324,7 +347,7 @@ function ModuleCard({ module: m }: { module: EcosystemModule }) {
             letterSpacing: '0.02em',
           }}
         >
-          Ecosystem module
+          {m.applicationType === 'main-module' ? 'Main Module' : 'Companion Application'}
         </span>
       </div>
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedBy": "scripts/phase20-product-truth.mjs",
   "moduleSlug": "ninjamation",
-  "moduleName": "Ninjamation",
+  "moduleName": "Script Ops",
   "sourceRoot": "apps/modules/ninjamation/source",
   "provenance": {
     "selectedKind": "composite_imported_snapshot",

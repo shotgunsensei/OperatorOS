@@ -64,7 +64,7 @@ const sourceDefinitions = [
   },
   {
     slug: 'ninja-launch-kit',
-    name: 'Ninja Launch Kit',
+    name: 'Deploy Ops',
     provenance: {
       selectedKind: 'imported_snapshot',
       remote: 'https://github.com/shotgunsensei/Ninja-Launch-Kit.git',
@@ -75,7 +75,7 @@ const sourceDefinitions = [
   },
   {
     slug: 'ninja-pool-hall',
-    name: 'Ninja Pool Hall',
+    name: 'Operator Pool Hall',
     provenance: {
       selectedKind: 'imported_snapshot',
       remote: 'https://github.com/shotgunsensei/Shotgun-ninja-pool-hall.git',
@@ -86,7 +86,7 @@ const sourceDefinitions = [
   },
   {
     slug: 'ninjamation',
-    name: 'Ninjamation',
+    name: 'Script Ops',
     provenance: {
       selectedKind: 'composite_imported_snapshot',
       remote: 'https://github.com/shotgunsensei/AutomationPacks.git',

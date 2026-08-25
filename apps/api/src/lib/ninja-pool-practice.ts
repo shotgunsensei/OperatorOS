@@ -1,5 +1,5 @@
 /**
- * Server contract for Ninja Pool Hall's first shared-runtime workflow.
+ * Server contract for Operator Pool Hall's first shared-runtime workflow.
  *
  * The actual pool simulation stays local and deterministic in the browser.
  * These parsers accept only bounded progress summaries; they never accept

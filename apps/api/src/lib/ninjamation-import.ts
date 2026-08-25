@@ -23,7 +23,7 @@ export function planNinjamationImport(input: unknown) {
   const descriptor = input as Record<string, unknown>;
   if (descriptor.sourceCommit !== NINJAMATION_SOURCE_COMMIT) {
     throw new NinjamationValidationError(
-      'Import sourceCommit does not match the pinned Ninjamation application source',
+      'Import sourceCommit does not match the pinned Script Ops legacy application source',
       'sourceCommit',
     );
   }

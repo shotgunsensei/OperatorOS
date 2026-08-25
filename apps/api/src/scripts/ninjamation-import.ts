@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { planNinjamationImport } from '../lib/ninjamation-import.js';
 
 const args = process.argv.slice(2);
-if (!args.includes('--dry-run')) throw new Error('Ninjamation import supports --dry-run only.');
+if (!args.includes('--dry-run')) throw new Error('Script Ops legacy-source import supports --dry-run only.');
 const fileIndex = args.indexOf('--file');
 if (fileIndex < 0 || !args[fileIndex + 1]) {
   throw new Error('Usage: ninjamation-import --dry-run --file <authorized-export.json>');

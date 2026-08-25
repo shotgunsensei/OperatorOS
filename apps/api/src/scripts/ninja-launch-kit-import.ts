@@ -4,7 +4,7 @@ import { planNinjaLaunchKitImport } from '../lib/ninja-launch-kit-import.js';
 
 const args = process.argv.slice(2);
 if (!args.includes('--dry-run')) {
-  throw new Error('Ninja Launch Kit import supports --dry-run only; apply requires an approved cutover phase.');
+  throw new Error('Deploy Ops legacy-source import supports --dry-run only; apply requires an approved cutover phase.');
 }
 const fileIndex = args.indexOf('--file');
 if (fileIndex < 0 || !args[fileIndex + 1]) {

@@ -243,7 +243,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
             ${JSON.stringify(analysis)}::jsonb,${userId}
           ) RETURNING *
         `);
-        await activity(request, 'script.created', String(row.id), 'Ninjamation script draft created.', {
+        await activity(request, 'script.created', String(row.id), 'Script Ops draft created.', {
           language: input.language,
           criticalCount: analysis.criticalCount,
           warningCount: analysis.warningCount,
@@ -315,7 +315,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
           WHERE tenant_id=${tenantId} AND id=${id} AND version=${input.expectedVersion}
           RETURNING *
         `);
-        await activity(request, 'script.updated', id, 'Ninjamation script updated and returned to draft.', {
+        await activity(request, 'script.updated', id, 'Script Ops script updated and returned to draft.', {
           contentChanged: nextVersionNumber !== Number(current.current_version_number),
           scriptVersion: nextVersionNumber,
           criticalCount: analysis?.criticalCount,
@@ -369,7 +369,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
             ${tenantId},${id},${String(version.rows[0].id)},${userId},'submitted',${input.note}
           )
         `);
-        await activity(request, 'review.submitted', id, 'Ninjamation script submitted for review.', {}, tx as any);
+        await activity(request, 'review.submitted', id, 'Script Ops script submitted for review.', {}, tx as any);
         return updated.rows[0] as Row;
       });
       if (!result) {
@@ -427,7 +427,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
             ${tenantId},${id},${String(current.script_version_id)},${userId},'approved',${input.note}
           )
         `);
-        await activity(request, 'script.approved', id, 'Ninjamation script approved for download.', {
+        await activity(request, 'script.approved', id, 'Script Ops script approved for download.', {
           contentSha256: current.content_sha256,
         }, tx as any);
         return updated.rows[0] as Row;
@@ -468,7 +468,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
             ${tenantId},${id},${String(current.script_version_id)},${userId},'rejected',${input.note}
           )
         `);
-        await activity(request, 'review.rejected', id, 'Ninjamation script returned to draft.', {}, tx as any);
+        await activity(request, 'review.rejected', id, 'Script Ops script returned to draft.', {}, tx as any);
         return updated.rows[0] as Row;
       });
       if (!result) return conflict(reply);
@@ -508,7 +508,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
             ${tenantId},${id},${String(current.script_version_id)},${userId},'retired',${input.note}
           )
         `);
-        await activity(request, 'script.retired', id, 'Ninjamation script retired.', {}, tx as any);
+        await activity(request, 'script.retired', id, 'Script Ops script retired.', {}, tx as any);
         return updated.rows[0] as Row;
       });
       if (!result) return conflict(reply);
@@ -541,7 +541,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
           ${String(current.content_sha256)},${request.id}
         )
       `);
-      await activity(request, 'script.downloaded', id, 'Approved Ninjamation script downloaded.', {
+      await activity(request, 'script.downloaded', id, 'Approved Script Ops script downloaded.', {
         fileName,
         contentSha256: current.content_sha256,
       }, tx as any);

@@ -1,23 +1,23 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 export function GET(request: NextRequest) {
-  const exactHost = request.nextUrl.hostname === 'ninja-pool-hall.operatoros.net';
+  const exactHost = request.nextUrl.hostname === 'operatorpoolhall.operatoros.net';
   return NextResponse.json({
-    name: 'Ninja Pool Hall',
-    short_name: 'Ninja Pool',
-    description: 'Mobile-first deterministic 8-ball practice, CPU, local and protected online play.',
+    name: 'Operator Pool Hall',
+    short_name: 'Pool Hall',
+    description: 'Operator-themed digital pool hall with mobile-first deterministic 8-ball practice, CPU, local, and protected online play.',
     id: '/modules/ninja-pool-hall',
     start_url: exactHost ? '/online' : '/modules/ninja-pool-hall/online',
     scope: exactHost ? '/' : '/modules/ninja-pool-hall/',
     display: 'standalone',
     orientation: 'any',
-    background_color: '#030305',
-    theme_color: '#b91c1c',
+    background_color: '#020617',
+    theme_color: '#0284c7',
     categories: ['games', 'sports', 'entertainment'],
     icons: [{
-      src: '/media/operatoros/module-ninja-pool-hall.png',
-      sizes: '1024x1024',
-      type: 'image/png',
+      src: '/icons/icon-512x512.svg',
+      sizes: '512x512',
+      type: 'image/svg+xml',
       purpose: 'any maskable',
     }],
   }, {

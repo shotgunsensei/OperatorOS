@@ -12,25 +12,31 @@ OperatorOS is the central login, tenant, entitlement, billing, and module runtim
 - The API owns authenticated runner routes in production. The standalone runner gateway on port `5002` is a local-development and legacy service, not a public Replit deployment surface.
 - Only exact registered hosts are trusted. OperatorOS does not trust arbitrary `*.operatoros.net` or Replit preview hosts.
 
-## Canonical modules
+## Canonical applications
 
-| Class | Module | Canonical host | Runtime state |
-| --- | --- | --- | --- |
-| Core | TradeFlowKit | `tradeflowkit.operatoros.net` | Enabled |
-| Core | TechDeck | `techdeck.operatoros.net` | Enabled |
-| Core | PulseDesk | `pulsedesk.operatoros.net` | Enabled |
-| Free | TorqueShed | `torqueshed.operatoros.net` | Enabled |
-| Free | FaultlineLab | `faultlinelab.operatoros.net` | Enabled |
-| Free | Ninja Pool Hall | `ninja-pool-hall.operatoros.net` | Enabled |
-| Add-on | BrandForgeOS | `brandforgeos.operatoros.net` | Enabled |
-| Add-on | SnapProofOS | `snapproofos.operatoros.net` | Enabled |
-| Add-on | StudyForge AI | `studyforge-ai.operatoros.net` | Enabled |
-| Add-on | Ninja Launch Kit | `ninjalaunchkit.operatoros.net` | Enabled |
-| Add-on | CallCommand AI | `callcommand-ai.operatoros.net` | Enabled |
-| Add-on | Ninjamation | `ninjamation.operatoros.net` | Enabled |
-| Add-on | OutCall | `outcall.operatoros.net` | Enabled; live provider gated |
+OperatorOS is the parent platform. TradeFlowKit, PulseDesk, and TechDeck are the
+only main modules; every other registered product is a companion application.
+Commercial access remains independent from that product hierarchy.
 
-The attached Replit domains are the canonical application paths. Historical standalone product domains are not active launch, SSO callback, logout, CORS, or return-to destinations.
+| Hierarchy | Access | Application | Canonical host | Runtime state |
+| --- | --- | --- | --- | --- |
+| Main Module | Core | TradeFlowKit | `tradeflowkit.operatoros.net` | Enabled |
+| Main Module | Core | PulseDesk | `pulsedesk.operatoros.net` | Enabled |
+| Main Module | Core | TechDeck | `techdeck.operatoros.net` | Enabled |
+| Companion Application | Free | TorqueShed | `torqueshed.operatoros.net` | Enabled |
+| Companion Application | Free | FaultlineLab | `faultlinelab.operatoros.net` | Enabled |
+| Companion Application | Free | Operator Pool Hall | `operatorpoolhall.operatoros.net` | Enabled |
+| Companion Application | Add-on | BrandForgeOS | `brandforgeos.operatoros.net` | Enabled |
+| Companion Application | Add-on | SnapProofOS | `snapproofos.operatoros.net` | Enabled |
+| Companion Application | Add-on | StudyForge AI | `studyforge-ai.operatoros.net` | Enabled |
+| Companion Application | Add-on | Deploy Ops | `deployops.operatoros.net` | Enabled |
+| Companion Application | Add-on | CallCommand AI | `callcommand-ai.operatoros.net` | Enabled |
+| Companion Application | Add-on | Script Ops | `scriptops.operatoros.net` | Enabled |
+| Companion Application | Add-on | OutCall | `outcall.operatoros.net` | Enabled; live provider gated |
+
+The attached Replit domains are the canonical application paths. Compatibility
+aliases may redirect to a clean canonical entry path, but are not accepted as
+SSO callbacks, logout URIs, origins, or newly emitted launch destinations.
 
 ## Quick start: Replit
 

@@ -182,7 +182,7 @@ test('catalog publishes one exact HTTPS OperatorOS origin for all 13 modules', (
 
   assert.equal(
     MODULE_CATALOG_BY_SLUG['ninja-launch-kit'].canonicalBaseUrl,
-    'https://ninjalaunchkit.operatoros.net',
+    'https://deployops.operatoros.net',
   );
   assert.equal(getCanonicalModuleBaseUrl('custom-module'), undefined);
   assert.equal(

@@ -163,7 +163,7 @@ export default function BillingPage() {
   const coreProduct = coreEntitlement
     ? CORE_PRODUCTS_BY_KEY[coreEntitlement.entitlementKey as keyof typeof CORE_PRODUCTS_BY_KEY]
     : null;
-  const coreProductName = coreProduct?.name ?? coreEntitlement?.entitlementKey ?? 'No core product active';
+  const coreProductName = coreProduct?.name ?? coreEntitlement?.entitlementKey ?? 'No main module active';
   const includedApps = activeEntitlements.filter((row: any) => row.entitlementType === 'included_app');
   const companions = activeEntitlements.filter((row: any) => row.entitlementType === 'companion_module');
   const includedSeatCount = coreProduct?.includedSeats ?? 0;

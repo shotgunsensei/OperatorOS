@@ -48,7 +48,7 @@ class OnlineRateLimitError extends Error {
   readonly statusCode = 429;
   readonly code = 'NINJA_POOL_ONLINE_RATE_LIMITED';
   constructor(readonly retryAfterSeconds: number) {
-    super('Ninja Pool Hall online action rate limit reached');
+    super('Operator Pool Hall online action rate limit reached');
   }
 }
 

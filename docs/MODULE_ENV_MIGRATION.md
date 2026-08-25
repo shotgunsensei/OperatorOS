@@ -81,12 +81,12 @@ The imported snapshots still mention providers that the executable shared
 runtime does not use. Do **not** migrate these solely because a child repository
 had them: TradeFlowKit SendGrid/Stripe Connect, TechDeck SMTP/uploads, PulseDesk
 inbox OAuth or SendGrid/Mailgun, FaultlineLab storage, SnapProofOS export
-storage, Ninja Launch Kit Anthropic, and standalone CallCommand object storage.
+storage, Deploy Ops (stable Ninja Launch Kit namespace) Anthropic, and standalone CallCommand object storage.
 Each requires a tenant-scoped vertical slice, retention rules, audit coverage,
 and an explicit active-runtime environment contract first.
 
-Ninja Pool Hall currently needs no external provider for its local Free Shoot
-workflow. Ninjamation has no additional canonical provider contract. OutCall
+Operator Pool Hall currently needs no external provider for its local Free Shoot
+workflow. Script Ops has no additional canonical provider contract. OutCall
 uses the active provider contract above; configure its secrets only in the
 reviewed Replit deployment and run the controlled verified-self acceptance
 before advertising live calling.

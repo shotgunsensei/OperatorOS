@@ -88,8 +88,8 @@ export const FREE_WITH_ANY_ACCOUNT: readonly ModuleCatalogItem[] = [
   },
   {
     key: 'ninja-pool-hall',
-    name: 'Ninja Pool Hall',
-    description: 'Deterministic Canvas 8-ball with practice, CPU, local and protected online play.',
+    name: 'Operator Pool Hall',
+    description: 'Operator-themed digital pool hall with deterministic 8-ball, practice, CPU, local, and protected online play.',
   },
 ] as const;
 
@@ -97,9 +97,9 @@ export const COMPANION_MODULES: readonly ModuleCatalogItem[] = [
   { key: 'snapproofos', name: 'SnapProofOS', description: 'Evidence, proof, and validation workflows.' },
   { key: 'brandforgeos', name: 'BrandForgeOS', description: 'Brand and campaign production workspace.' },
   { key: 'studyforge-ai', name: 'StudyForge AI', description: 'AI-assisted study and team training.' },
-  { key: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Launch planning, reviewed campaign assets, readiness, and audited exports.' },
+  { key: 'ninja-launch-kit', name: 'Deploy Ops', description: 'Release readiness, promotion evidence, approval gates, rollback planning, and audited exports.' },
   { key: 'callcommand-ai', name: 'CallCommand AI', description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation.' },
-  { key: 'ninjamation', name: 'Ninjamation', description: 'Reviewed PC automation script library and AI draft generator.' },
+  { key: 'ninjamation', name: 'Script Ops', description: 'Reviewed infrastructure and endpoint automation scripts with governed AI drafting.' },
 ] as const;
 
 export const COMPANION_MODULE_KEYS = new Set<CompanionModuleKey>(

@@ -431,7 +431,7 @@ async function brandForgeToLaunchKit(context: FabricDeliveryContext): Promise<Fa
     if (!brand.rows[0]) {
       const count = await context.executor.execute(sql`SELECT COUNT(*)::int AS count FROM launchkit_brand_profiles WHERE tenant_id=${context.tenantId} AND user_id=${context.actorUserId} AND deleted_at IS NULL`);
       if (access.limits.brandProfiles !== null && Number((count.rows[0] as Row).count) >= access.limits.brandProfiles) {
-        fabricError('NINJA_LAUNCH_KIT_BRAND_LIMIT_REACHED', 'Ninja Launch Kit brand profile limit reached for this OperatorOS entitlement');
+        fabricError('NINJA_LAUNCH_KIT_BRAND_LIMIT_REACHED', 'Deploy Ops configuration profile limit reached for this OperatorOS entitlement');
       }
       brand = await context.executor.execute(sql`
       INSERT INTO launchkit_brand_profiles(tenant_id,user_id,name,logo_text,primary_color,accent_color,voice,contact_json)
@@ -472,7 +472,7 @@ async function brandForgeToLaunchKit(context: FabricDeliveryContext): Promise<Fa
     VALUES (${context.tenantId},${kitId},${context.actorUserId},1,'created',${JSON.stringify(input)}::jsonb,${JSON.stringify(content)}::jsonb,${JSON.stringify(visuals)}::jsonb,${JSON.stringify(provenance)}::jsonb,${contentHash})
     ON CONFLICT (tenant_id,kit_id,revision) DO NOTHING
   `);
-  return { summary: `Created a plan-aware Ninja Launch Kit with ${visuals.length} visual-promo briefs`, references: [{ resourceKind: 'content', resourceType: 'launchkit_product_kit', resourceId: kitId, deepLink: `/modules/ninja-launch-kit/kits/${kitId}`, relationship: 'campaign_launch_kit', metadata: { brandProfileId: brandRow?.id ?? null, visualBriefCount: visuals.length, entitlementPlan: access.plan } }] };
+  return { summary: `Created a plan-aware Deploy Ops release package with ${visuals.length} evidence briefs`, references: [{ resourceKind: 'content', resourceType: 'launchkit_product_kit', resourceId: kitId, deepLink: `/modules/ninja-launch-kit/kits/${kitId}`, relationship: 'campaign_launch_kit', metadata: { brandProfileId: brandRow?.id ?? null, visualBriefCount: visuals.length, entitlementPlan: access.plan } }] };
 }
 
 async function ninjamationToTechDeck(context: FabricDeliveryContext): Promise<FabricAdapterResult> {
@@ -482,12 +482,12 @@ async function ninjamationToTechDeck(context: FabricDeliveryContext): Promise<Fa
     WHERE s.tenant_id=${context.tenantId} AND s.id=${context.aggregateId} AND s.status='approved' AND s.deleted_at IS NULL LIMIT 1
   `);
   const script = found.rows[0] as Row | undefined;
-  if (!script) fabricError('FABRIC_SOURCE_NOT_APPROVED', 'Ninjamation script must be approved and active');
+  if (!script) fabricError('FABRIC_SOURCE_NOT_APPROVED', 'Script Ops script must be approved and active');
   const slug = `ninjamation-${String(script.id).slice(0,8)}-${context.eventId.slice(0,8)}`;
   const content = [
     `# ${script.name}`,
     '',
-    'Imported as a documentation reference from Ninjamation. This content is never executed by OperatorOS.',
+    'Imported as a documentation reference from Script Ops. This content is never executed by OperatorOS.',
     '',
     `Language: ${script.language}`,
     `Risk tier: ${script.risk_tier}`,
@@ -500,13 +500,13 @@ async function ninjamationToTechDeck(context: FabricDeliveryContext): Promise<Fa
   ].join('\n');
   const document = await context.executor.execute(sql`
     INSERT INTO techdeck_documents(tenant_id,page_type,title,slug,summary,content,status,minimum_role,tags,created_by_user_id,updated_by_user_id)
-    VALUES (${context.tenantId},'runbook',${script.name},${slug},${bounded(script.description, 'Ninjamation script reference', 1_000)},${content},'draft','member',
+    VALUES (${context.tenantId},'runbook',${script.name},${slug},${bounded(script.description, 'Script Ops script reference', 1_000)},${content},'draft','member',
       ${JSON.stringify(['ninjamation','imported-reference',String(script.language),`risk:${script.risk_tier}`])}::jsonb,${context.actorUserId},${context.actorUserId}) RETURNING id
   `);
   const documentId = String((document.rows[0] as Row).id);
   await context.executor.execute(sql`
     INSERT INTO techdeck_document_revisions(tenant_id,document_id,version,title,summary,content,status,minimum_role,tags,change_note,created_by_user_id)
-    VALUES (${context.tenantId},${documentId},1,${script.name},${bounded(script.description, 'Ninjamation script reference', 1_000)},${content},'draft','member',
+    VALUES (${context.tenantId},${documentId},1,${script.name},${bounded(script.description, 'Script Ops script reference', 1_000)},${content},'draft','member',
       ${JSON.stringify(['ninjamation','imported-reference'])}::jsonb,'Phase 38 provenance import; execution intentionally disabled',${context.actorUserId})
   `);
   const runbook = await context.executor.execute(sql`
@@ -516,7 +516,7 @@ async function ninjamationToTechDeck(context: FabricDeliveryContext): Promise<Fa
   const runbookId = String((runbook.rows[0] as Row).id);
   const evidence = await context.executor.execute(sql`
     INSERT INTO techdeck_evidence(tenant_id,document_id,title,evidence_type,summary,source_reference,observed_at,tags,created_by_user_id)
-    VALUES (${context.tenantId},${documentId},${`${script.name} checksum evidence`},'configuration_snapshot',${`Ninjamation version ${script.version_number}; static analysis recorded; no execution performed.`},
+    VALUES (${context.tenantId},${documentId},${`${script.name} checksum evidence`},'configuration_snapshot',${`Script Ops version ${script.version_number}; static analysis recorded; no execution performed.`},
       ${`ninjamation:${script.id}:version:${script.script_version_id}:sha256:${script.content_sha256}`},NOW(),${JSON.stringify(['ninjamation','checksum','no-auto-execution'])}::jsonb,${context.actorUserId}) RETURNING id
   `);
   const evidenceId = String((evidence.rows[0] as Row).id);

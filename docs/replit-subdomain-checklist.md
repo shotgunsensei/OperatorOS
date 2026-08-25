@@ -88,13 +88,13 @@ attachment; attachment alone does not prove the current source is deployed.
 - [ ] `tradeflowkit.operatoros.net`
 - [ ] `torqueshed.operatoros.net`
 - [ ] `faultlinelab.operatoros.net`
-- [ ] `ninja-pool-hall.operatoros.net`
+- [ ] `operatorpoolhall.operatoros.net`
 - [ ] `brandforgeos.operatoros.net`
 - [ ] `snapproofos.operatoros.net`
 - [ ] `studyforge-ai.operatoros.net`
-- [ ] `ninjalaunchkit.operatoros.net`
+- [ ] `deployops.operatoros.net`
 - [ ] `callcommand-ai.operatoros.net`
-- [ ] `ninjamation.operatoros.net`
+- [ ] `scriptops.operatoros.net`
 - [ ] `outcall.operatoros.net`
 - [ ] Each shows **Verified** with a valid HTTPS certificate (no browser
       warning).

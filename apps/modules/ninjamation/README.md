@@ -1,9 +1,12 @@
-# Ninjamation module
+# Script Ops module
 
 Status: canonical source imported; active OperatorOS implementation is a
-tenant-scoped script library and review workflow.
+tenant-scoped script library and review workflow. The public product identity
+is Script Ops; the stable internal slug and code namespace remain `ninjamation`.
 
-- Canonical host: `https://ninjamation.operatoros.net`
+- Canonical host: `https://scriptops.operatoros.net`
+- Redirect-only legacy host: `https://ninjamation.operatoros.net`
+- Application type: companion application
 - Commercial class: paid add-on
 - Source repository: `https://github.com/shotgunsensei/AutomationPacks.git`
 - Application branch/commit: `master` /

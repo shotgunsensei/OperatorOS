@@ -36,7 +36,7 @@ export async function runNinjamationCatalogSync(input: {
           SELECT * FROM ninjamation_sync_runs WHERE tenant_id=${input.tenantId} AND id=${input.runId} LIMIT 1
         `);
         if (existing.rows[0]?.status === 'completed') return existing.rows[0] as Row;
-        throw Object.assign(new Error('Ninjamation sync run is unavailable or already processing'), { code: 'NINJAMATION_SYNC_NOT_CLAIMABLE' });
+        throw Object.assign(new Error('Script Ops sync run is unavailable or already processing'), { code: 'NINJAMATION_SYNC_NOT_CLAIMABLE' });
       }
 
       const existingResult = await tx.execute(sql`

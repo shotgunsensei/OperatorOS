@@ -1,4 +1,4 @@
-// Generated from the pinned, read-only Ninja Launch Kit source. Do not edit.
+// Generated from the pinned, read-only legacy source now surfaced as Deploy Ops. Do not edit.
 const catalog = {
   "schemaVersion": 1,
   "source": {

@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 
 /**
- * Phase 34 additive Ninja Launch Kit product persistence.
+ * Phase 34 additive Deploy Ops product persistence (stable database namespace retained).
  *
  * OperatorOS continues to own users, tenants, membership, roles, subscriptions,
  * entitlements, credits, billing, provider configuration, and audit activity.

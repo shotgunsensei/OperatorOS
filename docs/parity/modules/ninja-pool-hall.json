@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedBy": "scripts/phase20-product-truth.mjs",
   "moduleSlug": "ninja-pool-hall",
-  "moduleName": "Ninja Pool Hall",
+  "moduleName": "Operator Pool Hall",
   "sourceRoot": "apps/modules/ninja-pool-hall/source",
   "provenance": {
     "selectedKind": "imported_snapshot",

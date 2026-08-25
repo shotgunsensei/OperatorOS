@@ -30,45 +30,57 @@ export default function NinjaLaunchKitProductShell({
   embedded?: boolean;
   view?: string;
 }) {
-  const [mode, setMode] = useState<ProductMode>(() => view === 'review' ? 'execution' : initialMode(routePath));
-  React.useEffect(() => setMode(view === 'review' ? 'execution' : initialMode(routePath)), [routePath, view]);
+  const [mode, setMode] = useState<ProductMode>(() =>
+    view === 'review' ? 'execution' : initialMode(routePath),
+  );
+  React.useEffect(
+    () => setMode(view === 'review' ? 'execution' : initialMode(routePath)),
+    [routePath, view],
+  );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050506', colorScheme: 'dark' }}>
-      {!embedded && <nav
-        aria-label="Ninja Launch Kit product mode"
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 25,
-          display: 'flex',
-          gap: 8,
-          flexWrap: 'wrap',
-          padding: `${space.md}px clamp(16px,4vw,34px)`,
-          background: 'rgba(5,5,6,.94)',
-          borderBottom: `1px solid ${semantic.border}`,
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <button
-          type="button"
-          aria-current={mode === 'kits' ? 'page' : undefined}
-          onClick={() => setMode('kits')}
-          style={modeButton(mode === 'kits')}
+    <div style={{ minHeight: '100vh', background: '#020617', colorScheme: 'dark' }}>
+      {!embedded && (
+        <nav
+          aria-label="Deploy Ops product mode"
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 25,
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            padding: `${space.md}px clamp(16px,4vw,34px)`,
+            background: 'rgba(2,6,23,.94)',
+            borderBottom: `1px solid ${semantic.border}`,
+            backdropFilter: 'blur(12px)',
+          }}
         >
-          <Rocket size={15} /> Complete kits
-        </button>
-        <button
-          type="button"
-          aria-current={mode === 'execution' ? 'page' : undefined}
-          onClick={() => setMode('execution')}
-          style={modeButton(mode === 'execution')}
-        >
-          <ClipboardCheck size={15} /> Execution workspaces
-        </button>
-      </nav>}
+          <button
+            type="button"
+            aria-current={mode === 'kits' ? 'page' : undefined}
+            onClick={() => setMode('kits')}
+            style={modeButton(mode === 'kits')}
+          >
+          <Rocket size={15} /> Release packages
+          </button>
+          <button
+            type="button"
+            aria-current={mode === 'execution' ? 'page' : undefined}
+            onClick={() => setMode('execution')}
+            style={modeButton(mode === 'execution')}
+          >
+          <ClipboardCheck size={15} /> Readiness workspaces
+          </button>
+        </nav>
+      )}
       {mode === 'kits' ? (
-        <NinjaLaunchKitCompleteWorkspace baseUrl={baseUrl} routePath={routePath} embedded={embedded} view={view} />
+        <NinjaLaunchKitCompleteWorkspace
+          baseUrl={baseUrl}
+          routePath={routePath}
+          embedded={embedded}
+          view={view}
+        />
       ) : (
         <NinjaLaunchKitShell baseUrl={baseUrl} />
       )}
@@ -84,8 +96,8 @@ function modeButton(active: boolean): React.CSSProperties {
     gap: 7,
     padding: '9px 14px',
     borderRadius: 8,
-    border: `1px solid ${active ? '#ef4444' : semantic.border}`,
-    background: active ? 'rgba(153,27,27,.35)' : '#111114',
+    border: `1px solid ${active ? '#67e8f9' : semantic.border}`,
+    background: active ? 'linear-gradient(135deg,rgba(2,132,199,.35),rgba(109,40,217,.3))' : '#07111f',
     color: active ? '#fff' : semantic.textMuted,
     font: 'inherit',
     fontWeight: 800,

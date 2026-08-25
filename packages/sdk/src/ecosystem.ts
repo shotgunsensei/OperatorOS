@@ -11,7 +11,7 @@
  * layered on top here.
  *
  * The catalog's immutable `canonicalBaseUrl` owns slug-to-host
- * reconciliation (including ninja-launch-kit → ninjalaunchkit.operatoros.net).
+ * reconciliation, including compatibility aliases for renamed applications.
  * This overlay consumes that value directly so SSO registration, seeding, and
  * launch metadata cannot drift onto different origins.
  *
@@ -23,7 +23,9 @@
 import {
   MODULE_CATALOG,
   type ModuleCatalogEntry,
+  type ModuleApplicationType,
   type ModuleCategory,
+  type ModuleCommercialType,
   type ModuleStatus,
 } from './catalog.js';
 
@@ -49,15 +51,21 @@ export interface EcosystemModule {
   name: string;
   category: ModuleCategory;
   description: string;
+  /** Public hierarchy beneath OperatorOS. Exactly three entries are main modules. */
+  applicationType: ModuleApplicationType;
+  /** Commercial access remains independent of public hierarchy. */
+  commercialType: ModuleCommercialType;
   /** Canonical ecosystem URL, e.g. `https://techdeck.operatoros.net`. */
   ecosystemUrl: string;
+  /** Redirect-only compatibility origins for historical bookmarks. */
+  legacyUrls: readonly string[];
   status: EcosystemModuleStatus;
   launchMode: EcosystemLaunchMode;
   authMode: EcosystemAuthMode;
   billingMode: EcosystemBillingMode;
   /** Stable key a UI can map to an icon. Defaults to the slug. */
   iconKey: string;
-  /** Ecosystem display order (Tech Deck is first). */
+  /** Canonical ecosystem display order. Main modules always lead. */
   ord: number;
 }
 
@@ -115,13 +123,9 @@ interface EcosystemOverride {
   authMode?: EcosystemAuthMode;
   billingMode?: EcosystemBillingMode;
   iconKey?: string;
-  /** Force this module to the front of the ecosystem ordering. */
-  first?: boolean;
 }
 
-const ECOSYSTEM_OVERRIDES: Readonly<Record<string, EcosystemOverride>> = {
-  techdeck: { first: true },
-};
+const ECOSYSTEM_OVERRIDES: Readonly<Record<string, EcosystemOverride>> = {};
 
 function ecosystemSubdomain(entry: ModuleCatalogEntry): string {
   const hostname = new URL(entry.canonicalBaseUrl).hostname.toLowerCase();
@@ -145,7 +149,10 @@ function buildEcosystemModule(entry: ModuleCatalogEntry, ord: number): Ecosystem
     name: entry.name,
     category: entry.category,
     description: entry.description,
+    applicationType: entry.applicationType,
+    commercialType: entry.commercialType,
     ecosystemUrl: entry.canonicalBaseUrl,
+    legacyUrls: entry.legacyBaseUrls ?? [],
     status: o.status ?? catalogStatusToEcosystem(entry.defaultStatus),
     launchMode: o.launchMode ?? 'subdomain',
     authMode: o.authMode ?? 'sso',
@@ -156,15 +163,9 @@ function buildEcosystemModule(entry: ModuleCatalogEntry, ord: number): Ecosystem
   return module;
 }
 
-// Ordering: any module flagged `first` (Tech Deck) leads, then the rest
-// follow the catalog's own `ord`. `ord` on the resulting records is the
-// 1-based ecosystem position.
-const ORDERED_CATALOG: ModuleCatalogEntry[] = [...MODULE_CATALOG].sort((a, b) => {
-  const af = ECOSYSTEM_OVERRIDES[a.slug]?.first ? 0 : 1;
-  const bf = ECOSYSTEM_OVERRIDES[b.slug]?.first ? 0 : 1;
-  if (af !== bf) return af - bf;
-  return a.ord - b.ord;
-});
+// Ordering follows the catalog's explicit hierarchy-aware display order.
+// `ord` on the resulting records is the 1-based ecosystem position.
+const ORDERED_CATALOG: ModuleCatalogEntry[] = [...MODULE_CATALOG].sort((a, b) => a.ord - b.ord);
 
 export const ECOSYSTEM_MODULES: readonly EcosystemModule[] = Object.freeze(
   ORDERED_CATALOG.map((entry, i) => buildEcosystemModule(entry, i + 1)),
@@ -173,9 +174,12 @@ export const ECOSYSTEM_MODULES: readonly EcosystemModule[] = Object.freeze(
 export const ECOSYSTEM_MODULES_BY_SLUG: Readonly<Record<string, EcosystemModule>> =
   Object.freeze(Object.fromEntries(ECOSYSTEM_MODULES.map(m => [m.slug, m])));
 
-/** Reverse lookup: ecosystem subdomain label → catalog slug. */
+/** Reverse lookup: canonical or redirect-only ecosystem subdomain label → catalog slug. */
 const SLUG_BY_SUBDOMAIN: Readonly<Record<string, string>> = Object.freeze(
-  Object.fromEntries(MODULE_CATALOG.map(m => [ecosystemSubdomain(m), m.slug])),
+  Object.fromEntries(MODULE_CATALOG.flatMap(m => [
+    [ecosystemSubdomain(m), m.slug],
+    ...(m.legacyBaseUrls ?? []).map(url => [ecosystemSubdomain({ ...m, canonicalBaseUrl: url }), m.slug]),
+  ])),
 );
 
 // ---------------------------------------------------------------------------
@@ -196,6 +200,14 @@ export function getModuleUrl(slug: string): string | undefined {
 
 export function getActiveModules(): EcosystemModule[] {
   return ECOSYSTEM_MODULES.filter(m => m.status === 'active');
+}
+
+export function getMainModules(): EcosystemModule[] {
+  return ECOSYSTEM_MODULES.filter(m => m.applicationType === 'main-module');
+}
+
+export function getCompanionApplications(): EcosystemModule[] {
+  return ECOSYSTEM_MODULES.filter(m => m.applicationType === 'companion-application');
 }
 
 export function getPlannedModules(): EcosystemModule[] {

@@ -5,7 +5,7 @@ import { buildPublicMetadata } from '@/lib/seo';
 export const metadata: Metadata = buildPublicMetadata({
   title: 'OperatorOS Modules | Build Your Operations Stack',
   description:
-    'Compare OperatorOS core products, included apps, and companion modules that share your team, billing, and access controls.',
+    'Compare the three OperatorOS main modules and the companion applications that share your team, billing, tenant, and access controls.',
   path: '/modules',
 });
 

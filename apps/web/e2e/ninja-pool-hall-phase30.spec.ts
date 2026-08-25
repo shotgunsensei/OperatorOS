@@ -9,7 +9,7 @@ import type { GameState, Shot, Vec2 } from '../src/lib/ninja-pool-hall/types';
 
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:5001';
 const exactHost = process.env.E2E_PRODUCTION_HOSTS === '1';
-const WEB = exactHost ? 'https://ninja-pool-hall.operatoros.net' : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
+const WEB = exactHost ? 'https://operatorpoolhall.operatoros.net' : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
 const PASSWORD = 'Phase30-Disposable-Only-9!';
 const moduleUrl = (path: string) => `${WEB}${exactHost ? '' : '/modules/ninja-pool-hall'}${path}`;
 
@@ -216,7 +216,7 @@ async function playRackShots(
   return room;
 }
 
-test.describe('Phase 30 Ninja Pool Hall playable browser contract', () => {
+test.describe('Operator Pool Hall playable browser contract (stable Phase 30 API contract)', () => {
   test.setTimeout(180_000);
 
   test('mobile host and guest complete verified shots, reconnect, resize, and expose the PWA shell', async ({ browser, page }) => {

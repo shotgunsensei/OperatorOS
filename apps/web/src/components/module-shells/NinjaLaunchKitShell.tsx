@@ -27,7 +27,13 @@ type Workspace = {
   tasks?: Row[];
   artifacts?: Row[];
   exports?: Row[];
-  readiness?: { score: number; complete: number; total: number; blocked: boolean; rules: Row[] } | null;
+  readiness?: {
+    score: number;
+    complete: number;
+    total: number;
+    blocked: boolean;
+    rules: Row[];
+  } | null;
   ai?: { name: string; configured: boolean };
   assets?: Row[];
   timeline?: { events: Row[] };
@@ -48,7 +54,7 @@ const buttonStyle: React.CSSProperties = {
   border: 0,
   borderRadius: radius.sm,
   padding: '9px 14px',
-  background: semantic.accent,
+  background: 'linear-gradient(135deg,#0284c7,#6d28d9)',
   color: '#fff',
   fontWeight: 700,
   cursor: 'pointer',
@@ -58,7 +64,13 @@ function errorMessage(error: unknown, fallback: string) {
   return (error as any)?.message || fallback;
 }
 
-export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: string; idPrefix?: string }) {
+export default function NinjaLaunchKitShell({
+  baseUrl,
+  idPrefix,
+}: {
+  baseUrl?: string;
+  idPrefix?: string;
+}) {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [templates, setTemplates] = useState<Row[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -79,42 +91,48 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
     targetDate: '',
   });
 
-  const load = useCallback(async (preferredId?: string | null) => {
-    setError(null);
-    try {
-      const [root, catalog] = await Promise.all([
-        moduleShellApi.launchkit.workspace() as Promise<Workspace>,
-        moduleShellApi.launchkit.templates() as Promise<{ templates: Row[] }>,
-      ]);
-      setTemplates(catalog.templates ?? []);
-      const id = preferredId ?? selectedId ?? root.launches?.[0]?.id ?? null;
-      if (id) {
-        const detail = await moduleShellApi.launchkit.detail(id) as Workspace;
-        setWorkspace(detail);
-        setSelectedId(id);
-      } else {
-        setWorkspace(root);
-        setSelectedId(null);
+  const load = useCallback(
+    async (preferredId?: string | null) => {
+      setError(null);
+      try {
+        const [root, catalog] = await Promise.all([
+          moduleShellApi.launchkit.workspace() as Promise<Workspace>,
+          moduleShellApi.launchkit.templates() as Promise<{ templates: Row[] }>,
+        ]);
+        setTemplates(catalog.templates ?? []);
+        const id = preferredId ?? selectedId ?? root.launches?.[0]?.id ?? null;
+        if (id) {
+          const detail = (await moduleShellApi.launchkit.detail(id)) as Workspace;
+          setWorkspace(detail);
+          setSelectedId(id);
+        } else {
+          setWorkspace(root);
+          setSelectedId(null);
+        }
+      } catch (caught) {
+        setError(errorMessage(caught, 'Could not load release workspaces'));
+      } finally {
+        setLoading(false);
       }
-    } catch (caught) {
-      setError(errorMessage(caught, 'Could not load launch workspaces'));
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedId]);
+    },
+    [selectedId],
+  );
 
-  useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    void load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const readiness = workspace?.readiness;
   const selected = workspace?.selected;
   const channels = useMemo(
-    () => form.channels.split(',').map((value) => value.trim()).filter(Boolean),
+    () =>
+      form.channels
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean),
     [form.channels],
   );
-  const sectionId = useCallback(
-    (id: string) => idPrefix ? `${idPrefix}-${id}` : id,
-    [idPrefix],
-  );
+  const sectionId = useCallback((id: string) => (idPrefix ? `${idPrefix}-${id}` : id), [idPrefix]);
 
   async function createLaunch(event: React.FormEvent) {
     event.preventDefault();
@@ -122,7 +140,7 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
     setBusy('create');
     setError(null);
     try {
-      const response = await moduleShellApi.launchkit.create({
+      const response = (await moduleShellApi.launchkit.create({
         title: form.title,
         productType: form.productType,
         templateSlug: form.templateSlug || undefined,
@@ -133,11 +151,19 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
         priceMinor: form.price ? Math.round(Number(form.price) * 100) : undefined,
         channels,
         targetDate: form.targetDate || undefined,
-      }) as { launch: Row };
-      setForm((current) => ({ ...current, title: '', audience: '', painPoint: '', positioning: '', offer: '', price: '' }));
+      })) as { launch: Row };
+      setForm((current) => ({
+        ...current,
+        title: '',
+        audience: '',
+        painPoint: '',
+        positioning: '',
+        offer: '',
+        price: '',
+      }));
       await load(response.launch.id);
     } catch (caught) {
-      setError(errorMessage(caught, 'Could not create launch workspace'));
+      setError(errorMessage(caught, 'Could not create release workspace'));
     } finally {
       setBusy(null);
     }
@@ -162,7 +188,8 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
 
   async function advanceArtifact(artifact: Row) {
     if (busy) return;
-    const next = artifact.status === 'draft' ? 'review' : artifact.status === 'review' ? 'approved' : 'draft';
+    const next =
+      artifact.status === 'draft' ? 'review' : artifact.status === 'review' ? 'approved' : 'draft';
     setBusy(`artifact:${artifact.id}`);
     setError(null);
     try {
@@ -188,7 +215,9 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
         `ui-${selectedId}-${selected?.version}-${Date.now()}`,
       );
       await load(selectedId);
-      document.getElementById(sectionId('launchkit-artifacts'))?.scrollIntoView({ behavior: 'smooth' });
+      document
+        .getElementById(sectionId('launchkit-artifacts'))
+        ?.scrollIntoView({ behavior: 'smooth' });
     } catch (caught) {
       setError(errorMessage(caught, 'Could not generate launch artifacts'));
     } finally {
@@ -201,7 +230,7 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
     setBusy(`export:${format}`);
     setError(null);
     try {
-      const result = await moduleShellApi.launchkit.export(selectedId, format) as Row;
+      const result = (await moduleShellApi.launchkit.export(selectedId, format)) as Row;
       setExportResult(result);
       const blob = new Blob([result.content], { type: result.mimeType });
       const url = URL.createObjectURL(blob);
@@ -236,28 +265,61 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
   }
 
   return (
-    <div data-testid="shell-ninja-launch-kit" style={{ padding: space.xl, maxWidth: 1240, margin: '0 auto' }}>
-      <header style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: space.xl }}>
-        <Rocket size={30} color="#f97316" />
+    <div
+      data-testid="shell-ninja-launch-kit"
+      style={{ padding: space.xl, maxWidth: 1240, margin: '0 auto' }}
+    >
+      <header
+        style={{
+          display: 'flex',
+          gap: 12,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          marginBottom: space.xl,
+        }}
+      >
+        <Rocket size={30} color="#67e8f9" />
         <div style={{ flex: 1, minWidth: 240 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ color: '#fff', fontSize: 28, margin: 0 }}>Ninja Launch Kit</h1>
+            <h1 style={{ color: '#fff', fontSize: 28, margin: 0 }}>Deploy Ops</h1>
             <ShellLiveBadge />
           </div>
           <p style={{ color: semantic.textMuted, margin: '4px 0 0' }}>
             Plan, produce, review, and prove a launch is ready.
           </p>
         </div>
-        <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-ninja-launch-kit" label="Open launch workspace" />
+        <ShellLaunchButton
+          baseUrl={baseUrl}
+          testId="link-launch-ninja-launch-kit"
+          label="Open release workspace"
+        />
       </header>
 
       {error && (
-        <div data-testid="text-launchkit-error" role="alert" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>
-          <AlertTriangle size={16} style={{ verticalAlign: 'text-bottom', marginRight: 8 }} />{error}
+        <div
+          data-testid="text-launchkit-error"
+          role="alert"
+          style={{
+            ...cardStyle,
+            borderColor: semantic.accentDanger,
+            color: semantic.accentDanger,
+            marginBottom: space.lg,
+          }}
+        >
+          <AlertTriangle size={16} style={{ verticalAlign: 'text-bottom', marginRight: 8 }} />
+          {error}
         </div>
       )}
 
-      <section id={sectionId('launchkit-dashboard')} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: space.md, marginBottom: space.xl }}>
+      <section
+        id={sectionId('launchkit-dashboard')}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))',
+          gap: space.md,
+          marginBottom: space.xl,
+        }}
+      >
         {[
           ['Launches', workspace?.summary?.launches ?? 0, Rocket],
           ['Launched', workspace?.summary?.launched ?? 0, CheckCircle2],
@@ -265,65 +327,167 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
           ['Current readiness', readiness ? `${readiness.score}%` : '—', Target],
         ].map(([label, value, Icon]: any) => (
           <article key={label} style={cardStyle}>
-            <Icon size={18} color="#f97316" />
-            <div style={{ color: '#fff', fontSize: 26, fontWeight: 800, marginTop: 8 }}>{value}</div>
+            <Icon size={18} color="#67e8f9" />
+            <div style={{ color: '#fff', fontSize: 26, fontWeight: 800, marginTop: 8 }}>
+              {value}
+            </div>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{label}</div>
           </article>
         ))}
       </section>
 
       <section id={sectionId('launchkit-builder')} style={{ ...cardStyle, marginBottom: space.xl }}>
-        <h2 style={{ color: '#fff', marginTop: 0 }}>Create a real launch workspace</h2>
-        <form onSubmit={createLaunch} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: space.md }}>
-          <label style={{ color: semantic.textMuted }}>Launch name
-            <input data-testid="input-launchkit-title" required maxLength={180} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} style={inputStyle} />
+        <h2 style={{ color: '#fff', marginTop: 0 }}>Create a real release workspace</h2>
+        <form
+          onSubmit={createLaunch}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))',
+            gap: space.md,
+          }}
+        >
+          <label style={{ color: semantic.textMuted }}>
+            Launch name
+            <input
+              data-testid="input-launchkit-title"
+              required
+              maxLength={180}
+              value={form.title}
+              onChange={(event) => setForm({ ...form, title: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label style={{ color: semantic.textMuted }}>Product type
-            <input data-testid="input-launchkit-product-type" required maxLength={80} value={form.productType} onChange={(event) => setForm({ ...form, productType: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Product type
+            <input
+              data-testid="input-launchkit-product-type"
+              required
+              maxLength={80}
+              value={form.productType}
+              onChange={(event) => setForm({ ...form, productType: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label id={sectionId('launchkit-templates')} style={{ color: semantic.textMuted }}>Template
-            <select data-testid="select-launchkit-template" value={form.templateSlug} onChange={(event) => setForm({ ...form, templateSlug: event.target.value })} style={inputStyle}>
+          <label id={sectionId('launchkit-templates')} style={{ color: semantic.textMuted }}>
+            Template
+            <select
+              data-testid="select-launchkit-template"
+              value={form.templateSlug}
+              onChange={(event) => setForm({ ...form, templateSlug: event.target.value })}
+              style={inputStyle}
+            >
               <option value="">Blank launch</option>
-              {templates.map((template) => <option key={template.slug} value={template.slug}>{template.name}</option>)}
+              {templates.map((template) => (
+                <option key={template.slug} value={template.slug}>
+                  {template.name}
+                </option>
+              ))}
             </select>
           </label>
-          <label style={{ color: semantic.textMuted }}>Audience
-            <input data-testid="input-launchkit-audience" value={form.audience} onChange={(event) => setForm({ ...form, audience: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Audience
+            <input
+              data-testid="input-launchkit-audience"
+              value={form.audience}
+              onChange={(event) => setForm({ ...form, audience: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label style={{ color: semantic.textMuted }}>Customer problem
-            <input data-testid="input-launchkit-problem" value={form.painPoint} onChange={(event) => setForm({ ...form, painPoint: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Customer problem
+            <input
+              data-testid="input-launchkit-problem"
+              value={form.painPoint}
+              onChange={(event) => setForm({ ...form, painPoint: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label style={{ color: semantic.textMuted }}>Positioning
-            <input value={form.positioning} onChange={(event) => setForm({ ...form, positioning: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Positioning
+            <input
+              value={form.positioning}
+              onChange={(event) => setForm({ ...form, positioning: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label style={{ color: semantic.textMuted }}>Offer
-            <input data-testid="input-launchkit-offer" value={form.offer} onChange={(event) => setForm({ ...form, offer: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Offer
+            <input
+              data-testid="input-launchkit-offer"
+              value={form.offer}
+              onChange={(event) => setForm({ ...form, offer: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label style={{ color: semantic.textMuted }}>Price
-            <input type="number" min="0" step="0.01" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Price
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.price}
+              onChange={(event) => setForm({ ...form, price: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label style={{ color: semantic.textMuted }}>Channels, comma separated
-            <input value={form.channels} onChange={(event) => setForm({ ...form, channels: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Channels, comma separated
+            <input
+              value={form.channels}
+              onChange={(event) => setForm({ ...form, channels: event.target.value })}
+              style={inputStyle}
+            />
           </label>
-          <label style={{ color: semantic.textMuted }}>Target date
-            <input type="date" value={form.targetDate} onChange={(event) => setForm({ ...form, targetDate: event.target.value })} style={inputStyle} />
+          <label style={{ color: semantic.textMuted }}>
+            Target date
+            <input
+              type="date"
+              value={form.targetDate}
+              onChange={(event) => setForm({ ...form, targetDate: event.target.value })}
+              style={inputStyle}
+            />
           </label>
           <div style={{ display: 'flex', alignItems: 'end' }}>
-            <button data-testid="button-launchkit-create" disabled={busy === 'create'} style={{ ...buttonStyle, width: '100%', opacity: busy === 'create' ? 0.6 : 1 }}>
-              {busy === 'create' ? <Loader2 className="animate-spin" size={15} /> : <Rocket size={15} />} Create launch
+            <button
+              data-testid="button-launchkit-create"
+              disabled={busy === 'create'}
+              style={{ ...buttonStyle, width: '100%', opacity: busy === 'create' ? 0.6 : 1 }}
+            >
+              {busy === 'create' ? (
+                <Loader2 className="animate-spin" size={15} />
+              ) : (
+                <Rocket size={15} />
+              )}{' '}
+              Create launch
             </button>
           </div>
         </form>
       </section>
 
       <section id={sectionId('launchkit-launches')} style={{ marginBottom: space.xl }}>
-        <h2 style={{ color: '#fff' }}>Launch workspaces</h2>
+        <h2 style={{ color: '#fff' }}>Release workspaces</h2>
         {loading ? (
-          <div data-testid="text-launchkit-loading" style={{ ...cardStyle, color: semantic.textMuted }}>Loading your launches…</div>
+          <div
+            data-testid="text-launchkit-loading"
+            style={{ ...cardStyle, color: semantic.textMuted }}
+          >
+            Loading your launches…
+          </div>
         ) : !workspace?.launches?.length ? (
-          <div data-testid="text-launchkit-empty" style={{ ...cardStyle, color: semantic.textMuted }}>No launches yet. Complete the brief above to create one.</div>
+          <div
+            data-testid="text-launchkit-empty"
+            style={{ ...cardStyle, color: semantic.textMuted }}
+          >
+            No launches yet. Complete the brief above to create one.
+          </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: space.md }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))',
+              gap: space.md,
+            }}
+          >
             {workspace.launches.map((item) => (
               <button
                 key={item.id}
@@ -333,12 +497,16 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
                   ...cardStyle,
                   textAlign: 'left',
                   cursor: 'pointer',
-                  borderColor: item.id === selectedId ? '#f97316' : semantic.border,
+                  borderColor: item.id === selectedId ? '#67e8f9' : semantic.border,
                 }}
               >
                 <strong style={{ color: '#fff' }}>{item.title}</strong>
-                <div style={{ color: semantic.textMuted, marginTop: 6 }}>{item.productType} · {item.status}</div>
-                <div style={{ color: semantic.textDim, fontSize: fontSize.sm, marginTop: 5 }}>{item.targetDate || 'Target date not set'}</div>
+                <div style={{ color: semantic.textMuted, marginTop: 6 }}>
+                  {item.productType} · {item.status}
+                </div>
+                <div style={{ color: semantic.textDim, fontSize: fontSize.sm, marginTop: 5 }}>
+                  {item.targetDate || 'Target date not set'}
+                </div>
               </button>
             ))}
           </div>
@@ -347,28 +515,73 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
 
       {selected && (
         <>
-          <section id={sectionId('launchkit-readiness')} style={{ ...cardStyle, marginBottom: space.xl }}>
+          <section
+            id={sectionId('launchkit-readiness')}
+            style={{ ...cardStyle, marginBottom: space.xl }}
+          >
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Target size={25} color="#f97316" />
+              <Target size={25} color="#67e8f9" />
               <div style={{ flex: 1 }}>
                 <h2 style={{ color: '#fff', margin: 0 }}>{selected.title}: readiness</h2>
                 <p style={{ color: semantic.textMuted, margin: '4px 0 0' }}>
-                  {readiness?.complete ?? 0} of {readiness?.total ?? 0} required rules pass. The server computes this score.
+                  {readiness?.complete ?? 0} of {readiness?.total ?? 0} required rules pass. The
+                  server computes this score.
                 </p>
               </div>
-              <strong data-testid="text-launchkit-readiness" style={{ color: readiness?.score === 100 ? semantic.accentSuccess : '#f97316', fontSize: 28 }}>
+              <strong
+                data-testid="text-launchkit-readiness"
+                style={{
+                  color: readiness?.score === 100 ? semantic.accentSuccess : '#67e8f9',
+                  fontSize: 28,
+                }}
+              >
                 {readiness?.score ?? 0}%
               </strong>
-              <button data-testid="button-launchkit-mark-launched" disabled={readiness?.score !== 100 || !!busy} onClick={markLaunched} style={{ ...buttonStyle, opacity: readiness?.score === 100 ? 1 : 0.45 }}>
+              <button
+                data-testid="button-launchkit-mark-launched"
+                disabled={readiness?.score !== 100 || !!busy}
+                onClick={markLaunched}
+                style={{ ...buttonStyle, opacity: readiness?.score === 100 ? 1 : 0.45 }}
+              >
                 Mark launched
               </button>
             </div>
-            <div style={{ height: 8, borderRadius: 10, background: semantic.bg, margin: '16px 0', overflow: 'hidden' }}>
-              <div style={{ width: `${readiness?.score ?? 0}%`, height: '100%', background: readiness?.score === 100 ? semantic.accentSuccess : '#f97316' }} />
+            <div
+              style={{
+                height: 8,
+                borderRadius: 10,
+                background: semantic.bg,
+                margin: '16px 0',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${readiness?.score ?? 0}%`,
+                  height: '100%',
+                  background: readiness?.score === 100 ? semantic.accentSuccess : '#67e8f9',
+                }}
+              />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 7 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))',
+                gap: 7,
+              }}
+            >
               {readiness?.rules?.map((rule) => (
-                <div key={rule.id} style={{ color: rule.complete ? semantic.accentSuccess : rule.blocked ? semantic.accentDanger : semantic.textMuted, fontSize: fontSize.sm }}>
+                <div
+                  key={rule.id}
+                  style={{
+                    color: rule.complete
+                      ? semantic.accentSuccess
+                      : rule.blocked
+                        ? semantic.accentDanger
+                        : semantic.textMuted,
+                    fontSize: fontSize.sm,
+                  }}
+                >
                   {rule.complete ? '✓' : rule.blocked ? '!' : '○'} {rule.label}
                 </div>
               ))}
@@ -377,26 +590,51 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
 
           <section id={sectionId('launchkit-plan')} style={{ marginBottom: space.xl }}>
             <h2 style={{ color: '#fff' }}>Launch plan and checklist</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: space.md }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))',
+                gap: space.md,
+              }}
+            >
               {(workspace.phases ?? []).map((phase) => (
                 <article key={phase.id} style={cardStyle}>
                   <h3 style={{ color: '#fff', marginTop: 0 }}>{phase.title}</h3>
-                  {(workspace.tasks ?? []).filter((task) => {
-                    const milestone = workspace.milestones?.find((item) => item.id === task.milestoneId);
-                    return milestone?.phaseId === phase.id;
-                  }).map((task) => (
-                    <button
-                      key={task.id}
-                      data-testid={`button-launchkit-task-${task.id}`}
-                      onClick={() => void toggleTask(task)}
-                      disabled={busy === `task:${task.id}`}
-                      aria-pressed={task.status === 'complete'}
-                      style={{ display: 'flex', width: '100%', gap: 8, border: 0, background: 'transparent', color: task.status === 'complete' ? semantic.accentSuccess : semantic.text, padding: '7px 0', textAlign: 'left', cursor: 'pointer' }}
-                    >
-                      {task.status === 'complete' ? <CheckCircle2 size={17} /> : <Circle size={17} />}
-                      <span>{task.title}</span>
-                    </button>
-                  ))}
+                  {(workspace.tasks ?? [])
+                    .filter((task) => {
+                      const milestone = workspace.milestones?.find(
+                        (item) => item.id === task.milestoneId,
+                      );
+                      return milestone?.phaseId === phase.id;
+                    })
+                    .map((task) => (
+                      <button
+                        key={task.id}
+                        data-testid={`button-launchkit-task-${task.id}`}
+                        onClick={() => void toggleTask(task)}
+                        disabled={busy === `task:${task.id}`}
+                        aria-pressed={task.status === 'complete'}
+                        style={{
+                          display: 'flex',
+                          width: '100%',
+                          gap: 8,
+                          border: 0,
+                          background: 'transparent',
+                          color:
+                            task.status === 'complete' ? semantic.accentSuccess : semantic.text,
+                          padding: '7px 0',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {task.status === 'complete' ? (
+                          <CheckCircle2 size={17} />
+                        ) : (
+                          <Circle size={17} />
+                        )}
+                        <span>{task.title}</span>
+                      </button>
+                    ))}
                 </article>
               ))}
             </div>
@@ -407,41 +645,109 @@ export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: s
               <div style={{ flex: 1 }}>
                 <h2 style={{ color: '#fff', marginBottom: 4 }}>Campaign artifacts</h2>
                 <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-                  Generated content stays draft until review and approval. Provider: {workspace.ai?.name ?? 'disabled'}.
+                  Generated content stays draft until review and approval. Provider:{' '}
+                  {workspace.ai?.name ?? 'disabled'}.
                 </div>
               </div>
-              <button data-testid="button-launchkit-generate" onClick={generate} disabled={!!busy} style={buttonStyle}>
-                {busy === 'generate' ? <Loader2 size={15} /> : <Sparkles size={15} />} Generate draft kit
+              <button
+                data-testid="button-launchkit-generate"
+                onClick={generate}
+                disabled={!!busy}
+                style={buttonStyle}
+              >
+                {busy === 'generate' ? <Loader2 size={15} /> : <Sparkles size={15} />} Generate
+                draft kit
               </button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: space.md, marginTop: space.md }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))',
+                gap: space.md,
+                marginTop: space.md,
+              }}
+            >
               {(workspace.artifacts ?? []).map((artifact) => (
                 <article key={artifact.id} style={cardStyle}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <FileText size={17} color="#f97316" />
+                    <FileText size={17} color="#67e8f9" />
                     <strong style={{ color: '#fff', flex: 1 }}>{artifact.title}</strong>
-                    <span style={{ color: artifact.status === 'approved' ? semantic.accentSuccess : semantic.textMuted, textTransform: 'uppercase', fontSize: 11 }}>{artifact.status}</span>
+                    <span
+                      style={{
+                        color:
+                          artifact.status === 'approved'
+                            ? semantic.accentSuccess
+                            : semantic.textMuted,
+                        textTransform: 'uppercase',
+                        fontSize: 11,
+                      }}
+                    >
+                      {artifact.status}
+                    </span>
                   </div>
-                  <pre style={{ color: semantic.textMuted, whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto', fontFamily: 'inherit', fontSize: fontSize.sm }}>{artifact.body}</pre>
-                  <button data-testid={`button-launchkit-artifact-${artifact.id}`} onClick={() => void advanceArtifact(artifact)} disabled={artifact.status === 'archived' || !!busy} style={{ ...buttonStyle, background: artifact.status === 'approved' ? semantic.bgPanel : '#f97316' }}>
-                    {artifact.status === 'draft' ? 'Send to review' : artifact.status === 'review' ? 'Approve' : 'Return to draft'}
+                  <pre
+                    style={{
+                      color: semantic.textMuted,
+                      whiteSpace: 'pre-wrap',
+                      maxHeight: 160,
+                      overflow: 'auto',
+                      fontFamily: 'inherit',
+                      fontSize: fontSize.sm,
+                    }}
+                  >
+                    {artifact.body}
+                  </pre>
+                  <button
+                    data-testid={`button-launchkit-artifact-${artifact.id}`}
+                    onClick={() => void advanceArtifact(artifact)}
+                    disabled={artifact.status === 'archived' || !!busy}
+                    style={{
+                      ...buttonStyle,
+                      background: artifact.status === 'approved' ? semantic.bgPanel : '#0284c7',
+                    }}
+                  >
+                    {artifact.status === 'draft'
+                      ? 'Send to review'
+                      : artifact.status === 'review'
+                        ? 'Approve'
+                        : 'Return to draft'}
                   </button>
                 </article>
               ))}
             </div>
           </section>
 
-          <section id={sectionId('launchkit-exports')} style={{ ...cardStyle, marginBottom: space.xl }}>
+          <section
+            id={sectionId('launchkit-exports')}
+            style={{ ...cardStyle, marginBottom: space.xl }}
+          >
             <h2 style={{ color: '#fff', marginTop: 0 }}>Audited exports</h2>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {(['markdown', 'json', 'csv'] as const).map((format) => (
-                <button key={format} data-testid={`button-launchkit-export-${format}`} disabled={!!busy} onClick={() => void exportLaunch(format)} style={buttonStyle}>
+                <button
+                  key={format}
+                  data-testid={`button-launchkit-export-${format}`}
+                  disabled={!!busy}
+                  onClick={() => void exportLaunch(format)}
+                  style={buttonStyle}
+                >
                   <Download size={15} /> {format.toUpperCase()}
                 </button>
               ))}
             </div>
-            {exportResult && <p data-testid="text-launchkit-export-hash" style={{ color: semantic.textMuted, overflowWrap: 'anywhere' }}>Latest checksum: {exportResult.export?.contentSha256}</p>}
-            {!!workspace.exports?.length && <p style={{ color: semantic.textMuted, marginBottom: 0 }}>{workspace.exports.length} export(s) ready for this launch.</p>}
+            {exportResult && (
+              <p
+                data-testid="text-launchkit-export-hash"
+                style={{ color: semantic.textMuted, overflowWrap: 'anywhere' }}
+              >
+                Latest checksum: {exportResult.export?.contentSha256}
+              </p>
+            )}
+            {!!workspace.exports?.length && (
+              <p style={{ color: semantic.textMuted, marginBottom: 0 }}>
+                {workspace.exports.length} export(s) ready for this launch.
+              </p>
+            )}
           </section>
         </>
       )}

@@ -13,9 +13,27 @@ const RINGS: Array<{
   accent: string;
   testIdPrefix: string;
 }> = [
-  { type: 'core', label: 'Core Products', radius: 24, accent: brand.accentCyan, testIdPrefix: 'orbit-node-core' },
-  { type: 'included', label: 'Free With Any Account', radius: 34, accent: brand.accentGreen, testIdPrefix: 'orbit-node-included' },
-  { type: 'companion', label: 'Companion Modules', radius: 40, accent: brand.accentViolet, testIdPrefix: 'orbit-node-companion' },
+  {
+    type: 'core',
+    label: 'Main Modules',
+    radius: 24,
+    accent: brand.accentCyan,
+    testIdPrefix: 'orbit-node-core',
+  },
+  {
+    type: 'included',
+    label: 'Included Companion Applications',
+    radius: 34,
+    accent: brand.accentGreen,
+    testIdPrefix: 'orbit-node-included',
+  },
+  {
+    type: 'companion',
+    label: 'Add-on Companion Applications',
+    radius: 40,
+    accent: brand.accentViolet,
+    testIdPrefix: 'orbit-node-companion',
+  },
 ];
 
 const COMMAND_RAILS = [
@@ -41,7 +59,9 @@ export default function CommandOrbit() {
         boxSizing: 'border-box',
       }}
     >
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes operatoros-rail-flow {
           from { background-position: 0 0; }
           to { background-position: 96px 0; }
@@ -93,7 +113,9 @@ export default function CommandOrbit() {
             max-width: 118px !important;
           }
         }
-      ` }} />
+      `,
+        }}
+      />
 
       <div style={{ textAlign: 'center', marginBottom: 34 }}>
         <span
@@ -126,9 +148,17 @@ export default function CommandOrbit() {
             letterSpacing: '-0.04em',
           }}
         >
-          One command core. Every module in formation.
+          One parent platform. Three main modules. Every companion connected.
         </h2>
-        <p style={{ color: brand.textSecondary, fontSize: 16, lineHeight: 1.65, margin: '0 auto', maxWidth: 760 }}>
+        <p
+          style={{
+            color: brand.textSecondary,
+            fontSize: 16,
+            lineHeight: 1.65,
+            margin: '0 auto',
+            maxWidth: 760,
+          }}
+        >
           OperatorOS sits in the center while product access, organization context, billing state,
           and child-app launch rails stay synchronized across the ecosystem.
         </p>
@@ -188,7 +218,8 @@ export default function CommandOrbit() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'radial-gradient(circle at 50% 42%, rgba(0,229,255,0.18), rgba(8,11,18,0.96) 68%)',
+              background:
+                'radial-gradient(circle at 50% 42%, rgba(0,229,255,0.18), rgba(8,11,18,0.96) 68%)',
               border: `1px solid ${brand.borderStrong}`,
               boxShadow: `${brand.ctaGlowLarge}, 0 0 120px rgba(239,35,60,0.16)`,
               zIndex: 4,
@@ -249,7 +280,14 @@ export default function CommandOrbit() {
                     <Icon size={18} />
                   </span>
                   <div>
-                    <div style={{ color: brand.textPrimary, fontFamily: brand.fontDisplay, fontWeight: 800, fontSize: 17 }}>
+                    <div
+                      style={{
+                        color: brand.textPrimary,
+                        fontFamily: brand.fontDisplay,
+                        fontWeight: 800,
+                        fontSize: 17,
+                      }}
+                    >
                       {rail.label}
                     </div>
                     <div style={{ color: brand.textMuted, fontSize: 12, marginTop: 3 }}>

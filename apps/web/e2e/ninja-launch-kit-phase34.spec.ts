@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import { establishParitySession } from './parity-auth';
 
 const exactHost = process.env.E2E_PRODUCTION_HOSTS === '1';
-const WEB = exactHost ? 'https://ninjalaunchkit.operatoros.net' : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
+const WEB = exactHost ? 'https://deployops.operatoros.net' : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:5001';
 
 async function setAgency(tenantId: string) {
@@ -32,7 +32,7 @@ async function exactHostSession(page: Page) {
   await page.goto(`${WEB}/dashboard`);
   await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
   await page.getByTestId('input-email').fill(email); await page.getByTestId('input-password').fill(password);
-  await Promise.all([page.waitForURL(/^https:\/\/ninjalaunchkit\.operatoros\.net\/dashboard/), page.getByTestId('button-login').click()]);
+  await Promise.all([page.waitForURL(/^https:\/\/deployops\.operatoros\.net\/dashboard/), page.getByTestId('button-login').click()]);
 }
 
 async function noUnlabelledControls(page: Page) {
@@ -45,7 +45,7 @@ async function noUnlabelledControls(page: Page) {
   expect(failures).toEqual([]);
 }
 
-test.describe('Phase 34 Ninja Launch Kit exact-host product', () => {
+test.describe('Deploy Ops exact-host product (stable Phase 34 API contract)', () => {
   test.setTimeout(240_000);
   test.beforeEach(async ({ page }) => {
     if (exactHost) await exactHostSession(page);
@@ -91,10 +91,10 @@ test.describe('Phase 34 Ninja Launch Kit exact-host product', () => {
   });
 
   test('public exact-host pricing, contact, legal, and landing routes remain anonymous', async ({ page }) => {
-    test.skip(!exactHost, 'Public marketing paths are owned by the exact Ninja Launch Kit host.');
+    test.skip(!exactHost, 'Public marketing paths are owned by the exact Deploy Ops host.');
     for (const route of ['/', '/pricing', '/contact', '/terms', '/privacy']) {
       await page.goto(`${WEB}${route}`, { waitUntil: 'networkidle' });
-      await expect(page.getByText('Ninja Launch Kit', { exact: true }).first()).toBeVisible();
+      await expect(page.getByText('DEPLOY OPS', { exact: true }).first()).toBeVisible();
     }
   });
 });

@@ -24,9 +24,17 @@ const VALUE_STRIP = [
 ];
 
 const STACK_LAYERS = [
-  { label: 'Core products', value: 'TradeFlowKit · PulseDesk · TechDeck', accent: brand.accentCyan },
-  { label: 'Free with every account', value: 'TorqueShed · FaultlineLab · Ninja Pool Hall', accent: brand.accentGreen },
-  { label: 'Companion modules', value: 'SnapProof · BrandForge · Ninjamation', accent: brand.accentViolet },
+  { label: 'Main Modules', value: 'TradeFlowKit · PulseDesk · TechDeck', accent: brand.accentCyan },
+  {
+    label: 'Included Companions',
+    value: 'TorqueShed · FaultlineLab · Operator Pool Hall',
+    accent: brand.accentGreen,
+  },
+  {
+    label: 'Specialized Companions',
+    value: 'SnapProofOS · BrandForgeOS · Script Ops · Deploy Ops',
+    accent: brand.accentViolet,
+  },
 ];
 
 const COMMAND_SIGNALS = ['Sign-in', 'Billing', 'Organizations', 'Access', 'Modules'];
@@ -54,7 +62,9 @@ export default function Hero() {
         overflow: 'hidden',
       }}
     >
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes operatoros-hero-pulse {
           0%, 100% { opacity: 0.58; transform: translate3d(0,0,0) scale(1); }
           50% { opacity: 0.92; transform: translate3d(0,-4px,0) scale(1.015); }
@@ -139,7 +149,9 @@ export default function Hero() {
             text-align: left !important;
           }
         }
-      ` }} />
+      `,
+        }}
+      />
 
       <div
         aria-hidden
@@ -207,9 +219,9 @@ export default function Hero() {
               maxWidth: 660,
             }}
           >
-            Give your team one secure place to enter, manage, and launch every
-            tool your operation depends on. Identity, billing, access, and module
-            handoffs stay connected behind the scenes.
+            Give your team one secure place to enter, manage, and launch every application your
+            operation depends on. Identity, billing, access, and application handoffs stay connected
+            behind the scenes.
           </p>
 
           <div className="operatoros-hero-actions">
@@ -257,12 +269,20 @@ export default function Hero() {
           </div>
 
           {!signedIn && (
-            <p data-testid="hero-no-card" style={{ color: brand.textMuted, fontSize: 13, margin: '14px 0 0' }}>
-              TorqueShed, FaultlineLab, and Ninja Pool Hall are free with any account — no credit card required.
+            <p
+              data-testid="hero-no-card"
+              style={{ color: brand.textMuted, fontSize: 13, margin: '14px 0 0' }}
+            >
+              TorqueShed, FaultlineLab, and Operator Pool Hall are free with any account — no credit
+              card required.
             </p>
           )}
 
-          <div className="operatoros-value-strip" aria-label="OperatorOS platform value" style={{ marginTop: 34 }}>
+          <div
+            className="operatoros-value-strip"
+            aria-label="OperatorOS platform value"
+            style={{ marginTop: 34 }}
+          >
             {VALUE_STRIP.map((item) => {
               const Icon = item.icon;
               return (
@@ -317,7 +337,7 @@ export default function Hero() {
 
           <img
             src="/media/operatoros/operatoros-command-nexus.png"
-          alt="Cinematic OperatorOS command nexus connecting modules through identity, billing, and access rails."
+            alt="Cinematic OperatorOS command nexus connecting modules through identity, billing, and access rails."
             onError={(event) => {
               event.currentTarget.src = '/media/operatoros/operatoros-hero.png';
             }}
@@ -339,12 +359,29 @@ export default function Hero() {
               position: 'absolute',
               inset: 18,
               borderRadius: 22,
-              background: 'linear-gradient(90deg, rgba(8,11,18,0.2), transparent 34%, rgba(8,11,18,0.56)), linear-gradient(180deg, transparent 46%, rgba(8,11,18,0.86))',
+              background:
+                'linear-gradient(90deg, rgba(8,11,18,0.2), transparent 34%, rgba(8,11,18,0.56)), linear-gradient(180deg, transparent 46%, rgba(8,11,18,0.86))',
             }}
           />
 
-          <div style={{ position: 'relative', minHeight: '100%', display: 'grid', alignContent: 'space-between', gap: 22 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              position: 'relative',
+              minHeight: '100%',
+              display: 'grid',
+              alignContent: 'space-between',
+              gap: 22,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                alignItems: 'flex-start',
+                flexWrap: 'wrap',
+              }}
+            >
               <div
                 style={{
                   maxWidth: 360,
@@ -355,15 +392,33 @@ export default function Hero() {
                   backdropFilter: 'blur(14px)',
                 }}
               >
-                <div style={{ color: brand.accentCyan, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', marginBottom: 8 }}>
+                <div
+                  style={{
+                    color: brand.accentCyan,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    marginBottom: 8,
+                  }}
+                >
                   OperatorOS command layer
                 </div>
-                <div style={{ color: brand.textPrimary, fontFamily: brand.fontDisplay, fontSize: 24, fontWeight: 800, lineHeight: 1.08 }}>
+                <div
+                  style={{
+                    color: brand.textPrimary,
+                    fontFamily: brand.fontDisplay,
+                    fontSize: 24,
+                    fontWeight: 800,
+                    lineHeight: 1.08,
+                  }}
+                >
                   One login. Every operation.
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <div
+                style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}
+              >
                 {COMMAND_SIGNALS.map((signal) => (
                   <span
                     key={signal}
@@ -424,10 +479,24 @@ export default function Hero() {
                     border: `1px solid ${brand.borderSoft}`,
                   }}
                 >
-                  <span style={{ color: layer.accent, fontSize: 11, fontWeight: 800, textTransform: 'uppercase' }}>
+                  <span
+                    style={{
+                      color: layer.accent,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     {layer.label}
                   </span>
-                  <span style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.4, textAlign: 'right' }}>
+                  <span
+                    style={{
+                      color: brand.textSecondary,
+                      fontSize: 13,
+                      lineHeight: 1.4,
+                      textAlign: 'right',
+                    }}
+                  >
                     {layer.value}
                   </span>
                 </div>

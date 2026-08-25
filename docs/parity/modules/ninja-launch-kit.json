@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedBy": "scripts/phase20-product-truth.mjs",
   "moduleSlug": "ninja-launch-kit",
-  "moduleName": "Ninja Launch Kit",
+  "moduleName": "Deploy Ops",
   "sourceRoot": "apps/modules/ninja-launch-kit/source",
   "provenance": {
     "selectedKind": "imported_snapshot",

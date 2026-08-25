@@ -116,7 +116,7 @@ function failure(reply: FastifyReply, error: unknown) {
 
 async function moduleId(executor: Executor = db): Promise<string> {
   const result = await executor.execute(sql`SELECT id FROM modules WHERE slug=${MODULE_SLUG} LIMIT 1`);
-  if (!result.rows[0]) throw Object.assign(new Error('Ninja Launch Kit module registry is unavailable'), { code: 'NINJA_LAUNCH_KIT_MODULE_UNAVAILABLE' });
+  if (!result.rows[0]) throw Object.assign(new Error('Deploy Ops module registry is unavailable'), { code: 'NINJA_LAUNCH_KIT_MODULE_UNAVAILABLE' });
   return String((result.rows[0] as Row).id);
 }
 

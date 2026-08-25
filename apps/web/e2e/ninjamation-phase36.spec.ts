@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import { establishParitySession } from './parity-auth';
 
 const exactHost = process.env.E2E_PRODUCTION_HOSTS === '1';
-const WEB = exactHost ? 'https://ninjamation.operatoros.net' : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
+const WEB = exactHost ? 'https://scriptops.operatoros.net' : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:5001';
 
 async function grantPro(tenantId: string) {
@@ -35,10 +35,10 @@ async function exactHostSession(page: Page) {
   await page.goto(`${WEB}/library`);
   await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
   await page.getByTestId('input-email').fill(email); await page.getByTestId('input-password').fill(password);
-  await Promise.all([page.waitForURL(/^https:\/\/ninjamation\.operatoros\.net\/library/), page.getByTestId('button-login').click()]);
+  await Promise.all([page.waitForURL(/^https:\/\/scriptops\.operatoros\.net\/library/), page.getByTestId('button-login').click()]);
 }
 
-test.describe('Phase 36 Ninjamation complete product', () => {
+test.describe('Script Ops complete product (stable Phase 36 API contract)', () => {
   test.setTimeout(180_000);
   test.beforeEach(async ({ page }) => {
     if (exactHost) await exactHostSession(page);
@@ -95,12 +95,12 @@ test.describe('Phase 36 Ninjamation complete product', () => {
     expect(unlabelled).toEqual([]);
   });
 
-  test('public landing and pricing remain anonymous on the exact Ninjamation host', async ({ page }) => {
-    test.skip(!exactHost, 'Public marketing paths are owned by the exact Ninjamation host.');
+  test('public landing and pricing remain anonymous on the exact Script Ops host', async ({ page }) => {
+    test.skip(!exactHost, 'Public marketing paths are owned by the exact Script Ops host.');
     for (const route of ['/', '/pricing']) {
       await page.context().clearCookies();
       await page.goto(`${WEB}${route}`, { waitUntil: 'networkidle' });
-      await expect(page.getByText('NINJAMATION', { exact: true }).first()).toBeVisible();
+      await expect(page.getByText('SCRIPT OPS', { exact: true }).first()).toBeVisible();
     }
   });
 });

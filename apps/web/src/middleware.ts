@@ -185,6 +185,30 @@ function canonicalizeNoncanonicalHost(
   return withAuthSecurityHeaders(NextResponse.redirect(destination, 308));
 }
 
+function canonicalizeLegacyModuleHost(
+  req: NextRequest,
+  context: ResolvedOperatorOSModuleContext,
+): NextResponse | null {
+  const module = context.module;
+  if (
+    context.surface !== 'module' ||
+    !module ||
+    context.host === module.hostname ||
+    !module.legacyHostnames.includes(context.host)
+  ) return null;
+
+  // Historical product hosts are redirect-only. Never exchange an SSO code,
+  // set a session cookie, or preserve callback query parameters on an alias;
+  // restart from the clean canonical launch surface instead.
+  const isCallback = isSsoCallbackPath(req.nextUrl.pathname);
+  const destination = new URL(module.productionBaseUrl);
+  destination.pathname = isCallback
+    ? module.launchPath || '/'
+    : req.nextUrl.pathname;
+  if (!isCallback) destination.search = req.nextUrl.search;
+  return withAuthSecurityHeaders(NextResponse.redirect(destination, 308));
+}
+
 function canonicalizeProductionModulePath(
   req: NextRequest,
   context: ResolvedOperatorOSModuleContext,
@@ -426,6 +450,9 @@ export async function middleware(req: NextRequest) {
   const canonicalRedirect = canonicalizeNoncanonicalHost(req, context);
   if (canonicalRedirect) return canonicalRedirect;
 
+  const legacyModuleRedirect = canonicalizeLegacyModuleHost(req, context);
+  if (legacyModuleRedirect) return legacyModuleRedirect;
+
   const legacyAppRedirect = canonicalizeLegacyAppPath(req, context);
   if (legacyAppRedirect) return legacyAppRedirect;
 
@@ -481,7 +508,7 @@ export async function middleware(req: NextRequest) {
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
     if (pathname === '/login' || pathname === '/signup') {
       const mode = pathname === '/signup' ? '&mode=register' : '';
-      const next = encodeURIComponent('https://ninjalaunchkit.operatoros.net/dashboard');
+      const next = encodeURIComponent('https://deployops.operatoros.net/dashboard');
       return withAuthSecurityHeaders(NextResponse.redirect(new URL(buildPublicUrl(`/login?next=${next}${mode}`, 'root')), 307));
     }
   }
@@ -490,7 +517,7 @@ export async function middleware(req: NextRequest) {
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
     if (pathname === '/login' || pathname === '/signup') {
       const mode = pathname === '/signup' ? '&mode=register' : '';
-      const next = encodeURIComponent('https://ninjamation.operatoros.net/library');
+      const next = encodeURIComponent('https://scriptops.operatoros.net/library');
       return withAuthSecurityHeaders(NextResponse.redirect(new URL(buildPublicUrl(`/login?next=${next}${mode}`, 'root')), 307));
     }
   }

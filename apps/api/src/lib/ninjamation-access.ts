@@ -63,7 +63,7 @@ export async function consumeNinjamationUsage(input: {
     RETURNING generation_count,download_count,period_start
   `);
   if (!result.rows[0]) {
-    throw Object.assign(new Error(`Ninjamation monthly ${input.kind} limit reached for this OperatorOS entitlement`), {
+    throw Object.assign(new Error(`Script Ops monthly ${input.kind} limit reached for this OperatorOS entitlement`), {
       statusCode: 429,
       code: input.kind === 'generation'
         ? 'NINJAMATION_GENERATION_LIMIT_REACHED'

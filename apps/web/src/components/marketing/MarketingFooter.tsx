@@ -15,9 +15,8 @@ const COL_PRODUCT = [
 
 const COL_MODULES = [
   { href: '/modules#module-tradeflowkit', label: 'TradeFlowKit' },
-  { href: '/modules#module-techdeck', label: 'TechDeck' },
   { href: '/modules#module-pulsedesk', label: 'PulseDesk' },
-  { href: '/modules#module-ninjamation', label: 'Ninjamation' },
+  { href: '/modules#module-techdeck', label: 'TechDeck' },
 ];
 
 const COL_ACTIONS = [
@@ -55,7 +54,7 @@ export default function MarketingFooter() {
           margin: '0 auto',
           padding: '48px 24px 24px',
           display: 'grid',
-           gridTemplateColumns: 'minmax(0, 1.7fr) repeat(4, minmax(0, 1fr))',
+          gridTemplateColumns: 'minmax(0, 1.7fr) repeat(4, minmax(0, 1fr))',
           gap: 32,
         }}
       >
@@ -70,15 +69,14 @@ export default function MarketingFooter() {
               maxWidth: 320,
             }}
           >
-            One calm command layer for your business tools.
-            One sign-in. Every operation.
+            One calm command layer for your business tools. One sign-in. Every operation.
           </p>
         </div>
 
         <FooterColumn title="Product" links={COL_PRODUCT} />
         <FooterColumn title="Modules" links={COL_MODULES} />
-         <FooterColumn title="Actions" links={COL_ACTIONS} />
-         <FooterColumn title="Legal" links={COL_LEGAL} />
+        <FooterColumn title="Actions" links={COL_ACTIONS} />
+        <FooterColumn title="Legal" links={COL_LEGAL} />
       </div>
 
       <div
@@ -99,13 +97,20 @@ export default function MarketingFooter() {
         <span>© {year} OperatorOS. All rights reserved.</span>
         <span data-testid="footer-attribution">
           Powered by{' '}
-          <span style={{ color: brand.textSecondary, fontWeight: 600 }}>
+          <a
+            href="https://shotgunninjas.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.textSecondary, fontWeight: 600 }}
+          >
             Shotgun Ninjas Productions
-          </span>
+          </a>
         </span>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @media (max-width: 767px) {
           [data-testid="marketing-footer"] > div:first-child {
             grid-template-columns: 1fr 1fr !important;
@@ -116,7 +121,9 @@ export default function MarketingFooter() {
             grid-template-columns: 1fr !important;
           }
         }
-      ` }} />
+      `,
+        }}
+      />
     </footer>
   );
 }
@@ -135,7 +142,7 @@ function FooterColumn({
     transition: 'color 0.15s ease',
   } as const;
   return (
-    <div>
+    <div data-testid={`footer-column-${title.toLowerCase()}`}>
       <div
         style={{
           fontFamily: brand.fontDisplay,
