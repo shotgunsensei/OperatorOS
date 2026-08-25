@@ -14,6 +14,40 @@ removed from the current tree. They remain recoverable from Git history. The
 source code and provenance needed for migration, audit, and historical
 reference remain in place.
 
+## Latest Node 20 provider rejection — 2026-08-25
+
+Replit retried deployment `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` as build
+`974c6e95-4124-4647-8010-16f4b2c09415`. The provider security scan completed
+resolution and installation with bundled pnpm `10.26.1`, then the root
+`preinstall` rejected that pnpm under Node `v20.20.0`, Linux x64. The attempt
+stopped before the checked-in deployment build, database release, runtime, or
+health checks.
+
+GitHub and local `main` at `b2b8a06495e255360c237230facb66baca746338`
+already include the exact Node 20 tuple through commit `9a5cd76`. That current
+predicate accepts the supplied log's tuple, so the failed provider output is
+strong evidence of a stale or otherwise different source snapshot. Replit did
+not include a source SHA in the supplied log, so the snapshot identity cannot
+be confirmed from provider evidence alone.
+
+The current merge separately reintroduced public mappings for internal ports
+5001 and 5002; GitHub workflow `32881726210` caught those mappings in the
+deployment-scope gate. The local repair restores the single public-port
+contract and makes `REPLIT_DEV_DOMAIN` an unconditional denial for every scan
+exception. Regression coverage accepts only the two observed stripped tuples
+and rejects Node `v20.20.1`, pnpm `10.26.2`, ARM64, and exact tuples presented
+from the interactive editor.
+
+Provider-like pnpm 10.26.1 and exact pnpm 10.34.5 frozen installs both pass
+locally without changing the sole root lock hash. Phase 39 passes 14/14, the
+security scan reports zero findings across 1,279 files, deployment scope sees
+only root `pnpm-lock.yaml` and public port 80, npm fails with
+`EBADDEVENGINES` without creating a lock, and the production build completes
+all four TypeScript targets and 32/32 Next pages. This is source/local proof,
+not a successful Replit rescan or publication. Current GitHub CI has additional
+release-contract failures, and live readiness remains on commit `399f4d2`,
+build `e15147c`, database v54.
+
 ## Replit publish-scan runtime recursion — 2026-08-21
 
 GitHub `main` had advanced to Replit's empty publication-marker commit

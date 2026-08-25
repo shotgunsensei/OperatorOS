@@ -28,10 +28,14 @@ be assumed to carry into the deployment.
       `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING` failure before application code
       starts.
 - [ ] The provider-owned pre-build security scan may use its bundled pnpm
-      `10.26.1` under Node `24.12.0`; it must finish the root `preinstall`
-      without package-manager self-install recursion and then proceed to the
-      checked-in `.replit` build. The deployment build must still switch to the
-      exact pnpm `10.34.5` frozen install above.
+      `10.26.1` under either observed exact Linux x64 runtime, Node `24.12.0`
+      or Node `20.20.0`; it must finish the root `preinstall` without
+      package-manager self-install recursion and then proceed to the checked-in
+      `.replit` build. Adjacent versions and editor context remain rejected.
+      The deployment build must still switch to the exact pnpm `10.34.5`
+      frozen install above. Build `974c6e95-4124-4647-8010-16f4b2c09415`
+      failed before this point with output inconsistent with the current guard,
+      so retry only from a fresh snapshot whose source SHA is known.
 - [ ] `APP_ENV=production` and `NODE_ENV=production` in the deployment
       environment.
 - [ ] `DATABASE_URL` points to the production PostgreSQL authority.

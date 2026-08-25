@@ -1,5 +1,52 @@
 # OperatorOS implementation status
 
+## Replit Node 20 publish-scan rejection - SOURCE/LOCAL REPAIRED / FRESH SNAPSHOT REQUIRED (2026-08-25)
+
+- Replit deployment `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
+  `974c6e95-4124-4647-8010-16f4b2c09415`, failed during the provider-owned
+  **Running Security Scan -> Installing packages -> pnpm install** stage. Its
+  package resolution completed from the authoritative lock, then root
+  `preinstall` rejected provider `pnpm/10.26.1` on Node `v20.20.0`, Linux x64.
+  The checked-in `.replit` build, release-v55 apply, runtime supervisor, and
+  health checks did not run.
+- Current GitHub `main` / local base `b2b8a06495e255360c237230facb66baca746338`
+  already contains the exact Node `v20.20.0` fallback introduced at `9a5cd76`.
+  The supplied failure is incompatible with that guard: the logged tuple
+  passes the current predicate. This is strong evidence that the publish used
+  a source snapshot that did not contain the current guard; the Replit build
+  log does not expose a source SHA, so that snapshot identity remains an
+  inference rather than confirmed provider metadata.
+- The `b2b8a064` merge also reintroduced public mappings for private API port
+  `5001` and Next port `5002`. GitHub workflow `32881726210` failed its
+  Phase 39 deployment-scope gate on external ports `80, 3001, 3000`. The local
+  repair removes the two internal mappings so only the readiness-gated
+  supervisor on local `5000` is exposed as public port `80`.
+- The provider predicate now treats `REPLIT_DEV_DOMAIN` as an unconditional
+  denial, including when the process otherwise matches an exact scanner tuple.
+  Exact stripped fallbacks remain limited to `pnpm/10.26.1`, Linux x64, and
+  Node `v24.12.0` or `v20.20.0`. Adjacent Node/pnpm versions, other platforms
+  or architectures, npm, pnpm 11, and the interactive editor remain rejected.
+  The normal install and deployment build remain pinned to pnpm `10.34.5`
+  with `--frozen-lockfile`.
+- Fresh local evidence: provider-like pnpm `10.26.1` installation accepted the
+  bounded scan context; exact pnpm `10.34.5` frozen install passed; npm 11.13.0
+  failed with `EBADDEVENGINES` and created no `package-lock.json`; Phase 39
+  passed 14/14; deployment scope passed with only `pnpm-lock.yaml` and public
+  port 80; the security gate scanned 1,279 files with zero findings and audited
+  1,257 dependencies with zero critical or unresolved-high advisories; the
+  production build passed FaultlineLab 4/4, all four TypeScript targets,
+  API/runner builds, and 32/32 Next pages. The lock SHA-256 remained
+  `5b72b16f727bd8852868b7d9af9e5598ee5f1b861da0afc1d66fc2265f20c6f7`.
+- GitHub CI is not green. Workflow `32881726210` also reported parity, unit,
+  API, static route-control, and exact-host browser failures outside this
+  package-manager/port repair. Both live `/readyz` endpoints remain healthy but
+  identify old commit `399f4d2cb64ecf9511d7c82e8066c332c31ac7eb`, build
+  `e15147cfd811c794a780887f`, and database release v54. No commit, push,
+  republish, production database mutation, or deployed acceptance was
+  performed. A fresh committed/pushed source snapshot, green CI reconciliation,
+  provider rescan, release-v55 backup/apply, and exact live identity/browser
+  checks remain required.
+
 ## Ecosystem identity, hierarchy, and rendered QA refactor - SOURCE/LOCAL VERIFIED / DEPLOYMENT PENDING (2026-08-22)
 
 - OperatorOS remains the parent authority. The canonical inventory now marks

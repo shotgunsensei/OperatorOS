@@ -64,12 +64,12 @@ export function isReplitProviderInstallEnvironment(
       && runtime.nodeVersion === toolchain.nodeVersion
       && new RegExp(`^pnpm/${escapedPnpmVersion}(?:\\s|$)`).test(String(userAgent).trim());
   });
-  const strippedProviderSecurityScan = observedSecurityScanToolchain
-    && !replitEnvironmentSignal
-    && !providerNixNode;
-  return (developmentDomain.length === 0
-    && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain))
-    || strippedProviderSecurityScan;
+  // The editor domain is an unconditional denial. In particular, an exact
+  // provider tuple must never turn an interactive Replit workspace into a
+  // provider-scan context.
+  if (developmentDomain.length > 0) return false;
+
+  return replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain;
 }
 
 export function evaluatePackageManager(userAgent = '', { allowReplitProviderVersion = false } = {}) {

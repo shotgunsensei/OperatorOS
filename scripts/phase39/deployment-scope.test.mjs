@@ -37,6 +37,7 @@ build = ["bash", "npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen
   packageManagerEnforcer: `const REQUIRED_PNPM_VERSION = '10.34.5';
 const MINIMUM_REPLIT_PROVIDER_PNPM_VERSION = '10.26.0';
 const OBSERVED_REPLIT_SECURITY_SCAN = { pnpmVersion: '10.26.1', nodeVersion: 'v24.12.0', platform: 'linux', arch: 'x64' };
+const CURRENT_REPLIT_SECURITY_SCAN = { pnpmVersion: '10.26.1', nodeVersion: 'v20.20.0', platform: 'linux', arch: 'x64' };
 const REPLIT_PROVIDER_ENVIRONMENT_KEYS = ['REPL_ID', 'REPLIT_DEPLOYMENT'];
 const REPLIT_DEV_DOMAIN = 'editor-only';
 const providerNode = '/nix/store/provider-node/bin/node';
@@ -91,11 +92,24 @@ test('Replit provider detection uses provider evidence and excludes the interact
     ...scanRuntime,
     nodeVersion: 'v20.20.0',
   }, 'pnpm/10.26.1 npm/? node/v20.20.0 linux x64'), true);
+  assert.equal(isReplitProviderInstallEnvironment({}, {
+    ...scanRuntime,
+    nodeVersion: 'v20.20.1',
+  }, 'pnpm/10.26.1 npm/? node/v20.20.1 linux x64'), false);
+  assert.equal(isReplitProviderInstallEnvironment({}, {
+    ...scanRuntime,
+    nodeVersion: 'v20.20.0',
+  }, 'pnpm/10.26.2 npm/? node/v20.20.0 linux x64'), false);
   assert.equal(isReplitProviderInstallEnvironment(
     { REPLIT_DEV_DOMAIN: 'example.replit.dev' },
     scanRuntime,
     scanUserAgent,
-  ), true);
+  ), false);
+  assert.equal(isReplitProviderInstallEnvironment(
+    { REPLIT_DEV_DOMAIN: 'example.replit.dev' },
+    { ...scanRuntime, nodeVersion: 'v20.20.0' },
+    'pnpm/10.26.1 npm/? node/v20.20.0 linux x64',
+  ), false);
   assert.equal(isReplitProviderInstallEnvironment(
     {},
     scanRuntime,
