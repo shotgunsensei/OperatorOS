@@ -43,9 +43,11 @@ newer version within major 10 may perform the ephemeral scan install. The
 exception prefers Replit's documented provider/deployment variables or the
 observed Linux `/nix/store/` Node path, without the editor-only
 `REPLIT_DEV_DOMAIN`. Because the provider security scan may strip those
-signals, a fallback accepts only its exact observed `pnpm/10.26.1` + Node
-`v24.12.0` + Linux `x64` tuple. It rejects adjacent pnpm and Node versions,
-other architectures/platforms, and editor context. `.replit` subsequently reinstalls the sole graph
+signals, a fallback accepts only the exact observed `pnpm/10.26.1` + Linux
+`x64` tuples for Node `v24.12.0` and the current Node `v20.20.0` scanner
+runtime. The stripped-signal path also requires a non-Nix runtime so an
+interactive editor remains rejected. It rejects adjacent pnpm and Node versions, other
+architectures/platforms, and editor context. `.replit` subsequently reinstalls the sole graph
 with explicit pnpm 10.34.5 and `--frozen-lockfile`; npm remains rejected by
 `devEngines`, and ignored/alternate locks remain fail-closed inputs.
 

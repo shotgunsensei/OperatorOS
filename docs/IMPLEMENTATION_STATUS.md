@@ -94,10 +94,10 @@
   Preferred evidence is one of Replit's documented provider/deployment
   variables or the resolved provider Nix Node path, always without the
   editor-only `REPLIT_DEV_DOMAIN`. When the security scanner strips those
-  signals, the fallback requires the exact twice-observed provider tuple:
-  `pnpm/10.26.1`, Node `v24.12.0`, Linux `x64`. Adjacent pnpm/Node versions,
-  other platforms, and the interactive Replit editor do not receive the
-  fallback.
+  signals, the fallback requires an exact observed provider tuple:
+  `pnpm/10.26.1`, Linux `x64`, and either Node `v24.12.0` or the current
+  scanner's Node `v20.20.0`. Adjacent pnpm/Node versions, other platforms,
+  and the interactive Replit editor do not receive the fallback.
 - The compatibility path is pre-build scan input only. `.replit` still invokes
   exact `pnpm@10.34.5`, performs `pnpm install --frozen-lockfile`, and then runs
   the production build. `package.json` still rejects npm through error-level
