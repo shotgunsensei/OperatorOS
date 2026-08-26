@@ -55,8 +55,8 @@ test('session refresh preserves scope and revokes the replaced token', async () 
 
 test('TechDeck presents active workflows without migration or runtime notes', () => {
   const shell = read('apps/web/src/components/module-shells/TechDeckShell.tsx');
-  assert.match(shell, /Technician workspace for tickets/);
-  assert.match(shell, /Preparing your tickets, systems, documentation, and team access/);
+  assert.match(shell, /Triage assignment, SLA pressure, and technician ownership/);
+  assert.match(shell, /Loading this TechDeck route/);
   assert.doesNotMatch(shell, /Migration pending|shared runtime|module entitlement state/i);
 });
 

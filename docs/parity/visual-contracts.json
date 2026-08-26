@@ -28,7 +28,7 @@
     },
     {
       "moduleSlug": "ninja-launch-kit",
-      "moduleName": "Ninja Launch Kit",
+      "moduleName": "Deploy Ops",
       "criticalRoute": "/app/apps/ninja-launch-kit",
       "sourceReferences": ["apps/modules/ninja-launch-kit/source/artifacts/ninjalaunchkit/src/App.tsx"],
       "brandTokens": [{"name":"primary","value":"#8b5cf6"},{"name":"accent","value":"#f59e0b"},{"name":"surface","value":"#111827"}],
@@ -36,7 +36,7 @@
     },
     {
       "moduleSlug": "ninja-pool-hall",
-      "moduleName": "Ninja Pool Hall",
+      "moduleName": "Operator Pool Hall",
       "criticalRoute": "/app/apps/ninja-pool-hall",
       "sourceReferences": ["apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/MainMenu.tsx"],
       "brandTokens": [{"name":"primary","value":"#16a34a"},{"name":"accent","value":"#d4af37"},{"name":"surface","value":"#0b1f14"}],
@@ -44,7 +44,7 @@
     },
     {
       "moduleSlug": "ninjamation",
-      "moduleName": "Ninjamation",
+      "moduleName": "Script Ops",
       "criticalRoute": "/app/apps/ninjamation",
       "sourceReferences": ["apps/modules/ninjamation/source/artifacts/automation-station/src/index.css"],
       "brandTokens": [{"name":"primary","value":"#7c3aed"},{"name":"accent","value":"#06b6d4"},{"name":"surface","value":"#111827"}],

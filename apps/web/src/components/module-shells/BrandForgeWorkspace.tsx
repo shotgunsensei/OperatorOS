@@ -150,7 +150,6 @@ export default function BrandForgeWorkspace({ routePath, embedded = false }: { r
   useEffect(() => { setTab(tabFromRoute(routePath)); }, [routePath]);
 
   useEffect(() => {
-    if (routePath) return;
     void load();
   }, [load]);
 

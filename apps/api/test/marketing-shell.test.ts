@@ -511,17 +511,16 @@ test('marketing shell · HTTP — /robots.txt disallows /app', { concurrency: fa
 // Phase 2 — homepage section assembly.
 // ---------------------------------------------------------------------------
 
-test('marketing phase 2 · homepage composes the six required sections in order', () => {
+test('marketing phase 2 · homepage composes the ecosystem sections in hierarchy-first order', () => {
   const src = read('src/app/page.tsx');
-  for (const marker of ['Hero', 'CommandOrbit', 'PlatformPositioning',
-                        'ModuleGatewayGrid', 'HowItWorks', 'FinalCta']) {
+  for (const marker of ['Hero', 'PlatformPositioning', 'ModuleGatewayGrid',
+                        'CommandOrbit', 'HowItWorks', 'FinalCta']) {
     assert.match(src, new RegExp(`<${marker}\\b`), `home should render <${marker}>`);
   }
-  // Section order must match the spec: Hero → Orbit → Positioning →
-  // Gateway Grid → How It Works → Final CTA. Asserting positional
-  // index keeps Phase 3 from accidentally reshuffling them.
-  const order = ['Hero', 'CommandOrbit', 'PlatformPositioning',
-                 'ModuleGatewayGrid', 'HowItWorks', 'FinalCta'];
+  // The complete hierarchy-led application grid appears before the secondary
+  // orbit treatment so visitors see all main and companion applications first.
+  const order = ['Hero', 'PlatformPositioning', 'ModuleGatewayGrid',
+                 'CommandOrbit', 'HowItWorks', 'FinalCta'];
   const positions = order.map(name => src.indexOf(`<${name}`));
   for (let i = 1; i < positions.length; i++) {
     assert.ok(
@@ -570,17 +569,18 @@ test('marketing phase 2 · /modules and /how-it-works reuse the shared sections'
   assert.match(how, /MarketingLayout/, '/how-it-works must stay inside the marketing shell');
 });
 
-test('marketing phase 2 · catalog mirror covers all 11 modules with outcome copy', async () => {
+test('marketing phase 2 · catalog mirror covers all 13 modules with outcome copy', async () => {
   const src = read('src/lib/marketing-catalog.ts');
   // Every slug from the SDK catalog must be present in the marketing
   // outcome map so visitors never see an empty card body.
   const slugs = [
     'tradeflowkit', 'torqueshed', 'techdeck', 'pulsedesk', 'faultlinelab',
-    'brandforgeos', 'snapproofos', 'studyforge-ai', 'ninja-launch-kit',
-    'callcommand-ai', 'ninjamation',
+    'ninja-pool-hall', 'brandforgeos', 'snapproofos', 'studyforge-ai',
+    'ninja-launch-kit', 'callcommand-ai', 'ninjamation', 'outcall',
   ];
   for (const slug of slugs) {
-    assert.match(src, new RegExp(`'${slug}'\\s*:`), `marketing-catalog missing outcome for ${slug}`);
+    const property = slug.includes('-') ? `'${slug}'` : slug;
+    assert.match(src, new RegExp(`${property}\\s*:`), `marketing-catalog missing outcome for ${slug}`);
   }
   // Status mapping must produce the four marketing labels used by
   // statusBadgeColor.
@@ -623,7 +623,7 @@ test('marketing phase 2 · no buzzwords in homepage copy', () => {
 test('marketing phase 3 · homepage composes pricing teaser and trust section in order', () => {
   const src = read('src/app/page.tsx');
   const order = [
-    'Hero', 'CommandOrbit', 'PlatformPositioning', 'ModuleGatewayGrid',
+    'Hero', 'PlatformPositioning', 'ModuleGatewayGrid', 'CommandOrbit',
     'HowItWorks', 'PricingTeaser', 'TrustSection', 'FinalCta',
   ];
   const positions = order.map(name => src.indexOf(`<${name}`));

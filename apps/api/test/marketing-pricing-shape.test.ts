@@ -117,20 +117,20 @@ test('homepage marketing sections carry no paid-core gating for the free apps', 
       `stale "Included With Any Core" paid-gating phrase found in ${name}`,
     );
   }
-  assert.match(commandOrbit, /Free With Any Account/);
-  assert.match(hero, /no credit card required/);
+  assert.match(pricingSection, /Free With Any Account/);
+  assert.match(hero, /no credit\s+card required/);
 });
 
 test('pricing FAQ contains all finalized questions', () => {
   for (const question of [
     'What is OperatorOS?',
     'Do I pay for OperatorOS?',
-    'What comes with a core product?',
+    'What comes with a main module?',
     'How many seats are included?',
     'Can I buy more seats?',
     'Which apps are free with any account?',
-    'How does the free companion module work?',
-    'What do additional modules cost?',
+    'How does the included companion application work?',
+    'What do additional companion applications cost?',
     'Is PulseDesk only for healthcare?',
     'What happens if I cancel?',
   ]) {

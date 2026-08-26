@@ -13,9 +13,9 @@
   },
   "sourceFingerprint": {
     "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-    "treeSha256": "2fffe4b0dad8024cfba747f387beda41d1563b473987c79cc634f5db9ca62794",
-    "fileCount": 273,
-    "totalBytes": 1232410
+    "treeSha256": "8b9b5f4c1900b2e2536904573778e431f0524c22199195e0ca119c590ee9ac70",
+    "fileCount": 272,
+    "totalBytes": 1015651
   },
   "stateCounts": {
     "ACTIVE_NATIVE": 463,
@@ -36,7 +36,7 @@
     "ui_page": 21,
     "ui_route": 22
   },
-  "capabilityDigestSha256": "897a612dad1bed90e8a82c10c8ddb93e7a3556c82350252b67f3b177ffc74d2d",
+  "capabilityDigestSha256": "4c8fcf9bfd97a62ecb342b7d611218c458831f4b79095ecd5f1513611d45338a",
   "capabilities": [
     {
       "capabilityId": "brandforgeos.api_endpoint.0176ed324debf533",
@@ -61,7 +61,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -129,7 +132,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -164,7 +170,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -199,7 +208,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -234,7 +246,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -269,7 +284,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -304,7 +322,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -339,7 +360,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -374,7 +398,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -409,7 +436,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -543,7 +573,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -677,7 +710,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -712,7 +748,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -780,7 +819,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -815,7 +857,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -883,7 +928,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -918,7 +966,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -953,7 +1004,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1021,7 +1075,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1122,7 +1179,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1223,7 +1283,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1258,7 +1321,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1326,7 +1392,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1361,7 +1430,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1429,7 +1501,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1464,7 +1539,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1499,7 +1577,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1534,7 +1615,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1569,7 +1653,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1604,7 +1691,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1639,7 +1729,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1674,7 +1767,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1775,7 +1871,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1810,7 +1909,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1878,7 +1980,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1913,7 +2018,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1948,7 +2056,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -1983,7 +2094,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2018,7 +2132,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2053,7 +2170,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2154,7 +2274,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2189,7 +2312,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2257,7 +2383,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2292,7 +2421,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2393,7 +2525,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2428,7 +2563,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2562,7 +2700,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2597,7 +2738,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2665,7 +2809,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2700,7 +2847,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2735,7 +2885,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2803,7 +2956,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -2970,7 +3126,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -3071,7 +3230,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -3139,7 +3301,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -3306,7 +3471,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -3341,7 +3509,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -3508,7 +3679,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -3675,7 +3849,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -3776,7 +3953,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -4339,7 +4519,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -4770,7 +4953,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -4838,7 +5024,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5170,7 +5359,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5205,7 +5397,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5339,7 +5534,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5539,7 +5737,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5574,7 +5775,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5642,7 +5846,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5743,7 +5950,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5811,7 +6021,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5879,7 +6092,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -5914,7 +6130,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -6081,7 +6300,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -6116,7 +6338,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -6151,7 +6376,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -6285,7 +6513,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -6419,7 +6650,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -6685,7 +6919,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -7050,7 +7287,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -7382,7 +7622,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -7549,7 +7792,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -8013,7 +8259,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -8180,7 +8429,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -8281,7 +8533,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -8382,7 +8637,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -8450,7 +8708,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -8584,7 +8845,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -8685,7 +8949,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -9149,7 +9416,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -9514,7 +9784,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -9648,7 +9921,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -9683,7 +9959,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10015,7 +10294,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10050,7 +10332,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10118,7 +10403,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10186,7 +10474,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10221,7 +10512,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10256,7 +10550,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10324,7 +10621,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10359,7 +10659,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10427,7 +10730,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10594,7 +10900,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10662,7 +10971,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10697,7 +11009,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10765,7 +11080,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -10866,7 +11184,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11033,7 +11354,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11101,7 +11425,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11169,7 +11496,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11204,7 +11534,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11239,7 +11572,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11373,7 +11709,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11408,7 +11747,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11443,7 +11785,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11676,7 +12021,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11744,7 +12092,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11911,7 +12262,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -11979,7 +12333,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12014,7 +12371,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12049,7 +12409,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12216,7 +12579,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12251,7 +12617,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12286,7 +12655,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12321,7 +12693,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12356,7 +12731,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12391,7 +12769,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12459,7 +12840,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12494,7 +12878,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12529,7 +12916,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12564,7 +12954,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12632,7 +13025,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12700,7 +13096,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12834,7 +13233,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12869,7 +13271,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -12970,7 +13375,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13005,7 +13413,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13205,7 +13616,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13273,7 +13687,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13308,7 +13725,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13442,7 +13862,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13477,7 +13900,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13512,7 +13938,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13646,7 +14075,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13681,7 +14113,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13716,7 +14151,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13751,7 +14189,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13786,7 +14227,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13920,7 +14364,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -13988,7 +14435,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14089,7 +14539,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14157,7 +14610,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14192,7 +14648,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14293,7 +14752,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14361,7 +14823,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14495,7 +14960,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14563,7 +15031,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14598,7 +15069,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14633,7 +15107,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14668,7 +15145,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14703,7 +15183,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14804,7 +15287,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14905,7 +15391,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -14973,7 +15462,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15041,7 +15533,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15076,7 +15571,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15111,7 +15609,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15146,7 +15647,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15247,7 +15751,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15282,7 +15789,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15482,7 +15992,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15517,7 +16030,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15552,7 +16068,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15587,7 +16106,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15787,7 +16309,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15822,7 +16347,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15857,7 +16385,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15925,7 +16456,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -15960,7 +16494,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16028,7 +16565,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16063,7 +16603,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16098,7 +16641,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16265,7 +16811,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16333,7 +16882,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16368,7 +16920,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16535,7 +17090,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16603,7 +17161,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16638,7 +17199,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16673,7 +17237,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16708,7 +17275,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16743,7 +17313,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16778,7 +17351,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16813,7 +17389,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -16914,7 +17493,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17048,7 +17630,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17149,7 +17734,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17217,7 +17805,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17285,7 +17876,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17353,7 +17947,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17388,7 +17985,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17489,7 +18089,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17524,7 +18127,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17592,7 +18198,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17726,7 +18335,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17794,7 +18406,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17829,7 +18444,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -17996,7 +18614,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18064,7 +18685,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18264,7 +18888,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18299,7 +18926,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18334,7 +18964,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18402,7 +19035,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18437,7 +19073,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18604,7 +19243,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18639,7 +19281,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18773,7 +19418,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18907,7 +19555,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -18942,7 +19593,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19043,7 +19697,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19078,7 +19735,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19179,7 +19839,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19280,7 +19943,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19381,7 +20047,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19482,7 +20151,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19649,7 +20321,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19915,7 +20590,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -19950,7 +20628,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20018,7 +20699,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20119,7 +20803,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20187,7 +20874,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20255,7 +20945,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20290,7 +20983,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20325,7 +21021,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20459,7 +21158,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20560,7 +21262,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20628,7 +21333,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20663,7 +21371,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20698,7 +21409,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20733,7 +21447,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20768,7 +21485,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20836,7 +21556,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20871,7 +21594,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20939,7 +21665,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -20974,7 +21703,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21009,7 +21741,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21077,7 +21812,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21112,7 +21850,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21147,7 +21888,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21248,7 +21992,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21382,7 +22129,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21417,7 +22167,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21551,7 +22304,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21652,7 +22408,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21720,7 +22479,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21755,7 +22517,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21790,7 +22555,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21825,7 +22593,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21860,7 +22631,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -21961,7 +22735,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22029,7 +22806,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22064,7 +22844,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22099,7 +22882,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22134,7 +22920,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22202,7 +22991,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22237,7 +23029,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22602,7 +23397,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22703,7 +23501,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22738,7 +23539,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -22806,7 +23610,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23072,7 +23879,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23141,7 +23951,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23276,7 +24089,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23312,7 +24128,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23414,7 +24233,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23450,7 +24272,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23552,7 +24377,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23588,7 +24416,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23657,7 +24488,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23693,7 +24527,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23729,7 +24566,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23765,7 +24605,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23867,7 +24710,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23903,7 +24749,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23939,7 +24788,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -23975,7 +24827,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24110,7 +24965,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24244,7 +25102,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24279,7 +25140,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24314,7 +25178,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24349,7 +25216,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24384,7 +25254,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24419,7 +25292,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24454,7 +25330,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24489,7 +25368,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24524,7 +25406,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24559,7 +25444,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24594,7 +25482,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24629,7 +25520,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24664,7 +25558,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24699,7 +25596,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24734,7 +25634,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24769,7 +25672,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24804,7 +25710,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24839,7 +25748,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24874,7 +25786,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24909,7 +25824,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24944,7 +25862,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -24979,7 +25900,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25014,7 +25938,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25049,7 +25976,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25084,7 +26014,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25119,7 +26052,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25154,7 +26090,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25189,7 +26128,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25224,7 +26166,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25259,7 +26204,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25294,7 +26242,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25329,7 +26280,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25364,7 +26318,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25399,7 +26356,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25434,7 +26394,10 @@
         "apps/api/src/lib/shared-provider-adapters.ts",
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
-        "apps/api/src/lib/tenant-auth.ts"
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts"
       ],
       "automatedEvidence": [
         "apps/api/test/brandforgeos-db.test.ts",
@@ -25505,6 +26468,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -25612,6 +26578,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -25719,6 +26688,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -25966,6 +26938,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -26213,6 +27188,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -26355,6 +27333,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -26707,6 +27688,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -26884,6 +27868,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],
@@ -26921,6 +27908,9 @@
         "apps/api/src/lib/shared-services-db-init.ts",
         "apps/api/src/lib/shared-usage-activity.ts",
         "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/routes/auth-routes.ts",
+        "apps/api/src/routes/billing-routes.ts",
+        "apps/api/src/routes/tenant-admin-routes.ts",
         "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
         "apps/web/src/app/modules/[slug]/page.tsx"
       ],

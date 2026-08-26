@@ -3,7 +3,7 @@
   "generatedBy": "scripts/phase22-shared-equivalent-contract.mjs",
   "sourceOfTruth": "docs/parity/modules/*.json ACTIVE_SHARED_EQUIVALENT records",
   "mappingCount": 2432,
-  "mappingDigestSha256": "7896523617004dcd07bf64c73b96ed858987479f6fdd3bc03d779cf435933e2f",
+  "mappingDigestSha256": "2211b6909b33a0896923760cff202ef7e17bdb40573d960aa385f61ca75b2898",
   "adapters": {
     "identity-session-v1": {
       "testId": "P22-ADAPTER-SSO-001",
@@ -9336,7 +9336,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9356,7 +9355,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9376,7 +9374,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9396,7 +9393,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9416,7 +9412,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9436,7 +9431,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9456,7 +9450,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9476,7 +9469,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9496,7 +9488,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9516,7 +9507,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9536,7 +9526,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9556,7 +9545,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9576,7 +9564,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9596,7 +9583,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9616,7 +9602,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9636,7 +9621,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9656,7 +9640,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9676,7 +9659,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9696,7 +9678,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9716,7 +9697,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9736,7 +9716,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9756,7 +9735,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9776,7 +9754,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9796,7 +9773,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9816,7 +9792,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9836,7 +9811,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9856,7 +9830,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9876,7 +9849,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9896,7 +9868,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9916,7 +9887,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9936,7 +9906,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9956,7 +9925,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9976,7 +9944,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -9996,7 +9963,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10016,7 +9982,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10036,7 +10001,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10056,7 +10020,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10076,7 +10039,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10096,7 +10058,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10116,7 +10077,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10136,7 +10096,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10156,7 +10115,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10176,7 +10134,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10196,7 +10153,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10216,7 +10172,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10236,7 +10191,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10256,7 +10210,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10276,7 +10229,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10296,7 +10248,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10316,7 +10267,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10336,7 +10286,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10356,7 +10305,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10376,7 +10324,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10396,7 +10343,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10416,7 +10362,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10436,7 +10381,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10456,7 +10400,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10476,7 +10419,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10496,7 +10438,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10516,7 +10457,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10536,7 +10476,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10556,7 +10495,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10576,7 +10514,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10596,7 +10533,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10616,7 +10552,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10636,7 +10571,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10656,7 +10590,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10676,7 +10609,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10696,7 +10628,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10716,7 +10647,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10736,7 +10666,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10756,7 +10685,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10776,7 +10704,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10796,7 +10723,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10816,7 +10742,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10836,7 +10761,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10856,7 +10780,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10876,7 +10799,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10896,7 +10818,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10916,7 +10837,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10936,7 +10856,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10956,7 +10875,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10976,7 +10894,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -10996,7 +10913,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11016,7 +10932,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11036,7 +10951,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11056,7 +10970,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11076,7 +10989,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11096,7 +11008,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11116,7 +11027,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11136,7 +11046,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11156,7 +11065,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11176,7 +11084,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11196,7 +11103,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11216,7 +11122,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11236,7 +11141,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11256,7 +11160,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11276,7 +11179,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11296,7 +11198,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11316,7 +11217,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11336,7 +11236,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11356,7 +11255,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11376,7 +11274,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11396,7 +11293,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11416,7 +11312,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11436,7 +11331,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11456,7 +11350,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11476,7 +11369,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11496,7 +11388,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11516,7 +11407,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },
@@ -11536,7 +11426,6 @@
         "apps/api/test/ninja-launch-kit-phase34-domain.test.ts",
         "apps/api/test/ninja-launch-kit-phase34-static.test.ts",
         "apps/web/e2e/ninja-launch-kit-phase34.spec.ts",
-        "scripts/phase34/compile-ninja-launch-kit-source.mjs",
         "scripts/phase34/ninja-launch-kit-contract.test.mjs"
       ]
     },

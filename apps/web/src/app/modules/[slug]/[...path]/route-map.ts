@@ -401,7 +401,8 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'techdeck' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'assets' || resource === 'inventory') return { sectionId: 'techdeck-inventory', label: 'Configuration Item' };
-    if (resource === 'documents' || resource === 'runbooks' || resource === 'kb' || resource === 'knowledge-base') return { sectionId: 'techdeck-documentation', label: 'Document' };
+    if (resource === 'runbooks') return { sectionId: 'techdeck-runbooks', label: 'Runbook' };
+    if (resource === 'documents' || resource === 'kb' || resource === 'knowledge-base') return { sectionId: 'techdeck-documentation', label: 'Document' };
     if (resource === 'tickets') return { sectionId: 'techdeck-ticket-queue', label: 'Ticket Record' };
     if (resource === 'clients') return { sectionId: 'techdeck-directory', label: 'Managed Client Record' };
     if (resource === 'evidence') return { sectionId: 'techdeck-evidence', label: 'Evidence Record' };
@@ -433,7 +434,7 @@ export function resolveCoreModuleDeepLink(
     pathSegments[0] === 'assets' &&
     pathSegments[2] === 'report-issue'
   ) {
-    return { sectionId: 'pulsedesk-operations-route', label: 'Report Equipment Issue' };
+    return { sectionId: 'pulsedesk-service-ticket-create', label: 'Report Equipment Issue' };
   }
   if (slug === 'torqueshed' && pathSegments.length === 2) {
     const [resource, id] = pathSegments;

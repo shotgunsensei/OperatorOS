@@ -83,6 +83,9 @@ export function resolvePulseDeskRoute(routePath?: string): PulseDeskRouteState {
   const root = segments[0];
   if (!root || ['app', 'dashboard'].includes(root)) return state('overview', '/');
   if (['tickets', 'requests', 'submit'].includes(root)) return state('requests', '/requests', ['new', undefined].includes(segments[1]) ? undefined : segments[1]);
+  if (root === 'assets' && segments[1] && segments[2] === 'report-issue') {
+    return state('requests', '/requests', segments[1]);
+  }
   if (
     ['assignments', 'departments'].includes(root) ||
     (root === 'service-desk' && segments[1] === 'admin') ||

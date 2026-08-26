@@ -11,7 +11,7 @@ test('Phase 31 is pinned, additive, tenant scoped, and remains cumulative releas
   const source = JSON.parse(read('apps/modules/brandforgeos/source/SOURCE_SNAPSHOT.json'));
   assert.equal(source.sourceCommit, '5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e');
   assert.equal(source.trackedFileCount, 348);
-  assert.equal(source.fileCount, 272);
+  assert.equal(source.fileCount, 271);
   const contract = read('apps/api/src/lib/database-release-contract.ts');
   assert.match(contract, /releaseVersion:\s*(?:4[1-9]|[5-9][0-9])/);
   assert.match(contract, /brandforgeos_complete_product_tables/);

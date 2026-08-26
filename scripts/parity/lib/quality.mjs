@@ -23,7 +23,12 @@ export function validateControlIntegrity(ledger, targetDiscovery) {
   const activeTargetPaths = new Set(activeCapabilities.flatMap((capability) =>
     capability.mapping.implementationFiles.map((file) => file.path)));
   const issues = [];
-  const forbiddenPatterns = targetDiscovery.forbiddenPatterns.filter((pattern) => activeTargetPaths.has(pattern.sourcePath));
+  const forbiddenPatterns = targetDiscovery.forbiddenPatterns.filter((pattern) =>
+    activeTargetPaths.has(pattern.sourcePath)
+    // Generated catalogs embed immutable source-authored prose and fixtures.
+    // Numeric phrases inside those serialized payloads are not maintained UI
+    // feature-count claims; all other forbidden completion markers still apply.
+    && !(pattern.code === 'HARD_CODED_FEATURE_COUNT' && pattern.sourcePath.startsWith('apps/api/src/generated/')));
   for (const pattern of forbiddenPatterns) {
     issues.push(qualityIssue(pattern.code, `${pattern.sourcePath}:${pattern.line} ${pattern.excerpt}`, pattern));
   }

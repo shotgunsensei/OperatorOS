@@ -106,6 +106,14 @@ export async function ensureSchemaReady() {
   await ensureTorqueShedWebApiTables();
   const { ensureTorqueShedNativeTables } = await import('../src/lib/torqueshed-native-db-init.js');
   await ensureTorqueShedNativeTables();
+  const { ensureTorqueShedStripeCatalogTables } = await import('../src/lib/torqueshed-stripe-catalog-db-init.js');
+  await ensureTorqueShedStripeCatalogTables();
+  const { ensureTorqueShedCheckoutContract } = await import('../src/lib/torqueshed-checkout-contract-db-init.js');
+  await ensureTorqueShedCheckoutContract();
+  const { ensureTorqueShedSettlementContract } = await import('../src/lib/torqueshed-settlement-db-init.js');
+  await ensureTorqueShedSettlementContract();
+  const { ensureTorqueShedReservationContract } = await import('../src/lib/torqueshed-reservation-db-init.js');
+  await ensureTorqueShedReservationContract();
   const { ensureTechDeckLiteralTables } = await import('../src/lib/techdeck-literal-db-init.js');
   await ensureTechDeckLiteralTables();
   const { ensureOutCallTables, ensureOutCallProductTables } = await import('../src/lib/outcall-db-init.js');
@@ -137,6 +145,8 @@ export async function ensureSchemaReady() {
   await ensureTenantMessengerTables();
   const { ensureIdentityOnboardingIntegrity } = await import('../src/lib/identity-onboarding-db-init.js');
   await ensureIdentityOnboardingIntegrity();
+  const { ensureTenantInvitationConsent } = await import('../src/lib/tenant-invitation-consent-db-init.js');
+  await ensureTenantInvitationConsent();
   await ensureTestPlans();
 }
 

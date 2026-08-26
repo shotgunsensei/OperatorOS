@@ -22,7 +22,8 @@ test('Phase 28 web/API surfaces are real, deep-linked, reconnect-safe and instal
   for(const path of ['builds/:id/workspace','builds/:id/journal','live-bays/:id/messages','diagnostics/:id/report','marketplace/sellers/:userId','search','activity','notifications','settings','exports','share-links'])assert.match(routes,new RegExp(path.replace(/[/:]/g,match=>match==='/'?'\\/':':')));
   assert.match(routes,/last_sequence=last_sequence\+1/);assert.match(routes,/client_message_id/);assert.match(routes,/torqueshed_live_bay_rate_windows/);assert.match(routes,/tenant_id=\$\{tenant\(request\)\}/);
   assert.match(routes,/not a transaction rating or payment guarantee/);assert.match(routes,/does not process payment, escrow, shipping, title, or transaction guarantees/);assert.doesNotMatch(routes,/buyer protection|guaranteed transaction/i);
-  for(const testid of ['torqueshed-journal','torqueshed-live-bay','torqueshed-tools'])assert.match(ui,new RegExp(`data-testid="${testid}"`));
+  for(const testid of ['torqueshed-journal','torqueshed-live-bay'])assert.match(ui,new RegExp(`data-testid="${testid}"`));
+  assert.match(ui,/id="torqueshed-tools"/);assert.match(ui,/data-testid=\{`torqueshed-\$\{routeKind\}-route`\}/);
   assert.match(ui,/window\.setInterval\(\(\)=>void sync\(\),2000\)/);assert.match(workspace,/serviceWorker\.register\('\/torqueshed-sw\.js'/);assert.match(worker,/event\.request\.method !== 'GET'/);assert.doesNotMatch(worker,/cache\.put\(event\.request/);
   for(const path of ["'/journal'","'/live-bay'","'/search'","'/activity'","'/notifications'","'/exports'","'/settings'"])assert.match(routeMap,new RegExp(path.replace('/','\\/')));
   assert.match(workspace,/@media \(max-width: 900px\)/);assert.match(workspace,/@media \(max-width: 560px\)/);assert.match(workspace,/prefers-reduced-motion/);

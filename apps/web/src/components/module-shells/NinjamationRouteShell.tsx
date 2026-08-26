@@ -211,7 +211,7 @@ export default function NinjamationRouteShell({
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
   const current = area(routePath || pathname);
-  const localRoute = pathname.startsWith('/modules/');
+  const localRoute = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
   const hrefFor = useCallback(
     (path: string) => (localRoute ? `/modules/ninjamation${path}` : path),
     [localRoute],

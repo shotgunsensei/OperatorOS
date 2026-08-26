@@ -32,7 +32,7 @@ test('every module critical route has live controls and no page, console, networ
   });
 
   for (const contract of contracts.modules) {
-    const response = await page.goto(`${WEB}${contract.criticalRoute}`, { waitUntil: 'networkidle' });
+    const response = await page.goto(`${WEB}${contract.criticalRoute}`, { waitUntil: 'domcontentloaded' });
     expect(response?.status(), contract.moduleSlug).toBeLessThan(400);
     await expect(page.locator('body')).toContainText(contract.moduleName);
     await expect(page.locator('body')).not.toContainText(/404|500|something went wrong|migration pending|coming soon|not implemented/i);

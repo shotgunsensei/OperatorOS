@@ -60,7 +60,7 @@ async function prepareExactHost(page: Page): Promise<{ userId: string; tenantId:
   await page.getByTestId('input-email').fill(email);
   await page.getByTestId('input-password').fill(PASSWORD);
   await Promise.all([
-    page.waitForURL(/^https:\/\/ninja-pool-hall\.operatoros\.net\/online(?:[?#].*)?$/, { timeout: 30_000 }),
+    page.waitForURL(/^https:\/\/operatorpoolhall\.operatoros\.net\/online(?:[?#].*)?$/, { timeout: 30_000 }),
     page.getByTestId('button-login').click(),
   ]);
   return { userId, tenantId, email };
@@ -115,7 +115,7 @@ async function prepareGuest(context: BrowserContext, tenantId: string): Promise<
     await page.getByTestId('input-email').fill(email);
     await page.getByTestId('input-password').fill(PASSWORD);
     await Promise.all([
-      page.waitForURL(/^https:\/\/ninja-pool-hall\.operatoros\.net\/join(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.waitForURL(/^https:\/\/operatorpoolhall\.operatoros\.net\/join(?:[?#].*)?$/, { timeout: 30_000 }),
       page.getByTestId('button-login').click(),
     ]);
   }

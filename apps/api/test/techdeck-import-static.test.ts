@@ -111,10 +111,11 @@ test('OperatorOS module route shell wires TechDeck host/local fallback to the ad
 
   assert.match(appSlugPage, /TechDeckShell/);
   assert.match(appSlugPage, /'techdeck':\s*TechDeckShell/);
-  assert.ok(moduleFallback.includes('return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />'));
+  assert.match(moduleFallback, /const \{ slug \} = await params/);
+  assert.match(moduleFallback, /return <ModuleHost slug=\{slug\} requestedHost=\{query\?\.host\} \/>/);
   assert.match(shell, /createTechDeckAdapterContext/);
   assert.match(shell, /hasPlatformAdminAuthority/);
-  assert.match(shell, /techdeck-platform-manage-link/);
+  assert.match(shell, /app\/platform\/modules\/techdeck/);
   assert.match(shell, /data-testid="techdeck-module-shell"/);
   assert.match(`${registry}\n${ecosystem}`, /techdeck\.operatoros\.net/);
 });
@@ -232,6 +233,7 @@ test('TechDeck Phase 10 docs cover SSO conversion and manual QA', () => {
 test('TechDeck shell polish covers header, completed navigation, states, and demo docs', () => {
   const appSlugPage = readRepoFile('apps/web/src/app/apps/[slug]/page.tsx');
   const shell = readRepoFile('apps/web/src/components/module-shells/TechDeckShell.tsx');
+  const routeContract = readRepoFile('apps/web/src/components/module-shells/TechDeckRoute.contract.ts');
   const polishNotes = readRepoFile('docs/techdeck-polish-notes.md');
   const demoScript = readRepoFile('docs/techdeck-demo-script.md');
 
@@ -247,22 +249,21 @@ test('TechDeck shell polish covers header, completed navigation, states, and dem
     'techdeck-tenant-badge',
     'techdeck-role-badge',
     'techdeck-return-command-center',
-    'techdeck-module-sidebar',
-    'techdeck-loading-state',
-    'techdeck-empty-state',
-    'techdeck-error-state',
+    'mobileNavigation="drawer"',
+    'state={isLoading',
+    "stateMessage={!hasTenantContext ? 'Choose an organization",
     'techdeck-settings-panel',
-    'techdeck-module-settings-link',
+    'Platform settings',
     'hasPlatformAdminAuthority',
-    '@media (max-width: 920px)',
-    '@media (max-width: 620px)',
+    '@media(max-width:900px)',
+    '@media(max-width:640px)',
   ]) {
     assert.ok(shell.includes(needle), `missing shell polish: ${needle}`);
   }
 
   for (const needle of [
     'Tickets',
-    'Inventory',
+    'Assets',
     'Network / IPAM',
     'Lifecycle',
     'Documentation',
@@ -272,7 +273,7 @@ test('TechDeck shell polish covers header, completed navigation, states, and dem
     'Time',
     'Clients',
   ]) {
-    assert.ok(shell.includes(needle), `missing workflow shortcut: ${needle}`);
+    assert.ok(routeContract.includes(needle), `missing workflow shortcut: ${needle}`);
   }
 
   for (const needle of [

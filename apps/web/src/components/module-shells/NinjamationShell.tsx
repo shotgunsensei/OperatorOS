@@ -1601,7 +1601,7 @@ export default function NinjamationShell({
                             style={{ ...input, minHeight: 120 }}
                             required
                           />
-                          <button data-testid="button-ninjamation-save" style={button}>
+                          <button type="submit" data-testid="button-ninjamation-save" style={button}>
                             <Save size={14} />
                             Create draft
                           </button>

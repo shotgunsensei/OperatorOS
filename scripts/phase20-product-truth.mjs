@@ -1008,7 +1008,6 @@ function applyCurrentRestorationMappings(definition, capabilities) {
       'apps/api/src/lib/database-release-contract.ts',
     ];
     const evidence = [
-      'scripts/phase34/compile-ninja-launch-kit-source.mjs',
       'scripts/phase34/ninja-launch-kit-contract.test.mjs',
       'apps/api/test/ninja-launch-kit-phase34-domain.test.ts',
       'apps/api/test/ninja-launch-kit-phase34-static.test.ts',
@@ -1185,6 +1184,9 @@ function applyCurrentRestorationMappings(definition, capabilities) {
       'apps/api/src/lib/shared-services-db-init.ts',
       'apps/api/src/lib/shared-platform-db-init.ts',
       'apps/api/src/lib/database-release-contract.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
     ];
     const nativeSchemas = ['apps/api/src/lib/brandforgeos-db-init.ts','apps/api/src/lib/brandforgeos-phase31-db-init.ts'];
     const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts','apps/api/src/lib/shared-platform-db-init.ts'];
@@ -1583,11 +1585,24 @@ function stableDocument(document) {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
+function writeGeneratedArtifact(path, contents) {
+  const retrySignal = new Int32Array(new SharedArrayBuffer(4));
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    try {
+      writeFileSync(path, contents, 'utf8');
+      return;
+    } catch (error) {
+      if (attempt === 5 || !['EBUSY', 'EPERM', 'UNKNOWN'].includes(error?.code)) throw error;
+      Atomics.wait(retrySignal, 0, 0, attempt * 25);
+    }
+  }
+}
+
 function compareOrWrite(path, document, failures) {
   const expected = stableDocument(document);
   if (write) {
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, expected, 'utf8');
+    writeGeneratedArtifact(path, expected);
     return;
   }
   if (!existsSync(path)) {

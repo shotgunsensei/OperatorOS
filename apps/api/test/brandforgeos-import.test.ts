@@ -12,9 +12,9 @@ test('BrandForgeOS reconciliation is deterministic and verifies the pinned sourc
   assert.deepEqual(first, second);
   assert.equal(first.sourceCommit, BRANDFORGEOS_SOURCE_COMMIT);
   assert.equal(first.sourceManifestHash, BRANDFORGEOS_SOURCE_MANIFEST_SHA256);
-  assert.equal(first.sourceFileCount, 272);
+  assert.equal(first.sourceFileCount, 271);
   assert.equal(first.trackedFileCount, 348);
-  assert.equal(first.totalBytes, 1_254_117);
+  assert.equal(first.totalBytes, 1_031_572);
   assert.equal(first.evidenceFiles.length, 7);
   assert.equal(first.evidenceFiles.every((file) => file.exact), true);
   assert.equal(first.errors.length, 0);

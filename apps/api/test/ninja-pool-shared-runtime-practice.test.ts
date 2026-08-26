@@ -129,7 +129,7 @@ test('native shell uses the typed API and keeps unsafe snapshot runtimes quarant
   const recovery = readRepoFile('apps/web/src/lib/ninja-pool-hall/practice-recovery.ts');
   const client = readRepoFile('apps/web/src/lib/auth.ts');
 
-  assert.match(page, /'ninja-pool-hall':\s+NinjaPoolHallShell/);
+  assert.match(page, /'ninja-pool-hall':\s+NinjaPoolHallRouteShell/);
   assert.match(shell, /data-testid="ninja-pool-hall-shell"/);
   assert.match(shell, /NinjaPoolHallPractice/);
   assert.match(practice, /moduleShellApi\.ninjaPoolHall\.listPracticeSessions/);
