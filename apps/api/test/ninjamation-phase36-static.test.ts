@@ -64,7 +64,7 @@ test('Phase 36 release v45 is retained additively and contains every new persist
 });
 
 test('Phase 36 premium product shell and exact-host routes cover every source page and honest plan state', () => {
-  for (const phrase of ['Script Arsenal','AI Forge','GitHub Sync','Account','Admin','AutomationPacks','OperatorOS owns identity']) {
+  for (const phrase of ['Script Ops','AI drafting','GitHub Sync','Account','Admin','AutomationPacks','OperatorOS owns identity']) {
     assert.match(`${shell}\n${publicPage}`, new RegExp(phrase));
   }
   for (const path of ['/library','/generate','/account','/admin','/checkout/success','/checkout/cancel']) {

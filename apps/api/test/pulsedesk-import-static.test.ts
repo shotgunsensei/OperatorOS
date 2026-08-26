@@ -178,15 +178,17 @@ test('OperatorOS module route shell wires PulseDesk host/local fallback to the a
   assert.match(appSlugPage, /PulseDeskShell/);
   assert.match(appSlugPage, /'pulsedesk':\s*PulseDeskShell/);
   assert.match(appSlugPage, /TenantProvider/);
-  assert.ok(moduleFallback.includes('return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />'));
+  assert.match(moduleFallback, /const \{ slug \} = await params/);
+  assert.match(moduleFallback, /return <ModuleHost slug=\{slug\} requestedHost=\{query\?\.host\} \/>/);
   assert.match(shell, /createPulseDeskAdapterContext/);
   assert.match(shell, /hasPlatformAdminAuthority/);
-  assert.match(shell, /pulsedesk-platform-manage-link/);
-  assert.match(shell, /data-testid="pulsedesk-module-shell"/);
+  assert.match(shell, /app\/platform\/modules\/pulsedesk/);
+  assert.match(shell, /testId="pulsedesk-module-shell"/);
+  assert.match(shell, /pageHeaderTestId="pulsedesk-module-header"/);
   assert.match(shell, /pulsedesk-return-command-center/);
-  assert.match(shell, /pulsedesk-loading-state/);
-  assert.match(shell, /pulsedesk-empty-state/);
-  assert.match(shell, /pulsedesk-error-state/);
+  assert.match(shell, /state=\{isLoading \? 'loading' : !hasTenantContext \? 'empty' : restrictedProviderRoute \? 'forbidden' : 'ready'\}/);
+  assert.match(shell, /stateMessage=\{!hasTenantContext/);
+  assert.match(shell, /mobileNavigation="drawer"/);
   assert.equal(getModuleById('pulsedesk')?.hostname, 'pulsedesk.operatoros.net');
   assert.equal(getModuleByHost('https://pulsedesk.operatoros.net/sso?code=probe')?.id, 'pulsedesk');
 });
@@ -326,6 +328,6 @@ test('PulseDesk Phase 13 removes duplicate local login and checkout ownership fr
   assert.doesNotMatch(email, /PULSEDESK_LOCAL_AUTH_ENABLED/);
   assert.match(email, /const eligible = snapshotAllowsFeature\(snapshot, "emailToTicket"\);/);
 
-  assert.match(shell, /Sign-in', 'One account'/);
+  assert.match(shell, /Identity and access.*OperatorOS manages sign-in/);
   assert.doesNotMatch(shell, /Standalone login|shared runtime|module entitlement state/i);
 });

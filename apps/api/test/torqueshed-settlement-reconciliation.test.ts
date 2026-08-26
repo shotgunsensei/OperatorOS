@@ -8,7 +8,13 @@ import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { modules } from '../src/schema.js';
-import { cleanupUser, createTestUser, ensureSchemaReady } from './_setup.js';
+import {
+  cleanupModule,
+  cleanupUser,
+  createTestModule,
+  createTestUser,
+  ensureSchemaReady,
+} from './_setup.js';
 import {
   __setTorqueReconciliationProviderForTests,
   reconcileTorquePayment,
@@ -16,6 +22,7 @@ import {
 
 let owner: any;
 let moduleRow: any;
+let moduleCreated = false;
 const vehicleId = randomUUID();
 const diagnosticId = randomUUID();
 const purchaseId = randomUUID();
@@ -70,7 +77,10 @@ before(async () => {
   await ensureSchemaReady();
   owner = await createTestUser();
   [moduleRow] = await db.select().from(modules).where(eq(modules.slug, 'torqueshed')).limit(1);
-  assert.ok(moduleRow, 'seeded TorqueShed module is required');
+  if (!moduleRow) {
+    moduleRow = await createTestModule('torqueshed');
+    moduleCreated = true;
+  }
   await db.execute(sql`
     INSERT INTO torqueshed_vehicles (
       id,tenant_id,owner_user_id,nickname,year,make,model,created_by_user_id,updated_by_user_id
@@ -131,6 +141,7 @@ after(async () => {
     await db.execute(sql`DELETE FROM torqueshed_vehicles WHERE id=${vehicleId}`);
     await cleanupUser(owner.id);
   }
+  if (moduleRow && moduleCreated) await cleanupModule(moduleRow.id);
 });
 
 test('reconciliation detects, repairs, and idempotently confirms a verified paid receipt', async () => {

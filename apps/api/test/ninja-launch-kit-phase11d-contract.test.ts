@@ -39,7 +39,7 @@ test('Phase 11D replaces the unfinished scaffold surface with real workspace and
   const deepLinks = read('apps/web/src/app/modules/[slug]/[...path]/route-map.ts');
   const moduleRoutes = read('apps/api/src/routes/module-shell-routes.ts');
   assert.match(shell, /moduleShellApi\.launchkit\.workspace/);
-  assert.match(shell, /The server computes this score/);
+  assert.match(shell, /server computes this score/i);
   assert.match(shell, /Generated content stays draft until review and approval/);
   assert.match(shell, /Audited exports/);
   assert.doesNotMatch(shell, /Math\.random|Generate scaffold|starter stack/i);

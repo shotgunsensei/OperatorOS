@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { resolveRepositoryRoot } from './repository-root.js';
 
 export const BRANDFORGEOS_SOURCE_COMMIT = '5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e';
-export const BRANDFORGEOS_SOURCE_MANIFEST_SHA256 = '42c12b77fd134a1a25c2295dc08d346fd1ed4efb5ad95ca7272f1f51c9aa1df4';
+export const BRANDFORGEOS_SOURCE_MANIFEST_SHA256 = 'a9870113010225951faead6c74afbc4b3f15c7a2e643cd7c0459ed9920689298';
 
 const repoRoot = resolveRepositoryRoot();
 const sourceRoot = resolve(repoRoot, 'apps/modules/brandforgeos/source');

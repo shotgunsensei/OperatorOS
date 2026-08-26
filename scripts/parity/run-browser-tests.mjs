@@ -19,6 +19,10 @@ const runtimeEnv = {
   INTERNAL_API_URL: 'http://localhost:5001',
   OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
   OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
+  // This harness runs behind its own exact-host reverse proxy. Trusting that
+  // bounded proxy keeps production IP-based abuse controls active while each
+  // disposable browser identity retains its explicit test client address.
+  TRUST_PROXY: '1',
   PORT: '5000',
   API_PORT: '5001',
 };

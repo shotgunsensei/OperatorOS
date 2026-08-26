@@ -65,7 +65,7 @@ test('Phase 11A dedicated UI exposes persistent capabilities and no simulated pr
   assert.match(routeMap, /brandforgeos/);
   assert.match(routeMap, /resource === 'brands'/);
   assert.match(routeMap, /resource === 'campaigns'/);
-  assert.match(modulePage, /'brandforgeos':\s+BrandForgeWorkspace/);
+  assert.match(modulePage, /'brandforgeos':\s+BrandForgeRouteShell/);
   assert.doesNotMatch(workspace, /Math\.random|mock data|fake counter|Coming soon|href="#"/i);
 });
 

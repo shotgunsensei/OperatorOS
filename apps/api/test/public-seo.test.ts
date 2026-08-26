@@ -76,8 +76,11 @@ test('public SEO · footer module links target public module-card anchors', () =
   const footer = read('src/components/marketing/MarketingFooter.tsx');
   const grid = read('src/components/marketing/sections/ModuleGatewayGrid.tsx');
 
-  for (const slug of ['tradeflowkit', 'techdeck', 'pulsedesk', 'ninjamation']) {
+  for (const slug of ['tradeflowkit', 'pulsedesk', 'techdeck']) {
     assert.match(footer, new RegExp(`/modules#module-${slug}`));
+  }
+  for (const companionSlug of ['ninjamation', 'ninja-pool-hall', 'ninja-launch-kit', 'torqueshed']) {
+    assert.doesNotMatch(footer, new RegExp(`/modules#module-${companionSlug}`));
   }
   assert.match(grid, /id=\{`module-\$\{m\.slug\}`\}/);
   assert.match(grid, /scrollMarginTop:\s*96/);

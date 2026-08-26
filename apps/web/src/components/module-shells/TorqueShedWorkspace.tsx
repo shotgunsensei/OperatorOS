@@ -933,7 +933,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 <option value="public_build">Public-build eligible</option>
               </select>
             </label>
-            <button style={button}>
+            <button type="submit" style={button}>
               <Plus size={16} />
               Save build
             </button>
@@ -962,7 +962,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                   style={{ display: 'flex', gap: 8 }}
                 >
                   <input name="title" required aria-label={`Add task to ${row.title}`} placeholder="Add a build task" style={input} />
-                  <button style={button}>
+                  <button type="submit" style={button}>
                     <Plus size={15} />
                   </button>
                 </form>
@@ -1044,6 +1044,17 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 </div>
               </button>
             ))}
+            {!diagnostics.length && !loading && (
+              <article style={{ ...cardStyle, color: semantic.textMuted }}>
+                <h2 style={{ marginTop: 0, color: semantic.text }}>No diagnostic sessions yet</h2>
+                <p style={{ marginBottom: space.md }}>
+                  Start an evidence-first diagnostic to record the concern, codes, tests, findings, and verified repair.
+                </p>
+                <Link href={hrefFor('/diagnostics/new')} style={{ ...button, textDecoration: 'none' }}>
+                  <Plus size={16} /> Start diagnostic
+                </Link>
+              </article>
+            )}
             </>}
             {diagnosticDetail && (
               <DiagnosticDetail
@@ -1113,7 +1124,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 <option value="tenant">Team</option>
               </select>
             </label>
-            <button style={button}>
+            <button type="submit" style={button}>
               <Plus size={16} />
               Save template
             </button>
@@ -1167,7 +1178,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
               Email
               <input name="email" type="email" style={input} />
             </label>
-            <button style={button}>
+            <button type="submit" style={button}>
               <Plus size={16} />
               Save vendor
             </button>
@@ -1492,7 +1503,7 @@ function DiagnosticDetail({
           <input name="code" required aria-label="Diagnostic trouble code" placeholder="P0171" style={input} />
           <input name="description" aria-label="Trouble code description" placeholder="Description" style={input} />
           <input name="freezeFrame" aria-label="Freeze-frame note" placeholder="Freeze-frame note" style={input} />
-          <button style={button}>
+          <button type="submit" style={button}>
             <Plus size={15} />
             Add code
           </button>
@@ -1555,7 +1566,7 @@ function DiagnosticDetail({
             <input name="referenceMax" type="number" step="any" aria-label="Reference maximum" placeholder="Max" style={input} />
           </div>
           <input name="outcome" aria-label="Evidence outcome" placeholder="Outcome" style={input} />
-          <button style={button}>
+          <button type="submit" style={button}>
             <Plus size={15} />
             Add evidence
           </button>
@@ -1621,7 +1632,7 @@ function DiagnosticDetail({
           required
           style={{ color: semantic.textMuted }}
         />
-        <button style={button}>
+        <button type="submit" style={button}>
           <FileUp size={15} />
           Attach evidence
         </button>

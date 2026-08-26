@@ -722,9 +722,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(sibling.getByText(internalNote, { exact: true })).toBeVisible({ timeout: 30_000 });
 
     await sibling.goto('https://pulsedesk.operatoros.net/analytics');
-    await expect(sibling.getByTestId('pulsedesk-tab-dashboard')).toHaveAttribute('aria-selected', 'true');
+    await expect(sibling.getByTestId('pulsedesk-analytics-route')).toBeVisible({ timeout: 30_000 });
     await sibling.goto('https://pulsedesk.operatoros.net/service-desk-admin');
-    await expect(sibling.getByTestId('pulsedesk-tab-admin')).toHaveAttribute('aria-selected', 'true');
+    await expect(sibling.getByTestId('pulsedesk-assignments-route')).toBeVisible({ timeout: 30_000 });
+    await sibling.goto('https://pulsedesk.operatoros.net/integrations');
     const connectorLabel = `E2E SendGrid ${Date.now()}`;
     const connectorConsole = sibling.getByTestId('pulsedesk-connector-console');
     await expect(connectorConsole).toBeVisible({ timeout: 30_000 });
@@ -841,7 +842,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await page.getByLabel(`Health for ${firewallName}`).selectOption('warning');
     await expect(page.getByLabel(`Health for ${firewallName}`)).toHaveValue('warning');
+    await page.goto('https://techdeck.operatoros.net/network');
     const relationshipForm = page.getByTestId('techdeck-relationship-create-form');
+    await expect(relationshipForm).toBeVisible({ timeout: 30_000 });
     await relationshipForm.locator('select').nth(0).selectOption(firewall.id);
     await relationshipForm.locator('select').nth(1).selectOption(subnet.id);
     await relationshipForm.locator('select').nth(2).selectOption('protects');
@@ -855,12 +858,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(page.locator(`.td-row[data-record-id="${firewall.id}"][data-active="true"]`)).toBeVisible();
 
     const runbookTitle = `E2E Firewall Recovery ${suffix}`;
+    await page.goto('https://techdeck.operatoros.net/documentation');
     const documentForm = page.getByTestId('techdeck-document-create-form');
     await documentForm.locator('input[placeholder="Document title"]').fill(runbookTitle);
     await documentForm.locator('select').first().selectOption('runbook');
     await documentForm.locator('input[placeholder="Summary"]').fill('Validated, documentation-only firewall recovery sequence.');
     await documentForm.locator('textarea').fill('1. Verify current configuration.\\n2. Capture evidence.\\n3. Apply the approved manual recovery plan.');
     await documentForm.getByRole('button', { name: 'Save draft' }).click();
+    await page.goto('https://techdeck.operatoros.net/runbooks');
     const runbookRow = page.locator('.td-doc').filter({ hasText: runbookTitle });
     await expect(runbookRow).toBeVisible({ timeout: 30_000 });
 
@@ -870,7 +875,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     });
     const runbook = workspaceAfterDocument.documents.find((row: { title: string }) => row.title === runbookTitle);
     expect(runbook?.id).toBeTruthy();
-    await page.goto(`https://techdeck.operatoros.net/kb/${runbook.id}`);
+    await page.goto(`https://techdeck.operatoros.net/runbooks/${runbook.id}`);
     await expect(page.getByTestId('techdeck-route-record-context')).toHaveAttribute('data-found', 'true');
     await expect(page.locator(`.td-doc[data-record-id="${runbook.id}"][data-active="true"]`)).toBeVisible();
 
@@ -895,12 +900,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(page.locator('.td-row').filter({ hasText: evidenceTitle })).toBeVisible({ timeout: 30_000 });
 
     const reportName = `E2E Managed Infrastructure ${suffix}`;
+    await page.goto('https://techdeck.operatoros.net/reports');
     const reportForm = page.getByTestId('techdeck-report-create-form');
     await reportForm.locator('input').fill(reportName);
     await reportForm.getByRole('button', { name: 'Generate' }).click();
     await expect(page.locator('.td-row').filter({ hasText: reportName })).toBeVisible({ timeout: 30_000 });
 
     const timeNotes = `E2E recovery validation ${suffix}`;
+    await page.goto('https://techdeck.operatoros.net/time');
     const timeForm = page.getByTestId('techdeck-time-create-form');
     await timeForm.locator('input[type="number"]').fill('45');
     await timeForm.locator('select').selectOption(firewall.id);
@@ -999,18 +1006,29 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       page.getByTestId('button-login').click(),
     ]);
 
-    const literal = page.getByTestId('techdeck-literal-workspace');
-    await expect(literal).toBeVisible({ timeout: 30_000 });
-    for (const id of [
-      'techdeck-calendar', 'techdeck-portal', 'techdeck-licenses', 'techdeck-status',
-      'techdeck-webhooks', 'techdeck-api-tokens', 'techdeck-secure-intake', 'techdeck-compliance',
-    ]) await expect(page.locator(`#${id}`)).toBeVisible();
+    const openLiteralRoute = async (path: string, ids: readonly string[]) => {
+      await page.goto(`https://techdeck.operatoros.net${path}`, { waitUntil: 'domcontentloaded' });
+      const workspace = page.getByTestId('techdeck-literal-workspace');
+      await expect(workspace).toBeVisible({ timeout: 30_000 });
+      for (const id of ids) await expect(page.locator(`#${id}`)).toBeVisible();
+      return workspace;
+    };
+    for (const [path, ids] of [
+      ['/calendar', ['techdeck-calendar']],
+      ['/portal', ['techdeck-portal']],
+      ['/licenses', ['techdeck-licenses']],
+      ['/status', ['techdeck-status']],
+      ['/webhooks', ['techdeck-webhooks']],
+      ['/api-tokens', ['techdeck-api-tokens']],
+      ['/compliance', ['techdeck-secure-intake', 'techdeck-compliance']],
+    ] as const) await openLiteralRoute(path, ids);
 
     const suffix = Date.now().toString(36);
     const appointmentTitle = `Phase 26 review ${suffix}`;
     const startsAt = new Date(Date.now() + 3_600_000);
     const endsAt = new Date(startsAt.getTime() + 1_800_000);
     const localDateTime = (value: Date) => new Date(value.getTime() - value.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+    await openLiteralRoute('/calendar', ['techdeck-calendar']);
     const calendar = page.locator('#techdeck-calendar');
     await calendar.getByPlaceholder('Appointment title').fill(appointmentTitle);
     await calendar.getByLabel('Starts at').fill(localDateTime(startsAt));
@@ -1019,6 +1037,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(calendar).toContainText(appointmentTitle, { timeout: 30_000 });
 
     const productName = `Phase 26 Agent ${suffix}`;
+    let literal = await openLiteralRoute('/licenses', ['techdeck-licenses']);
     const licenses = page.locator('#techdeck-licenses');
     await licenses.getByPlaceholder('Product name').fill(productName);
     await licenses.getByPlaceholder('product-slug').fill(`phase-26-agent-${suffix}`);
@@ -1031,6 +1050,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     const statusTitle = `Phase 26 Status ${suffix}`;
     const statusSlug = `phase-26-status-${suffix}`;
+    await openLiteralRoute('/status', ['techdeck-status']);
     const status = page.locator('#techdeck-status');
     await status.getByPlaceholder('Status page title').fill(statusTitle);
     await status.getByPlaceholder('public-slug').fill(statusSlug);
@@ -1038,6 +1058,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await status.getByRole('button', { name: 'Publish page' }).click();
     await expect(status).toContainText(statusTitle, { timeout: 30_000 });
 
+    literal = await openLiteralRoute('/api-tokens', ['techdeck-api-tokens']);
     const tokens = page.locator('#techdeck-api-tokens');
     await tokens.getByPlaceholder('Service identity').fill(`phase26-agent-${suffix}`);
     await tokens.getByPlaceholder('Token label').fill('Exact-host read token');
@@ -1045,6 +1066,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(literal.locator('.tdl-secret code')).not.toBeEmpty({ timeout: 30_000 });
 
     const intakeName = `Phase 26 Intake ${suffix}`;
+    literal = await openLiteralRoute('/compliance', ['techdeck-secure-intake', 'techdeck-compliance']);
     const intake = page.locator('#techdeck-secure-intake');
     await intake.getByPlaceholder('Intake space').fill(intakeName);
     await intake.getByPlaceholder('intake-slug').fill(`phase-26-intake-${suffix}`);
@@ -1056,6 +1078,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const intakePath = await literal.locator('.tdl-secret code').textContent();
     expect(intakePath).toMatch(/^\/t\/upload\/tdi_/);
 
+    await openLiteralRoute('/webhooks', ['techdeck-webhooks']);
     const webhooks = page.locator('#techdeck-webhooks');
     await webhooks.getByPlaceholder('Endpoint name').fill('Blocked loopback endpoint');
     await webhooks.getByPlaceholder('https://receiver.example/hook').fill('https://127.0.0.1/hook');
@@ -1063,6 +1086,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await webhooks.getByRole('button', { name: 'Add endpoint' }).click();
     await expect(literal.getByRole('alert')).toContainText(/hostname is not public|address is not public|SSRF/i, { timeout: 30_000 });
 
+    await openLiteralRoute('/compliance', ['techdeck-secure-intake', 'techdeck-compliance']);
     const compliance = page.locator('#techdeck-compliance');
     await compliance.getByRole('button', { name: 'Build deterministic ZIP packet' }).click();
     await expect(compliance).toContainText(/queued|integrity artifact ready/i, { timeout: 30_000 });
@@ -1082,6 +1106,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       await anonymous.close();
     }
 
+    literal = page.getByTestId('techdeck-literal-workspace');
     const interactive = literal.locator('button,input,textarea,select,a');
     const unnamed = await interactive.evaluateAll(elements => elements.filter(element => {
       const html = element as HTMLElement;
@@ -1125,7 +1150,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await assertNoBrowserCredentialStorage(page);
     assertNoCredentialQuery(page.url());
 
-    await page.getByRole('button', { name: 'Vehicles', exact: true }).click();
+    await page.goto('https://torqueshed.operatoros.net/garage/vehicles/new');
+    await expect(page.getByTestId('torqueshed-garage')).toBeVisible({ timeout: 30_000 });
     const vehicleForm = page.getByTestId('torqueshed-garage').locator('form').first();
     await vehicleForm.getByLabel('Year').fill('2018');
     await vehicleForm.getByLabel('Nickname').fill(vehicleName);
@@ -1142,9 +1168,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(vehicleReply.status(), await vehicleReply.text()).toBe(201);
     const vehicle = await vehicleReply.json() as { id: string; vinMasked: string };
     expect(vehicle.vinMasked).toBe('***********A12345');
+    await page.goto('https://torqueshed.operatoros.net/garage');
     await expect(page.getByTestId('torqueshed-garage')).toContainText(vehicleName);
 
-    await page.getByRole('button', { name: 'Diagnostics', exact: true }).click();
+    await page.goto('https://torqueshed.operatoros.net/diagnostics/new');
+    await expect(page.getByTestId('torqueshed-diagnostics')).toBeVisible({ timeout: 30_000 });
     const diagnosticForm = page.getByTestId('torqueshed-diagnostics').locator('form').first();
     await diagnosticForm.getByLabel('Vehicle').selectOption(vehicle.id);
     await diagnosticForm.getByLabel('Title').fill(diagnosticTitle);
@@ -1157,9 +1185,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const diagnosticReply = await diagnosticResponse;
     expect(diagnosticReply.status(), await diagnosticReply.text()).toBe(201);
     const diagnostic = await diagnosticReply.json() as { id: string };
-    const diagnosticCard = page.locator(`button[data-record-id="${diagnostic.id}"]`);
-    await expect(diagnosticCard).toContainText(diagnosticTitle);
-    await diagnosticCard.click();
+    await page.goto(`https://torqueshed.operatoros.net/diagnostics/${diagnostic.id}`);
 
     const timeline = page.getByTestId('torqueshed-diagnostic-timeline');
     await expect(timeline).toHaveAttribute('data-record-id', diagnostic.id);
@@ -1245,12 +1271,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(payment.status, JSON.stringify(payment.body)).toBe(200);
 
     const diagnosticUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnostic.id}`;
-    const purchaseStatusUrl = `${diagnosticUrl}?purchase=${purchase.id}`;
+    const purchaseStatusUrl = `https://torqueshed.operatoros.net/billing/credits?diagnostic=${diagnostic.id}&purchase=${purchase.id}`;
     await page.goto(purchaseStatusUrl);
+    const credits = page.getByTestId('torqueshed-credits-route');
+    await expect(credits.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
+    await expect(credits).toContainText('25,000', { timeout: 30_000 });
+    await page.goto(diagnosticUrl);
     await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText(diagnosticTitle, { timeout: 30_000 });
     const refreshedAssist = page.getByTestId('torqueshed-torque-assist');
-    await expect(refreshedAssist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
-    await expect(refreshedAssist).toContainText('25,000 units', { timeout: 30_000 });
     const assistResponse = page.waitForResponse(response =>
       response.request().method() === 'POST'
       && new URL(response.url()).pathname === '/api/modules/torqueshed/torque-assist');
@@ -1458,14 +1486,15 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     );
     expect(checkoutReply.status, JSON.stringify(checkoutReply.body)).toBe(201);
     const purchase = checkoutReply.body.purchase;
-    const purchaseStatusUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnosticReply.body.id}?purchase=${purchase.id}`;
+    const purchaseStatusUrl = `https://torqueshed.operatoros.net/billing/credits?diagnostic=${diagnosticReply.body.id}&purchase=${purchase.id}`;
     await page.goto(purchaseStatusUrl);
-    const assist = page.getByTestId('torqueshed-torque-assist');
-    await expect(assist.getByTestId('torque-purchase-status')).toContainText('Verifying payment', { timeout: 30_000 });
+    const credits = page.getByTestId('torqueshed-credits-route');
+    await expect(credits).toBeVisible({ timeout: 30_000 });
+    await expect(credits.getByRole('status')).toContainText('Verifying payment', { timeout: 30_000 });
     if (process.env.PHASE43_CAPTURE_SCREENSHOTS === '1') {
       const screenshotDirectory = resolve(repoRoot, 'docs/phase-43/screenshots');
       mkdirSync(screenshotDirectory, { recursive: true });
-      await assist.getByTestId('torque-purchase-status').screenshot({ path: resolve(screenshotDirectory, 'settlement-verifying.png') });
+      await credits.getByRole('status').screenshot({ path: resolve(screenshotDirectory, 'settlement-verifying.png') });
     }
     const event = {
       id: `evt_exact_host_payment_${suffix}`,
@@ -1514,15 +1543,16 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       { 'stripe-signature': 'operatoros-test-signature' },
     );
     expect(credited.status, JSON.stringify(credited.body)).toBe(200);
-    await expect(assist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
-    await expect(assist).toContainText('25,000 units');
+    await credits.getByRole('button', { name: 'Refresh status' }).click();
+    await expect(credits.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
+    await expect(credits).toContainText('25,000');
     if (process.env.PHASE43_CAPTURE_SCREENSHOTS === '1') {
-      await assist.getByTestId('torque-purchase-status').screenshot({ path: resolve(repoRoot, 'docs/phase-43/screenshots/settlement-credited.png') });
+      await credits.getByTestId('torque-purchase-status').screenshot({ path: resolve(repoRoot, 'docs/phase-43/screenshots/settlement-credited.png') });
     }
     if (process.env.PHASE45_CAPTURE_SCREENSHOTS === '1') {
       const screenshotDirectory = resolve(repoRoot, 'docs/phase-45/screenshots');
       mkdirSync(screenshotDirectory, { recursive: true });
-      await assist.screenshot({ path: resolve(screenshotDirectory, 'torque-assist-credit-availability.png') });
+      await credits.screenshot({ path: resolve(screenshotDirectory, 'torque-assist-credit-availability.png') });
     }
     const replay = await browserJson<{ duplicate?: boolean }>(
       page,
@@ -1545,15 +1575,17 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload();
-    await expect(page.getByTestId('torqueshed-torque-assist').getByTestId('torque-purchase-status'))
+    await expect(page.getByTestId('torqueshed-credits-route').getByTestId('torque-purchase-status'))
       .toContainText('Credits added', { timeout: 30_000 });
     if (process.env.PHASE45_CAPTURE_SCREENSHOTS === '1') {
-      await page.getByTestId('torqueshed-torque-assist').screenshot({
+      await page.getByTestId('torqueshed-credits-route').screenshot({
         path: resolve(repoRoot, 'docs/phase-45/screenshots/torque-assist-mobile-availability.png'),
       });
     }
-    const overflow = await page.evaluate(() =>
-      Array.from(document.querySelectorAll<HTMLElement>('body *'))
+    const overflow = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      elements: Array.from(document.querySelectorAll<HTMLElement>('body *'))
         .map(element => {
           const bounds = element.getBoundingClientRect();
           return {
@@ -1566,10 +1598,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
             text: (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 80),
           };
         })
-        .filter(element => element.left < -1 || element.right > window.innerWidth + 1)
+        // A closed mobile drawer is intentionally translated off the left
+        // edge and does not expand the document. Only right-edge expansion
+        // can create user-visible horizontal scrolling.
+        .filter(element => element.right > window.innerWidth + 1)
         .slice(0, 20),
-    );
-    expect(overflow, JSON.stringify(overflow, null, 2)).toEqual([]);
+    }));
+    expect(overflow.documentWidth, JSON.stringify(overflow, null, 2)).toBeLessThanOrEqual(overflow.viewportWidth);
+    expect(overflow.elements, JSON.stringify(overflow, null, 2)).toEqual([]);
   });
 
   test('tenant denial and the global OutCall activation lock fail closed without issuing a handoff', async ({ page, request }) => {

@@ -252,7 +252,8 @@ test('OperatorOS module route shell wires TradeFlowKit host/local fallback to th
   assert.match(appSlugPage, /TradeFlowKitShell/);
   assert.match(appSlugPage, /'tradeflowkit':\s*TradeFlowKitShell/);
   assert.match(appSlugPage, /TenantProvider/);
-  assert.ok(moduleFallback.includes('return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />'));
+  assert.match(moduleFallback, /const \{ slug \} = await params/);
+  assert.match(moduleFallback, /return <ModuleHost slug=\{slug\} requestedHost=\{query\?\.host\} \/>/);
   assert.match(webTsconfig, /tradeflowkit\/adapter\.ts/);
 
   assert.match(shell, /createTradeFlowKitAdapterContext/);
@@ -260,8 +261,9 @@ test('OperatorOS module route shell wires TradeFlowKit host/local fallback to th
   assert.match(shell, /const routePrefix = '\/modules\/tradeflowkit'/);
   assert.match(shell, /const hrefFor = \(href: string\) => `\$\{routePrefix\}\$\{href\}`/);
   assert.match(shell, /data-testid="tradeflowkit-module-shell"/);
-  assert.match(shell, /data-testid="tradeflowkit-module-header"/);
-  assert.match(shell, /data-testid="tradeflowkit-module-sidebar"/);
+  assert.match(shell, /pageHeaderTestId="tradeflowkit-module-header"/);
+  assert.match(shell, /sideRail: styles\.sidebar/);
+  assert.match(shell, /mobileNavigation="bottom"/);
   assert.match(shell, /tradeflowkit-loading-state/);
   assert.match(shell, /tradeflowkit-empty-state/);
   assert.match(operations, /tradeflowkit-operations-error/);

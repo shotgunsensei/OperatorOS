@@ -69,4 +69,7 @@ const cases: Array<{ name: string; run: () => void | Promise<void> }> = [
 ];
 
 assert.equal(cases.length, 42, 'Phase 35 must preserve the source 42-check live-call gate shape');
+test('Phase 35 live-call gate statically inventories all 42 executable checks', () => {
+  assert.equal(cases.length, 42);
+});
 for (const gate of cases) test(`Phase 35 live-call gate ${gate.name}`, gate.run);

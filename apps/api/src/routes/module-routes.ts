@@ -477,7 +477,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         userId: user.id, action: 'module_handoff_module_coming_soon',
         details: { moduleSlug: slug }, ip: getClientIp(request),
       });
-      return reply.code(400).send({ error: 'Module is coming soon.', code: 'MODULE_COMING_SOON' });
+      return reply.code(400).send({ error: 'Module access is not available yet.', code: 'MODULE_COMING_SOON' });
     }
     if (mod.status === 'disabled') {
       await auditSsoReject({

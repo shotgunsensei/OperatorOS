@@ -1,5 +1,55 @@
 # OperatorOS implementation status
 
+## Replit publish reconciliation and stashed release-gate integration - SOURCE INTEGRATED / RELEASE GATE RED (2026-08-26)
+
+- Local work started from clean `origin/main` commit
+  `86483cc0cd0bd76d4e064b479adc755abddbd36b`. Replit publication marker
+  `2d305848f8ea821d60a4774d4ff47a9b9b0f6f22` records successful provider build
+  `02e56a3d-6f12-4537-8e94-7144df6b20a0`. The pulled package-manager repair is
+  preserved unchanged: provider preinstall accepts only the two exact observed
+  `pnpm/10.26.1` Linux x64 scanner fingerprints, while the checked-in deployment
+  build reinstalls exact pnpm `10.34.5` with `--frozen-lockfile`.
+- Replit's later merge-preparation commit `1b0689f` reintroduced public mappings
+  for internal API and Next ports `5001` and `5002`. Those mappings were not part
+  of the successful scanner repair and made the checked-in deployment-scope gate
+  fail. The reconciliation removes them, leaving only supervised local port
+  `5000` exposed as public port `80`.
+- GitHub Desktop stash `stash@{0}` was applied without dropping it. Its 57-path
+  release-gate repair merged cleanly over the pulled Replit commits; it did not
+  modify `.replit`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, the
+  provider guard, or the provider scanner tests. The stash remains a recovery
+  point. PulseDesk's connector journey now opens `/integrations`, and TorqueShed
+  uses the separated vehicle-create and diagnostic-create/detail routes.
+- Fresh source evidence is green: exact pnpm `10.34.5` frozen install; deployment
+  scope `6/6` with only `pnpm-lock.yaml` and public port `80`; four-project
+  typecheck; repository lint with zero warnings; production build including
+  FaultlineLab `4/4`, API/runner compilation, and `32/32` Next routes; Phase 39
+  script checks `14/14` plus API/preflight checks `13/13`; 1,282 scanned files
+  with zero findings; 1,257 audited dependencies with zero critical or unresolved
+  high advisories; unit/compiler checks `35/35`; release-v55 clean apply and
+  idempotent reapply plus integration checks `28/28`; and the full API suite
+  `1,197/1,197` with zero skips, todos, cancellations, or failures. Static route
+  integrity reports 191 active target files, 1,137 active route capabilities,
+  916 crawl routes, and zero failures. Static visual-contract metadata reports
+  zero issues across all 13 modules.
+- Focused exact-host browser acceptance is not fully green. The PulseDesk
+  deep-link, silent-SSO, connector-ingestion, logout, and return journey passed.
+  TorqueShed now persists a vehicle, verifies the garage list, creates a
+  diagnostic, opens its exact detail deep link, and records trouble-code and
+  measurement evidence, but the journey still looks for Torque Assist on the
+  diagnostic detail route instead of its dedicated `/diagnostics/:id/assist`
+  route. The bounded two-iteration repair workflow stopped there; no pass claim
+  is made for the aggregate browser gate.
+- Strict parity remains intentionally red with 1,449 `BLOCKED_REQUIRED` records
+  out of 7,396 capabilities: TradeFlowKit 947, FaultlineLab 501, and OutCall 1.
+  There are zero owner waivers. `corepack pnpm verify:release` is therefore not
+  green and was not rerun redundantly after its strict parity and browser
+  constituents were proven red. No commit, push, merge, Replit publish,
+  production database mutation, or deployed acceptance was performed. The
+  reconciled work remains on `codex/reconcile-replit-release-gate` pending an
+  owner decision on the parity backlog/waivers and completion of the remaining
+  exact-host journey.
+
 ## Replit Node 20 publish-scan rejection - SOURCE/LOCAL REPAIRED / FRESH SNAPSHOT REQUIRED (2026-08-25)
 
 - Replit deployment `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
@@ -3378,3 +3428,67 @@ the verifier to make it pass.
 - Same-tab SSO/navigation passed 1/1 for all 12 active modules including deliberate Ctrl/middle/explicit new-tab behavior; Platform Command passed 2/2; 146 active-module major routes plus 11 production-disabled OutCall test routes passed their Phase 49–51 route suites. The Phase 52 runner preserves production secure-cookie semantics and restarts OutCall only under its explicit test adapter boundary. The 13-module approved visual-contract verifier passes with zero issues and the TradeFlowKit visual source contract passes 9/9; platform-specific Playwright screenshot comparison remains open because reviewed `*-win32.png` spec baselines do not exist and were not self-approved.
 - Focused Phase 41–45 revenue contracts pass 24/24, but the mandatory provider journey is blocked: no Stripe test secret/account, webhook secret/CLI, catalog rows, official Checkout/PaymentIntent/Charge, signed receipt, or provider-backed Assist credential was available. Fresh DB provider counts remain catalog 0, receipts 0, ledger 0, Assist 0. The catalog dry-run fails closed with `TORQUESHED_STRIPE_CATALOG_FAILED` and `STRIPE_SECRET_KEY is required`.
 - Therefore Phase 52 is not certified, no production-ready/deployed claim is made, the purchase kill switch remains closed, and no deterministic completion is substituted. Full evidence and the exact owner checklist are in `docs/phase-52/REVENUE-NAVIGATION-ROUTE-CERTIFICATION.md`.
+
+## 2026-08-25 release-gate remediation - RED / OWNER DECISION REQUIRED
+
+Baseline and scope:
+
+- Local `main`, `HEAD`, and `origin/main` remained
+  `48710225de42e196d0ccc8bf38a699bedc82d082`. The failed GitHub Actions run
+  used this revision: run `32885707248`.
+- Replit deployment `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
+  `974c6e95-4124-4647-8010-16f4b2c09415`, failed before build because the
+  provider invoked pnpm `10.26.1` on Node `20.20.0` while the repository guard
+  requires pnpm `10.34.5`. The current source retains the exact bounded
+  provider-scan compatibility check and the normal frozen 10.34.5 install
+  contract; no Replit publish or republish was attempted in this remediation.
+- All database verification used disposable PostgreSQL container
+  `operatoros-release-gate-20260825`, database
+  `operatoros_phase21_release`, through localhost port `55432`. No persistent
+  or production database was read or mutated. The exact named disposable
+  container was identity-checked and removed after evidence collection.
+
+Remediation completed in the two bounded repair iterations:
+
+- Updated stale ecosystem identity/static contracts to the current public
+  names and exact hosts: Deploy Ops, Operator Pool Hall, and Script Ops.
+- Restored missing disposable test schema and seed coverage for tenant invite
+  consent and TorqueShed catalog, checkout, settlement, reservation, and
+  reconciliation behavior.
+- Corrected current route-first browser contracts for BrandForgeOS, PulseDesk,
+  TechDeck, TorqueShed, and Operator Pool Hall; added explicit submit button
+  semantics and a usable TorqueShed empty diagnostic state.
+- Fixed BrandForgeOS route loading, PulseDesk equipment-issue deep-link
+  routing, TechDeck runbook record routing, exact-host browser proxy trust, and
+  internal `/app/apps/*` navigation. The latter removed 41 observed 404 RSC
+  prefetches without filtering or ignoring failed responses.
+- Kept the forbidden-pattern quality gate active while excluding only
+  generated immutable source-catalog prose from the maintained UI feature
+  count rule. Added a focused regression for that boundary.
+
+Fresh local verification evidence:
+
+| Gate | Result |
+| --- | --- |
+| `corepack pnpm typecheck` | PASS for API, runner gateway, web, and TorqueShed native after the second repair |
+| `corepack pnpm test:unit` | PASS 35/35, 0 skipped after the first repair; the later route changes passed focused contracts and final typecheck |
+| `corepack pnpm test:api` | PASS 1,197/1,197, 0 failed, 0 skipped against disposable PostgreSQL; the root runner also started the web runtime so six HTTP checks executed |
+| `corepack pnpm test:integration` | PASS 28/28, 0 skipped; clean release v55 apply and idempotent reapply passed |
+| `corepack pnpm build:production` | PASS; deployment scope, FaultlineLab 4/4 compiler checks, four-project typecheck, API/runner builds, and Next production build passed |
+| `corepack pnpm test:route-integrity` | PASS; 198 active target files, 1,268 active route capabilities, 916 crawl routes, 0 failures |
+| Focused static/domain regressions | PASS 27/27 current contracts, PASS 4/4 TorqueShed database tests, and PASS 11/11 core deep-link/customer-experience contracts |
+| Focused exact-host browser rerun | PASS 4/6 in 14.5 minutes: Operator Pool Hall, all-module live controls/no page-console-network-HTTP failure, TechDeck persisted operations, and TorqueShed exactly-once payment return. PulseDesk still targets the integrations-only connector form while on `/inbound`; TorqueShed still targets the vehicle-create form while on the `/garage` list route. Both failed by timeout, not by an authorization bypass or provider mutation. |
+| `corepack pnpm verify:parity` | **FAIL** with 1,449 `BLOCKED_REQUIRED` records out of 7,396 capabilities: TradeFlowKit 947, FaultlineLab 501, OutCall 1. The remaining states are 3,515 `ACTIVE_NATIVE`, 2,432 `ACTIVE_SHARED_EQUIVALENT`, and 0 `OWNER_WAIVED`. |
+| Full exact-host/visual suite | **NOT GREEN**. The first full run had 19 E2E failures and 2 passes plus 2 visual failures and 2 passes; focused repairs eliminated the demonstrated product and stale-contract failures above, but the two remaining journey contracts and reviewed visual-baseline refresh remain open. |
+| `corepack pnpm verify:release` | **NOT GREEN / NOT RERUN TO COMPLETION** after the second repair because its strict parity and exact-host browser constituents are already proven red. No pass claim is made from individually green gates. |
+
+Release decision:
+
+- No commit, push, Replit publish, republish, or production mutation was made.
+  Repository policy permits a commit only after documentation and fresh
+  verification agree; the release gate is currently red.
+- A green strict gate now requires an owner decision between implementing the
+  1,449 documented missing source capabilities or authorizing explicit,
+  reviewed owner waivers with reasons and scope. The release gate must not be
+  made green by silently relabeling blocked work, adding skips, weakening
+  assertions, or treating current partial module restoration as complete.

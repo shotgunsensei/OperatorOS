@@ -78,6 +78,23 @@ test('controlled route/control fixture detects a dead button and an uncrawlable 
   assert.ok(issues.some((entry) => entry.code === 'ROUTE_NOT_CRAWLABLE'));
 });
 
+test('generated source catalog prose is not treated as a maintained UI feature-count claim', () => {
+  const ledger = {
+    modules: [{ capabilities: [{
+      capabilityId: 'fixture.source_test.1', moduleSlug: 'fixture', type: 'source_test', state: 'ACTIVE_NATIVE',
+      mapping: { implementationFiles: [{ path: 'apps/api/src/generated/fixture-catalog.ts' }], routeIds: [] },
+    }] }],
+  };
+  const target = {
+    forbiddenPatterns: [{
+      code: 'HARD_CODED_FEATURE_COUNT', sourcePath: 'apps/api/src/generated/fixture-catalog.ts', line: 1, excerpt: '2 modules',
+    }],
+    routes: [],
+    files: [{ path: 'apps/api/src/generated/fixture-catalog.ts', controls: [] }],
+  };
+  assert.deepEqual(validateControlIntegrity(ledger, target).issues, []);
+});
+
 test('database reset guard accepts only marked loopback test databases', () => {
   assert.equal(assertDisposableDatabaseEnvironment({
     PARITY_DATABASE_IS_DISPOSABLE: '1',

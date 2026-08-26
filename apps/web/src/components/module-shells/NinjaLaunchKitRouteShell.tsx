@@ -212,7 +212,7 @@ export default function NinjaLaunchKitRouteShell({
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
   const current = area(routePath || pathname);
-  const localRoute = pathname.startsWith('/modules/');
+  const localRoute = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
   const hrefFor = useCallback(
     (path: string) => (localRoute ? `/modules/ninja-launch-kit${path}` : path),
     [localRoute],

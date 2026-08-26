@@ -204,7 +204,7 @@ export default function NinjaPoolHallRouteShell({
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
   const current = area(routePath || pathname);
   const game = ['practice', 'cpu', 'local', 'online'].includes(current);
-  const localRoute = pathname.startsWith('/modules/');
+  const localRoute = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
   const hrefFor = useCallback(
     (path: string) => (localRoute ? `/modules/ninja-pool-hall${path === '/' ? '' : path}` : path),
     [localRoute],

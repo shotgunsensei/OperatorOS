@@ -115,6 +115,7 @@ test('six representative customer workflows expose a plain first action and trus
   const tradeFlowKitRevenue = read('apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx');
   const torqueShed = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
   const pulseDesk = read('apps/web/src/components/module-shells/PulseDeskShell.tsx');
+  const pulseDeskContract = read('apps/web/src/components/module-shells/PulseDeskRoute.contract.ts');
   const techDeck = read('apps/web/src/components/module-shells/TechDeckShell.tsx');
   const catalog = read('apps/web/src/components/pages/AppsPage.tsx');
   const billing = read('apps/web/src/components/pages/BillingPage.tsx');
@@ -131,14 +132,14 @@ test('six representative customer workflows expose a plain first action and trus
   assert.match(tradeFlowKitRevenue, /panel: 'var\(--tfk-panel\)'/);
   assert.doesNotMatch(tradeFlowKitStyles, /#f6fbf8/);
   assert.match(torqueShed, /Start diagnostic/);
-  assert.match(torqueShed, /More tools/);
+  assert.match(torqueShed, /maintenance costs, files, or private diagnostic notes/);
   assert.match(pulseDesk, /Open request queue/);
-  assert.match(pulseDesk, /not patient charts or clinical records/);
-  assert.match(pulseDesk, /bg: '#07111b'/);
-  assert.match(pulseDesk, /color-scheme: dark/);
-  assert.doesNotMatch(pulseDesk, /bg: '#f5f9fc'/);
+  assert.match(pulseDesk, /Do not store patient charts, clinical records/);
+  assert.match(pulseDeskContract, /background: '#07111b'/);
+  assert.match(pulseDeskContract, /colorScheme: 'dark'/);
+  assert.doesNotMatch(pulseDeskContract, /background: '#f5f9fc'/);
   assert.match(techDeck, /Open ticket queue/);
-  assert.match(techDeck, /Protected by OperatorOS/);
+  assert.match(techDeck, /OperatorOS manages sign-in, subscription access, roles, and workspace membership/);
 
   assert.match(catalog, /How to get access/);
   assert.match(catalog, /Purchase temporarily unavailable/);

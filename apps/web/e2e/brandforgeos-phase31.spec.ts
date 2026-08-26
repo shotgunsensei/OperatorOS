@@ -96,23 +96,21 @@ test.describe('Phase 31 BrandForgeOS complete product contract', () => {
     const prefix = exactHost ? '' : '/modules/brandforgeos';
     const routes = [
       ['/brands', 'brandforgeos-brands'],
-      ['/offers', 'brandforge-offers'],
       ['/campaigns', 'brandforgeos-campaigns'],
-      ['/copy-studio', 'brandforgeos-copy'],
+      ['/content', 'brandforgeos-copy'],
       ['/calendar', 'brandforgeos-calendar'],
+      ['/approvals', 'brandforgeos-campaigns'],
       ['/ai-workflows', 'brandforgeos-ai'],
-      ['/strategy', 'brandforge-strategy'],
-      ['/templates', 'brandforge-templates'],
+      ['/analytics', 'brandforgeos-analytics'],
       ['/integrations', 'brandforge-integrations'],
       ['/reports', 'brandforge-reports'],
-      ['/activity', 'brandforge-activity'],
-      ['/admin', 'brandforge-admin'],
+      ['/settings', 'brandforgeos-settings'],
     ] as const;
 
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       for (const [route, testId] of routes) {
-        const response = await page.goto(`${WEB}${prefix}${route}`, { waitUntil: 'networkidle' });
+        const response = await page.goto(`${WEB}${prefix}${route}`, { waitUntil: 'domcontentloaded' });
         expect(response?.status(), route).toBeLessThan(400);
         await expect(page.getByTestId('brandforgeos-workspace')).toBeVisible();
         await expect(page.getByTestId(testId)).toBeVisible();

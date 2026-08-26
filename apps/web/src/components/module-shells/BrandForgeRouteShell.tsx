@@ -74,7 +74,7 @@ function area(path?: string): string {
 export default function BrandForgeRouteShell({ routePath }: { baseUrl?: string; routePath?: string }) {
   const pathname = usePathname(); const { user, loading: authLoading } = useAuth(); const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId(); const currentArea = area(routePath || pathname); const page = copy[currentArea] ?? copy.dashboard;
-  const source = pathname.startsWith('/modules/'); const hrefFor = useCallback((path: string) => source ? `/modules/brandforgeos${path === '/' ? '/dashboard' : path}` : path, [source]);
+  const source = pathname.startsWith('/app/') || pathname.startsWith('/modules/'); const hrefFor = useCallback((path: string) => source ? `/modules/brandforgeos${path === '/' ? '/dashboard' : path}` : path, [source]);
   const navigation = useMemo(() => nav.map(group => ({ ...group, items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })) })), [hrefFor]);
   return <ModuleApplicationShell moduleId="brandforgeos" moduleName="BrandForgeOS" theme={theme} currentPath={hrefFor(currentArea === 'dashboard' ? '/' : `/${currentArea}`)} navigation={navigation}
     brand={<Link href={hrefFor('/')} style={{ color:'#fff7ff', textDecoration:'none', fontWeight:900 }}>BrandForge<span style={{color:'#f0abfc'}}>OS</span></Link>}

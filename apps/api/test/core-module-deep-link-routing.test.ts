@@ -121,12 +121,13 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['m', 'tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['clients', 'client-123'])?.sectionId, 'techdeck-directory');
-  for (const path of ['documents', 'runbooks', 'kb', 'knowledge-base']) {
+  for (const path of ['documents', 'kb', 'knowledge-base']) {
     assert.equal(resolveCoreModuleDeepLink('techdeck', [path, 'document-123'])?.sectionId, 'techdeck-documentation');
   }
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['runbooks', 'document-123'])?.sectionId, 'techdeck-runbooks');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['tickets', 'ticket-123'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['clients', 'client-123'])?.sectionId, 'pulsedesk-directory');
-  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123', 'report-issue'])?.sectionId, 'pulsedesk-operations-route');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123', 'report-issue'])?.sectionId, 'pulsedesk-service-ticket-create');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123']), null);
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches']), null);

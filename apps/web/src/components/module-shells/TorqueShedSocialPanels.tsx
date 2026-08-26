@@ -711,7 +711,7 @@ function ListingActions({
                 style={input}
               />
             </label>
-            <button style={button}>Send in-app message</button>
+            <button type="submit" style={button}>Send in-app message</button>
           </form>
           <form
             onSubmit={(event) => {
@@ -744,7 +744,7 @@ function ListingActions({
               Details
               <textarea name="details" rows={2} style={input} />
             </label>
-            <button style={{ ...button, background: semantic.bgPanel, color: semantic.text }}>
+            <button type="submit" style={{ ...button, background: semantic.bgPanel, color: semantic.text }}>
               Submit report
             </button>
           </form>
@@ -1059,7 +1059,7 @@ export function TorqueShedCommunityPanel() {
           Post
           <textarea required minLength={2} maxLength={20000} name="body" rows={6} style={input} />
         </label>
-        <button style={button}>Create draft</button>
+        <button type="submit" style={button}>Create draft</button>
       </form>
       <form
         onSubmit={(event) => {
@@ -1124,7 +1124,7 @@ export function TorqueShedCommunityPanel() {
           Bio
           <textarea name="bio" defaultValue={profile?.bio ?? ''} rows={3} style={input} />
         </label>
-        <button style={button}>Save profile</button>
+        <button type="submit" style={button}>Save profile</button>
       </form>
       <form
         onSubmit={(event) => {
@@ -1162,7 +1162,7 @@ export function TorqueShedCommunityPanel() {
             {text}
           </label>
         ))}
-        <button style={button}>Save preferences</button>
+        <button type="submit" style={button}>Save preferences</button>
       </form>
       <div style={{ ...cardStyle, display: 'grid', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -1222,7 +1222,7 @@ export function TorqueShedCommunityPanel() {
                 placeholder="Moderation reason"
                 style={input}
               />
-              <button style={button}>Record action</button>
+              <button type="submit" style={button}>Record action</button>
             </div>
           </form>
         ))}
@@ -1460,7 +1460,7 @@ function CommunityDiscussion({
             Add comment
             <textarea required name="body" rows={3} style={input} />
           </label>
-          <button style={button}>Comment</button>
+          <button type="submit" style={button}>Comment</button>
         </form>
       )}{' '}
       {!mine && (
@@ -1488,7 +1488,7 @@ function CommunityDiscussion({
             <option value="other">Other</option>
           </select>
           <input name="details" placeholder="Report details" style={input} />
-          <button style={{ ...button, background: semantic.bgPanel, color: semantic.text }}>
+          <button type="submit" style={{ ...button, background: semantic.bgPanel, color: semantic.text }}>
             Report post
           </button>
         </form>

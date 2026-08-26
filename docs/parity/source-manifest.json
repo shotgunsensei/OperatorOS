@@ -60,11 +60,11 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "2fffe4b0dad8024cfba747f387beda41d1563b473987c79cc634f5db9ca62794",
-        "fileCount": 273,
-        "totalBytes": 1232410
+        "treeSha256": "8b9b5f4c1900b2e2536904573778e431f0524c22199195e0ca119c590ee9ac70",
+        "fileCount": 272,
+        "totalBytes": 1015651
       },
-      "capabilityDigestSha256": "897a612dad1bed90e8a82c10c8ddb93e7a3556c82350252b67f3b177ffc74d2d",
+      "capabilityDigestSha256": "4c8fcf9bfd97a62ecb342b7d611218c458831f4b79095ecd5f1513611d45338a",
       "stateCounts": {
         "ACTIVE_NATIVE": 463,
         "ACTIVE_SHARED_EQUIVALENT": 330,
@@ -99,9 +99,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "6e9a40c62329b50b9a7d02e57d8e7b4314aaca7a42d215d6312e2affd87fac7b",
-        "fileCount": 370,
-        "totalBytes": 4395736
+        "treeSha256": "46ec8cf00bfb44ca101f21cf7cd733dcf378264419b2968436bc1f1d2629d7d2",
+        "fileCount": 369,
+        "totalBytes": 4139156
       },
       "capabilityDigestSha256": "b4b144afc720bcb06a4b56423a28287988fec664af1e65dc4de01d5ef59ef68e",
       "stateCounts": {
@@ -137,9 +137,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "ae29bce1a9450b34c7bf6e9ae9b9b2b170cdcbe2cbeb27cad269d31850ffed16",
-        "fileCount": 452,
-        "totalBytes": 7872303
+        "treeSha256": "af42f4667e9046e3608657c166bab285056bef1a5cc257855503fd7edef544c3",
+        "fileCount": 451,
+        "totalBytes": 7547009
       },
       "capabilityDigestSha256": "02cd43443a5f4e2018d9fff83117a323f504bceedfaae9fa81dee86fdb0cae25",
       "stateCounts": {
@@ -166,7 +166,7 @@
     },
     {
       "moduleSlug": "ninja-launch-kit",
-      "moduleName": "Ninja Launch Kit",
+      "moduleName": "Deploy Ops",
       "ledger": "docs/parity/modules/ninja-launch-kit.json",
       "sourceRoot": "apps/modules/ninja-launch-kit/source",
       "provenance": {
@@ -178,11 +178,11 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "d9d7055fc00ac85bc7cd96a55b432a96a3adfbd25499aeb559acc314a9004afc",
-        "fileCount": 257,
-        "totalBytes": 1152808
+        "treeSha256": "4803b19444c855a909416a09d02f378fb149f62ed847ab76c90ce1d41339a5c0",
+        "fileCount": 256,
+        "totalBytes": 935340
       },
-      "capabilityDigestSha256": "f6e9df32d23d0c9fb68a97e347595ba8016d61fdc9cf86185cbfce2647b90053",
+      "capabilityDigestSha256": "5bb47ea2b4f563d3083b6e03457e5e77ad10d8a00d1311699c0a84c587703423",
       "stateCounts": {
         "ACTIVE_NATIVE": 225,
         "ACTIVE_SHARED_EQUIVALENT": 111,
@@ -205,7 +205,7 @@
     },
     {
       "moduleSlug": "ninja-pool-hall",
-      "moduleName": "Ninja Pool Hall",
+      "moduleName": "Operator Pool Hall",
       "ledger": "docs/parity/modules/ninja-pool-hall.json",
       "sourceRoot": "apps/modules/ninja-pool-hall/source",
       "provenance": {
@@ -217,9 +217,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "8f4ad33321977a7c65db6203f405c91dcfc7f411da7af395ef587a44f792eec0",
-        "fileCount": 146,
-        "totalBytes": 1807534
+        "treeSha256": "ee9c206bc13bab5cc80ac73cd680f879034ebebbceb8b8ec9ed88aa0b960b924",
+        "fileCount": 145,
+        "totalBytes": 1576837
       },
       "capabilityDigestSha256": "94f01507cf1cabb9111194a80e32ea4177a3afa26eaa76507bce50585bb4764c",
       "stateCounts": {
@@ -242,7 +242,7 @@
     },
     {
       "moduleSlug": "ninjamation",
-      "moduleName": "Ninjamation",
+      "moduleName": "Script Ops",
       "ledger": "docs/parity/modules/ninjamation.json",
       "sourceRoot": "apps/modules/ninjamation/source",
       "provenance": {
@@ -267,9 +267,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "438e86063be2e82de10c941c788bd4b4e4c6d4b4be38bce4d1c9e875e5dd9d32",
-        "fileCount": 185,
-        "totalBytes": 2845583
+        "treeSha256": "81b40131eed38fe8dbf824f8fb4c0dec2710d48abb1634e87630e7dbbb792e80",
+        "fileCount": 184,
+        "totalBytes": 2621059
       },
       "capabilityDigestSha256": "de6c2883998eaa923afe3494bd1da52151d10972d794f132af597820699e4aa8",
       "stateCounts": {
@@ -381,9 +381,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "6af29f96b956550bbf40153d08b91389681068c77e53735dfed66bc066b4732c",
-        "fileCount": 260,
-        "totalBytes": 3383130
+        "treeSha256": "3d70716cc8dc0881003d6b5030f7656559f2a05082c712977bd27cf213dc918d",
+        "fileCount": 259,
+        "totalBytes": 3164480
       },
       "capabilityDigestSha256": "3721b5f9f6beda8aef84cd277fa470e75115e5d726886d549bd1241641b7514c",
       "stateCounts": {
@@ -421,9 +421,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "751fa4f1432be0f22fa4bc6dbd8609bd393fcbd62f43685a764382c47fb244b5",
-        "fileCount": 225,
-        "totalBytes": 910030
+        "treeSha256": "f49a343d918816002e38e938cfd7b59f6693e0ffb0492d9a96598105b7ebc544",
+        "fileCount": 224,
+        "totalBytes": 695450
       },
       "capabilityDigestSha256": "1586573bc9ba39ef4691ae60fd3b45060eb2ccbff585894d4ac1c98d3bb3d489",
       "stateCounts": {
@@ -507,9 +507,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "b2e1495ebbdeeb9d88e8571ca9b97d94ddbcaec6b63d64cc1b771ea752f95a9a",
-        "fileCount": 182,
-        "totalBytes": 8795626
+        "treeSha256": "820f9c2871c51df7f3d9232bfe453319dc9b423a22c81a241dba74d734973b81",
+        "fileCount": 180,
+        "totalBytes": 8059934
       },
       "capabilityDigestSha256": "588bb1a90cadc3a92fa417c9abbed4a1216e69d42affb617745ff94ac8842f48",
       "stateCounts": {
@@ -554,9 +554,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "d79e76c69cf9fb3ec699291e51ac2d5fd93fcde44038ef17f410663f1a74f454",
-        "fileCount": 321,
-        "totalBytes": 7820081
+        "treeSha256": "e0bd2fac4ecd0af32adc6ca611fe3c8e90fbcdeb5e581ebee0023f479bee4390",
+        "fileCount": 322,
+        "totalBytes": 7824820
       },
       "capabilityDigestSha256": "ee3e8ac1c5335ded6fdbe0412d0f9f4d2bc4fa35ab65f8c145ed88b14864cec6",
       "stateCounts": {
