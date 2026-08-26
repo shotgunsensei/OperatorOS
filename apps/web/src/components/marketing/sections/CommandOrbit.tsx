@@ -182,8 +182,9 @@ export default function CommandOrbit() {
         >
           <img
             src="/media/operatoros/operatoros-ecosystem-orbit.png"
-            alt="OperatorOS ecosystem orbit artwork showing connected module rings around a central command core."
+            alt=""
             aria-hidden
+            role="presentation"
             style={{
               position: 'absolute',
               inset: 0,

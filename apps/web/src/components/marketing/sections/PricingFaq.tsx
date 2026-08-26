@@ -112,7 +112,7 @@ export default function PricingFaq({
         }
       `}</style>
 
-      <div role="list">
+      <div>
         {marketingPricingFaqs.map((faq) => (
           <FaqItem key={faq.slug} faq={faq} />
         ))}
@@ -131,23 +131,19 @@ export default function PricingFaq({
 }
 
 function FaqItem({ faq }: { faq: MarketingPricingFaq }) {
-  const answerId = `faq-answer-${faq.slug}`;
   return (
     <details
       className="faq-item"
       data-testid={`faq-item-${faq.slug}`}
-      role="listitem"
     >
       <summary
         className="faq-summary"
         data-testid={`faq-question-${faq.slug}`}
-        aria-controls={answerId}
       >
         <span>{faq.question}</span>
         <ChevronDown className="faq-chevron" size={18} aria-hidden />
       </summary>
       <p
-        id={answerId}
         className="faq-answer"
         data-testid={`faq-answer-${faq.slug}`}
       >

@@ -143,7 +143,7 @@ function FooterColumn({
   } as const;
   return (
     <div data-testid={`footer-column-${title.toLowerCase()}`}>
-      <div
+      <h3
         style={{
           fontFamily: brand.fontDisplay,
           fontSize: 12,
@@ -152,10 +152,11 @@ function FooterColumn({
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
           marginBottom: 12,
+          marginTop: 0,
         }}
       >
         {title}
-      </div>
+      </h3>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
         {links.map((l) => (
           <li key={`${title}-${l.label}`}>

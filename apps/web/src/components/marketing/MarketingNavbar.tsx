@@ -150,6 +150,7 @@ export default function MarketingNavbar() {
           <nav
             className="operatoros-nav-desktop"
             data-testid="marketing-nav-desktop"
+            aria-label="Site navigation"
             style={{ display: 'flex', alignItems: 'center', gap: 28, marginLeft: 16 }}
           >
             {NAV_LINKS.map((link) =>
@@ -215,6 +216,8 @@ export default function MarketingNavbar() {
           <button
             type="button"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="marketing-nav-mobile-drawer"
             data-testid="marketing-nav-mobile-toggle"
             className="operatoros-nav-mobile-toggle"
             onClick={() => setMobileOpen((v) => !v)}
@@ -235,18 +238,22 @@ export default function MarketingNavbar() {
           </button>
         </div>
 
-        {mobileOpen && (
-          <div
-            className="operatoros-nav-mobile-drawer"
-            data-testid="marketing-nav-mobile-drawer"
-            style={{
-              borderTop: `1px solid ${brand.borderSoft}`,
-              padding: '12px 24px 18px',
-              animation: 'operatoros-nav-fade 0.2s ease',
-              background: brand.bgPrimary,
-            }}
-          >
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div
+          id="marketing-nav-mobile-drawer"
+          className="operatoros-nav-mobile-drawer"
+          data-testid="marketing-nav-mobile-drawer"
+          hidden={!mobileOpen}
+          style={{
+            borderTop: `1px solid ${brand.borderSoft}`,
+            padding: '12px 24px 18px',
+            animation: mobileOpen ? 'operatoros-nav-fade 0.2s ease' : undefined,
+            background: brand.bgPrimary,
+          }}
+        >
+            <nav
+              aria-label="Site navigation"
+              style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+            >
               {NAV_LINKS.map((link) =>
                 link.external ? (
                   <a
@@ -305,8 +312,7 @@ export default function MarketingNavbar() {
                 )
               )}
             </div>
-          </div>
-        )}
+        </div>
       </header>
     </>
   );

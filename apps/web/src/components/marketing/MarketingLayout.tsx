@@ -42,8 +42,20 @@ export default function MarketingLayout({
           flexDirection: 'column',
         }}
       >
+        <a className="ops-skip-link" href="#marketing-main-content">
+          Skip to main content
+        </a>
         <MarketingNavbar />
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <main
+          id="marketing-main-content"
+          tabIndex={-1}
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            scrollMarginTop: 80,
+          }}
+        >
           {children}
         </main>
         <MarketingFooter />
