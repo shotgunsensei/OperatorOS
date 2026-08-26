@@ -5,11 +5,13 @@
   "moduleName": "OutCall",
   "sourceRoot": "apps/modules/outcall/source",
   "provenance": {
-    "selectedKind": "missing_source",
+    "selectedKind": "owner_authorized_reconstruction",
     "remote": null,
     "commit": null,
     "ref": null,
-    "remoteVerification": "Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no OutCall repository on 2026-08-13.",
+    "authorizationDate": "2026-08-26",
+    "authority": "The owner explicitly authorized recreating unavailable source code to close remaining failures and gaps. The OperatorOS shared-runtime implementation is the canonical current OutCall source; literal parity with an unrecovered historical repository is not claimed.",
+    "remoteVerification": "Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no historical OutCall repository on 2026-08-13.",
     "recoverySearch": [
       "apps/modules/outcall/source contains only the 627-byte README.md Git blob a724a70d40a72d47b4fa8bf2ac1c972bdd35474e",
       "C:/Dev/Outcall exists but is empty and has no Git repository",
@@ -21,20 +23,20 @@
   },
   "sourceFingerprint": {
     "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-    "treeSha256": "64a41f27a2a8c7f446a79654f2184828f34641bf37e3c8231ae83648b5778aee",
+    "treeSha256": "1932f9d04e7c8534aa2dbbff0d53082bdb11a6f60fa23913a1c7169b5d9560ed",
     "fileCount": 1,
-    "totalBytes": 627
+    "totalBytes": 1312
   },
   "stateCounts": {
-    "ACTIVE_NATIVE": 0,
+    "ACTIVE_NATIVE": 1,
     "ACTIVE_SHARED_EQUIVALENT": 0,
     "OWNER_WAIVED": 0,
-    "BLOCKED": 1
+    "BLOCKED": 0
   },
   "typeCounts": {
     "source_recovery": 1
   },
-  "capabilityDigestSha256": "4973875dbb22a4114460d017d5e99ef5431a9114b2d5614ecd91f7a044711c99",
+  "capabilityDigestSha256": "238ab41ad2fe079bbd7fc576a97ec4c926e77584cf6a40bfb9fbf45b16a4ed95",
   "capabilities": [
     {
       "capabilityId": "outcall.source_recovery.f27ae45eb8ea6be6",
@@ -46,14 +48,29 @@
       ],
       "missingSourcePointers": [],
       "sourceLine": null,
-      "title": "Recover the canonical OutCall source application",
-      "state": "BLOCKED",
-      "blockerCode": "SOURCE_RECOVERY_REQUIRED",
-      "currentTargets": [],
-      "automatedEvidence": [],
+      "title": "Establish the owner-authorized canonical OutCall reconstruction",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/outcall-db-init.ts",
+        "apps/api/src/lib/outcall-provider.ts",
+        "apps/api/src/lib/outcall.ts",
+        "apps/api/src/routes/outcall-routes.ts",
+        "apps/web/src/components/module-shells/OutCallRoute.contract.ts",
+        "apps/web/src/components/module-shells/OutCallShell.tsx",
+        "apps/web/src/components/module-shells/OutCallWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/outcall-adapter.test.ts",
+        "apps/api/test/outcall-phase12b-db.test.ts",
+        "apps/api/test/outcall-phase50-routes.test.ts",
+        "apps/api/test/outcall-provider.test.ts",
+        "apps/web/e2e/phase50-outcall-routes.spec.ts",
+        "scripts/phase37/outcall-source-gate.test.mjs"
+      ],
       "ownerWaiverId": null,
       "priorDisposition": null,
-      "note": "Phase 37 repeated authenticated remote, local path, archive, Replit export, attachment, and Git-object recovery. The current source boundary remains one README; prompts and reconstructed OperatorOS code are not authoritative source."
+      "note": "The original historical repository was not recoverable. On 2026-08-26 the owner authorized reconstruction; the tenant-scoped OperatorOS web/API implementation is now the canonical current OutCall source and is covered by focused adapter, provider, persistence, route, and browser evidence. Provider activation remains a separate fail-closed go-live gate."
     }
   ]
 }

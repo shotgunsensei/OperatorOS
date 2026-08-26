@@ -14,8 +14,8 @@ test('Phase 50 SnapProofOS exposes a route-first application shell and honest wo
   const modulePage = read('apps/web/src/app/apps/[slug]/page.tsx');
   for (const route of [
     '/customers', '/projects', '/jobs', '/capture', '/work', '/costs', '/templates',
-    '/team', '/activity', '/evidence', '/review', '/reports', '/share', '/exports',
-    '/custody', '/retention', '/branding', '/settings',
+    '/team', '/activity', '/cases', '/evidence', '/review', '/findings', '/reports',
+    '/share', '/exports', '/custody', '/retention', '/branding', '/settings',
   ]) assert.match(contract, new RegExp(route.replaceAll('/', '\\/')));
   assert.match(contract, /no separate duplicate project record is invented/i);
   assert.match(shell, /ModuleApplicationShell/);
@@ -26,13 +26,14 @@ test('Phase 50 SnapProofOS exposes a route-first application shell and honest wo
   assert.doesNotMatch(workspace, /window\.history|popstate|setTab\(/);
 });
 
-test('Phase 50 SnapProofOS preserves compatibility aliases and record deep links', () => {
+test('Phase 50 SnapProofOS preserves compatibility aliases and first-class record deep links', () => {
   const contract = read('apps/web/src/components/module-shells/SnapProofRoute.contract.ts');
   const routeMap = read('apps/web/src/app/modules/[slug]/[...path]/route-map.ts');
   for (const alias of ['/dashboard', '/cases', '/jobs/new', '/files', '/findings', '/profile', '/billing']) {
     assert.match(routeMap, new RegExp(alias.replaceAll('/', '\\/')));
   }
-  assert.match(routeMap, /resource === 'cases'.*redirectPath: `\/jobs\/\$\{encodeURIComponent\(id\)\}`/s);
+  assert.match(routeMap, /resource === 'cases'.*sectionId: 'snapproofos-cases'/s);
+  assert.doesNotMatch(routeMap, /resource === 'cases'.*redirectPath: `\/jobs\/\$\{encodeURIComponent\(id\)\}`/s);
   assert.match(routeMap, /resource === 'jobs'/);
   assert.match(contract, /recordId/);
   assert.match(contract, /SNAPPROOF_LEGACY_REDIRECTS/);
@@ -42,7 +43,9 @@ test('Phase 50 SnapProofOS loads route data narrowly while retaining capture and
   const routes = read('apps/api/src/routes/snapproofos-phase32-routes.ts');
   const workspace = read('apps/web/src/components/module-shells/SnapProofWorkspace.tsx');
   const field = read('apps/web/src/components/module-shells/SnapProofFieldWorkspace.tsx');
-  assert.match(workspace, /const needsCases = \['dashboard', 'evidence', 'review', 'reports', 'custody', 'retention'\]/);
+  assert.match(workspace, /const needsCases = \['dashboard', 'cases', 'evidence', 'review', 'findings', 'reports', 'custody', 'retention'\]/);
+  assert.match(workspace, /tab === 'cases'.*<CasesPanel/s);
+  assert.match(workspace, /tab === 'findings'.*<FindingsPanel/s);
   assert.match(field, /const needsJobs = \['jobs', 'capture', 'work', 'costs', 'templates', 'reports', 'share', 'exports'\]/);
   assert.match(field, /tab === 'customers'/);
   assert.match(field, /tab === 'capture'.*listSnapProofCaptures\(\)/s);

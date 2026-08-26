@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthProvider';
 import { authApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
@@ -31,6 +31,81 @@ export default function SettingsPage() {
 
   const [globalLogoutMessage, setGlobalLogoutMessage] = useState('');
   const [globalLogoutSaving, setGlobalLogoutSaving] = useState(false);
+
+  const [mfaStatus, setMfaStatus] = useState<{ enabled: boolean; enabledAt: string | null; pendingSetup: boolean; recoveryCodesRemaining: number } | null>(null);
+  const [mfaSetup, setMfaSetup] = useState<{ secret: string; otpauthUrl: string; qrDataUrl: string } | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaPassword, setMfaPassword] = useState('');
+  const [mfaUseRecovery, setMfaUseRecovery] = useState(false);
+  const [mfaRecoveryCodes, setMfaRecoveryCodes] = useState<string[]>([]);
+  const [mfaMessage, setMfaMessage] = useState('');
+  const [mfaSaving, setMfaSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void authApi.mfaStatus().then(status => {
+      if (!cancelled) setMfaStatus(status);
+    }).catch(() => {
+      if (!cancelled) setMfaMessage('MFA status is temporarily unavailable. Your current sign-in settings are unchanged.');
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const refreshMfa = async () => {
+    setMfaStatus(await authApi.mfaStatus());
+  };
+
+  const beginMfa = async () => {
+    setMfaSaving(true); setMfaMessage(''); setMfaRecoveryCodes([]);
+    try {
+      setMfaSetup(await authApi.beginMfaSetup());
+      await refreshMfa();
+    } catch (error: any) {
+      setMfaMessage(error?.error ?? 'We could not start authenticator enrollment. Your current sign-in settings are unchanged.');
+    } finally { setMfaSaving(false); }
+  };
+
+  const verifyMfa = async () => {
+    setMfaSaving(true); setMfaMessage('');
+    try {
+      const result = await authApi.verifyMfaSetup(mfaCode);
+      setMfaRecoveryCodes(result.recoveryCodes ?? []);
+      setMfaSetup(null); setMfaCode('');
+      await refreshMfa();
+      toast('Multi-factor authentication enabled');
+    } catch (error: any) {
+      setMfaMessage(error?.error ?? 'That authenticator code was not accepted. Check the time on your device and try again.');
+    } finally { setMfaSaving(false); }
+  };
+
+  const regenerateMfaCodes = async () => {
+    setMfaSaving(true); setMfaMessage(''); setMfaRecoveryCodes([]);
+    try {
+      const credential = mfaUseRecovery ? { recoveryCode: mfaCode } : { code: mfaCode };
+      const result = await authApi.regenerateMfaRecoveryCodes(credential);
+      setMfaRecoveryCodes(result.recoveryCodes ?? []);
+      setMfaCode('');
+      await refreshMfa();
+      toast('Recovery codes replaced');
+    } catch (error: any) {
+      setMfaMessage(error?.error ?? 'We could not replace the recovery codes. Existing codes remain valid.');
+    } finally { setMfaSaving(false); }
+  };
+
+  const disableMfa = async () => {
+    setMfaSaving(true); setMfaMessage('');
+    try {
+      await authApi.disableMfa({
+        password: mfaPassword,
+        ...(mfaUseRecovery ? { recoveryCode: mfaCode } : { code: mfaCode }),
+      });
+      await logout();
+      if (typeof window !== 'undefined') window.location.assign('/signed-out?signed_out=mfa-disabled');
+    } catch (error: any) {
+      setMfaMessage(error?.error ?? 'We could not disable MFA. Your account remains protected.');
+      setMfaSaving(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     setSaving(true); setMessage('');
@@ -163,6 +238,73 @@ export default function SettingsPage() {
         <button data-testid="button-change-password" onClick={handleChangePassword} disabled={pwSaving} style={btnStyle}>
           {pwSaving ? 'Changing password…' : 'Change password'}
         </button>
+      </section>
+
+      <section style={cardStyle} aria-labelledby="mfa-heading" data-testid="settings-mfa-section">
+        <h2 id="mfa-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 6px' }}>Authenticator app</h2>
+        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 18px', lineHeight: 1.6 }}>
+          Require a time-based code after your password. The encrypted secret and one-way recovery-code hashes stay in OperatorOS, the identity authority for every module.
+        </p>
+        {!mfaStatus ? (
+          <p style={{ color: colors.textMuted, fontSize: 13 }}>Loading sign-in protection…</p>
+        ) : !mfaStatus.enabled ? (
+          <>
+            {!mfaSetup ? (
+              <button data-testid="button-mfa-begin" onClick={beginMfa} disabled={mfaSaving} style={btnStyle}>
+                {mfaSaving ? 'Preparing authenticator…' : mfaStatus.pendingSetup ? 'Restart authenticator setup' : 'Set up authenticator app'}
+              </button>
+            ) : (
+              <div style={{ display: 'grid', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)', gap: 18, alignItems: 'center' }}>
+                  <img src={mfaSetup.qrDataUrl} alt="OperatorOS authenticator enrollment QR code" width={240} height={240} style={{ width: '100%', maxWidth: 240, borderRadius: 10, background: '#fff' }} />
+                  <div>
+                    <p style={{ color: colors.textMuted, fontSize: 13, lineHeight: 1.55 }}>Scan this code with your authenticator app. If scanning is unavailable, enter this secret manually:</p>
+                    <code data-testid="text-mfa-secret" style={{ display: 'block', padding: 12, borderRadius: 8, background: colors.bg, color: colors.accentGreen, overflowWrap: 'anywhere' }}>{mfaSetup.secret}</code>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="settings-mfa-verify" style={labelStyle}>Current six-digit code</label>
+                  <input id="settings-mfa-verify" data-testid="input-mfa-verify" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={event => setMfaCode(event.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button data-testid="button-mfa-verify" onClick={verifyMfa} disabled={mfaSaving || !/^\d{6}$/.test(mfaCode.replace(/\s/g, ''))} style={btnStyle}>{mfaSaving ? 'Verifying…' : 'Verify and enable'}</button>
+                  <button type="button" onClick={() => { setMfaSetup(null); setMfaCode(''); }} style={{ ...btnStyle, background: colors.bg }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div style={{ fontSize: 13, color: colors.textMuted }}>
+              Status: <strong style={{ color: colors.accentGreen }}>Enabled</strong>
+              {mfaStatus.enabledAt ? ` since ${new Date(mfaStatus.enabledAt).toLocaleDateString()}` : ''} · {mfaStatus.recoveryCodesRemaining} unused recovery codes
+            </div>
+            <div>
+              <label htmlFor="settings-mfa-current-code" style={labelStyle}>{mfaUseRecovery ? 'Recovery code' : 'Current authenticator code'}</label>
+              <input id="settings-mfa-current-code" data-testid="input-mfa-current-code" inputMode={mfaUseRecovery ? 'text' : 'numeric'} autoComplete="one-time-code" value={mfaCode} onChange={event => setMfaCode(event.target.value)} style={inputStyle} />
+              <button type="button" onClick={() => { setMfaUseRecovery(value => !value); setMfaCode(''); }} style={{ border: 0, background: 'none', color: colors.accent, padding: '8px 0', cursor: 'pointer', fontSize: 12 }}>
+                {mfaUseRecovery ? 'Use authenticator code' : 'Use a recovery code'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button data-testid="button-mfa-regenerate" onClick={regenerateMfaCodes} disabled={mfaSaving || !mfaCode.trim()} style={btnStyle}>Replace recovery codes</button>
+            </div>
+            <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 14 }}>
+              <label htmlFor="settings-mfa-password" style={labelStyle}>Current password to disable MFA</label>
+              <input id="settings-mfa-password" type="password" autoComplete="current-password" value={mfaPassword} onChange={event => setMfaPassword(event.target.value)} style={inputStyle} />
+              <button data-testid="button-mfa-disable" onClick={disableMfa} disabled={mfaSaving || !mfaPassword || !mfaCode.trim()} style={{ ...btnStyle, background: colors.accentRed, marginTop: 10 }}>Disable MFA and sign out everywhere</button>
+            </div>
+          </div>
+        )}
+        {mfaMessage && <FieldMessage>{mfaMessage}</FieldMessage>}
+        {mfaRecoveryCodes.length > 0 && (
+          <div role="status" data-testid="panel-mfa-recovery-codes" style={{ marginTop: 16, padding: 16, borderRadius: 10, border: `1px solid ${colors.accentGreen}`, background: 'rgba(63,185,80,.08)' }}>
+            <strong style={{ color: colors.accentGreen }}>Save these recovery codes now. They will not be shown again.</strong>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, marginTop: 12 }}>
+              {mfaRecoveryCodes.map(code => <code key={code} style={{ color: colors.text }}>{code}</code>)}
+            </div>
+          </div>
+        )}
       </section>
 
       <section style={cardStyle} aria-labelledby="email-heading">

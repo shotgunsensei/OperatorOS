@@ -2,13 +2,20 @@ import { spawn, spawnSync } from 'node:child_process';
 import { closeSync, createWriteStream, openSync } from 'node:fs';
 import net from 'node:net';
 
-export const PNPM = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+// A bare pnpm shim can resolve an unrelated globally bundled CLI (the Codex
+// desktop runtime currently exposes pnpm 11). Route every repository child
+// command through Corepack so packageManager remains the single version
+// authority on Windows, CI, and Replit.
+export const PNPM = 'corepack-pnpm';
 
 function requiresWindowsCommandShell(command) {
   return process.platform === 'win32' && /\.(?:cmd|bat)$/iu.test(command);
 }
 
 function executableInvocation(command, args) {
+  if (command === PNPM) {
+    return executableInvocation(process.platform === 'win32' ? 'corepack.cmd' : 'corepack', ['pnpm', ...args]);
+  }
   if (!requiresWindowsCommandShell(command)) return { command, args };
   return {
     command: process.env.ComSpec || 'cmd.exe',

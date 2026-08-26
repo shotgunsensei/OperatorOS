@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { Activity, Beaker, ExternalLink, FlaskConical, Grid2X2, LifeBuoy, Settings, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
@@ -59,6 +59,18 @@ export default function FaultlineLabShell({ routePath }: FaultlineLabShellProps)
     : route.area === 'settings' && platformAdmin
       ? <Link className="faultline-action" href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/faultlinelab`}><ExternalLink size={15} />Platform settings</Link>
       : <Link className="faultline-action" href={hrefFor('/challenges')}><Beaker size={15} />Browse challenges</Link>;
+
+  useEffect(() => {
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const previousManifest = manifest?.href;
+    if (manifest) manifest.href = '/faultlinelab.webmanifest';
+    if ('serviceWorker' in navigator && window.location.hostname.toLowerCase() === 'faultlinelab.operatoros.net') {
+      void navigator.serviceWorker.register('/faultlinelab-sw.js', { scope: '/' }).catch(() => undefined);
+    }
+    return () => {
+      if (manifest && previousManifest) manifest.href = previousManifest;
+    };
+  }, [pathname]);
 
   return (
     <ModuleApplicationShell

@@ -1,5 +1,23 @@
 # Phase 37 — OutCall Source Recovery and Go-Live Report
 
+## Current owner-authorized reconstruction overlay (2026-08-26)
+
+The missing historical OutCall repository was not recovered. The owner has now
+explicitly authorized recreating unavailable source to close source/local gaps,
+so the existing OperatorOS shared-runtime implementation is the canonical
+current reconstruction. This changes the source-parity disposition below: its
+single current capability is `ACTIVE_NATIVE`, with zero waiver and zero
+blocker, and the complete 7,396-capability parity gate passes.
+
+The activation decision remains **HOLD / `coming_soon`**. Reconstruction
+authority does not imply Twilio provider acceptance, a live verified-self call,
+production database migration, DNS/deployment acceptance, or permission to
+publish. The current code retains the verified-self/single-destination,
+non-emergency, consent, signature, replay, rate-limit, encryption, audit,
+export, and deletion boundaries. Provider activation requires complete reviewed
+configuration plus the controlled sandbox and deployed checks described later
+in this report.
+
 Evidence date: 2026-08-13
 Branch: `codex/phase-37-outcall-source-integration`
 Base: `f1d07595f361c434fdb0cf077352a470157ad09f`

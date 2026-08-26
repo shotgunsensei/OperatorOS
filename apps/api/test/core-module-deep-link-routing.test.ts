@@ -137,7 +137,7 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['campaigns', 'campaign-123'])?.sectionId, 'brandforgeos-campaigns');
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['dashboard'])?.sectionId, 'snapproofos-overview-route');
-  assert.equal(resolveCoreModuleDeepLink('snapproofos', ['cases', 'case-123'])?.sectionId, 'snapproofos-jobs');
+  assert.equal(resolveCoreModuleDeepLink('snapproofos', ['cases', 'case-123'])?.sectionId, 'snapproofos-cases');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['evidence', 'evidence-123'])?.sectionId, 'snapproofos-evidence');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['reports', 'report-123'])?.sectionId, 'snapproofos-reports');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['unknown']), null);
@@ -177,6 +177,9 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   assert.match(appPage, /new MutationObserver/);
   assert.match(appPage, /target\.scrollIntoView/);
   assert.match(appPage, /target\.focus/);
+  assert.match(tradeFlowKitShell, /operatorConsolePageUrl\('tenant-users'\)/);
+  assert.doesNotMatch(tradeFlowKitShell, /app\/team/);
+  assert.match(tradeFlowKitShell, /Review OutCall availability/);
 
   for (const [source, targetId] of [
     [tradeFlowKitShell, 'tradeflowkit-overview'],

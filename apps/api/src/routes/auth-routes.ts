@@ -31,6 +31,18 @@ import {
   isTenantInviteToken,
   TenantInvitationError,
 } from '../lib/tenant-invitations.js';
+import {
+  AuthMfaError,
+  beginAuthMfaEnrollment,
+  confirmAuthMfaEnrollment,
+  consumeAuthMfaLoginChallenge,
+  createAuthMfaLoginChallenge,
+  disableAuthMfa,
+  getAuthMfaStatus,
+  MFA_CHALLENGE_COOKIE_NAME,
+  MFA_CHALLENGE_TTL_SECONDS,
+  regenerateAuthMfaRecoveryCodes,
+} from '../lib/auth-mfa.js';
 
 const AUTH_IP_RATE_LIMIT = 10;
 const AUTH_RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -44,6 +56,17 @@ function setAuthResponseHeaders(reply: any) {
   reply.header('Cache-Control', 'no-store');
   reply.header('Pragma', 'no-cache');
   reply.header('Referrer-Policy', 'no-referrer');
+}
+
+function getMfaChallengeCookieOptions() {
+  return { ...getSessionCookieOptions(), maxAge: MFA_CHALLENGE_TTL_SECONDS };
+}
+
+function sendMfaError(reply: any, error: unknown) {
+  if (error instanceof AuthMfaError) {
+    return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+  }
+  throw error;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -273,6 +296,19 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     await resetFailedLogins(user.id);
+    const mfaStatus = await getAuthMfaStatus(user.id);
+    if (mfaStatus.enabled) {
+      const challengeToken = await createAuthMfaLoginChallenge(user.id);
+      reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
+      reply.setCookie(MFA_CHALLENGE_COOKIE_NAME, challengeToken, getMfaChallengeCookieOptions());
+      await logAudit(user.id, 'login_mfa_challenge_created', user.id, { email: normalizedEmail }, request.ip);
+      return {
+        mfaRequired: true,
+        methods: ['totp', 'recovery_code'],
+        challengeExpiresIn: MFA_CHALLENGE_TTL_SECONDS,
+      };
+    }
+
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
     const [refreshedUser] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
     await logAudit(user.id, 'login_success', user.id, { email: normalizedEmail }, request.ip);
@@ -288,6 +324,121 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
 
     return { user: sanitizeUser(refreshedUser) };
+  });
+
+  app.post('/v1/auth/login/mfa', async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    const ip = getIp(request);
+    if (!checkRateLimit(`login-mfa:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+      return reply.code(429).send({ error: 'Too many MFA attempts. Please sign in again later.', code: 'RATE_LIMITED' });
+    }
+    const challengeToken = String((request as any).cookies?.[MFA_CHALLENGE_COOKIE_NAME] ?? '');
+    const { code, recoveryCode } = (request.body ?? {}) as any;
+    if (!challengeToken) {
+      return reply.code(401).send({ error: 'The MFA login challenge is missing or expired', code: 'MFA_CHALLENGE_INVALID' });
+    }
+    if ((!code || typeof code !== 'string') && (!recoveryCode || typeof recoveryCode !== 'string')) {
+      return reply.code(400).send({ error: 'An authenticator or recovery code is required', code: 'VALIDATION_ERROR' });
+    }
+    try {
+      const result = await consumeAuthMfaLoginChallenge({ challengeToken, code, recoveryCode });
+      if (!result.verified) {
+        if (result.attemptsRemaining === 0) reply.clearCookie(MFA_CHALLENGE_COOKIE_NAME, getSessionClearCookieOptions());
+        return reply.code(401).send({
+          error: result.attemptsRemaining > 0
+            ? 'The authenticator or recovery code is invalid'
+            : 'Too many invalid MFA attempts. Sign in again.',
+          code: 'MFA_CODE_INVALID',
+          attemptsRemaining: result.attemptsRemaining,
+        });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, result.userId)).limit(1);
+      if (!user || user.status !== 'active' || (user.lockedUntil && user.lockedUntil > new Date())) {
+        reply.clearCookie(MFA_CHALLENGE_COOKIE_NAME, getSessionClearCookieOptions());
+        return reply.code(401).send({ error: 'This account cannot complete sign in', code: 'MFA_ACCOUNT_UNAVAILABLE' });
+      }
+      await resetFailedLogins(user.id);
+      await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+      const [refreshedUser] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
+      const token = signToken({
+        userId: refreshedUser.id,
+        email: refreshedUser.email,
+        role: refreshedUser.role,
+        tokenVersion: refreshedUser.tokenVersion,
+        sessionType: 'platform',
+      });
+      reply.clearCookie(MFA_CHALLENGE_COOKIE_NAME, getSessionClearCookieOptions());
+      reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+      await logAudit(user.id, 'login_success', user.id, { email: user.email, mfa: true }, request.ip);
+      return { user: sanitizeUser(refreshedUser), mfaVerified: true };
+    } catch (error) {
+      reply.clearCookie(MFA_CHALLENGE_COOKIE_NAME, getSessionClearCookieOptions());
+      return sendMfaError(reply, error);
+    }
+  });
+
+  app.get('/v1/auth/mfa/status', { preHandler: [authenticate] }, async (request: any, reply) => {
+    setAuthResponseHeaders(reply);
+    return getAuthMfaStatus(request.user.id);
+  });
+
+  app.post('/v1/auth/mfa/setup', { preHandler: [authenticate] }, async (request: any, reply) => {
+    setAuthResponseHeaders(reply);
+    try {
+      const setup = await beginAuthMfaEnrollment({ userId: request.user.id, email: request.user.email });
+      await logAudit(request.user.id, 'mfa_enrollment_started', request.user.id, {}, request.ip);
+      return setup;
+    } catch (error) {
+      return sendMfaError(reply, error);
+    }
+  });
+
+  app.post('/v1/auth/mfa/verify', { preHandler: [authenticate] }, async (request: any, reply) => {
+    setAuthResponseHeaders(reply);
+    const { code } = (request.body ?? {}) as any;
+    if (!code || typeof code !== 'string') {
+      return reply.code(400).send({ error: 'Authenticator code is required', code: 'VALIDATION_ERROR' });
+    }
+    try {
+      const result = await confirmAuthMfaEnrollment({ userId: request.user.id, code });
+      await logAudit(request.user.id, 'mfa_enabled', request.user.id, { recoveryCodeCount: result.recoveryCodes.length }, request.ip);
+      return result;
+    } catch (error) {
+      return sendMfaError(reply, error);
+    }
+  });
+
+  app.post('/v1/auth/mfa/disable', { preHandler: [authenticate] }, async (request: any, reply) => {
+    setAuthResponseHeaders(reply);
+    const { password, code, recoveryCode } = (request.body ?? {}) as any;
+    if (!password || typeof password !== 'string') {
+      return reply.code(400).send({ error: 'Current password is required', code: 'VALIDATION_ERROR' });
+    }
+    if (!await verifyPassword(password, request.user.passwordHash)) {
+      return reply.code(401).send({ error: 'Current password is incorrect', code: 'INVALID_CREDENTIALS' });
+    }
+    try {
+      const result = await disableAuthMfa({ userId: request.user.id, code, recoveryCode });
+      await db.update(users).set({ tokenVersion: sql`token_version + 1`, updatedAt: new Date() }).where(eq(users.id, request.user.id));
+      await logAudit(request.user.id, 'mfa_disabled', request.user.id, {}, request.ip);
+      reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
+      return { ...result, signedOutEverywhere: true };
+    } catch (error) {
+      return sendMfaError(reply, error);
+    }
+  });
+
+  app.post('/v1/auth/mfa/recovery-codes', { preHandler: [authenticate] }, async (request: any, reply) => {
+    setAuthResponseHeaders(reply);
+    const { code, recoveryCode } = (request.body ?? {}) as any;
+    try {
+      const result = await regenerateAuthMfaRecoveryCodes({ userId: request.user.id, code, recoveryCode });
+      await logAudit(request.user.id, 'mfa_recovery_codes_regenerated', request.user.id, { recoveryCodeCount: result.recoveryCodes.length }, request.ip);
+      return result;
+    } catch (error) {
+      return sendMfaError(reply, error);
+    }
   });
 
   const logoutHandler = async (request: any, reply: any) => {

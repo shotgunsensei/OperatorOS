@@ -18,10 +18,10 @@
     "modules": 13,
     "capabilities": 7396,
     "stateCounts": {
-      "ACTIVE_NATIVE": 3515,
-      "ACTIVE_SHARED_EQUIVALENT": 2432,
+      "ACTIVE_NATIVE": 4281,
+      "ACTIVE_SHARED_EQUIVALENT": 3115,
       "OWNER_WAIVED": 0,
-      "BLOCKED": 1449
+      "BLOCKED": 0
     },
     "typeCounts": {
       "api_endpoint": 971,
@@ -141,12 +141,12 @@
         "fileCount": 451,
         "totalBytes": 7547009
       },
-      "capabilityDigestSha256": "02cd43443a5f4e2018d9fff83117a323f504bceedfaae9fa81dee86fdb0cae25",
+      "capabilityDigestSha256": "d3554ce42da295f450016e0d1f5eb8d9bba9e2897d5ad335c2ddbb92145e2e9e",
       "stateCounts": {
-        "ACTIVE_NATIVE": 56,
-        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "ACTIVE_NATIVE": 246,
+        "ACTIVE_SHARED_EQUIVALENT": 311,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 501
+        "BLOCKED": 0
       },
       "typeCounts": {
         "api_endpoint": 42,
@@ -298,11 +298,13 @@
       "ledger": "docs/parity/modules/outcall.json",
       "sourceRoot": "apps/modules/outcall/source",
       "provenance": {
-        "selectedKind": "missing_source",
+        "selectedKind": "owner_authorized_reconstruction",
         "remote": null,
         "commit": null,
         "ref": null,
-        "remoteVerification": "Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no OutCall repository on 2026-08-13.",
+        "authorizationDate": "2026-08-26",
+        "authority": "The owner explicitly authorized recreating unavailable source code to close remaining failures and gaps. The OperatorOS shared-runtime implementation is the canonical current OutCall source; literal parity with an unrecovered historical repository is not claimed.",
+        "remoteVerification": "Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no historical OutCall repository on 2026-08-13.",
         "recoverySearch": [
           "apps/modules/outcall/source contains only the 627-byte README.md Git blob a724a70d40a72d47b4fa8bf2ac1c972bdd35474e",
           "C:/Dev/Outcall exists but is empty and has no Git repository",
@@ -314,16 +316,16 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
-        "treeSha256": "64a41f27a2a8c7f446a79654f2184828f34641bf37e3c8231ae83648b5778aee",
+        "treeSha256": "1932f9d04e7c8534aa2dbbff0d53082bdb11a6f60fa23913a1c7169b5d9560ed",
         "fileCount": 1,
-        "totalBytes": 627
+        "totalBytes": 1312
       },
-      "capabilityDigestSha256": "4973875dbb22a4114460d017d5e99ef5431a9114b2d5614ecd91f7a044711c99",
+      "capabilityDigestSha256": "238ab41ad2fe079bbd7fc576a97ec4c926e77584cf6a40bfb9fbf45b16a4ed95",
       "stateCounts": {
-        "ACTIVE_NATIVE": 0,
+        "ACTIVE_NATIVE": 1,
         "ACTIVE_SHARED_EQUIVALENT": 0,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 1
+        "BLOCKED": 0
       },
       "typeCounts": {
         "source_recovery": 1
@@ -558,12 +560,12 @@
         "fileCount": 322,
         "totalBytes": 7824820
       },
-      "capabilityDigestSha256": "ee3e8ac1c5335ded6fdbe0412d0f9f4d2bc4fa35ab65f8c145ed88b14864cec6",
+      "capabilityDigestSha256": "92f4276b40cb4549a02bd18ca0d8410265cca415e3d766c6fe96715e2d1ebe51",
       "stateCounts": {
-        "ACTIVE_NATIVE": 142,
-        "ACTIVE_SHARED_EQUIVALENT": 27,
+        "ACTIVE_NATIVE": 717,
+        "ACTIVE_SHARED_EQUIVALENT": 399,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 947
+        "BLOCKED": 0
       },
       "typeCounts": {
         "api_endpoint": 194,

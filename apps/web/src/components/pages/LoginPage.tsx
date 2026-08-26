@@ -17,18 +17,32 @@ const BENEFITS = [
 ];
 
 export default function LoginPage({ onSwitch }: LoginPageProps) {
-  const { login } = useAuth();
+  const { login, completeMfaLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      if (mfaRequired) {
+        await completeMfaLogin(useRecoveryCode
+          ? { recoveryCode: mfaCode }
+          : { code: mfaCode });
+      } else {
+        const result = await login(email, password);
+        if (result.mfaRequired) {
+          setMfaRequired(true);
+          setPassword('');
+          return;
+        }
+      }
     } catch (err: any) {
       setError(err.error || 'We could not sign you in. Check your credentials and try again.');
     } finally {
@@ -165,13 +179,15 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
         <div className="operatoros-auth-form">
           <div style={{ marginBottom: 30 }}>
             <div style={{ color: brand.accentCyan, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>
-              Welcome back
+              {mfaRequired ? 'Identity verification' : 'Welcome back'}
             </div>
             <h2 style={{ margin: '9px 0 8px', fontFamily: brand.fontDisplay, fontSize: 34, letterSpacing: '-.04em' }}>
-              Enter your command center.
+              {mfaRequired ? 'Confirm it is really you.' : 'Enter your command center.'}
             </h2>
             <p style={{ margin: 0, color: brand.textSecondary, fontSize: 14, lineHeight: 1.6 }}>
-              Your app access and active organization will be restored automatically.
+              {mfaRequired
+                ? 'Enter the current six-digit authenticator code or one unused recovery code.'
+                : 'Your app access and active organization will be restored automatically.'}
             </p>
           </div>
 
@@ -184,7 +200,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
           )}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 17 }}>
+            {!mfaRequired && <div style={{ marginBottom: 17 }}>
               <label htmlFor="operatoros-email" style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 7 }}>
                 Work email
               </label>
@@ -199,9 +215,9 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
                 required
                 placeholder="you@company.com"
               />
-            </div>
+            </div>}
 
-            <div style={{ marginBottom: 8 }}>
+            {!mfaRequired && <div style={{ marginBottom: 8 }}>
               <label htmlFor="operatoros-password" style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 7 }}>
                 Password
               </label>
@@ -216,16 +232,51 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
                 required
                 placeholder="Enter your password"
               />
-            </div>
+            </div>}
 
-            <div style={{ textAlign: 'right', marginBottom: 22 }}>
+            {mfaRequired && <div style={{ marginBottom: 17 }}>
+              <label htmlFor="operatoros-mfa-code" style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 7 }}>
+                {useRecoveryCode ? 'Recovery code' : 'Authenticator code'}
+              </label>
+              <input
+                id="operatoros-mfa-code"
+                className="operatoros-auth-input"
+                data-testid="input-mfa-code"
+                type="text"
+                inputMode={useRecoveryCode ? 'text' : 'numeric'}
+                autoComplete="one-time-code"
+                value={mfaCode}
+                onChange={event => setMfaCode(event.target.value)}
+                required
+                autoFocus
+                placeholder={useRecoveryCode ? 'ABCDE-12345' : '123456'}
+              />
+            </div>}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 22 }}>
+              {mfaRequired && <button
+                type="button"
+                className="operatoros-auth-link"
+                data-testid="button-mfa-mode"
+                onClick={() => { setUseRecoveryCode(value => !value); setMfaCode(''); setError(''); }}
+                style={{ background: 'none', border: 'none', color: brand.accentCyan, cursor: 'pointer', fontSize: 13, padding: 4 }}
+              >{useRecoveryCode ? 'Use authenticator code' : 'Use a recovery code'}</button>}
               <button
                 type="button"
                 className="operatoros-auth-link"
                 data-testid="link-forgot-password"
-                onClick={() => onSwitch('forgot-password')}
+                onClick={() => {
+                  if (mfaRequired) {
+                    setMfaRequired(false);
+                    setMfaCode('');
+                    setUseRecoveryCode(false);
+                    setError('');
+                    return;
+                  }
+                  onSwitch('forgot-password');
+                }}
                 style={{ background: 'none', border: 'none', color: brand.accentCyan, cursor: 'pointer', fontSize: 13, padding: 4 }}
-              >Forgot password?</button>
+              >{mfaRequired ? 'Start sign-in again' : 'Forgot password?'}</button>
             </div>
 
             <button
@@ -241,11 +292,13 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
                 boxShadow: loading ? 'none' : brand.ctaGlowSoft, transition: 'transform 160ms ease, box-shadow 160ms ease',
               }}
             >
-              {loading ? 'Opening your command center…' : <>Continue to OperatorOS <ArrowRight size={16} /></>}
+              {loading
+                ? (mfaRequired ? 'Verifying identity…' : 'Opening your command center…')
+                : <>{mfaRequired ? 'Verify and continue' : 'Continue to OperatorOS'} <ArrowRight size={16} /></>}
             </button>
           </form>
 
-          <div style={{ marginTop: 24, paddingTop: 22, borderTop: `1px solid ${brand.borderSoft}`, textAlign: 'center', fontSize: 13, color: brand.textSecondary }}>
+          {!mfaRequired && <div style={{ marginTop: 24, paddingTop: 22, borderTop: `1px solid ${brand.borderSoft}`, textAlign: 'center', fontSize: 13, color: brand.textSecondary }}>
             New to the ecosystem?{' '}
             <button
               className="operatoros-auth-link"
@@ -253,7 +306,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
               onClick={() => onSwitch('register')}
               style={{ background: 'none', border: 'none', color: brand.accentCyan, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
             >Create your free command layer</button>
-          </div>
+          </div>}
         </div>
       </section>
     </main>

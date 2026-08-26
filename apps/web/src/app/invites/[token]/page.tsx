@@ -44,7 +44,7 @@ function clearLegacyInviteRelay() {
 function InviteAcceptInner() {
   const params = useParams<{ token: string }>();
   const router = useRouter();
-  const { user, loading, login, registerWithInvite, logout } = useAuth();
+  const { user, loading, login, completeMfaLogin, registerWithInvite, logout } = useAuth();
   const token = decodeURIComponent(String(params?.token ?? ''));
   const [phase, setPhase] = useState<Phase>('loading');
   const [authMode, setAuthMode] = useState<AuthMode>('create');
@@ -52,6 +52,9 @@ function InviteAcceptInner() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [mfaPending, setMfaPending] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -126,11 +129,34 @@ function InviteAcceptInner() {
     setErrorCode(null);
     setErrorText(null);
     try {
-      await login(peek.email, password);
+      const result = await login(peek.email, password);
+      if (result.mfaRequired) {
+        setMfaPending(true);
+        setPassword('');
+        return;
+      }
       setPhase('decision');
     } catch (error: any) {
       setErrorCode(error?.code ?? 'INVALID_CREDENTIALS');
       setErrorText(error?.error ?? 'We could not sign you in. Check your password and try again.');
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const completeMfaSignIn = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (authBusy) return;
+    setAuthBusy(true);
+    setErrorCode(null);
+    setErrorText(null);
+    try {
+      await completeMfaLogin(useRecoveryCode ? { recoveryCode: mfaCode } : { code: mfaCode });
+      setMfaPending(false);
+      setPhase('decision');
+    } catch (error: any) {
+      setErrorCode(error?.code ?? 'MFA_CODE_INVALID');
+      setErrorText(error?.error ?? 'The authenticator or recovery code was not accepted.');
     } finally {
       setAuthBusy(false);
     }
@@ -289,14 +315,14 @@ function InviteAcceptInner() {
                 aria-selected={authMode === 'create'}
                 className={authMode === 'create' ? 'active' : ''}
                 disabled={peek.status !== 'pending'}
-                onClick={() => { setAuthMode('create'); setErrorCode(null); setErrorText(null); }}
+                onClick={() => { setAuthMode('create'); setMfaPending(false); setErrorCode(null); setErrorText(null); }}
               >Create account</button>
               <button
                 type="button"
                 role="tab"
                 aria-selected={authMode === 'sign-in'}
                 className={authMode === 'sign-in' ? 'active' : ''}
-                onClick={() => { setAuthMode('sign-in'); setErrorCode(null); setErrorText(null); }}
+                onClick={() => { setAuthMode('sign-in'); setMfaPending(false); setErrorCode(null); setErrorText(null); }}
               >Sign in</button>
             </div>
 
@@ -309,6 +335,27 @@ function InviteAcceptInner() {
                 <label className="invite-label">Create password<input className="invite-input" type="password" value={password} onChange={event => setPassword(event.target.value)} required minLength={8} maxLength={128} autoComplete="new-password" /></label>
                 <label className="invite-label">Confirm password<input className="invite-input" type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required minLength={8} maxLength={128} autoComplete="new-password" /></label>
                 <button className="invite-primary" type="submit" disabled={authBusy} data-testid="button-invite-register"><UserPlus size={18} />{authBusy ? 'Creating account…' : 'Create account and review invitation'}</button>
+              </form>
+            ) : mfaPending ? (
+              <form className="invite-form" onSubmit={completeMfaSignIn} data-testid="form-invite-mfa">
+                <p className="invite-context">Password accepted. Confirm the second factor for <strong>{peek.email}</strong> before reviewing this invitation.</p>
+                <label className="invite-label">{useRecoveryCode ? 'Recovery code' : 'Authenticator code'}
+                  <input
+                    className="invite-input"
+                    data-testid="input-invite-mfa-code"
+                    value={mfaCode}
+                    onChange={event => setMfaCode(event.target.value)}
+                    inputMode={useRecoveryCode ? 'text' : 'numeric'}
+                    autoComplete="one-time-code"
+                    required
+                    autoFocus
+                  />
+                </label>
+                <button className="invite-secondary" type="button" onClick={() => { setUseRecoveryCode(value => !value); setMfaCode(''); }}>
+                  {useRecoveryCode ? 'Use authenticator code' : 'Use a recovery code'}
+                </button>
+                <button className="invite-primary" type="submit" disabled={authBusy} data-testid="button-invite-mfa"><KeyRound size={18} />{authBusy ? 'Verifying…' : 'Verify and review invitation'}</button>
+                <button className="invite-secondary" type="button" onClick={() => { setMfaPending(false); setMfaCode(''); setErrorCode(null); setErrorText(null); }}>Start sign-in again</button>
               </form>
             ) : (
               <form className="invite-form" onSubmit={signIn} data-testid="form-invite-login">
@@ -399,6 +446,9 @@ function humanizeError(code: string | null, fallback: string | null): string {
       return 'You are signed in with a different account. Sign out and use the invited email shown above.';
     case 'INVALID_CREDENTIALS':
       return 'The password did not match the invited account. Try again or reset the password from the sign-in page.';
+    case 'MFA_CODE_INVALID':
+    case 'MFA_CHALLENGE_INVALID':
+      return fallback ?? 'The second factor was not accepted. Start sign-in again if the challenge expired.';
     case 'INVITE_TENANT_UNAVAILABLE':
       return 'This organization is not currently available. Contact its owner before trying again.';
     default:

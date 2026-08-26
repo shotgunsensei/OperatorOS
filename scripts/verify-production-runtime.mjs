@@ -136,11 +136,11 @@ export function validateReleaseIdentity(payload, expectedCommit) {
   }
   if (
     payload?.databaseRelease?.contractVersion !== 1
-    || payload?.databaseRelease?.releaseVersion !== 54
-    || payload?.databaseRelease?.stepCount !== 54
-    || payload?.databaseRelease?.lastStep !== 'identity_onboarding_integrity'
+    || payload?.databaseRelease?.releaseVersion !== 56
+    || payload?.databaseRelease?.stepCount !== 56
+    || payload?.databaseRelease?.lastStep !== 'auth_mfa_tables'
   ) {
-    issues.push('database release identity does not match version 54');
+    issues.push('database release identity does not match version 56');
   }
   return issues;
 }

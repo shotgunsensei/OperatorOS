@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useCallback, useMemo } from 'react';
-import { Activity, BarChart3, CalendarDays, CheckCircle2, FileText, Grid2X2, LayoutDashboard, Megaphone, Palette, PlugZap, Settings, Sparkles, UserRound } from 'lucide-react';
+import { Activity, BarChart3, CalendarDays, CheckCircle2, FileText, Grid2X2, LayoutDashboard, Megaphone, Palette, PlugZap, Settings, Sparkles, UserRound, Users } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell, type ModuleRouteManifestGroup, type ModuleThemeTokens } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
@@ -27,6 +27,7 @@ const nav: readonly ModuleRouteManifestGroup[] = [
   { id: 'create', label: 'Creative production', items: [
     { id: 'overview', canonicalPath: '/', label: 'Dashboard', icon: LayoutDashboard, activeMatch: { kind: 'exact' } },
     { id: 'brands', canonicalPath: '/brands', label: 'Brands', icon: Palette, activeMatch: { kind: 'prefix' } },
+    { id: 'personas', canonicalPath: '/personas', label: 'Personas', icon: Users, activeMatch: { kind: 'prefix' } },
     { id: 'campaigns', canonicalPath: '/campaigns', label: 'Campaigns', icon: Megaphone, activeMatch: { kind: 'prefix' } },
     { id: 'content', canonicalPath: '/content', label: 'Content & assets', icon: FileText, activeMatch: { kind: 'prefix' } },
     { id: 'calendar', canonicalPath: '/calendar', label: 'Calendar', icon: CalendarDays, activeMatch: { kind: 'prefix' } },
@@ -44,6 +45,7 @@ const nav: readonly ModuleRouteManifestGroup[] = [
 const copy: Record<string, { eyebrow: string; title: string; subtitle: string }> = {
   dashboard: { eyebrow: 'Creative command', title: 'BrandForgeOS dashboard', subtitle: 'Coordinate real brands, campaigns, assets, approvals, and measurable launch work.' },
   brands: { eyebrow: 'Reusable identity systems', title: 'Brands and audiences', subtitle: 'Manage durable brand kits, voice, visual rules, assets, and audience evidence.' },
+  personas: { eyebrow: 'Audience evidence', title: 'Personas', subtitle: 'Maintain durable audience profiles that campaigns can select and measure.' },
   campaigns: { eyebrow: 'Campaign production', title: 'Campaigns', subtitle: 'Move briefs, offers, content, and approval state through a durable campaign workflow.' },
   content: { eyebrow: 'Content production', title: 'Content and assets', subtitle: 'Create reviewable copy and generation artifacts without presenting provider-disabled output as complete.' },
   calendar: { eyebrow: 'Publishing rhythm', title: 'Content calendar', subtitle: 'Schedule persisted campaign deliverables and review upcoming work.' },
@@ -58,7 +60,8 @@ const copy: Record<string, { eyebrow: string; title: string; subtitle: string }>
 function area(path?: string): string {
   const root = (path || '/').split(/[?#]/u, 1)[0].replace(/^\/modules\/brandforgeos\/?/u, '').split('/').filter(Boolean)[0] || 'dashboard';
   if (['dashboard','home','login'].includes(root)) return 'dashboard';
-  if (['brands','personas'].includes(root)) return 'brands';
+  if (root === 'brands') return 'brands';
+  if (root === 'personas') return 'personas';
   if (['campaigns','offers'].includes(root)) return 'campaigns';
   if (['content','assets','copy-studio'].includes(root)) return 'content';
   if (root === 'calendar' || root === 'calendar-items') return 'calendar';

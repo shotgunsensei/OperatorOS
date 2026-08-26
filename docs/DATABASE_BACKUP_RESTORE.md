@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 55 ordered step identifiers without secrets
+`db:plan` is read-only and prints 56 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -39,6 +39,31 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+Release v56 appends `auth_mfa_tables` after the v55 invitation-consent step. It
+adds encrypted TOTP enrollment state, one-way recovery-code hashes with
+single-use timestamps, and short-lived single-use login challenges with bounded
+failure attempts. Before production apply, require a verified backup covering
+users, credentials, sessions, tenant membership, invitations, entitlements,
+billing, platform audit, and all module data. Backup evidence and release logs
+must never include MFA plaintext secrets, challenge tokens, recovery codes, or
+encryption keys. The additive tables may remain during application rollback,
+but users enrolled on v56 cannot complete MFA through a v55 application. Do not
+route authentication traffic to v55 while any account requires MFA; either
+retain the v56 auth implementation or restore and validate a pre-v56 database
+in a new database before an authorized traffic switch.
+
+### Release v56 disposable rehearsal (2026-08-26)
+
+On an isolated PostgreSQL 16 Docker database, the supported root release path
+clean-applied and verified all 56 ordered operations in 22,083 ms with final
+step `auth_mfa_tables`. An immediate second application verified the same
+release in 2,848 ms. The integration aggregate then passed 28/28 with no skips,
+including tenant isolation and shared-platform controls. The disposable reset
+first releases foreign-key and relation locks in bounded autocommit operations,
+so a stock PostgreSQL server does not require a `max_locks_per_transaction`
+exception merely to prepare the test database. No production database was
+contacted or modified.
 
 Release v55 appends `tenant_invitation_consent` after the v54 identity and
 onboarding integrity step. It adds nullable `tenant_invites.declined_at`, a

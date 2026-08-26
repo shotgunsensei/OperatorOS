@@ -169,6 +169,7 @@ function sectionFromView(view?: string): Section {
   if (view === 'generate') return 'generate';
   if (view === 'sources') return 'sync';
   if (view === 'settings') return 'account';
+  if (view === 'admin') return 'admin';
   return 'dashboard';
 }
 

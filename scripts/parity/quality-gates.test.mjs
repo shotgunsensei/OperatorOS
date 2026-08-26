@@ -7,8 +7,8 @@ import {
   validateControlIntegrity,
   validateVisualContracts,
 } from './lib/quality.mjs';
-import { assertDisposableDatabaseEnvironment } from './lib/database.mjs';
-import { parseNodeTestSummary, requiredTestExitCode } from './lib/process.mjs';
+import { assertDisposableDatabaseEnvironment, resetDisposablePublicSchema } from './lib/database.mjs';
+import { PNPM, parseNodeTestSummary, requiredTestExitCode, runCaptured } from './lib/process.mjs';
 
 test('visual contract covers 13 module-owned suites at desktop, tablet, and mobile widths', () => {
   const contracts = readVisualContracts();
@@ -108,6 +108,39 @@ test('database reset guard accepts only marked loopback test databases', () => {
     PARITY_DATABASE_IS_DISPOSABLE: '1',
     DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros',
   }), /database name/u);
+});
+
+test('disposable database reset releases locks between foreign keys and relations', async () => {
+  const statements = [];
+  const client = {
+    async query(statement) {
+      statements.push(statement);
+      if (statement.includes('FROM pg_constraint')) {
+        return { rows: [{ schema_name: 'public', object_name: 'child"table', constraint_name: 'fk"parent' }] };
+      }
+      if (statement.includes('FROM pg_class relation')) {
+        return { rows: [
+          { schema_name: 'public', object_name: 'current_view', object_kind: 'v' },
+          { schema_name: 'public', object_name: 'parent_table', object_kind: 'r' },
+        ] };
+      }
+      return { rows: [] };
+    },
+  };
+  const dropped = await resetDisposablePublicSchema(client);
+  assert.deepEqual(dropped, { foreignKeys: 1, views: 1, tables: 1, sequences: 0, foreignTables: 0 });
+  assert.ok(statements.includes('ALTER TABLE IF EXISTS "public"."child""table" DROP CONSTRAINT IF EXISTS "fk""parent"'));
+  assert.ok(statements.includes('DROP VIEW IF EXISTS "public"."current_view" CASCADE'));
+  assert.ok(statements.includes('DROP TABLE IF EXISTS "public"."parent_table" CASCADE'));
+  assert.equal(statements.some(statement => /^begin$/iu.test(statement.trim())), false);
+  assert.ok(statements.indexOf('DROP SCHEMA IF EXISTS public CASCADE') > statements.indexOf('DROP TABLE IF EXISTS "public"."parent_table" CASCADE'));
+  assert.equal(statements.at(-1), 'CREATE SCHEMA public');
+});
+
+test('repository child pnpm commands resolve the packageManager version through Corepack', async () => {
+  const result = await runCaptured(PNPM, ['--version']);
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.trim(), '10.34.5');
 });
 
 test('required Node test summaries fail closed on skips and missing telemetry', () => {

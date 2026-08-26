@@ -7,19 +7,27 @@ import { buildOutCallSourceGate } from '../phase37-outcall-source-gate.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-test('Phase 37 records missing source without converting unknown capability counts to zero', () => {
+test('Phase 37 records the owner-authorized current reconstruction without claiming historical literal parity', () => {
   const gate = buildOutCallSourceGate();
-  assert.equal(gate.phaseStatus, 'BLOCKED');
-  assert.equal(gate.source.authoritativeCommit, null);
-  assert.equal(gate.source.exactSourceCapabilityCounts.pages, null);
-  assert.match(gate.source.exactSourceCapabilityCounts.reason, /null is not treated as zero/u);
-  assert.equal(gate.acceptance.authoritativeFullSourceExistsAndFingerprintPinned, false);
-  assert.equal(gate.acceptance.everySourceOutcomeMappedAndTested, false);
+  assert.equal(gate.phaseStatus, 'RECONSTRUCTED_SOURCE_LOCAL');
+  assert.equal(gate.blockerCode, 'PROVIDER_ACCEPTANCE_REQUIRED');
+  assert.equal(gate.source.historicalCommit, null);
+  assert.equal(gate.source.provenanceStatus, 'OWNER_AUTHORIZED_RECONSTRUCTION');
+  assert.ok(gate.source.canonicalCurrentImplementation.targetCount >= 7);
+  assert.ok(gate.source.canonicalCurrentImplementation.evidenceCount >= 5);
+  assert.match(gate.source.canonicalCurrentImplementation.fingerprintSha256, /^[a-f0-9]{64}$/u);
+  assert.equal(gate.acceptance.historicalFullSourceRecovered, false);
+  assert.equal(gate.acceptance.ownerAuthorizedReconstruction, true);
+  assert.equal(gate.acceptance.canonicalCurrentImplementationPinned, true);
+  assert.equal(gate.acceptance.everyCurrentSourceOutcomeMappedAndTested, true);
+  assert.equal(gate.acceptance.originalHistoricalLiteralParityClaimed, false);
 });
 
 test('OutCall activation remains locked across every launch authority', () => {
   const gate = buildOutCallSourceGate();
   assert.equal(gate.activationAllowed, false);
+  assert.equal(gate.acceptance.completeTwilioSandboxLifecycleProven, false);
+  assert.equal(gate.acceptance.goLiveAccepted, false);
   assert.equal(gate.activationLock.failClosed, true);
   assert.ok(Object.entries(gate.activationLock.checks).every(([, value]) => value === true));
   assert.equal(gate.activationLock.sdkCatalogStatus, 'coming_soon');

@@ -1,5 +1,24 @@
 # Phase 24 TradeFlowKit zero-gap restoration report
 
+## Current closure overlay (2026-08-26)
+
+The historical partial result below has been superseded for current source
+truth. TradeFlowKit now compiles **1,116/1,116** capabilities as **717
+`ACTIVE_NATIVE`** plus **399 `ACTIVE_SHARED_EQUIVALENT`**, with zero owner
+waivers, zero blocked rows, and zero parity failures. The restored source
+routes, recurring-work adapter, persisted business workflows, installable PWA
+shell, responsive visual contracts, API behavior, tenant/role controls, and
+exact-host workflows are included in the 14/14 green repository release gate.
+The former 947 stopped rows now bind to one bounded outcome-specific
+target/evidence domain. In particular, the 12 historical 2FA rows point only
+to the central OperatorOS MFA implementation and its focused API/UI tests;
+they are not claimed by generic password-auth evidence.
+
+This closes the source/local zero-gap criterion. It does not constitute a live
+deployment or provider/data-cutover acceptance; GitHub CI, fresh Replit build,
+production backup/v56 apply, deployed identity, exact-host acceptance,
+monitoring, and rollback evidence remain open.
+
 - Date: 2026-08-09
 - Branch: `codex/phase-23-tradeflowkit-visual-restoration`
 - Source root: `apps/modules/tradeflowkit/source`

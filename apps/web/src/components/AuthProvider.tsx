@@ -22,7 +22,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   authError: { code: string; message: string } | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
+  completeMfaLogin: (input: { code?: string; recoveryCode?: string }) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   registerWithInvite: (token: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -35,7 +36,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   authError: null,
-  login: async () => {},
+  login: async () => ({ mfaRequired: false }),
+  completeMfaLogin: async () => {},
   register: async () => {},
   registerWithInvite: async () => {},
   logout: async () => {},
@@ -114,8 +116,17 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const login = async (email: string, password: string) => {
     setAuthError(null);
     const data = await authApi.login(email, password);
+    if (data.mfaRequired) return { mfaRequired: true };
     // Seed active tenant immediately so the very first post-login request
     // already carries X-Tenant-Id, instead of racing TenantProvider.refresh().
+    setActiveTenantId(data.user?.currentTenantId ?? null);
+    setUser(data.user);
+    return { mfaRequired: false };
+  };
+
+  const completeMfaLogin = async (input: { code?: string; recoveryCode?: string }) => {
+    setAuthError(null);
+    const data = await authApi.completeMfaLogin(input);
     setActiveTenantId(data.user?.currentTenantId ?? null);
     setUser(data.user);
   };
@@ -153,7 +164,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, authError, login, register, registerWithInvite, logout, logoutEverywhere, refresh, clearAuthError }}>
+    <AuthContext.Provider value={{ user, loading, authError, login, completeMfaLogin, register, registerWithInvite, logout, logoutEverywhere, refresh, clearAuthError }}>
       {children}
     </AuthContext.Provider>
   );

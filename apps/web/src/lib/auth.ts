@@ -66,6 +66,9 @@ export const authApi = {
   login: (email: string, password: string) =>
     apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
+  completeMfaLogin: (input: { code?: string; recoveryCode?: string }) =>
+    apiFetch('/auth/login/mfa', { method: 'POST', body: JSON.stringify(input) }),
+
   logout: () => apiFetch('/auth/logout', { method: 'POST' }),
 
   logoutAll: () => apiFetch('/auth/logout-all', { method: 'POST' }),
@@ -91,6 +94,19 @@ export const authApi = {
 
   requestDeletion: (password: string) =>
     apiFetch('/auth/request-deletion', { method: 'POST', body: JSON.stringify({ password }) }),
+
+  mfaStatus: () => apiFetch('/auth/mfa/status'),
+
+  beginMfaSetup: () => apiFetch('/auth/mfa/setup', { method: 'POST' }),
+
+  verifyMfaSetup: (code: string) =>
+    apiFetch('/auth/mfa/verify', { method: 'POST', body: JSON.stringify({ code }) }),
+
+  disableMfa: (input: { password: string; code?: string; recoveryCode?: string }) =>
+    apiFetch('/auth/mfa/disable', { method: 'POST', body: JSON.stringify(input) }),
+
+  regenerateMfaRecoveryCodes: (input: { code?: string; recoveryCode?: string }) =>
+    apiFetch('/auth/mfa/recovery-codes', { method: 'POST', body: JSON.stringify(input) }),
 };
 
 export const saasApi = {

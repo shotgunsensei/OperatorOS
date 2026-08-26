@@ -114,7 +114,7 @@ export default function SnapProofWorkspace({ view, recordId, hrefFor = path => p
     setLoading(true);
     setError(null);
     try {
-      const needsCases = ['dashboard', 'evidence', 'review', 'reports', 'custody', 'retention'].includes(tab);
+      const needsCases = ['dashboard', 'cases', 'evidence', 'review', 'findings', 'reports', 'custody', 'retention'].includes(tab);
       const tasks: Array<Promise<void>> = [];
       if (tab === 'dashboard') tasks.push(moduleShellApi.snapproofos.dashboard().then(setDashboard));
       if (needsCases) tasks.push(moduleShellApi.snapproofos.listCases('limit=100').then(caseRows => {
@@ -155,13 +155,18 @@ export default function SnapProofWorkspace({ view, recordId, hrefFor = path => p
   useEffect(() => { if (recordId) chooseCase(recordId); }, [chooseCase, recordId]);
 
   const navigate = (next: Tab) => {
-    const path = next === 'cases' ? '/jobs' : next === 'dashboard' ? '/' : `/${next}`;
+    const path = next === 'dashboard' ? '/' : `/${next}`;
     router.push(hrefFor(path));
   };
 
   const selectCase = (caseId: string) => {
     chooseCase(caseId);
     router.push(hrefFor(`/jobs/${caseId}`));
+  };
+
+  const selectEvidenceCase = (caseId: string) => {
+    chooseCase(caseId);
+    router.push(hrefFor(`/cases/${caseId}`));
   };
 
   async function mutate(task: () => Promise<unknown>) {
@@ -206,8 +211,10 @@ export default function SnapProofWorkspace({ view, recordId, hrefFor = path => p
         <>
           {tab === 'dashboard' && <Dashboard counts={dashboard.counts || {}} cases={cases} onOpen={selectCase} navigate={navigate} />}
           {fieldTab && <SnapProofFieldWorkspace tab={fieldTab} selectedJobId={selectedCaseId} onSelectJob={chooseCase} onOpenJob={selectCase} />}
+          {tab === 'cases' && <CasesPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelect={selectEvidenceCase} mutate={mutate} />}
           {tab === 'evidence' && <EvidencePanel cases={cases} evidence={evidence} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'review' && <ReviewPanel caseDetail={detail} evidence={evidence} reports={reports} saving={saving} mutate={mutate} />}
+          {tab === 'findings' && <FindingsPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'reports' && <ReportsPanel cases={cases} reports={reports} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'custody' && <CustodyPanel cases={cases} selectedCaseId={selectedCaseId} events={custody} onSelectCase={chooseCase} />}
           {tab === 'retention' && <RetentionPanel cases={cases} selectedCase={selectedCase} onSelectCase={chooseCase} saving={saving} mutate={mutate} />}

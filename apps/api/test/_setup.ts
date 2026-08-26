@@ -147,6 +147,8 @@ export async function ensureSchemaReady() {
   await ensureIdentityOnboardingIntegrity();
   const { ensureTenantInvitationConsent } = await import('../src/lib/tenant-invitation-consent-db-init.js');
   await ensureTenantInvitationConsent();
+  const { ensureAuthMfaTables } = await import('../src/lib/auth-mfa-db-init.js');
+  await ensureAuthMfaTables();
   await ensureTestPlans();
 }
 

@@ -1,116 +1,87 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "phase": 37,
-  "evidenceDate": "2026-08-13",
-  "phaseStatus": "BLOCKED",
+  "evidenceDate": "2026-08-26",
+  "phaseStatus": "RECONSTRUCTED_SOURCE_LOCAL",
   "activationAllowed": false,
-  "blockerCode": "SOURCE_RECOVERY_REQUIRED",
+  "blockerCode": "PROVIDER_ACCEPTANCE_REQUIRED",
   "source": {
-    "authoritativeRepository": null,
-    "authoritativeCommit": null,
-    "authoritativeRef": null,
-    "provenanceStatus": "MISSING_SOURCE",
+    "historicalRepository": null,
+    "historicalCommit": null,
+    "historicalRef": null,
+    "historicalProvenanceStatus": "NOT_RECOVERED",
+    "provenanceStatus": "OWNER_AUTHORIZED_RECONSTRUCTION",
+    "authorizationDate": "2026-08-26",
+    "authority": "The owner explicitly authorized recreating unavailable source code to close remaining failures and gaps. The OperatorOS shared-runtime implementation is the canonical current OutCall source; literal parity with an unrecovered historical repository is not claimed.",
     "importedBoundary": {
       "root": "apps/modules/outcall/source",
       "files": [
         "apps/modules/outcall/source/README.md"
       ],
       "gitCanonicalFileCount": 1,
-      "gitCanonicalBytes": 627,
-      "treeSha256": "64a41f27a2a8c7f446a79654f2184828f34641bf37e3c8231ae83648b5778aee",
-      "readmeCanonicalContentSha256": "d3e2ea87d475c3ccb7053a15f93b07a9aa0ed3d63d9a5a98a475f096d901aca6"
+      "gitCanonicalBytes": 1312,
+      "treeSha256": "1932f9d04e7c8534aa2dbbff0d53082bdb11a6f60fa23913a1c7169b5d9560ed",
+      "readmeCanonicalContentSha256": "214c50f697f4803d2962393f4fe6d01f7ed847fbee45fe67bf8aa9dfffebdd41"
     },
-    "exactSourceCapabilityCounts": {
-      "pages": null,
-      "routes": null,
-      "api": null,
-      "schemaTables": null,
-      "providers": null,
-      "schedulingProcesses": null,
-      "reminders": null,
-      "verificationFlows": null,
-      "consentFlows": null,
-      "cancellationFlows": null,
-      "auditFlows": null,
-      "exports": null,
-      "settings": null,
-      "tests": null,
-      "reason": "Counts are not computable without an authoritative launchable source tree; null is not treated as zero."
+    "canonicalCurrentImplementation": {
+      "targets": [
+        "apps/api/src/lib/outcall-db-init.ts",
+        "apps/api/src/lib/outcall-provider.ts",
+        "apps/api/src/lib/outcall.ts",
+        "apps/api/src/routes/outcall-routes.ts",
+        "apps/web/src/components/module-shells/OutCallRoute.contract.ts",
+        "apps/web/src/components/module-shells/OutCallShell.tsx",
+        "apps/web/src/components/module-shells/OutCallWorkspace.tsx"
+      ],
+      "targetCount": 7,
+      "fingerprintSha256": "906257d8e67f9d88855e95ce27cebbdd26c3ebc204c2548c11e7f12148d3247e",
+      "automatedEvidence": [
+        "apps/api/test/outcall-adapter.test.ts",
+        "apps/api/test/outcall-phase12b-db.test.ts",
+        "apps/api/test/outcall-phase50-routes.test.ts",
+        "apps/api/test/outcall-provider.test.ts",
+        "apps/web/e2e/phase50-outcall-routes.spec.ts",
+        "scripts/phase37/outcall-source-gate.test.mjs"
+      ],
+      "evidenceCount": 6,
+      "originalHistoricalLiteralParityClaimed": false
     }
   },
-  "rejectedAsAuthority": [
-    {
-      "candidate": "Owner ten-phase OutCall prompt attachment",
-      "sha256": "fba5fb4e615cdfcfb0e90ebe0dababa19c7de942628d936f7de16f3b1e18ac7b",
-      "reason": "A requested implementation specification is not an executable source tree or runtime fingerprint."
-    },
-    {
-      "candidate": "Downloads/outcall.ts",
-      "sha256": "975df74077da54d4060f0d896ade1626443339771100f1ecec054e471c8d71a8",
-      "reason": "Byte-identical to apps/api/src/lib/outcall.ts from reconstructed OperatorOS commit 7dcefd279949cca413e99d4d3d1d7cde48aa36b0."
-    },
-    {
-      "candidate": "Existing OperatorOS OutCall routes, schema, UI, and tests",
-      "firstImplementationCommit": "d3839256fab70dd7667f1d2be11ff87782e0f175",
-      "reason": "Valid reconstructed Phase 12B work is retained, but it cannot establish parity with missing source."
-    }
-  ],
-  "recoveryEvidence": [
+  "historicalRecoveryEvidence": [
     {
       "target": "Authenticated shotgunsensei GitHub repositories and repository search",
-      "result": "No OutCall repository, including private repositories visible to the authenticated account."
+      "result": "No historical OutCall repository, including private repositories visible to the authenticated account."
     },
     {
-      "target": "C:/Dev/Outcall",
-      "result": "Directory is empty and has no .git metadata."
+      "target": "C:/Dev/Outcall and local archive locations",
+      "result": "No launchable historical source tree or Git repository was recovered."
     },
     {
-      "target": "Downloads, Documents, Desktop, OneDrive, and Codex attachment filenames",
-      "result": "No source tree or OutCall archive; only the rejected helper and prompt artifacts above."
-    },
-    {
-      "target": "ReplitExport-johntwms355.tar.gz",
-      "sha256": "7c351ad3f3b756f587aa4ed80d1ac83e71973fd3fb08c2439857f05edb9c14fc",
-      "result": "No OutCall path or matching content in the export or its embedded repository list."
-    },
-    {
-      "target": "OperatorOS (4).zip embedded Git database",
-      "sha256": "335c2ab188706a7b0ad1776cdf37d1647c29b9d81e9d555b17ee1fae705eb826",
-      "result": "No OutCall path in 22 Replit sub-branches, reachable commits, or 12 unreachable commits."
-    },
-    {
-      "target": "OperatorOS (2).zip embedded Git database",
-      "sha256": "34776df937baf6e5ee64b54d9b91c08c0a4f1ce672c5d2850c0987ae5dbdc4aa",
-      "result": "No OutCall path in 275 reachable commits or 545 dangling trees."
-    },
-    {
-      "target": "Current OperatorOS Git object database and remote heads",
-      "result": "No remote OutCall branch; unreachable commits contain only the same README-only imported boundary and derived documentation."
-    },
-    {
-      "target": "Public web index searches for the owner, Replit profile, product host, and GitHub owner",
-      "result": "No indexed authoritative source location."
+      "target": "Replit exports and OperatorOS Git object databases",
+      "result": "No authoritative historical OutCall tree was recovered; only the README boundary and reconstructed shared-runtime code were found."
     }
   ],
   "providerAcceptance": {
     "twilioSandboxLifecycle": "NOT_RUN",
     "evidence": null,
     "configuredOutCallOrTwilioVariableNamesObservedLocally": 0,
-    "note": "No credentials were read or fabricated. Provider acceptance remains an external activation gate after source recovery."
+    "note": "No credentials were read or fabricated. Provider acceptance remains an external activation gate after local source reconstruction."
   },
   "activationLock": {
     "sdkCatalogStatus": "coming_soon",
-    "marketingStatus": "coming_soon",
+    "marketingStatus": "derived_from_sdk_coming_soon",
     "ecosystemStatus": "planned",
     "deploymentRegistryEnabled": false,
     "existingDatabaseStatusAfterSeed": "coming_soon",
     "checks": {
-      "parityClassifiesMissingSource": true,
-      "recoveryCapabilityBlocked": true,
-      "importedBoundaryIsReadmeOnly": true,
+      "parityClassifiesAuthorizedReconstruction": true,
+      "recoveryCapabilityActive": true,
+      "canonicalTargetsPresent": true,
+      "automatedEvidencePresent": true,
+      "importedBoundaryRecordsReconstruction": true,
       "importedBoundaryRequiresPlannedStatus": true,
       "sdkCatalogComingSoon": true,
-      "marketingCatalogComingSoon": true,
+      "marketingCatalogDerivesCanonicalStatus": true,
       "deploymentRegistryDisabled": true,
       "ecosystemRegistryPlanned": true,
       "existingDatabaseRowsRelocked": true,
@@ -119,8 +90,11 @@
     "failClosed": true
   },
   "acceptance": {
-    "authoritativeFullSourceExistsAndFingerprintPinned": false,
-    "everySourceOutcomeMappedAndTested": false,
+    "historicalFullSourceRecovered": false,
+    "ownerAuthorizedReconstruction": true,
+    "canonicalCurrentImplementationPinned": true,
+    "everyCurrentSourceOutcomeMappedAndTested": true,
+    "originalHistoricalLiteralParityClaimed": false,
     "completeTwilioSandboxLifecycleProven": false,
     "registryEnabledOnlyAfterAllGates": true,
     "goLiveAccepted": false

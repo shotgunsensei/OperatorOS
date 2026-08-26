@@ -1,5 +1,19 @@
 # OutCall parity matrix
 
+## Current owner-authorized reconstruction truth (2026-08-26)
+
+The historical source-recovery blocker below is superseded for source/local
+parity by explicit owner authorization to recreate missing source. The
+OperatorOS shared-runtime OutCall implementation is the canonical current
+reconstruction, represented by one `ACTIVE_NATIVE` capability with zero shared
+equivalents, zero owner waivers, and zero blockers. Literal parity with an
+unrecovered historical repository is not claimed.
+
+OutCall remains globally `coming_soon` and exact-host SSO/provider activation
+remains fail closed. A green source/local parity record does not authorize
+Twilio configuration, a real call, production migration, deployment, or public
+activation; those remain separate provider and production acceptance gates.
+
 ## Phase 20 current truth (2026-08-08)
 
 Current release truth is `docs/parity/modules/outcall.json`: 1 capability, 0

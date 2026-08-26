@@ -22,6 +22,7 @@ import {
   Settings,
   ShieldCheck,
   Moon,
+  PhoneCall,
   Sun,
   Users,
   type LucideIcon,
@@ -32,6 +33,7 @@ import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow, { type TradeFlowKitRevenueView } from './TradeFlowKitRevenueFlow';
 import TradeFlowKitOperations, { type TradeFlowKitOperationsView } from './TradeFlowKitOperations';
@@ -68,7 +70,11 @@ type TradeFlowKitScreen =
   | 'analytics'
   | 'directory'
   | 'trash'
-  | 'settings';
+  | 'settings'
+  | 'subscription'
+  | 'call-recovery'
+  | 'admin'
+  | 'access-denied';
 
 interface RouteState {
   screen: TradeFlowKitScreen;
@@ -176,7 +182,33 @@ const pageCopy: Record<TradeFlowKitScreen, { eyebrow: string; title: string; des
     title: 'Settings',
     description: 'Configure operating defaults, lead intake, and provider readiness under OperatorOS authority.',
   },
+  subscription: {
+    eyebrow: 'OperatorOS commercial authority',
+    title: 'Subscription',
+    description: 'Review the organization plan, module access, invoices, and subscription changes in OperatorOS.',
+  },
+  'call-recovery': {
+    eyebrow: 'Connected customer recovery',
+    title: 'Call recovery',
+    description: 'Continue missed-call recovery through the tenant-scoped OutCall companion application.',
+  },
+  admin: {
+    eyebrow: 'Shared platform administration',
+    title: 'Administration',
+    description: 'Manage organization membership and platform controls through the authoritative OperatorOS console.',
+  },
+  'access-denied': {
+    eyebrow: 'Access boundary',
+    title: 'Access denied',
+    description: 'OperatorOS could not validate the required organization or module authority for this request.',
+  },
 };
+
+function operatorConsolePageUrl(page: string): string {
+  const url = new URL(DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl);
+  url.searchParams.set('page', page);
+  return url.toString();
+}
 
 function resolveRoute(routePath?: string): RouteState {
   const clean = (routePath || '/dashboard').split('?')[0].replace(/^\/modules\/tradeflowkit/, '') || '/dashboard';
@@ -198,6 +230,10 @@ function resolveRoute(routePath?: string): RouteState {
   if (['directory', 'contacts', 'sites'].includes(resource)) return { screen: 'directory', recordId };
   if (resource === 'trash') return { screen: 'trash' };
   if (resource === 'settings') return { screen: 'settings' };
+  if (resource === 'subscription') return { screen: 'subscription' };
+  if (resource === 'call-recovery') return { screen: 'call-recovery' };
+  if (resource === 'admin') return { screen: 'admin' };
+  if (resource === 'access-denied') return { screen: 'access-denied' };
   return { screen: 'dashboard' };
 }
 
@@ -226,6 +262,18 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
     media.addEventListener('change', updateSystemTheme);
     return () => media.removeEventListener('change', updateSystemTheme);
   }, []);
+
+  useEffect(() => {
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const previousManifest = manifest?.href;
+    if (manifest) manifest.href = '/tradeflowkit.webmanifest';
+    if ('serviceWorker' in navigator && window.location.hostname.toLowerCase() === 'tradeflowkit.operatoros.net') {
+      void navigator.serviceWorker.register('/tradeflowkit-sw.js', { scope: '/' }).catch(() => undefined);
+    }
+    return () => {
+      if (manifest && previousManifest) manifest.href = previousManifest;
+    };
+  }, [pathname]);
 
   const adapter = useMemo(() => createTradeFlowKitAdapterContext({
     currentUser: user
@@ -392,6 +440,31 @@ function TradeFlowKitScreen({
   if (screen === 'settings') {
     const operationsView: TradeFlowKitOperationsView = 'settings';
     return <section id="tradeflowkit-settings" data-testid="tradeflowkit-settings-panel" tabIndex={-1}><TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view={operationsView} routePrefix={hrefFor('')} /><TradeFlowKitLeadCenter tenantKey={tenantKey} canManage={canManage} view="settings" routePrefix={hrefFor('')} /></section>;
+  }
+  if (screen === 'subscription') {
+    return <section className={styles.dashboardGrid} data-testid="tradeflowkit-subscription-route" tabIndex={-1}>
+      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl} Icon={CreditCard} title="Manage subscription" body="Open the OperatorOS-owned plan, invoice, checkout, and customer-portal controls." />
+      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} Icon={ShieldCheck} title="Review module access" body="Return to My Apps to review the organization and its enabled modules." />
+    </section>;
+  }
+  if (screen === 'call-recovery') {
+    return <section className={styles.dashboardGrid} data-testid="tradeflowkit-call-recovery-route" tabIndex={-1}>
+      <QuickLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}modules/outcall`} Icon={PhoneCall} title="Review OutCall availability" body="Continue only when OperatorOS has enabled the verified-self companion module and its provider gate for this organization." />
+      <QuickLink href={hrefFor('/leads')} Icon={ClipboardList} title="Return to leads" body="Keep qualification, follow-up, and lead conversion inside TradeFlowKit." />
+    </section>;
+  }
+  if (screen === 'admin') {
+    return <section className={styles.dashboardGrid} data-testid="tradeflowkit-admin-route" tabIndex={-1}>
+      <QuickLink href={operatorConsolePageUrl('tenant-users')} Icon={Users} title="Organization members" body="Manage tenant membership and bounded roles through OperatorOS." />
+      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl} Icon={ShieldCheck} title="Commercial controls" body="Manage module entitlement and billing without creating a second authority in TradeFlowKit." />
+    </section>;
+  }
+  if (screen === 'access-denied') {
+    return <section className={styles.stateCard} data-testid="tradeflowkit-access-denied-route" role="alert" tabIndex={-1}>
+      <AlertTriangle size={19} color="var(--tfk-danger)" />
+      <div><strong>Access denied</strong><span>Return to My Apps and select an organization with TradeFlowKit access.</span></div>
+      <Link href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}>Return to My Apps</Link>
+    </section>;
   }
   return null;
 }

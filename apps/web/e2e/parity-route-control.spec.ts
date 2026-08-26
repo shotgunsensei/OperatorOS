@@ -15,6 +15,8 @@ test('every module critical route has live controls and no page, console, networ
   const pageErrors: string[] = [];
   const failedRequests: string[] = [];
   const failedResponses: string[] = [];
+  let advancingToNextContract = false;
+  const testOrigin = new URL(WEB).origin;
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
   page.on('requestfailed', request => {
@@ -25,6 +27,17 @@ test('every module critical route has live controls and no page, console, networ
     // response remain successful, so these client-side cancellations are not
     // transport failures.
     if (request.method() === 'GET' && failure === 'net::ERR_ABORTED' && url.searchParams.has('_rsc')) return;
+    // Route workspaces cancel their own read-only initial fetches during
+    // unmount. Ignore that cancellation only while this crawler is deliberately
+    // replacing the document with the next contract; an abort at any other time
+    // remains a release failure.
+    if (
+      advancingToNextContract
+      && request.method() === 'GET'
+      && failure === 'net::ERR_ABORTED'
+      && url.origin === testOrigin
+      && url.pathname.startsWith('/api/')
+    ) return;
     failedRequests.push(`${request.method()} ${request.url()} ${failure}`);
   });
   page.on('response', response => {
@@ -32,7 +45,9 @@ test('every module critical route has live controls and no page, console, networ
   });
 
   for (const contract of contracts.modules) {
+    advancingToNextContract = true;
     const response = await page.goto(`${WEB}${contract.criticalRoute}`, { waitUntil: 'domcontentloaded' });
+    advancingToNextContract = false;
     expect(response?.status(), contract.moduleSlug).toBeLessThan(400);
     await expect(page.locator('body')).toContainText(contract.moduleName);
     await expect(page.locator('body')).not.toContainText(/404|500|something went wrong|migration pending|coming soon|not implemented/i);

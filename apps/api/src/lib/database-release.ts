@@ -51,6 +51,7 @@ import { ensureTorqueShedReservationContract } from './torqueshed-reservation-db
 import { ensureTenantMessengerTables } from './tenant-messenger-db-init.js';
 import { ensureIdentityOnboardingIntegrity } from './identity-onboarding-db-init.js';
 import { ensureTenantInvitationConsent } from './tenant-invitation-consent-db-init.js';
+import { ensureAuthMfaTables } from './auth-mfa-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -120,6 +121,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   tenant_messenger_tables: ensureTenantMessengerTables,
   identity_onboarding_integrity: ensureIdentityOnboardingIntegrity,
   tenant_invitation_consent: ensureTenantInvitationConsent,
+  auth_mfa_tables: ensureAuthMfaTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -325,6 +327,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       )
       AND to_regclass('public.idx_tenant_invites_pending') IS NOT NULL
       AS tenant_invitation_consent
+      ,to_regclass('public.auth_mfa_totp') IS NOT NULL
+      AND to_regclass('public.auth_mfa_recovery_codes') IS NOT NULL
+      AND to_regclass('public.auth_mfa_login_challenges') IS NOT NULL
+      AND to_regclass('public.idx_auth_mfa_recovery_active') IS NOT NULL
+      AND to_regclass('public.idx_auth_mfa_challenge_user_active') IS NOT NULL
+      AS auth_mfa_tables
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

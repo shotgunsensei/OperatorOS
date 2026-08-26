@@ -1,5 +1,39 @@
 # OperatorOS current release gate
 
+## Current reconciled candidate - SOURCE/LOCAL PASS, LIVE RELEASE PENDING (2026-08-26)
+
+The `codex/green-release-gate` candidate preserves the pulled Replit
+package-manager compatibility repair and reconciles the applicable stashed
+product work. `corepack pnpm verify:release` passes all 14 stages with zero
+failed stages. The strict matrix contains 7,396 capabilities: 4,281 native,
+3,115 tested shared equivalents, zero owner waivers, and zero blockers.
+
+Fresh evidence: security/hardening passes with 1,296 files and zero findings;
+39/39 unit tests; 1,203/1,203 API tests; 28/28 disposable PostgreSQL release,
+apply, reapply, and integration tests; four-workspace typecheck; zero-warning
+ESLint; production build; 1,304 route capabilities across 964 crawl routes
+with zero failures; 13 governed visual contracts and 39 reviewed responsive
+hashes; 21/21 exact-host workflow/accessibility browser tests; 4/4 immutable
+visual tests; and production preflight. The read-only release-v56 database plan
+has 56 ordered, idempotent, non-destructive steps. Release v56 adds central
+encrypted TOTP, one-time MFA login challenges, one-way recovery codes, and the
+complete login/invitation/settings workflow without creating module-local
+identity authority.
+
+No waiver approval is required. FaultlineLab's former 501 blocked rows were
+source-to-executable-evidence mappings, not HTTP 500 failures; current
+FaultlineLab parity is 246 native plus 311 shared with zero blocked, while all
+56 compiled cases complete action, server scoring, reload, and restart
+persistence tests. OutCall uses the explicitly authorized current
+reconstruction but stays `coming_soon` until provider activation is separately
+accepted.
+
+Release status is **SOURCE/LOCAL PASS; PRODUCTION HOLD**. GitHub CI, fresh
+Replit publish, pre-apply backup, production v56 apply, exact deployed release
+identity, DNS/exact-host authenticated acceptance, live provider acceptance,
+monitoring, and rollback proof remain human/production gates. A green local
+gate does not authorize publishing or production mutation.
+
 ## Current Phase 36 source/local overlay - RELEASE BLOCKED (2026-08-13)
 
 Ninjamation Phase 36 is source/local implemented at cumulative additive

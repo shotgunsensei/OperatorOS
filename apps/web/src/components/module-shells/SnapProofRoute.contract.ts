@@ -23,7 +23,7 @@ import type { ModuleRouteManifestGroup, ModuleThemeTokens } from '@/components/m
 
 export type SnapProofRouteArea =
   | 'overview' | 'customers' | 'projects' | 'jobs' | 'capture' | 'work' | 'costs' | 'templates'
-  | 'team' | 'activity' | 'evidence' | 'review' | 'reports' | 'share' | 'exports'
+  | 'team' | 'activity' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'share' | 'exports'
   | 'custody' | 'retention' | 'branding' | 'settings';
 
 export interface SnapProofRouteState {
@@ -65,7 +65,9 @@ export const SNAPPROOF_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
     { id: 'templates', canonicalPath: '/templates', label: 'Templates', icon: LayoutTemplate, activeMatch: { kind: 'prefix' } },
   ] },
   { id: 'proof-delivery', label: 'Proof and delivery', items: [
+    { id: 'cases', canonicalPath: '/cases', label: 'Evidence cases', icon: FolderKanban, activeMatch: { kind: 'prefix' } },
     { id: 'evidence', canonicalPath: '/evidence', label: 'Evidence integrity', icon: FileCheck2, activeMatch: { kind: 'prefix' } },
+    { id: 'findings', canonicalPath: '/findings', label: 'Case findings', icon: MessageSquareText, activeMatch: { kind: 'prefix' } },
     { id: 'review', canonicalPath: '/review', label: 'Review', icon: ClipboardCheck, activeMatch: { kind: 'prefix' } },
     { id: 'reports', canonicalPath: '/reports', label: 'Reports', icon: FileText, activeMatch: { kind: 'prefix' } },
     { id: 'share', canonicalPath: '/share', label: 'Secure sharing', icon: Link2, activeMatch: { kind: 'prefix' } },
@@ -92,8 +94,10 @@ const copy: Record<SnapProofRouteArea, Pick<SnapProofRouteState, 'eyebrow' | 'ti
   templates: { eyebrow: 'Repeatable delivery', title: 'Job templates', subtitle: 'Create and apply tenant-scoped job templates to consistent field workflows.' },
   team: { eyebrow: 'Assignment context', title: 'Team', subtitle: 'Review OperatorOS organization members available for proof-work assignment.' },
   activity: { eyebrow: 'Audit trail', title: 'Activity', subtitle: 'Review the tenant-scoped field action stream.' },
+  cases: { eyebrow: 'Evidence lifecycle', title: 'Evidence cases', subtitle: 'Group evidence, findings, decisions, reports, retention, and custody under a durable case.' },
   evidence: { eyebrow: 'Integrity control', title: 'Evidence integrity', subtitle: 'Capture, inspect, verify, and preserve private evidence with durable hashes.' },
   review: { eyebrow: 'Approval control', title: 'Review', subtitle: 'Approve or reject evidence, jobs, and reports through server-enforced manager authority.' },
+  findings: { eyebrow: 'Structured conclusions', title: 'Case findings', subtitle: 'Record editable findings and append-only internal review notes against the active evidence case.' },
   reports: { eyebrow: 'Customer delivery', title: 'Reports', subtitle: 'Generate branded report snapshots from persistent job data and review state.' },
   share: { eyebrow: 'Revocable access', title: 'Secure sharing', subtitle: 'Create bounded, revocable report links only from authorized persistent records.' },
   exports: { eyebrow: 'Defensible delivery', title: 'Exports', subtitle: 'Generate and download real PDF/DOCX or approved hash-bound evidence exports.' },
@@ -113,11 +117,13 @@ export function resolveSnapProofRoute(routePath?: string): SnapProofRouteState {
   const segments = path.split('/').filter(Boolean);
   const [root, recordId] = segments;
   if (!root || root === 'dashboard') return state('overview', '/');
-  if (['cases', 'jobs'].includes(root)) return state('jobs', '/jobs', ['new', undefined].includes(recordId) ? undefined : recordId);
+  if (root === 'jobs') return state('jobs', '/jobs', ['new', undefined].includes(recordId) ? undefined : recordId);
+  if (root === 'cases') return state('cases', '/cases', recordId);
   if (root === 'customers') return state('customers', '/customers', recordId);
   if (root === 'projects') return state('projects', '/projects', recordId);
   if (['capture', 'files'].includes(root)) return state('capture', '/capture', recordId);
-  if (['work', 'findings'].includes(root)) return state('work', '/work', recordId);
+  if (root === 'work') return state('work', '/work', recordId);
+  if (root === 'findings') return state('findings', '/findings', recordId);
   if (root === 'costs') return state('costs', '/costs');
   if (root === 'templates') return state('templates', '/templates');
   if (root === 'team') return state('team', '/team');
@@ -135,6 +141,6 @@ export function resolveSnapProofRoute(routePath?: string): SnapProofRouteState {
 }
 
 export const SNAPPROOF_LEGACY_REDIRECTS = {
-  '/dashboard': '/', '/cases': '/jobs', '/jobs/new': '/jobs', '/files': '/capture', '/findings': '/work',
+  '/dashboard': '/', '/jobs/new': '/jobs', '/files': '/capture',
   '/profile': '/settings', '/billing': '/settings',
 } as const;

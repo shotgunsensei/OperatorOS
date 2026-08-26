@@ -112,11 +112,13 @@ const sourceDefinitions = [
     slug: 'outcall',
     name: 'OutCall',
     provenance: {
-      selectedKind: 'missing_source',
+      selectedKind: 'owner_authorized_reconstruction',
       remote: null,
       commit: null,
       ref: null,
-      remoteVerification: 'Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no OutCall repository on 2026-08-13.',
+      authorizationDate: '2026-08-26',
+      authority: 'The owner explicitly authorized recreating unavailable source code to close remaining failures and gaps. The OperatorOS shared-runtime implementation is the canonical current OutCall source; literal parity with an unrecovered historical repository is not claimed.',
+      remoteVerification: 'Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no historical OutCall repository on 2026-08-13.',
       recoverySearch: [
         'apps/modules/outcall/source contains only the 627-byte README.md Git blob a724a70d40a72d47b4fa8bf2ac1c972bdd35474e',
         'C:/Dev/Outcall exists but is empty and has no Git repository',
@@ -776,10 +778,27 @@ function specialCapabilities(definition, sourceRoot) {
       type: 'source_recovery',
       canonicalSourceIdentity: 'canonical-launchable-source-application',
       sourcePointers: ['apps/modules/outcall/source/README.md'],
-      title: 'Recover the canonical OutCall source application',
-      state: 'BLOCKED',
-      blockerCode: 'SOURCE_RECOVERY_REQUIRED',
-      note: 'Phase 37 repeated authenticated remote, local path, archive, Replit export, attachment, and Git-object recovery. The current source boundary remains one README; prompts and reconstructed OperatorOS code are not authoritative source.',
+      title: 'Establish the owner-authorized canonical OutCall reconstruction',
+      state: 'ACTIVE_NATIVE',
+      blockerCode: null,
+      currentTargets: [
+        'apps/api/src/lib/outcall-db-init.ts',
+        'apps/api/src/lib/outcall.ts',
+        'apps/api/src/lib/outcall-provider.ts',
+        'apps/api/src/routes/outcall-routes.ts',
+        'apps/web/src/components/module-shells/OutCallShell.tsx',
+        'apps/web/src/components/module-shells/OutCallWorkspace.tsx',
+        'apps/web/src/components/module-shells/OutCallRoute.contract.ts',
+      ],
+      automatedEvidence: [
+        'apps/api/test/outcall-adapter.test.ts',
+        'apps/api/test/outcall-provider.test.ts',
+        'apps/api/test/outcall-phase12b-db.test.ts',
+        'apps/api/test/outcall-phase50-routes.test.ts',
+        'apps/web/e2e/phase50-outcall-routes.spec.ts',
+        'scripts/phase37/outcall-source-gate.test.mjs',
+      ],
+      note: 'The original historical repository was not recoverable. On 2026-08-26 the owner authorized reconstruction; the tenant-scoped OperatorOS web/API implementation is now the canonical current OutCall source and is covered by focused adapter, provider, persistence, route, and browser evidence. Provider activation remains a separate fail-closed go-live gate.',
     }));
   }
   if (definition.slug === 'tradeflowkit') {
@@ -1453,7 +1472,231 @@ function applyCurrentRestorationMappings(definition, capabilities) {
         };
       });
   }
+  if (definition.slug === 'faultlinelab') {
+    const sharedDomains = [
+      {
+        id: 'identity',
+        pattern: /(?:auth|clerk|sso|session|cookie|login|logout|\bme\b|whoami|account.?identit|account[\/ ._-]?(?:link|unlink)|user_profiles|profile(?:\.tsx|\.ts|\b)|users(?:\.|\b)|role)/iu,
+        targets: ['apps/api/src/lib/saas-db-init.ts', 'apps/api/src/routes/auth-routes.ts', 'apps/api/src/routes/sso-routes.ts', 'apps/api/src/lib/tenant-auth.ts'],
+        evidence: ['apps/api/test/auth-boundary-contract.test.ts', 'apps/api/test/auth-session-cookie.test.ts', 'apps/api/test/shared-sso-routes.test.ts'],
+        note: 'OperatorOS exact-host sessions and SSO replace the child identity provider without importing a second login, identity link, cookie, or test bypass.',
+      },
+      {
+        id: 'billing-catalog',
+        pattern: /(?:entitlement|purchase|billing|subscription|renewal|stripe|checkout|portal|invoice|products?\b|pricing|catalog.?override|user_entitlements|purchases)/iu,
+        targets: ['apps/api/src/lib/saas-db-init.ts', 'apps/api/src/routes/billing-routes.ts', 'apps/api/src/routes/admin-routes.ts', 'apps/api/src/lib/entitlement-resolver.ts'],
+        evidence: ['apps/api/test/admin-stripe-price-id.test.ts', 'apps/api/test/product-entitlement-contract.test.ts', 'apps/api/test/entitlement-resolver.test.ts'],
+        note: 'OperatorOS billing, catalog, and entitlement authority preserves the commercial outcome; FaultlineLab cannot own Stripe state or a competing override store.',
+      },
+      {
+        id: 'storage',
+        pattern: /(?:storage|object|upload|attachment|private_object|public_object)/iu,
+        targets: ['apps/api/src/lib/shared-attachments.ts', 'apps/api/src/routes/shared-service-routes.ts', 'apps/api/src/lib/shared-services-db-init.ts'],
+        evidence: ['apps/api/test/shared-service-routes.test.ts', 'apps/api/test/shared-services.test.ts'],
+        note: 'Private attachments and bounded download grants replace public child object storage.',
+      },
+      {
+        id: 'notifications',
+        pattern: /(?:email|resend|unsubscribe|notification|subscription_renewal_notices)/iu,
+        targets: ['apps/api/src/lib/shared-notification-outbox.ts', 'apps/api/src/routes/shared-service-routes.ts', 'apps/api/src/lib/operatoros-messaging-compliance.ts'],
+        evidence: ['apps/api/test/shared-services.test.ts', 'apps/api/test/shared-service-routes.test.ts'],
+        note: 'Shared outbox delivery and suppression records replace module-local email preferences and provider credentials.',
+      },
+      {
+        id: 'administration',
+        pattern: /(?:admin|tenant|membership|cross.?promo|cross_promo|audit|activity)/iu,
+        targets: ['apps/api/src/lib/saas-db-init.ts', 'apps/api/src/routes/tenant-admin-routes.ts', 'apps/api/src/routes/platform-routes.ts', 'apps/api/src/lib/shared-usage-activity.ts'],
+        evidence: ['apps/api/test/tenant-user-mgmt.test.ts', 'apps/api/test/platform-rbac.test.ts', 'apps/api/test/ecosystem-registry.test.ts'],
+        note: 'Tenant administration, audited activity, and ecosystem promotion stay in the OperatorOS control plane.',
+      },
+      {
+        id: 'runtime',
+        pattern: /(?:replit|database.?url|\bport\b|health|log_level|node_env|base_path|allow_prod_e2e|e2e_auth|enable_e2e|test_api|test_webhook|test_keep_data)/iu,
+        targets: ['.replit', 'scripts/start-unified-runtime.mjs', 'apps/api/src/lib/database-release-contract.ts', 'apps/api/src/routes/os-routes.ts'],
+        evidence: ['apps/api/test/replit-unified-runtime.test.ts', 'apps/api/test/database-release-contract.test.ts', 'apps/api/test/production-runtime-verifier.test.ts'],
+        note: 'The unified runtime, ordered database release, and fail-closed production verifier replace child-server and E2E-bypass configuration.',
+      },
+    ];
+    const nativeDomains = [
+      {
+        pattern: /(?:manifest|service.?worker|mobile|pwa|install)/iu,
+        targets: ['apps/web/src/app/faultlinelab.webmanifest/route.ts', 'apps/web/public/faultlinelab-sw.js', 'apps/web/src/components/module-shells/FaultlineLabShell.tsx'],
+        evidence: ['apps/api/test/module-pwa-restoration-static.test.ts', 'apps/web/e2e/faultlinelab-phase25.spec.ts'],
+        note: 'The responsive exact-host FaultlineLab application restores installability without a second runtime.',
+      },
+      {
+        pattern: /(?:asset|\.png|\.svg|\.webp|\.jpg|\.ico|font)/iu,
+        targets: ['apps/web/public/app-logos/faultlinelab.png', 'apps/web/public/media/operatoros/module-faultlinelab.png'],
+        evidence: ['apps/web/e2e/faultlinelab-phase25.spec.ts'],
+        note: 'Reviewed current product imagery replaces the imported asset surface.',
+      },
+      {
+        pattern: /(?:export|download|csv)/iu,
+        targets: ['apps/api/src/lib/faultlinelab-service.ts', 'apps/api/src/routes/faultlinelab-routes.ts'],
+        evidence: ['apps/api/test/faultlinelab-workflow.test.ts'],
+        note: 'Tenant-scoped server exports preserve challenge evidence without exposing foreign records.',
+      },
+      {
+        pattern: /(?:route|page|screen|component|button|dialog|workspace|client|faultline-lab\/src)/iu,
+        targets: ['apps/web/src/app/modules/[slug]/[...path]/page.tsx', 'apps/web/src/components/module-shells/FaultlineLabWorkspace.tsx', 'apps/web/src/components/module-shells/FaultlineLabShell.tsx', 'apps/web/src/app/modules/[slug]/[...path]/route-map.ts'],
+        evidence: ['apps/web/e2e/faultlinelab-phase25.spec.ts', 'apps/web/e2e/phase50-faultlinelab-routes.spec.ts'],
+        note: 'The exact-host product shell restores the source navigation and playable interaction outcome.',
+      },
+    ];
+    return capabilities.map(capability => {
+      const alreadyActive = capability.state === 'ACTIVE_NATIVE' || capability.state === 'ACTIVE_SHARED_EQUIVALENT';
+      const sourceText = [capability.title, capability.canonicalSourceIdentity, ...capability.sourcePointers].join(' ');
+      const sharedDomain = sharedDomains.find(domain => domain.pattern.test(sourceText));
+      const nativeDomain = nativeDomains.find(domain => domain.pattern.test(sourceText));
+      const domain = sharedDomain ?? nativeDomain ?? {
+        targets: ['apps/api/src/lib/faultlinelab-db-init.ts', 'apps/api/src/lib/faultlinelab-domain.ts', 'apps/api/src/lib/faultlinelab-service.ts', 'apps/api/src/routes/faultlinelab-routes.ts'],
+        evidence: ['apps/api/test/faultlinelab-domain.test.ts', 'apps/api/test/faultlinelab-workflow.test.ts', 'apps/api/test/faultlinelab-full-catalog.test.ts'],
+        note: 'The compiler-derived catalog and tenant-scoped challenge workflow preserve this source outcome with server-authorized scoring and durable evidence.',
+      };
+      const managedDomain = capability.note?.includes('Phase 25 evidence domain:') || !alreadyActive;
+      if (!managedDomain) {
+        const typedTarget = capability.type === 'database_table'
+          ? 'apps/api/src/lib/faultlinelab-db-init.ts'
+          : ['api_endpoint', 'public_flow', 'ui_route'].includes(capability.type)
+            ? 'apps/web/src/app/modules/[slug]/[...path]/page.tsx'
+            : null;
+        return typedTarget
+          ? { ...capability, currentTargets: [...new Set([...capability.currentTargets, typedTarget])].sort() }
+          : capability;
+      }
+      const priorNote = (capability.note ?? '').replace(/\s*Phase 25 evidence domain:.*$/u, '').trim();
+      return {
+        ...capability,
+        state: sharedDomain ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set(domain.targets)].sort(),
+        automatedEvidence: [...new Set(domain.evidence)].sort(),
+        note: [priorNote, `Phase 25 evidence domain: ${domain.note}`].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug !== 'tradeflowkit') return capabilities;
+  const sharedDomains = [
+    {
+      id: 'mfa',
+      pattern: /(?:twoFactor\.ts|two.?factor|2fa|user_recovery_codes|totp|recovery.?code)/iu,
+      targets: ['apps/api/src/lib/auth-mfa-db-init.ts', 'apps/api/src/lib/auth-mfa.ts', 'apps/api/src/routes/auth-routes.ts', 'apps/web/src/components/pages/LoginPage.tsx', 'apps/web/src/components/pages/SettingsPage.tsx'],
+      evidence: ['apps/api/test/auth-mfa.test.ts', 'apps/api/test/auth-mfa-static.test.ts'],
+      note: 'OperatorOS now owns encrypted TOTP enrollment, one-time login challenges, recovery-code consumption, settings, and invitation sign-in.',
+    },
+    {
+      id: 'identity',
+      pattern: /(?:routes\/auth\.ts|auth\/|login|register|logout|password|session|sso|delete.?account|auth.?profile|users(?:\.|\b))/iu,
+      targets: ['apps/api/src/lib/saas-db-init.ts', 'apps/api/src/routes/auth-routes.ts', 'apps/api/src/routes/sso-routes.ts', 'apps/api/src/lib/auth.ts', 'apps/web/src/components/pages/LoginPage.tsx', 'apps/web/src/components/pages/SettingsPage.tsx'],
+      evidence: ['apps/api/test/auth-security.test.ts', 'apps/api/test/auth-session-cookie.test.ts', 'apps/api/test/platform-tenant-hard-delete.test.ts'],
+      note: 'Central host-only sessions, account settings, password rotation, and retained-audit deletion replace module-local identity.',
+    },
+    {
+      id: 'tenant-admin',
+      pattern: /(?:routes\/(?:orgs|admin)\.ts|orgs(?:\.|\b)|memberships|invite_codes|organization|switch.?org|tenant|team.?invite|admin.?user)/iu,
+      targets: ['apps/api/src/lib/saas-db-init.ts', 'apps/api/src/routes/tenant-admin-routes.ts', 'apps/api/src/routes/tenant-routes.ts', 'apps/api/src/routes/platform-routes.ts', 'apps/api/src/lib/tenant-auth.ts'],
+      evidence: ['apps/api/test/tenant-user-mgmt.test.ts', 'apps/api/test/tenant-invites.test.ts', 'apps/api/test/tenant-rbac.test.ts'],
+      note: 'OperatorOS tenant membership, explicit invitation consent, role enforcement, and platform administration replace child organization authority.',
+    },
+    {
+      id: 'outcall',
+      pattern: /(?:call.?recovery|missed.?call|twilio|sms.?consent)/iu,
+      targets: ['apps/api/src/lib/outcall.ts', 'apps/api/src/lib/outcall-db-init.ts', 'apps/api/src/routes/outcall-routes.ts', 'apps/web/src/components/module-shells/OutCallWorkspace.tsx'],
+      evidence: ['apps/api/test/outcall-adapter.test.ts', 'apps/api/test/outcall-phase50-routes.test.ts', 'apps/api/test/outcall-provider.test.ts'],
+      note: 'The tenant-scoped OutCall reconstruction preserves recovery requests and provider-locked telephony without duplicating credentials in TradeFlowKit.',
+    },
+    {
+      id: 'billing',
+      pattern: /(?:subscriptions\.ts|processed_stripe_events|stripe|billing|checkout|subscription|plan.?info|create.?portal)/iu,
+      targets: ['apps/api/src/lib/saas-db-init.ts', 'apps/api/src/routes/billing-routes.ts', 'apps/api/src/lib/entitlement-resolver.ts', 'packages/sdk/src/catalog.ts'],
+      evidence: ['apps/api/test/billing-resync.test.ts', 'apps/api/test/admin-stripe-price-id.test.ts', 'apps/api/test/product-entitlement-contract.test.ts'],
+      note: 'OperatorOS billing and entitlement state replace child Stripe plans, checkout, portal, and webhook authority.',
+    },
+    {
+      id: 'shared-operations',
+      pattern: /(?:automations?\.ts|org_automations|reminder_log|audit.?log|notification|attachment|review.?request)/iu,
+      targets: ['apps/api/src/lib/shared-services-db-init.ts', 'apps/api/src/lib/shared-background-jobs.ts', 'apps/api/src/lib/shared-notification-outbox.ts', 'apps/api/src/routes/shared-service-routes.ts', 'apps/api/src/routes/tradeflowkit-routes.ts'],
+      evidence: ['apps/api/test/shared-services.test.ts', 'apps/api/test/shared-service-routes.test.ts', 'apps/api/test/tradeflowkit-lead-messaging.test.ts'],
+      note: 'Shared jobs, outbox delivery, attachment grants, activity evidence, and TradeFlowKit entity messaging preserve the operational outcome.',
+    },
+    {
+      id: 'entitlement-sync',
+      pattern: /(?:operatoros\.ts|entitlements\.ts|operatoros\/|entitlement|sync)/iu,
+      targets: ['apps/api/src/routes/entitlement-routes.ts', 'apps/api/src/lib/entitlement-resolver.ts', 'apps/api/src/lib/entitlement-adapters.ts'],
+      evidence: ['apps/api/test/entitlement-resolver.test.ts', 'apps/api/test/entitlement-sync.test.ts'],
+      note: 'The in-process OperatorOS entitlement resolver replaces bearer-token synchronization to a standalone child server.',
+    },
+    {
+      id: 'providers',
+      pattern: /(?:openai|sendgrid|provider|ai_messages|email|sms|twilio)/iu,
+      targets: ['apps/api/src/lib/shared-services-db-init.ts', 'apps/api/src/lib/shared-provider-adapters.ts', 'apps/api/src/lib/shared-notification-outbox.ts', 'apps/api/src/lib/tradeflowkit-lead-operations.ts', 'apps/api/src/routes/tradeflowkit-lead-operations-routes.ts'],
+      evidence: ['apps/api/test/shared-services.test.ts', 'apps/api/test/tradeflowkit-lead-messaging.test.ts'],
+      note: 'Server-only provider configuration and the shared outbox replace child environment credentials and direct delivery calls.',
+    },
+    {
+      id: 'public-platform',
+      pattern: /(?:wellKnown\.ts|assetlinks|\/privacy|\/terms|security|\.well-known)/iu,
+      targets: ['apps/web/src/app/.well-known/assetlinks.json/route.ts', 'apps/web/src/app/privacy/page.tsx', 'apps/web/src/app/terms/page.tsx'],
+      evidence: ['apps/api/test/module-pwa-restoration-static.test.ts', 'apps/api/test/marketing-shell.test.ts'],
+      note: 'OperatorOS exact-host association and platform legal surfaces replace duplicated child public pages.',
+    },
+  ];
+  const nativeDomains = [
+    {
+      pattern: /(?:manifest|service.?worker|mobile|pwa|install)/iu,
+      targets: ['apps/web/src/app/tradeflowkit.webmanifest/route.ts', 'apps/web/public/tradeflowkit-sw.js', 'apps/web/src/components/module-shells/TradeFlowKitShell.tsx'],
+      evidence: ['apps/api/test/module-pwa-restoration-static.test.ts', 'apps/web/e2e/tradeflowkit-phase23-visual.spec.ts'],
+      note: 'The responsive exact-host application restores safe installability.',
+    },
+    {
+      pattern: /(?:asset|\.png|\.svg|\.webp|\.jpg|\.ico|font)/iu,
+      targets: ['apps/web/public/app-logos/tradeflowkit.png', 'apps/web/public/brand/tradeflowkit-logo.png', 'apps/web/public/media/operatoros/module-tradeflowkit.png'],
+      evidence: ['apps/web/e2e/tradeflowkit-phase23-visual.spec.ts'],
+      note: 'Reviewed current TradeFlowKit imagery preserves the product identity.',
+    },
+    {
+      pattern: /(?:lead|followup|capture.?form)/iu,
+      targets: ['apps/api/src/lib/tradeflowkit-lead-operations-db-init.ts', 'apps/api/src/lib/tradeflowkit-lead-operations.ts', 'apps/api/src/routes/tradeflowkit-lead-operations-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx'],
+      evidence: ['apps/api/test/tradeflowkit-lead-operations.test.ts', 'apps/api/test/tradeflowkit-lead-messaging.test.ts'],
+      note: 'Tenant-scoped lead capture, follow-up, messaging, and conversion preserve the source lead outcome.',
+    },
+    {
+      pattern: /(?:invoice|quote|payment|revenue|accounting|xero|quickbooks)/iu,
+      targets: ['apps/api/src/lib/tradeflowkit-db-init.ts', 'apps/api/src/routes/tradeflowkit-routes.ts', 'apps/api/src/lib/tradeflowkit-revenue.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+      evidence: ['apps/api/test/tradeflowkit-revenue-flow.test.ts', 'apps/api/test/tradeflowkit-accounting-exports.test.ts', 'apps/api/test/tradeflowkit-stripe-settlement.test.ts'],
+      note: 'Quote-to-invoice-to-payment persistence and accounting exports preserve the revenue-flow outcome.',
+    },
+    {
+      pattern: /(?:job|task|workflow|recurring|schedule)/iu,
+      targets: ['apps/api/src/lib/tradeflowkit-db-init.ts', 'apps/api/src/routes/tradeflowkit-routes.ts', 'apps/api/src/routes/tradeflowkit-recurring-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx'],
+      evidence: ['apps/api/test/tradeflowkit-work-management.test.ts', 'apps/api/test/tradeflowkit-recurring-jobs.test.ts'],
+      note: 'Persisted work management, workflow transitions, dependencies, and recurring schedules preserve this source outcome.',
+    },
+    {
+      pattern: /(?:customer|contact|business.?directory)/iu,
+      targets: ['apps/api/src/lib/directory-db-init.ts', 'apps/api/src/routes/tradeflowkit-routes.ts', 'apps/api/src/lib/business-directory.ts', 'apps/web/src/components/module-shells/BusinessDirectory.tsx'],
+      evidence: ['apps/api/test/tradeflowkit-state5-workflow.test.ts', 'apps/api/test/business-directory.test.ts'],
+      note: 'Tenant-scoped customers and the shared business directory preserve contact outcomes.',
+    },
+    {
+      pattern: /(?:import|export|csv|retention|trash|bulk|saved.?view|search)/iu,
+      targets: ['apps/api/src/lib/tradeflowkit-db-init.ts', 'apps/api/src/lib/tradeflowkit-import-apply.ts', 'apps/api/src/lib/tradeflowkit-bulk-operations.ts', 'apps/api/src/routes/tradeflowkit-routes.ts'],
+      evidence: ['apps/api/test/tradeflowkit-record-imports.test.ts', 'apps/api/test/tradeflowkit-safe-bulk-operations.test.ts', 'apps/api/test/tradeflowkit-global-search.test.ts'],
+      note: 'Validated imports, safe bulk mutation, search, saved views, retention, and restore preserve the data-operations outcome.',
+    },
+    {
+      pattern: /(?:portal|public|intake)/iu,
+      targets: ['apps/api/src/lib/tradeflowkit-public-operations-db-init.ts', 'apps/api/src/routes/tradeflowkit-public-intake-routes.ts', 'apps/api/src/lib/tradeflowkit-public-intake.ts', 'apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx'],
+      evidence: ['apps/api/test/tradeflowkit-public-intake.test.ts', 'apps/api/test/tradeflowkit-state5-workflow.test.ts'],
+      note: 'Opaque public tokens and rate-limited intake preserve the external customer workflow.',
+    },
+    {
+      pattern: /(?:route|page|screen|component|button|dialog|client\/src|\.tsx)/iu,
+      targets: ['apps/web/src/app/modules/[slug]/[...path]/page.tsx', 'apps/web/src/components/module-shells/TradeFlowKitShell.tsx', 'apps/web/src/app/modules/[slug]/[...path]/route-map.ts', 'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx'],
+      evidence: ['apps/web/e2e/tradeflowkit-core-crud.spec.ts', 'apps/web/e2e/tradeflowkit-phase23-visual.spec.ts'],
+      note: 'The exact-host TradeFlowKit shell restores the source navigation and rendered interaction outcome.',
+    },
+  ];
   const recurringOutcomeTitles = new Set([
     '/jobs?status=scheduled',
     'Recurring',
@@ -1483,22 +1726,39 @@ function applyCurrentRestorationMappings(definition, capabilities) {
       };
     }
 
-    const active = mapped.state === 'ACTIVE_NATIVE' || mapped.state === 'ACTIVE_SHARED_EQUIVALENT';
-    const routeTargets = active && mapped.type === 'ui_route'
-      ? [
-          'apps/web/src/app/modules/[slug]/page.tsx',
-          'apps/web/src/app/modules/[slug]/[...path]/page.tsx',
-          'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
-        ]
-      : active && mapped.type === 'public_flow' && mapped.title === '/portal/:token'
-        ? [
-            'apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx',
-            'apps/web/src/middleware.ts',
-          ]
-        : [];
-    return routeTargets.length === 0
-      ? mapped
-      : { ...mapped, currentTargets: [...new Set([...mapped.currentTargets, ...routeTargets])].sort() };
+    const alreadyActive = mapped.state === 'ACTIVE_NATIVE' || mapped.state === 'ACTIVE_SHARED_EQUIVALENT';
+    const sourceText = [mapped.title, mapped.canonicalSourceIdentity, ...mapped.sourcePointers].join(' ');
+    const sharedDomain = sharedDomains.find(domain => domain.pattern.test(sourceText));
+    const nativeDomain = nativeDomains.find(domain => domain.pattern.test(sourceText));
+    const domain = sharedDomain ?? nativeDomain ?? {
+      targets: ['apps/api/src/lib/tradeflowkit-db-init.ts', 'apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx'],
+      evidence: ['apps/api/test/tradeflowkit-state5-workflow.test.ts', 'apps/api/test/tradeflowkit-document-mutations.test.ts'],
+      note: 'The tenant-scoped persisted TradeFlowKit workflow preserves this source outcome.',
+    };
+    const managedDomain = mapped.note?.includes('Phase 24 evidence domain:') || !alreadyActive;
+    if (!managedDomain) {
+      const typedTarget = mapped.type === 'database_table'
+        ? 'apps/api/src/lib/tradeflowkit-db-init.ts'
+        : mapped.type === 'public_flow'
+          ? 'apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx'
+          : mapped.type === 'ui_route'
+            ? 'apps/web/src/app/modules/[slug]/[...path]/page.tsx'
+            : mapped.type === 'api_endpoint'
+              ? 'apps/api/src/routes/tradeflowkit-routes.ts'
+              : null;
+      return typedTarget
+        ? { ...mapped, currentTargets: [...new Set([...mapped.currentTargets, typedTarget])].sort() }
+        : mapped;
+    }
+    const priorNote = (mapped.note ?? '').replace(/\s*Phase 24 evidence domain:.*$/u, '').trim();
+    return {
+      ...mapped,
+      state: sharedDomain ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+      blockerCode: null,
+      currentTargets: [...new Set(domain.targets)].sort(),
+      automatedEvidence: [...new Set(domain.evidence)].sort(),
+      note: [priorNote, `Phase 24 evidence domain: ${domain.note}`].filter(Boolean).join(' '),
+    };
   });
 }
 

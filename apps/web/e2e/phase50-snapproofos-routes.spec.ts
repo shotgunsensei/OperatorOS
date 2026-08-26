@@ -115,8 +115,10 @@ test.describe('Phase 50 SnapProofOS route application', () => {
       ['/templates', 'snapproofos-templates-route', 'Job templates'],
       ['/team', 'snapproofos-team-route', 'Team'],
       ['/activity', 'snapproofos-activity-route', 'Activity'],
+      ['/cases', 'snapproofos-cases-route', 'Evidence cases'],
       ['/evidence', 'snapproofos-evidence-route', 'Evidence integrity'],
       ['/review', 'snapproofos-review-route', 'Review'],
+      ['/findings', 'snapproofos-findings-route', 'Case findings'],
       ['/reports', 'snapproofos-reports-route', 'Reports'],
       ['/share', 'snapproofos-share-route', 'Secure sharing'],
       ['/exports', 'snapproofos-exports-route', 'Exports'],
@@ -136,8 +138,8 @@ test.describe('Phase 50 SnapProofOS route application', () => {
     }
 
     for (const [legacy, canonical] of [
-      ['/dashboard', '/'], ['/cases', '/jobs'], ['/jobs/new', '/jobs'], ['/files', '/capture'],
-      ['/findings', '/work'], ['/profile', '/settings'], ['/billing', '/settings'], [`/cases/${jobId}`, jobPath],
+      ['/dashboard', '/'], ['/jobs/new', '/jobs'], ['/files', '/capture'],
+      ['/profile', '/settings'], ['/billing', '/settings'],
     ]) {
       await page.goto(`${WEB}${legacy}`);
       await expect(page).toHaveURL(`${WEB}${canonical}`);

@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 import { join } from 'node:path';
 import { BUILD_ROOT, writeJson } from './lib/compiler.mjs';
-import { assertDisposableDatabaseEnvironment } from './lib/database.mjs';
+import { assertDisposableDatabaseEnvironment, resetDisposablePublicSchema } from './lib/database.mjs';
 import {
   PNPM,
   parseNodeTestSummary,
@@ -14,13 +14,7 @@ const disposable = assertDisposableDatabaseEnvironment(process.env);
 const client = new Client({ connectionString: disposable.url });
 await client.connect();
 try {
-  await client.query('begin');
-  await client.query('drop schema if exists public cascade');
-  await client.query('create schema public');
-  await client.query('commit');
-} catch (error) {
-  await client.query('rollback').catch(() => {});
-  throw error;
+  await resetDisposablePublicSchema(client);
 } finally {
   await client.end();
 }

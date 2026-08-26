@@ -1,5 +1,25 @@
 # OperatorOS module parity index
 
+## Zero-gap release-candidate overlay (2026-08-26)
+
+The strict source-derived parity contract is green across all 13 registered
+modules: 7,396 capabilities resolve to 4,281 `ACTIVE_NATIVE` and 3,115
+`ACTIVE_SHARED_EQUIVALENT`, with zero `OWNER_WAIVED`, zero `BLOCKED`, and zero
+verification failures. Shared equivalents are accepted only when they name the
+original user outcome, compatibility assertion, concrete adapter, and
+executable behavior test. No product category was retired or hidden to reach
+the result.
+
+TradeFlowKit is 717 native plus 399 shared equivalents; FaultlineLab is 246
+native plus 311 shared equivalents; OutCall is one owner-authorized current
+reconstruction capability and remains provider/activation locked. The complete
+release gate passes 14/14, including 1,203 API tests, release-v56 clean apply
+and reapply, production build, route/control inventory, 39 reviewed responsive
+visual baselines, exact-host browser acceptance, accessibility, and production
+preflight. This overlay supersedes historical blocked-count statements for
+current source truth, but does not claim GitHub CI, Replit deployment, live
+provider, DNS, production data, backup/rollback, or deployed acceptance.
+
 ## Ecosystem identity and hierarchy overlay (2026-08-22)
 
 OperatorOS is the parent platform; TradeFlowKit, PulseDesk, and TechDeck are the

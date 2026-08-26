@@ -1205,13 +1205,17 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await evidenceForm.getByRole('button', { name: 'Add evidence' }).click();
     await expect(timeline).toContainText('Cylinder 2 compression', { timeout: 30_000 });
 
+    await timeline.getByRole('link', { name: 'Open Torque Assist for this diagnostic', exact: true }).click();
+    await expect(page).toHaveURL(`https://torqueshed.operatoros.net/diagnostics/${diagnostic.id}/assist`);
     const assist = page.getByTestId('torqueshed-torque-assist');
     await expect(assist).toContainText('Preview analysis mode is active', { timeout: 30_000 });
-    await assist.locator('summary').click();
+    await page.goto(`https://torqueshed.operatoros.net/billing/credits?diagnostic=${diagnostic.id}`);
+    const creditPurchase = page.getByTestId('torqueshed-credits-route');
+    await expect(creditPurchase).toBeVisible({ timeout: 30_000 });
     const purchaseResponse = page.waitForResponse(response =>
       response.request().method() === 'POST'
       && new URL(response.url()).pathname === '/api/modules/torqueshed/token-purchases/checkout');
-    await assist.getByRole('button', { name: /Roadside: 25,000 units/ }).click();
+    await creditPurchase.getByRole('button', { name: /Roadside.*25,000 units/ }).click();
     const purchaseReply = await purchaseResponse;
     expect(purchaseReply.status(), await purchaseReply.text()).toBe(201);
     const purchaseBody = await purchaseReply.json() as {
@@ -1276,7 +1280,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const credits = page.getByTestId('torqueshed-credits-route');
     await expect(credits.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
     await expect(credits).toContainText('25,000', { timeout: 30_000 });
-    await page.goto(diagnosticUrl);
+    await page.goto(`${diagnosticUrl}/assist`);
     await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText(diagnosticTitle, { timeout: 30_000 });
     const refreshedAssist = page.getByTestId('torqueshed-torque-assist');
     const assistResponse = page.waitForResponse(response =>
@@ -1697,6 +1701,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('button-launch-faultlinelab').click();
     const modulePage = page;
     await expect(modulePage.getByTestId('faultlinelab-module-shell')).toBeVisible({ timeout: 30_000 });
+    await modulePage.getByRole('link', { name: 'Browse challenges', exact: true }).click();
+    await expect(modulePage).toHaveURL('https://faultlinelab.operatoros.net/challenges');
     await expect(modulePage.getByTestId('faultlinelab-challenge-card').first()).toBeVisible();
 
     await modulePage.getByTestId('faultlinelab-challenge-card').first().getByRole('button', { name: 'Start' }).click();
@@ -1794,7 +1800,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(await modulePage.getByTestId('brandforgeos-workspace').getAttribute('data-evidence')).toBe('persisted_records_only');
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('button', { name: 'Brand Kits', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Brands', exact: true }).click();
     await expect(modulePage).toHaveURL('https://brandforgeos.operatoros.net/brands');
     await modulePage.getByLabel('Brand name').fill(brandName);
     await modulePage.getByLabel('Voice and tone').fill('Direct, technical, and evidence-led');
@@ -1807,14 +1813,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     ]);
     await expect(modulePage.getByRole('heading', { name: brandName })).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Personas', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Personas', exact: true }).click();
     await modulePage.getByLabel('Persona name').fill(personaName);
     await modulePage.getByLabel('Pain points').fill('Fragmented creative operations');
     await modulePage.getByLabel('Goals').fill('Ship measurable campaigns');
     await modulePage.getByRole('button', { name: 'Create persona' }).click();
     await expect(modulePage.getByRole('heading', { name: personaName })).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Campaigns', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Campaigns', exact: true }).click();
     await modulePage.getByLabel('Campaign name').fill(campaignName);
     await modulePage.getByLabel('Objective').fill('Prove the durable OperatorOS creative workflow');
     await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
@@ -1824,15 +1830,18 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: 'Move to planning' }).click();
     await expect(modulePage.getByText('planning', { exact: true })).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Copy Studio', exact: true }).click();
-    await modulePage.getByLabel('Title').fill(copyTitle);
-    await modulePage.getByLabel('Copy content').fill('This copy asset is persisted and linked to the accepted campaign.');
-    await modulePage.getByLabel('Campaign').selectOption({ label: campaignName });
-    await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
-    await modulePage.getByRole('button', { name: 'Save copy asset' }).click();
+    await modulePage.getByRole('link', { name: 'Content & assets', exact: true }).click();
+    await expect(modulePage).toHaveURL('https://brandforgeos.operatoros.net/content');
+    const copyPanel = modulePage.locator('#brandforgeos-copy');
+    await expect(copyPanel).toBeVisible();
+    await copyPanel.getByLabel('Title', { exact: true }).fill(copyTitle);
+    await copyPanel.getByLabel('Copy content').fill('This copy asset is persisted and linked to the accepted campaign.');
+    await copyPanel.getByLabel('Campaign').selectOption({ label: campaignName });
+    await copyPanel.getByLabel('Brand kit').selectOption({ label: brandName });
+    await copyPanel.getByRole('button', { name: 'Save copy asset' }).click();
     await expect(modulePage.getByRole('heading', { name: copyTitle })).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Calendar', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Calendar', exact: true }).click();
     await modulePage.getByLabel('Deliverable title').fill(calendarTitle);
     await modulePage.getByLabel('Scheduled time').fill('2026-08-20T14:00');
     await modulePage.getByLabel('Campaign').selectOption({ label: campaignName });
@@ -1840,16 +1849,24 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: 'Schedule content' }).click();
     await expect(modulePage.getByText(calendarTitle, { exact: true })).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Analytics', exact: true }).click();
-    await modulePage.getByLabel('Campaign').selectOption({ label: campaignName });
-    await modulePage.getByLabel('Impressions').fill('100');
-    await modulePage.getByLabel('Clicks').fill('20');
-    await modulePage.getByLabel('Conversions').fill('4');
-    await modulePage.getByRole('button', { name: 'Record metrics' }).click();
-    await expect(modulePage.locator('#brandforgeos-analytics').getByText('100', { exact: true })).toBeVisible();
+    await modulePage.getByRole('link', { name: 'Analytics', exact: true }).click();
+    await expect(modulePage).toHaveURL('https://brandforgeos.operatoros.net/analytics');
+    const analyticsPanel = modulePage.locator('#brandforgeos-analytics');
+    await expect(analyticsPanel).toBeVisible();
+    await analyticsPanel.getByLabel('Campaign').selectOption({ label: campaignName });
+    await analyticsPanel.getByLabel('Impressions').fill('100');
+    await analyticsPanel.getByLabel('Clicks').fill('20');
+    await analyticsPanel.getByLabel('Conversions').fill('4');
+    await Promise.all([
+      modulePage.waitForResponse(response => response.request().method() === 'POST'
+        && /\/api\/modules\/brandforgeos\/campaigns\/[^/]+\/metrics$/.test(new URL(response.url()).pathname)
+        && response.status() === 201),
+      analyticsPanel.getByRole('button', { name: 'Record metrics' }).click(),
+    ]);
+    await expect(analyticsPanel.getByText('100', { exact: true })).toBeVisible();
     await expect(modulePage.getByRole('link', { name: 'Download real CSV export' })).toHaveAttribute('href', '/api/modules/brandforgeos/export?format=csv');
 
-    await modulePage.getByRole('button', { name: 'AI Workflows', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'AI workflows', exact: true }).click();
     await modulePage.getByLabel('Workflow').selectOption('copy');
     await modulePage.getByLabel('Brief').fill('Write a concise launch message for technical operators who value persistent evidence.');
     await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
@@ -1877,8 +1894,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage).toHaveURL('https://brandforgeos.operatoros.net/ai-workflows');
     await expect(modulePage.getByText(/test · [1-9]\d* tokens/)).toBeVisible();
     await modulePage.setViewportSize({ width: 390, height: 844 });
-    await expect(modulePage.getByRole('navigation', { name: 'BrandForgeOS workspace' })).toBeVisible();
-    await expect(modulePage.getByRole('button', { name: 'Campaigns', exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Open BrandForgeOS navigation', exact: true })).toBeVisible();
 
     await Promise.all([
       modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
@@ -1945,14 +1961,13 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(await workspace.getAttribute('data-evidence')).toBe('persisted_records_only');
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('button', { name: 'Subjects', exact: true }).click();
-    await expect(modulePage).toHaveURL('https://studyforge-ai.operatoros.net/subjects');
+    await modulePage.getByRole('link', { name: 'Sources & notes', exact: true }).click();
+    await expect(modulePage).toHaveURL('https://studyforge-ai.operatoros.net/sources');
     await modulePage.getByTestId('input-studyforge-subject-name').fill(subjectName);
     await modulePage.getByLabel('Course code').fill('NET-201');
     await modulePage.getByTestId('button-studyforge-subject-create').click();
     await expect(modulePage.locator('#studyforge-subjects').getByText(subjectName, { exact: true })).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Sources', exact: true }).click();
     await modulePage.getByTestId('input-studyforge-source-title').fill(sourceTitle);
     await modulePage.getByTestId('textarea-studyforge-source-body').fill(
       'Domain Name System resolvers translate host names into IP addresses. Recursive resolvers cache successful answers according to the record time to live.',
@@ -1974,7 +1989,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.locator('#studyforge-sources').getByText(documentTitle, { exact: true })).toBeVisible();
 
     const generate = async (type: 'deck' | 'quiz' | 'study_plan', title: string) => {
-      await modulePage.getByRole('button', { name: 'AI Studio', exact: true }).click();
+      await modulePage.getByRole('link', { name: 'AI Studio', exact: true }).click();
       await modulePage.getByTestId('select-studyforge-generation-source').selectOption({ label: sourceTitle });
       await modulePage.getByTestId('select-studyforge-generation-type').selectOption(type);
       await modulePage.getByTestId('input-studyforge-generation-title').fill(title);
@@ -1987,7 +2002,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     };
 
     const deck = await generate('deck', deckTitle);
-    await modulePage.getByRole('button', { name: 'Flashcards', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Flashcards', exact: true }).click();
     const deckArticle = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: deckTitle }) });
     await expect(deckArticle).toBeVisible();
     await deckArticle.getByRole('button', { name: 'Edit card' }).first().click();
@@ -2000,7 +2015,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await deckArticle.getByRole('button', { name: 'good', exact: true }).first().click();
 
     const quiz = await generate('quiz', quizTitle);
-    await modulePage.getByRole('button', { name: 'Quizzes', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Quizzes', exact: true }).click();
     const quizArticle = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: quizTitle }) });
     await expect(quizArticle).toBeVisible();
     await quizArticle.getByRole('button', { name: 'Edit question' }).first().click();
@@ -2017,7 +2032,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await quizArticle.getByRole('button', { name: 'Submit quiz' }).click();
 
     const plan = await generate('study_plan', planTitle);
-    await modulePage.getByRole('button', { name: 'Study Plans', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Sessions', exact: true }).click();
     const planArticle = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: planTitle }) });
     await expect(planArticle).toBeVisible();
     await planArticle.getByRole('button', { name: 'Edit session' }).first().click();
@@ -2067,8 +2082,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect((exportResult.body as any).decks.some((item: any) => item.id === deck.entity.id)).toBe(true);
 
     await modulePage.setViewportSize({ width: 390, height: 844 });
-    await expect(modulePage.getByRole('navigation', { name: 'StudyForge workspace' })).toBeVisible();
-    await expect(modulePage.getByRole('button', { name: 'Learning home', exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Open StudyForge AI navigation', exact: true })).toBeVisible();
     await Promise.all([
       modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
       modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
@@ -2129,7 +2143,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.locator('#launchkit-dashboard')).toBeVisible();
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('button', { name: 'Execution workspaces', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Readiness', exact: true }).click();
     await expect(modulePage.getByTestId('input-launchkit-title')).toBeVisible();
     await modulePage.getByTestId('input-launchkit-title').fill(launchTitle);
     await modulePage.getByTestId('input-launchkit-product-type').fill('SaaS service');
@@ -2262,18 +2276,24 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await page.getByTestId('button-launch-callcommand-ai').click();
     const modulePage = page;
-    await expect(modulePage.getByTestId('shell-callcommand-ai')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.getByTestId('callcommand-module-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Twilio voice provider');
     assertNoCredentialQuery(modulePage.url());
 
+    await modulePage.getByRole('link', { name: 'Automations', exact: true }).click();
     await modulePage.getByTestId('button-callcommand-create-profile').click();
     await expect(modulePage.locator('#callcommand-receptionists')).toContainText('Operations receptionist');
+    await modulePage.getByRole('button', { name: 'Create urgent rule' }).click();
+
+    await modulePage.getByRole('link', { name: 'Numbers and channels', exact: true }).click();
     await modulePage.getByTestId('input-callcommand-channel-phone').fill(phone);
     await modulePage.getByTestId('button-callcommand-create-channel').click();
     await expect(modulePage.locator('#callcommand-configuration')).toContainText('Primary operations line');
-    await modulePage.getByRole('button', { name: 'Create urgent rule' }).click();
+
+    await modulePage.getByRole('link', { name: 'Calls', exact: true }).click();
     await modulePage.getByTestId('button-callcommand-place-test-call').click();
     await expect(modulePage.locator('#callcommand-calls')).toContainText('urgent', { timeout: 20_000 });
+    await modulePage.getByRole('link', { name: 'Actions', exact: true }).click();
     await expect(modulePage.locator('#callcommand-work')).toContainText('Urgent caller response');
 
     const persisted = await pg.query<{
@@ -2354,13 +2374,13 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await page.getByTestId('button-launch-snapproofos').click();
     const modulePage = page;
-    const workspace = modulePage.getByTestId('snapproofos-workspace');
+    const workspace = modulePage.locator('#snapproofos-workspace');
     await expect(workspace).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.locator('#snapproofos-dashboard')).toBeVisible();
     expect(await workspace.getAttribute('data-evidence')).toBe('persisted-field-proof-and-private-evidence');
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('button', { name: 'Proof cases', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Evidence cases', exact: true }).click();
     await modulePage.getByLabel('Case reference').fill(reference);
     await modulePage.getByLabel('Title', { exact: true }).fill(caseTitle);
     await modulePage.getByLabel('Description').fill('A real persisted evidence lifecycle exercised through the production-host proxy.');
@@ -2375,7 +2395,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const caseUrl = `https://snapproofos.operatoros.net/cases/${createdCase.id}`;
     await expect(modulePage).toHaveURL(caseUrl);
 
-    await modulePage.getByRole('button', { name: 'Integrity', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Evidence integrity', exact: true }).click();
     await modulePage.getByLabel('Evidence type').selectOption('note');
     await modulePage.getByLabel('Title', { exact: true }).fill(noteTitle);
     await modulePage.getByLabel('Source type').fill('acceptance_test');
@@ -2410,7 +2430,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       return result.rows[0]?.scan_status;
     }, { timeout: 30_000 }).toMatch(/^(clean|unavailable)$/);
 
-    await modulePage.getByRole('button', { name: 'Evidence findings', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Case findings', exact: true }).click();
     await modulePage.getByLabel('Finding title').fill(findingTitle);
     await modulePage.getByLabel('Description').fill('The private evidence hash and review state remain server authoritative.');
     await modulePage.getByLabel('Severity').selectOption('high');
@@ -2420,46 +2440,51 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: 'Add internal note' }).click();
     await expect(modulePage.getByText('Internal reviewer context is append-only and custody linked.')).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Integrity', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Evidence integrity', exact: true }).click();
     await noteCard.getByRole('button', { name: 'Submit for review' }).click();
     await fileCard.getByRole('button', { name: 'Submit for review' }).click();
-    await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Review', exact: true }).click();
     await modulePage.locator('article').filter({ hasText: noteTitle }).getByRole('button', { name: 'Verify' }).click();
     await modulePage.locator('article').filter({ hasText: fileTitle }).getByRole('button', { name: 'Verify' }).click();
 
-    await modulePage.getByRole('button', { name: 'Proof cases', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Evidence cases', exact: true }).click();
     await modulePage.getByRole('button', { name: 'Submit case for review' }).click();
-    await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Review', exact: true }).click();
     await modulePage.getByRole('button', { name: 'Approve case' }).click();
     await expect(modulePage.getByRole('button', { name: 'Approve case' })).toBeHidden({ timeout: 30_000 });
 
-    await modulePage.getByRole('button', { name: 'Reports', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Reports', exact: true }).click();
     const reportTitleInput = modulePage.getByLabel('Report title');
     await reportTitleInput.fill(reportTitle);
     await expect(reportTitleInput).toHaveValue(reportTitle);
     await modulePage.getByRole('button', { name: 'Create report snapshot' }).click();
-    const reportCard = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: reportTitle }) });
+    const reportCard = workspace
+      .getByRole('heading', { name: reportTitle, exact: true })
+      .locator('xpath=ancestor::article[1]');
     await expect(reportCard).toBeVisible();
     await reportCard.getByRole('button', { name: 'Submit report' }).click();
-    await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
-    await modulePage.locator('article').filter({ hasText: reportTitle }).getByRole('button', { name: 'Approve report' }).click();
-    await modulePage.getByRole('button', { name: 'Reports', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Review', exact: true }).click();
+    await workspace
+      .getByRole('heading', { name: reportTitle, exact: true })
+      .locator('xpath=ancestor::article[1]')
+      .getByRole('button', { name: 'Approve report' })
+      .click();
+    await modulePage.getByRole('link', { name: 'Reports', exact: true }).click();
     await expect(reportCard.getByRole('button', { name: 'JSON' })).toBeVisible();
     await Promise.all([
       modulePage.waitForEvent('download'),
       reportCard.getByRole('button', { name: 'JSON' }).click(),
     ]);
 
-    await modulePage.getByRole('button', { name: 'Custody', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Custody', exact: true }).click();
     await expect(modulePage.getByText('Displayed custody links are continuous')).toBeVisible();
     await expect(modulePage.getByText('report approved', { exact: true })).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Retention', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Retention', exact: true }).click();
     await modulePage.getByRole('button', { name: 'Place legal hold' }).click();
     await expect(modulePage.getByRole('button', { name: 'Release legal hold' })).toBeVisible();
     await modulePage.setViewportSize({ width: 390, height: 844 });
-    await expect(modulePage.getByRole('navigation', { name: 'SnapProofOS workspace' })).toBeVisible();
-    await expect(modulePage.getByRole('button', { name: 'Proof cases', exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Open SnapProofOS navigation', exact: true })).toBeVisible();
 
     await Promise.all([
       modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
@@ -2515,11 +2540,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const modulePage = page;
     await expect(modulePage.getByTestId('ninja-pool-hall-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('ninja-pool-dashboard')).toBeVisible();
-    await expect(modulePage.getByRole('button', { name: 'Online', exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('link', { name: 'Online', exact: true })).toBeVisible();
     await expect(modulePage.getByText('Online rooms are coming later', { exact: true })).toHaveCount(0);
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('button', { name: 'Profile', exact: true }).click();
+    await modulePage.locator('a[href="/profile"]').click();
     await expect(modulePage).toHaveURL('https://operatorpoolhall.operatoros.net/profile');
     const displayName = modulePage.getByLabel('Display name');
     await displayName.fill('Phase 10B Table Ninja');
@@ -2530,10 +2555,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       modulePage.getByRole('button', { name: 'Save profile' }).click(),
     ]);
 
-    await modulePage.getByRole('button', { name: 'Vs CPU', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Vs CPU', exact: true }).click();
     await expect(modulePage.getByTestId('ninja-pool-bot-match')).toBeVisible();
     await modulePage.getByTestId('ninja-pool-start-match').click();
-    await expect(modulePage).toHaveURL(/^https:\/\/ninja-pool-hall\.operatoros\.net\/matches\/[a-f0-9-]+$/);
+    await expect(modulePage).toHaveURL(/^https:\/\/operatorpoolhall\.operatoros\.net\/matches\/[a-f0-9-]+$/);
     const cpuMatchUrl = modulePage.url();
     const shotStartedAt = Date.now();
     await modulePage.getByTestId('ninja-pool-match-shoot').click();
@@ -2546,7 +2571,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByText('active', { exact: true })).toBeVisible();
     await expect(modulePage.locator('dd').filter({ hasText: /^[1-9]\d*$/ }).first()).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Vs CPU', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Vs CPU', exact: true }).click();
     await expect(modulePage.getByText('Match recovery required')).toBeVisible({ timeout: 20_000 });
     await modulePage.getByRole('button', { name: 'End recovered match' }).click();
     await expect(modulePage.locator('.nphm-history article').filter({ hasText: 'abandoned' }).first()).toBeVisible();
@@ -2614,7 +2639,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByTestId('shell-ninjamation')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('notice-ninjamation-no-execution')).toContainText('never executes script source');
 
-    await modulePage.getByTestId('nav-ninjamation-admin').click();
+    await modulePage.getByRole('link', { name: 'Administration', exact: true }).click();
     await modulePage.getByTestId('input-ninjamation-name').fill(scriptName);
     await modulePage.getByTestId('select-ninjamation-language').selectOption('powershell');
     await modulePage.getByTestId('select-ninjamation-risk').selectOption('low');

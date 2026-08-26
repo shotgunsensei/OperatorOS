@@ -132,6 +132,13 @@ const nav: readonly ModuleRouteManifestGroup[] = [
         icon: Settings,
         activeMatch: { kind: 'prefix' },
       },
+      {
+        id: 'admin',
+        canonicalPath: '/admin',
+        label: 'Administration',
+        icon: ShieldCheck,
+        activeMatch: { kind: 'prefix' },
+      },
     ],
   },
 ];
@@ -180,6 +187,11 @@ const copy: Record<string, { eyebrow: string; title: string; subtitle: string }>
     title: 'Script Ops settings',
     subtitle: 'Review account, plan usage, administration, and shared synchronization policy.',
   },
+  admin: {
+    eyebrow: 'Tenant administration',
+    title: 'Script Ops administration',
+    subtitle: 'Create inert drafts and manage synchronization policy without executing imported source.',
+  },
 };
 
 function area(path?: string) {
@@ -196,7 +208,8 @@ function area(path?: string) {
   if (root === 'review') return 'review';
   if (['runs', 'downloads'].includes(root)) return 'runs';
   if (root === 'versions') return 'versions';
-  if (['settings', 'account', 'billing', 'checkout', 'admin'].includes(root)) return 'settings';
+  if (root === 'admin') return 'admin';
+  if (['settings', 'account', 'billing', 'checkout'].includes(root)) return 'settings';
   return 'overview';
 }
 
@@ -262,6 +275,23 @@ export default function NinjamationRouteShell({
       testId="ninjamation-module-shell"
       pageHeaderTestId="ninjamation-module-header"
     >
+      <aside
+        data-testid="notice-ninjamation-no-execution"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 9,
+          marginBottom: 16,
+          border: '1px solid rgba(139,92,246,.4)',
+          borderRadius: 10,
+          background: 'rgba(49,46,129,.16)',
+          color: '#ddd6fe',
+          padding: '10px 12px',
+          fontSize: 13,
+        }}
+      >
+        <ShieldCheck size={16} /> Script Ops never executes script source in the browser, web server, or API process.
+      </aside>
       {tenantId && (
         <Workspace
           key={`${tenantId}-${current}-${routePath ?? ''}`}

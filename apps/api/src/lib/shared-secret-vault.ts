@@ -34,7 +34,7 @@ export function getSharedSecretVaultReadiness() {
   }
 }
 
-function encryptedReference(reference: string) {
+export function encryptServerSecret(reference: string) {
   const { key, version } = encryptionKey();
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
@@ -46,6 +46,21 @@ function encryptedReference(reference: string) {
     keyVersion: version,
     fingerprint: createHash('sha256').update(reference).digest('hex'),
   };
+}
+
+export function decryptServerSecret(input: {
+  ciphertext: Buffer | Uint8Array;
+  iv: Buffer | Uint8Array;
+  authTag: Buffer | Uint8Array;
+  keyVersion: string;
+}): string {
+  const configured = encryptionKey();
+  if (input.keyVersion !== configured.version) {
+    throw Object.assign(new Error('Secret reference uses an unavailable encryption key version'), { code: 'SECRET_KEY_VERSION_UNAVAILABLE' });
+  }
+  const decipher = createDecipheriv('aes-256-gcm', configured.key, Buffer.from(input.iv));
+  decipher.setAuthTag(Buffer.from(input.authTag));
+  return Buffer.concat([decipher.update(Buffer.from(input.ciphertext)), decipher.final()]).toString('utf8');
 }
 
 export async function storeEncryptedSecretReference(input: {
@@ -61,7 +76,7 @@ export async function storeEncryptedSecretReference(input: {
   if (!purpose || purpose.length > 120 || !reference || reference.length > 2_000) {
     throw Object.assign(new Error('Secret reference and bounded purpose are required'), { code: 'SECRET_REFERENCE_INVALID' });
   }
-  const encrypted = encryptedReference(reference);
+  const encrypted = encryptServerSecret(reference);
   const result = await executor.execute(sql`
     INSERT INTO shared_secret_references (
       tenant_id, module_id, purpose, ciphertext, iv, auth_tag, key_version,
@@ -96,11 +111,10 @@ export async function resolveEncryptedSecretReference(input: {
   `);
   const row = result.rows[0] as any;
   if (!row) return null;
-  const configured = encryptionKey();
-  if (String(row.key_version) !== configured.version) {
-    throw Object.assign(new Error('Secret reference uses an unavailable encryption key version'), { code: 'SECRET_KEY_VERSION_UNAVAILABLE' });
-  }
-  const decipher = createDecipheriv('aes-256-gcm', configured.key, Buffer.from(row.iv));
-  decipher.setAuthTag(Buffer.from(row.auth_tag));
-  return Buffer.concat([decipher.update(Buffer.from(row.ciphertext)), decipher.final()]).toString('utf8');
+  return decryptServerSecret({
+    ciphertext: row.ciphertext,
+    iv: row.iv,
+    authTag: row.auth_tag,
+    keyVersion: String(row.key_version),
+  });
 }

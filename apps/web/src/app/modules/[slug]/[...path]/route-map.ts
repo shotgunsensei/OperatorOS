@@ -41,6 +41,10 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/analytics': { sectionId: 'tradeflowkit-operations', label: 'Operational Analytics' },
     '/trash': { sectionId: 'tradeflowkit-trash', label: 'Archived Records' },
     '/settings': { sectionId: 'tradeflowkit-settings', label: 'Settings' },
+    '/subscription': { sectionId: 'tradeflowkit-subscription-route', label: 'Subscription' },
+    '/call-recovery': { sectionId: 'tradeflowkit-call-recovery-route', label: 'Call Recovery' },
+    '/admin': { sectionId: 'tradeflowkit-admin-route', label: 'Administration' },
+    '/access-denied': { sectionId: 'tradeflowkit-access-denied-route', label: 'Access Denied' },
   },
   techdeck: {
     '/dashboard': { sectionId: 'techdeck-overview', label: 'Overview', redirectPath: '/' },
@@ -169,7 +173,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   brandforgeos: {
     '/dashboard': { sectionId: 'brandforgeos-dashboard', label: 'Dashboard', redirectPath: '/' },
     '/brands': { sectionId: 'brandforgeos-brands', label: 'Brand Kits' },
-    '/personas': { sectionId: 'brandforgeos-personas', label: 'Audience Personas', redirectPath: '/brands' },
+    '/personas': { sectionId: 'brandforgeos-personas', label: 'Audience Personas' },
     '/offers': { sectionId: 'brandforgeos-offers', label: 'Offers', redirectPath: '/campaigns' },
     '/campaigns': { sectionId: 'brandforgeos-campaigns', label: 'Campaigns' },
     '/copy-studio': { sectionId: 'brandforgeos-copy', label: 'Copy Studio', redirectPath: '/content' },
@@ -210,10 +214,10 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/branding': { sectionId: 'snapproofos-branding', label: 'Organization Branding' },
     '/profile': { sectionId: 'snapproofos-settings', label: 'Profile and Organization', redirectPath: '/settings' },
     '/billing': { sectionId: 'snapproofos-settings', label: 'Plan and Billing', redirectPath: '/settings' },
-    '/cases': { sectionId: 'snapproofos-jobs', label: 'Evidence Cases', redirectPath: '/jobs' },
+    '/cases': { sectionId: 'snapproofos-cases', label: 'Evidence Cases' },
     '/evidence': { sectionId: 'snapproofos-evidence', label: 'Evidence' },
     '/review': { sectionId: 'snapproofos-review', label: 'Review Queue' },
-    '/findings': { sectionId: 'snapproofos-work', label: 'Findings', redirectPath: '/work' },
+    '/findings': { sectionId: 'snapproofos-findings', label: 'Case Findings' },
     '/reports': { sectionId: 'snapproofos-reports', label: 'Reports' },
     '/share': { sectionId: 'snapproofos-share-route', label: 'Secure Sharing' },
     '/exports': { sectionId: 'snapproofos-exports-route', label: 'Defensible Exports' },
@@ -331,7 +335,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/billing': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing', redirectPath: '/settings' },
     '/checkout/success': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status', redirectPath: '/settings' },
     '/checkout/cancel': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status', redirectPath: '/settings' },
-    '/admin': { sectionId: 'ninjamation-admin', label: 'Script Ops Administration', redirectPath: '/settings' },
+    '/admin': { sectionId: 'ninjamation-admin', label: 'Script Ops Administration' },
   },
   outcall: {
     '/dashboard': { sectionId: 'outcall-overview-route', label: 'Overview', redirectPath: '/' },
@@ -485,8 +489,8 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'workflows') return { sectionId: 'brandforgeos-strategy', label: 'Guided Workflow' };
   }
   if (slug === 'snapproofos' && pathSegments.length === 2) {
-    const [resource, id] = pathSegments;
-    if (resource === 'cases') return { sectionId: 'snapproofos-jobs', label: 'Evidence Case', redirectPath: `/jobs/${encodeURIComponent(id)}` };
+    const [resource] = pathSegments;
+    if (resource === 'cases') return { sectionId: 'snapproofos-cases', label: 'Evidence Case' };
     if (resource === 'evidence') return { sectionId: 'snapproofos-evidence', label: 'Evidence Item' };
     if (resource === 'reports') return { sectionId: 'snapproofos-reports', label: 'Report' };
     if (resource === 'jobs') return { sectionId: 'snapproofos-jobs', label: 'Job' };

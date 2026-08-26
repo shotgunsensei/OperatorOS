@@ -35,6 +35,27 @@ continues to identify commit `399f4d2`, build `e15147cfd811c794a780887f`, and
 database release v54. No module parity state changes; republish, v55
 backup/apply, exact release identity, and deployed acceptance remain open.
 
+## Current release v56 MFA authority overlay
+
+OperatorOS now owns TOTP multi-factor authentication for the shared identity
+boundary. TOTP secrets use the existing server-side AES-256-GCM secret
+encryption authority; recovery codes are stored only as one-way hashes; and
+login challenges are stored only by token hash, expire after five minutes, are
+single-use, and lock after five failed attempts. Password login does not issue a
+platform session when MFA is enabled. A host-only, `Secure`, `HttpOnly`,
+`SameSite=Lax` challenge cookie completes the second factor through the shared
+auth route. Login, explicit invitation sign-in, and account settings use that
+same authority. Disabling MFA increments the account token version and revokes
+all sessions. Release v56 adds only the three central MFA tables after v55;
+modules do not own credentials, recovery, or independent MFA state.
+
+Source and disposable-database verification cover RFC 6238 compatibility,
+enrollment, TOTP and recovery login, replay rejection, recovery-code
+regeneration, disablement, and the database release contract. Production backup
+and v56 apply, fresh publication, exact deployed identity, authenticated
+exact-host browser acceptance, monitoring, and rollback verification remain
+open human/provider gates.
+
 ## Current release v55 invitation-consent overlay
 
 Every OperatorOS account retains a real default single-owner tenant. Invitation
