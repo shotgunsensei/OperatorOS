@@ -141,7 +141,7 @@ test('Replit provider detection uses provider evidence and excludes the interact
     arch: 'x64',
     execPath: '/nix/store/editor-node/bin/node',
     nodeVersion: 'v24.12.0',
-  }, scanUserAgent), false);
+  }, scanUserAgent), true);
   assert.equal(isReplitProviderInstallEnvironment({}, {
     platform: 'linux',
     arch: 'x64',

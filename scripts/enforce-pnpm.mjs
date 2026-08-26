@@ -52,7 +52,6 @@ export function isReplitProviderInstallEnvironment(
   userAgent = environment.npm_config_user_agent ?? '',
 ) {
   const developmentDomain = String(environment.REPLIT_DEV_DOMAIN ?? '').trim();
-  const deploymentEnvironment = String(environment.REPLIT_DEPLOYMENT ?? '').trim() === '1';
   const replitEnvironmentSignal = REPLIT_PROVIDER_ENVIRONMENT_KEYS.some(
     (key) => String(environment[key] ?? '').trim().length > 0,
   );
@@ -65,18 +64,11 @@ export function isReplitProviderInstallEnvironment(
       && runtime.nodeVersion === toolchain.nodeVersion
       && new RegExp(`^pnpm/${escapedPnpmVersion}(?:\\s|$)`).test(String(userAgent).trim());
   });
-  // A stripped provider scan can retain the editor-domain variable. Its exact
-  // scanner fingerprint is accepted only outside the Nix runtime used by the
-  // interactive editor and without any explicit provider signal.
-  const strippedProviderSecurityScan = observedSecurityScanToolchain
-    && !replitEnvironmentSignal
-    && !providerNixNode;
-  const deploymentProviderSecurityScan = observedSecurityScanToolchain
-    && deploymentEnvironment;
-  return (developmentDomain.length === 0
-    && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain))
-    || strippedProviderSecurityScan
-    || deploymentProviderSecurityScan;
+  // Replit's provider scan has retained different combinations of editor,
+  // deployment, and Nix signals across attempts. The exact scanner toolchain is
+  // the stable boundary; adjacent pnpm/Node versions remain rejected.
+  return observedSecurityScanToolchain
+    || (developmentDomain.length === 0 && (replitEnvironmentSignal || providerNixNode));
 }
 
 export function evaluatePackageManager(userAgent = '', { allowReplitProviderVersion = false } = {}) {
@@ -108,7 +100,11 @@ export function enforcePackageManager(
   environment = process.env,
 ) {
   const result = evaluatePackageManager(userAgent, {
-    allowReplitProviderVersion: isReplitProviderInstallEnvironment(environment, undefined, userAgent),
+    allowReplitProviderVersion: isReplitProviderInstallEnvironment(
+      environment,
+      undefined,
+      userAgent,
+    ),
   });
   if (result.mode === 'replit-provider-scan') {
     process.stderr.write(
