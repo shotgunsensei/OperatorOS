@@ -21,11 +21,13 @@
   Phase 39 deployment-scope gate on external ports `80, 3001, 3000`. The local
   repair removes the two internal mappings so only the readiness-gated
   supervisor on local `5000` is exposed as public port `80`.
-- The provider predicate now treats `REPLIT_DEV_DOMAIN` as an unconditional
-  denial, including when the process otherwise matches an exact scanner tuple.
+- The provider predicate accepts the exact observed stripped scanner tuple even
+  if the provider retains `REPLIT_DEV_DOMAIN`, but only outside the Nix Node
+  runtime used by the interactive editor and without explicit provider signals.
   Exact stripped fallbacks remain limited to `pnpm/10.26.1`, Linux x64, and
   Node `v24.12.0` or `v20.20.0`. Adjacent Node/pnpm versions, other platforms
-  or architectures, npm, pnpm 11, and the interactive editor remain rejected.
+  or architectures, npm, pnpm 11, and the interactive editor's Nix runtime
+  remain rejected.
   The normal install and deployment build remain pinned to pnpm `10.34.5`
   with `--frozen-lockfile`.
 - Fresh local evidence: provider-like pnpm `10.26.1` installation accepted the

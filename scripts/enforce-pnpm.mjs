@@ -64,12 +64,15 @@ export function isReplitProviderInstallEnvironment(
       && runtime.nodeVersion === toolchain.nodeVersion
       && new RegExp(`^pnpm/${escapedPnpmVersion}(?:\\s|$)`).test(String(userAgent).trim());
   });
-  // The editor domain is an unconditional denial. In particular, an exact
-  // provider tuple must never turn an interactive Replit workspace into a
-  // provider-scan context.
-  if (developmentDomain.length > 0) return false;
-
-  return replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain;
+  // A stripped provider scan can retain the editor-domain variable. Its exact
+  // scanner fingerprint is accepted only outside the Nix runtime used by the
+  // interactive editor and without any explicit provider signal.
+  const strippedProviderSecurityScan = observedSecurityScanToolchain
+    && !replitEnvironmentSignal
+    && !providerNixNode;
+  return (developmentDomain.length === 0
+    && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain))
+    || strippedProviderSecurityScan;
 }
 
 export function evaluatePackageManager(userAgent = '', { allowReplitProviderVersion = false } = {}) {
