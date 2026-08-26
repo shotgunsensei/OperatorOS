@@ -34,10 +34,11 @@ The current merge separately reintroduced public mappings for internal ports
 5001 and 5002; GitHub workflow `32881726210` caught those mappings in the
 deployment-scope gate. The local repair restores the single public-port
 contract. Because the provider can retain `REPLIT_DEV_DOMAIN` while stripping
-its other signals, the exact two observed scanner tuples are accepted only
-outside the Nix runtime used by the interactive editor and without explicit
-provider signals. Regression coverage rejects Node `v20.20.1`, pnpm `10.26.2`,
-ARM64, and the editor's Nix runtime.
+its other signals, the exact two observed scanner tuples are accepted with the
+deployment-only `REPLIT_DEPLOYMENT=1` marker. If that marker is stripped,
+the fallback remains limited to non-Nix runtimes without explicit provider
+signals. Regression coverage rejects Node `v20.20.1`, pnpm `10.26.2`, ARM64,
+and the editor's Nix runtime.
 
 Provider-like pnpm 10.26.1 and exact pnpm 10.34.5 frozen installs both pass
 locally without changing the sole root lock hash. Phase 39 passes 14/14, the

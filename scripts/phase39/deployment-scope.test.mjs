@@ -110,6 +110,15 @@ test('Replit provider detection uses provider evidence and excludes the interact
     { ...scanRuntime, nodeVersion: 'v20.20.0' },
     'pnpm/10.26.1 npm/? node/v20.20.0 linux x64',
   ), true);
+  assert.equal(isReplitProviderInstallEnvironment({
+    REPLIT_DEV_DOMAIN: 'example.replit.dev',
+    REPLIT_DEPLOYMENT: '1',
+  }, {
+    platform: 'linux',
+    arch: 'x64',
+    execPath: '/nix/store/provider-node/bin/node',
+    nodeVersion: 'v20.20.0',
+  }, 'pnpm/10.26.1 npm/? node/v20.20.0 linux x64'), true);
   assert.equal(isReplitProviderInstallEnvironment(
     {},
     scanRuntime,

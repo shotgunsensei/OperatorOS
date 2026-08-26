@@ -52,6 +52,7 @@ export function isReplitProviderInstallEnvironment(
   userAgent = environment.npm_config_user_agent ?? '',
 ) {
   const developmentDomain = String(environment.REPLIT_DEV_DOMAIN ?? '').trim();
+  const deploymentEnvironment = String(environment.REPLIT_DEPLOYMENT ?? '').trim() === '1';
   const replitEnvironmentSignal = REPLIT_PROVIDER_ENVIRONMENT_KEYS.some(
     (key) => String(environment[key] ?? '').trim().length > 0,
   );
@@ -70,9 +71,12 @@ export function isReplitProviderInstallEnvironment(
   const strippedProviderSecurityScan = observedSecurityScanToolchain
     && !replitEnvironmentSignal
     && !providerNixNode;
+  const deploymentProviderSecurityScan = observedSecurityScanToolchain
+    && deploymentEnvironment;
   return (developmentDomain.length === 0
     && (replitEnvironmentSignal || providerNixNode || observedSecurityScanToolchain))
-    || strippedProviderSecurityScan;
+    || strippedProviderSecurityScan
+    || deploymentProviderSecurityScan;
 }
 
 export function evaluatePackageManager(userAgent = '', { allowReplitProviderVersion = false } = {}) {
