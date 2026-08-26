@@ -3,3 +3,4 @@
 - [Twilio connector proxy](twilio-connector-proxy.md) — token needs `repl `/`depl ` prefix; `connector_names` filter broken; serves API key pair (auth as api_key:secret); webhooks still need TWILIO_AUTH_TOKEN.
 - [Installs & preflight](monorepo-installs-preflight.md) — install only via pinned pnpm frozen-lockfile (npm drift once broke fastify boot); preflight needs production values injected inline.
 - [Next.js SEO validation](nextjs-seo-validation.md) — use a crawler UA for metadata checks; browser UAs may receive streamed metadata, and ImageResponse supports restricted CSS.
+- [Replit provider scan marker](replit-provider-scan.md) — exact provider pnpm tuples may retain workspace signals; use the deployment-only marker for a bounded exception.
