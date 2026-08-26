@@ -220,6 +220,7 @@ const assetExtensions = new Set([
   '.avif', '.gif', '.ico', '.jpeg', '.jpg', '.mp3', '.mp4', '.ogg', '.otf',
   '.pdf', '.png', '.svg', '.ttf', '.wav', '.webm', '.webp', '.woff', '.woff2',
 ]);
+const privateSigningContainerExtensions = new Set(['.jks', '.keystore', '.p12', '.pfx']);
 const codeExtensions = new Set(['.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx']);
 const testPattern = /(?:^|\/)(?:e2e|test|tests)(?:\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/iu;
 const mobilePattern = /(?:^|\/)(?:android|ios|mobile)(?:\/|$)|(?:^|\/)(?:app|eas)\.json$|capacitor|expo|manifest\.(?:json|webmanifest)$|service[-_.]?worker|(?:^|\/)sw\.[cm]?[jt]s$/iu;
@@ -249,7 +250,9 @@ function walk(directory) {
 }
 
 function sourceFingerprint(sourceRoot) {
-  const files = walk(sourceRoot);
+  const files = walk(sourceRoot).filter(
+    (file) => !privateSigningContainerExtensions.has(extname(file).toLowerCase()),
+  );
   const hash = createHash('sha256');
   let totalBytes = 0;
   for (const file of files) {

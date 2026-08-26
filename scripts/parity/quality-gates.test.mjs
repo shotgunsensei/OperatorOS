@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
 import {
   createVisualNegativeFixture,
@@ -8,7 +10,8 @@ import {
   validateVisualContracts,
 } from './lib/quality.mjs';
 import { assertDisposableDatabaseEnvironment, resetDisposablePublicSchema } from './lib/database.mjs';
-import { PNPM, parseNodeTestSummary, requiredTestExitCode, runCaptured } from './lib/process.mjs';
+import { REPOSITORY_ROOT } from './lib/compiler.mjs';
+import { PNPM, parseNodeTestSummary, requiredTestExitCode, runCaptured, waitForPort } from './lib/process.mjs';
 
 test('visual contract covers 13 module-owned suites at desktop, tablet, and mobile widths', () => {
   const contracts = readVisualContracts();
@@ -141,6 +144,18 @@ test('repository child pnpm commands resolve the packageManager version through 
   const result = await runCaptured(PNPM, ['--version']);
   assert.equal(result.status, 0);
   assert.equal(result.stdout.trim(), '10.34.5');
+});
+
+test('port readiness fails immediately when its child process exits', async () => {
+  await assert.rejects(
+    waitForPort(9, '127.0.0.1', 1_000, { exitCode: 1 }),
+    /Process exited before 127\.0\.0\.1:9 became ready \(1\)/u,
+  );
+});
+
+test('GitHub release runners grant only Node the low-port capability required by the exact-host TLS edge', () => {
+  const workflow = readFileSync(join(REPOSITORY_ROOT, '.github', 'workflows', 'release-gate.yml'), 'utf8');
+  assert.match(workflow, /sudo setcap cap_net_bind_service=\+ep .*command -v node/u);
 });
 
 test('required Node test summaries fail closed on skips and missing telemetry', () => {

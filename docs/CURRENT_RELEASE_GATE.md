@@ -9,7 +9,7 @@ failed stages. The strict matrix contains 7,396 capabilities: 4,281 native,
 3,115 tested shared equivalents, zero owner waivers, and zero blockers.
 
 Fresh evidence: security/hardening passes with 1,296 files and zero findings;
-39/39 unit tests; 1,203/1,203 API tests; 28/28 disposable PostgreSQL release,
+41/41 unit tests; 1,203/1,203 API tests; 28/28 disposable PostgreSQL release,
 apply, reapply, and integration tests; four-workspace typecheck; zero-warning
 ESLint; production build; 1,304 route capabilities across 964 crawl routes
 with zero failures; 13 governed visual contracts and 39 reviewed responsive
@@ -28,11 +28,12 @@ persistence tests. OutCall uses the explicitly authorized current
 reconstruction but stays `coming_soon` until provider activation is separately
 accepted.
 
-Release status is **SOURCE/LOCAL PASS; PRODUCTION HOLD**. GitHub CI, fresh
-Replit publish, pre-apply backup, production v56 apply, exact deployed release
-identity, DNS/exact-host authenticated acceptance, live provider acceptance,
-monitoring, and rollback proof remain human/production gates. A green local
-gate does not authorize publishing or production mutation.
+Release status is **SOURCE/LOCAL PASS; PRODUCTION HOLD**. GitHub CI evidence is
+reported from the final committed revision; fresh Replit publish, pre-apply
+backup, production v56 apply, exact deployed release identity, DNS/exact-host
+authenticated acceptance, live provider acceptance, monitoring, and rollback
+proof remain human/production gates. A green source or CI gate does not
+authorize publishing or production mutation.
 
 ## Current Phase 36 source/local overlay - RELEASE BLOCKED (2026-08-13)
 

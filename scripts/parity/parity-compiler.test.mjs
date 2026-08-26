@@ -21,6 +21,9 @@ test('compiler derives counts from all 13 Phase 20 module ledgers', () => {
   assert.equal(baseline.source.totals.unclassified, 0);
   assert.equal(baseline.source.drift.length, 0);
   assert.equal(baseline.ledger.totals.capabilities, baseline.source.totals.capabilities);
+  const tradeFlowKit = baseline.source.modules.find((module) => module.moduleSlug === 'tradeflowkit');
+  assert.ok(tradeFlowKit);
+  assert.equal(tradeFlowKit.freshFingerprint.fileCount, 321);
 });
 
 test('every active evidence file compiles to one or more real runnable test IDs', () => {

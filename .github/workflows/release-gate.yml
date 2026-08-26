@@ -82,6 +82,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Permit the exact-host TLS proxy to bind HTTPS
+        run: sudo setcap cap_net_bind_service=+ep "$(readlink -f "$(command -v node)")"
+
       - name: Install the clean checkout
         run: pnpm install --frozen-lockfile
 

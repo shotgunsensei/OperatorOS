@@ -132,9 +132,12 @@ export async function waitForHttp(url, child, timeoutMs = 120_000) {
   throw new Error(`Timed out waiting for ${url}: ${detail}`);
 }
 
-export async function waitForPort(port, host = '127.0.0.1', timeoutMs = 30_000) {
+export async function waitForPort(port, host = '127.0.0.1', timeoutMs = 30_000, child) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (child?.exitCode != null) {
+      throw new Error(`Process exited before ${host}:${port} became ready (${child.exitCode})`);
+    }
     const connected = await new Promise(resolve => {
       const socket = net.createConnection({ port, host });
       socket.once('connect', () => { socket.destroy(); resolve(true); });

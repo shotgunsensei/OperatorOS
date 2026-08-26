@@ -4,22 +4,26 @@ import { resolve } from 'node:path';
 import { resolveRepositoryRoot } from './repository-root.js';
 
 export const BRANDFORGEOS_SOURCE_COMMIT = '5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e';
-export const BRANDFORGEOS_SOURCE_MANIFEST_SHA256 = 'a9870113010225951faead6c74afbc4b3f15c7a2e643cd7c0459ed9920689298';
+export const BRANDFORGEOS_SOURCE_MANIFEST_SHA256 = '2125d8ced0a7486b4f90467c4e60ada98b462b1db099f3405e46d46cb2dfd956';
 
 const repoRoot = resolveRepositoryRoot();
 const sourceRoot = resolve(repoRoot, 'apps/modules/brandforgeos/source');
 const evidenceFiles = [
-  ['lib/db/src/schema/brands.ts', '93cefd2242f779de4d8e74c0fc16d4c78f5b2446b23febd786697c67f63b1d96'],
-  ['lib/db/src/schema/personas.ts', 'f8c0faa89b5cdfff80573ee6b09c51d4fb2493c1c5945a52f3ba0933874d3a9c'],
-  ['lib/db/src/schema/campaigns.ts', '91ecfe809b7dc76833eb505f39701fde614539a921c65e2423bec556e2aac16f'],
-  ['lib/db/src/schema/copyAssets.ts', 'a58b6857ab1bc38adc0ab2ee28011820f8f3b6089497e45e1cff0887ce014a3e'],
-  ['lib/db/src/schema/calendarItems.ts', 'd72370d17dd94c65676e89b8001340ce9b46e19f63c4300be48e1e1506270544'],
-  ['artifacts/api-server/src/routes/ai.ts', '12e1b888953f2233fe0bf386ce408cc740a83e203cea2098bbed1bbccff5168e'],
-  ['artifacts/api-server/src/routes/dashboard.ts', 'dd6f86afa2165aed57e9cc1f652d6e6e81b33c63c3879bfb091e4a42c7bc5c71'],
+  ['lib/db/src/schema/brands.ts', '2234fd0132c3c5f8da56a21e3569f3df90f444019eac0a1f47b68f4a639f9486'],
+  ['lib/db/src/schema/personas.ts', '94b87ecceaf96a578281a0b0b564d229c0392a705372b6ee2aa793d6e09c8327'],
+  ['lib/db/src/schema/campaigns.ts', '9d2785a6b53e901f7db9f40f6802d87db70674e75e1b7d54887a6a65a7feb336'],
+  ['lib/db/src/schema/copyAssets.ts', '149000fdc2c5ceab1428e3a0e87cb28ccc799cd5a51a6960ddc598366ff9257c'],
+  ['lib/db/src/schema/calendarItems.ts', '1f872f8a14abd88b491580c47a511f6bc6d9589c6b70ae6d469f4e815106eccc'],
+  ['artifacts/api-server/src/routes/ai.ts', 'd806cbd30e0c5b6fbea0dfa2e084154fd03a5e102ccc49375c017c9b78c94b92'],
+  ['artifacts/api-server/src/routes/dashboard.ts', '7e0041404be0091a1ce242a4c2f9fa145fcac580c1bdcdda1d33f8ef46723d6b'],
 ] as const;
 
 function hash(bytes: string | Buffer) {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function hashCanonicalText(bytes: Buffer) {
+  return hash(Buffer.from(bytes.toString('utf8').replaceAll('\r\n', '\n'), 'utf8'));
 }
 
 export interface BrandForgeOsImportPlan {
@@ -60,7 +64,7 @@ export function planBrandForgeOsImport(): BrandForgeOsImportPlan {
     totalBytes?: number;
   };
   const errors: string[] = [];
-  const sourceManifestHash = hash(manifestBytes);
+  const sourceManifestHash = hashCanonicalText(manifestBytes);
   if (manifest.sourceCommit !== BRANDFORGEOS_SOURCE_COMMIT) {
     errors.push('Pinned source commit does not match the Phase 11A authority');
   }
@@ -68,7 +72,7 @@ export function planBrandForgeOsImport(): BrandForgeOsImportPlan {
     errors.push('Source snapshot manifest hash does not match the reviewed Phase 11A snapshot');
   }
   const verifiedFiles = evidenceFiles.map(([path, expectedHash]) => {
-    const actualHash = hash(readFileSync(resolve(sourceRoot, path)));
+    const actualHash = hashCanonicalText(readFileSync(resolve(sourceRoot, path)));
     if (actualHash !== expectedHash) errors.push(`Source evidence file differs from the reviewed snapshot: ${path}`);
     return { path, expectedHash, actualHash, exact: actualHash === expectedHash };
   });

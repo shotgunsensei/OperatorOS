@@ -94,7 +94,10 @@ export function walk(directory) {
 }
 
 export function sourceFingerprint(sourceRoot) {
-  const files = walk(sourceRoot);
+  const privateSigningContainerExtensions = new Set(['.jks', '.keystore', '.p12', '.pfx']);
+  const files = walk(sourceRoot).filter(
+    (file) => !privateSigningContainerExtensions.has(extname(file).toLowerCase()),
+  );
   const hash = createHash('sha256');
   let totalBytes = 0;
   for (const file of files) {

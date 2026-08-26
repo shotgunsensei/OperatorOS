@@ -41,7 +41,7 @@
   MFA is disabled.
 - Fresh `corepack pnpm verify:release` completed **14/14** stages with no failed
   stage. Evidence includes 1,296 scanned source files with zero findings; 1,276
-  audited dependencies with zero critical or unresolved high advisories; 39/39
+  audited dependencies with zero critical or unresolved high advisories; 41/41
   unit/compiler tests; 1,203/1,203 API tests; 28/28 disposable database,
   clean-apply, and idempotent-reapply tests; four-workspace typecheck; ESLint
   with zero warnings; production build; 223 active target files, 1,304 route
@@ -50,13 +50,14 @@
   accessibility and persisted-workflow browser tests; 4/4 stable visual tests;
   and production preflight. The separate read-only `corepack pnpm db:plan`
   reports release v56, 56 ordered steps, `destructive: false`.
-- This is source/local release evidence, not a production-published claim. The
-  final committed revision still needs GitHub CI, a fresh Replit publish (not
-  republish of an older snapshot), backup confirmation before v56 application,
-  exact deployed `/readyz` commit/build/database identity, exact-host DNS and
-  authenticated browser acceptance, monitoring, and rollback verification.
-  Live provider activation remains separately controlled, especially OutCall.
-  No Replit publish or production database mutation was performed here.
+- This is source/local release evidence, not a production-published claim.
+  GitHub CI evidence must come from the exact final committed revision. A fresh
+  Replit publish (not republish of an older snapshot), backup confirmation
+  before v56 application, exact deployed `/readyz` commit/build/database
+  identity, exact-host DNS and authenticated browser acceptance, monitoring,
+  and rollback verification remain separate gates. Live provider activation
+  remains separately controlled, especially OutCall. No Replit publish or
+  production database mutation was performed here.
 
 ## Replit publish reconciliation and stashed release-gate integration - SOURCE INTEGRATED / RELEASE GATE RED (2026-08-26)
 

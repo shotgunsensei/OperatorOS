@@ -43,7 +43,7 @@ try {
     logPath: join(BUILD_ROOT, 'exact-host-proxy.log'),
     mirrorToParent: false,
   });
-  await waitForPort(443);
+  await waitForPort(443, '127.0.0.1', 30_000, proxy);
   if (suite === 'e2e' || suite === 'all') {
     const browserArgs = [
       'test',
