@@ -1,6 +1,7 @@
 {
-  "schemaVersion": 1,
-  "policy": "A baseline is release evidence only when its PNG exists and visual-baseline-approvals.json binds its SHA-256 to an identified reviewer, timestamp, and reason.",
+  "schemaVersion": 2,
+  "policy": "A baseline is release evidence only when every declared platform PNG exists and visual-baseline-approvals.json binds each SHA-256 to an identified reviewer, timestamp, and reason.",
+  "baselinePlatforms": ["linux", "win32"],
   "modules": [
     {
       "moduleSlug": "brandforgeos",

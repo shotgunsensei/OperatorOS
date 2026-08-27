@@ -8,13 +8,14 @@ product work. `corepack pnpm verify:release` passes all 14 stages with zero
 failed stages. The strict matrix contains 7,396 capabilities: 4,281 native,
 3,115 tested shared equivalents, zero owner waivers, and zero blockers.
 
-Fresh evidence: security/hardening passes with 1,296 files and zero findings;
-41/41 unit tests; 1,203/1,203 API tests; 28/28 disposable PostgreSQL release,
+Fresh clean-checkout evidence: security/hardening passes with 1,291 tracked
+source files and zero findings;
+42/42 unit tests; 1,203/1,203 API tests; 28/28 disposable PostgreSQL release,
 apply, reapply, and integration tests; four-workspace typecheck; zero-warning
 ESLint; production build; 1,304 route capabilities across 964 crawl routes
-with zero failures; 13 governed visual contracts and 39 reviewed responsive
-hashes; 21/21 exact-host workflow/accessibility browser tests; 4/4 immutable
-visual tests; and production preflight. The read-only release-v56 database plan
+with zero failures; 13 governed visual contracts and 78 reviewed Linux/Windows
+responsive hashes; 21/21 exact-host workflow/accessibility browser tests; 4/4
+immutable visual tests; and production preflight. The read-only release-v56 database plan
 has 56 ordered, idempotent, non-destructive steps. Release v56 adds central
 encrypted TOTP, one-time MFA login challenges, one-way recovery codes, and the
 complete login/invitation/settings workflow without creating module-local

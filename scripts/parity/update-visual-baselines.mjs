@@ -7,6 +7,7 @@ import {
 } from './lib/compiler.mjs';
 import {
   VISUAL_APPROVAL_PATH,
+  expandVisualBaselinePaths,
   readVisualApprovals,
   readVisualContracts,
   validateVisualContracts,
@@ -30,17 +31,20 @@ if (structuralIssues.length > 0) throw new Error(`Visual contracts are structura
 const approvals = [];
 for (const module of contracts.modules) {
   for (const viewport of module.viewports) {
-    const absolute = join(REPOSITORY_ROOT, viewport.baselinePath);
-    if (!existsSync(absolute)) throw new Error(`Missing screenshot baseline: ${viewport.baselinePath}`);
-    approvals.push({
-      moduleSlug: module.moduleSlug,
-      viewport: viewport.name,
-      baselinePath: viewport.baselinePath,
-      sha256: sha256(readFileSync(absolute)),
-      approvedBy,
-      approvedAt,
-      reason,
-    });
+    for (const entry of expandVisualBaselinePaths(contracts, viewport.baselinePath)) {
+      const absolute = join(REPOSITORY_ROOT, entry.baselinePath);
+      if (!existsSync(absolute)) throw new Error(`Missing screenshot baseline: ${entry.baselinePath}`);
+      approvals.push({
+        moduleSlug: module.moduleSlug,
+        viewport: viewport.name,
+        platform: entry.platform,
+        baselinePath: entry.baselinePath,
+        sha256: sha256(readFileSync(absolute)),
+        approvedBy,
+        approvedAt,
+        reason,
+      });
+    }
   }
 }
 approvals.sort((left, right) => left.baselinePath.localeCompare(right.baselinePath));

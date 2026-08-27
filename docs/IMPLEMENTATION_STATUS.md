@@ -40,14 +40,15 @@
   challenge cookie, login/invitation/settings UI, and session revocation when
   MFA is disabled.
 - Fresh `corepack pnpm verify:release` completed **14/14** stages with no failed
-  stage. Evidence includes 1,296 scanned source files with zero findings; 1,276
-  audited dependencies with zero critical or unresolved high advisories; 41/41
+  stage. Evidence includes 1,291 clean-checkout tracked source files with zero
+  findings; 1,276 audited dependencies with zero critical or unresolved high
+  advisories; 42/42
   unit/compiler tests; 1,203/1,203 API tests; 28/28 disposable database,
   clean-apply, and idempotent-reapply tests; four-workspace typecheck; ESLint
   with zero warnings; production build; 223 active target files, 1,304 route
   capabilities, 964 crawl routes, and zero route/control failures; 13 visual
-  contracts and 39 reviewed desktop/tablet/mobile hashes; 21/21 exact-host
-  accessibility and persisted-workflow browser tests; 4/4 stable visual tests;
+  contracts and 78 reviewed Linux/Windows desktop/tablet/mobile hashes; 21/21
+  exact-host accessibility and persisted-workflow browser tests; 4/4 stable visual tests;
   and production preflight. The separate read-only `corepack pnpm db:plan`
   reports release v56, 56 ordered steps, `destructive: false`.
 - This is source/local release evidence, not a production-published claim.

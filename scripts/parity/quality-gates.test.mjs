@@ -23,8 +23,12 @@ test('visual contract covers 13 module-owned suites at desktop, tablet, and mobi
 });
 
 test('current visual approval gate binds every module viewport to a reviewed baseline', () => {
-  const issues = validateVisualContracts(readVisualContracts(), readVisualApprovals());
-  assert.equal(readVisualApprovals().approvals.length, 39);
+  const contracts = readVisualContracts();
+  const approvals = readVisualApprovals();
+  const issues = validateVisualContracts(contracts, approvals);
+  assert.deepEqual(contracts.baselinePlatforms, ['linux', 'win32']);
+  assert.equal(approvals.approvals.length, 78);
+  assert.deepEqual([...new Set(approvals.approvals.map((approval) => approval.platform))].sort(), ['linux', 'win32']);
   assert.deepEqual(issues, []);
 });
 
@@ -32,6 +36,7 @@ for (const [fixtureName, expectedCode] of [
   ['missing-brand-token', 'MISSING_MODULE_BRANDING_TOKENS'],
   ['missing-viewport', 'MISSING_VISUAL_VIEWPORT'],
   ['invalid-route', 'INVALID_VISUAL_ROUTE'],
+  ['invalid-platforms', 'INVALID_VISUAL_BASELINE_PLATFORMS'],
 ]) {
   test(`controlled visual fixture ${fixtureName} produces ${expectedCode}`, () => {
     const contracts = readVisualContracts();

@@ -14,8 +14,8 @@ TradeFlowKit is 717 native plus 399 shared equivalents; FaultlineLab is 246
 native plus 311 shared equivalents; OutCall is one owner-authorized current
 reconstruction capability and remains provider/activation locked. The complete
 release gate passes 14/14, including 1,203 API tests, release-v56 clean apply
-and reapply, production build, route/control inventory, 39 reviewed responsive
-visual baselines, exact-host browser acceptance, accessibility, and production
+and reapply, production build, route/control inventory, 78 reviewed
+Linux/Windows responsive visual baselines, exact-host browser acceptance, accessibility, and production
 preflight. This overlay supersedes historical blocked-count statements for
 current source truth, but does not claim GitHub CI, Replit deployment, live
 provider, DNS, production data, backup/rollback, or deployed acceptance.

@@ -12,7 +12,10 @@ export default defineConfig({
   expect: { timeout: 20_000 },
   reporter: [['line'], ['html', { outputFolder: 'playwright-report/visual', open: 'never' }], ['./e2e/fail-on-skipped-reporter.ts']],
   outputDir: 'test-results/playwright-visual',
-  snapshotPathTemplate: '{testDir}/visual-baselines/{arg}{ext}',
+  // Chromium text metrics and rasterization differ between the supported
+  // Windows workstation and Linux release runners. Keep the same strict pixel
+  // threshold while selecting an explicitly reviewed baseline for each OS.
+  snapshotPathTemplate: '{testDir}/visual-baselines/{arg}-{platform}{ext}',
   use: {
     ...devices['Desktop Chrome'],
     ignoreHTTPSErrors: true,

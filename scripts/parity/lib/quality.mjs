@@ -72,14 +72,35 @@ export function readVisualApprovals() {
   return JSON.parse(readFileSync(VISUAL_APPROVAL_PATH, 'utf8'));
 }
 
+export function platformVisualBaselinePath(logicalPath, platform) {
+  if (!String(logicalPath).endsWith('.png')) return null;
+  return String(logicalPath).replace(/\.png$/u, `-${platform}.png`);
+}
+
+export function expandVisualBaselinePaths(contracts, logicalPath) {
+  return (contracts.baselinePlatforms ?? []).map((platform) => ({
+    platform,
+    baselinePath: platformVisualBaselinePath(logicalPath, platform),
+  }));
+}
+
 export function validateVisualContracts(contracts, approvals, { checkFiles = true } = {}) {
   const issues = [];
   const seenModules = new Set();
   const approvalByPath = new Map((approvals.approvals ?? []).map((approval) => [approval.baselinePath, approval]));
-  if (contracts.schemaVersion !== 1 || !Array.isArray(contracts.modules)) {
-    issues.push(qualityIssue('INVALID_VISUAL_CONTRACT_SCHEMA', 'visual-contracts.json must use schemaVersion 1 and a modules array'));
+  if (contracts.schemaVersion !== 2 || !Array.isArray(contracts.modules)) {
+    issues.push(qualityIssue('INVALID_VISUAL_CONTRACT_SCHEMA', 'visual-contracts.json must use schemaVersion 2 and a modules array'));
     return issues;
   }
+  const baselinePlatforms = contracts.baselinePlatforms ?? [];
+  if (!Array.isArray(baselinePlatforms)
+      || baselinePlatforms.length === 0
+      || new Set(baselinePlatforms).size !== baselinePlatforms.length
+      || baselinePlatforms.some((platform) => !/^[a-z0-9-]+$/u.test(platform))) {
+    issues.push(qualityIssue('INVALID_VISUAL_BASELINE_PLATFORMS', 'baselinePlatforms must contain unique lower-case platform identifiers'));
+    return issues;
+  }
+  const requiredBaselinePaths = new Set();
   for (const module of contracts.modules) {
     if (seenModules.has(module.moduleSlug)) issues.push(qualityIssue('DUPLICATE_VISUAL_MODULE', `Duplicate visual module ${module.moduleSlug}`));
     seenModules.add(module.moduleSlug);
@@ -108,21 +129,38 @@ export function validateVisualContracts(contracts, approvals, { checkFiles = tru
         issues.push(qualityIssue('MISSING_VISUAL_BASELINE', `${module.moduleSlug}/${required.name} has no baseline path`, { moduleSlug: module.moduleSlug, viewport: required.name }));
         continue;
       }
-      if (!checkFiles) continue;
-      const absolute = join(REPOSITORY_ROOT, baselinePath);
-      if (!existsSync(absolute)) {
-        issues.push(qualityIssue('MISSING_VISUAL_BASELINE', `${module.moduleSlug}/${required.name} baseline is missing: ${baselinePath}`, { moduleSlug: module.moduleSlug, viewport: required.name, path: baselinePath }));
+      const platformBaselines = expandVisualBaselinePaths(contracts, baselinePath);
+      if (platformBaselines.some((entry) => !entry.baselinePath)) {
+        issues.push(qualityIssue('INVALID_VISUAL_BASELINE_PATH', `${baselinePath} must be a PNG logical baseline path`, { moduleSlug: module.moduleSlug, viewport: required.name, path: baselinePath }));
         continue;
       }
-      const approval = approvalByPath.get(baselinePath);
-      if (!approval) {
-        issues.push(qualityIssue('UNAPPROVED_VISUAL_BASELINE', `${baselinePath} has no explicit approval`, { moduleSlug: module.moduleSlug, viewport: required.name, path: baselinePath }));
-        continue;
+      for (const entry of platformBaselines) {
+        const concretePath = entry.baselinePath;
+        requiredBaselinePaths.add(concretePath);
+        if (!checkFiles) continue;
+        const absolute = join(REPOSITORY_ROOT, concretePath);
+        if (!existsSync(absolute)) {
+          issues.push(qualityIssue('MISSING_VISUAL_BASELINE', `${module.moduleSlug}/${required.name}/${entry.platform} baseline is missing: ${concretePath}`, { moduleSlug: module.moduleSlug, viewport: required.name, platform: entry.platform, path: concretePath }));
+          continue;
+        }
+        const approval = approvalByPath.get(concretePath);
+        if (!approval) {
+          issues.push(qualityIssue('UNAPPROVED_VISUAL_BASELINE', `${concretePath} has no explicit approval`, { moduleSlug: module.moduleSlug, viewport: required.name, platform: entry.platform, path: concretePath }));
+          continue;
+        }
+        if (approval.platform !== entry.platform) issues.push(qualityIssue('VISUAL_BASELINE_PLATFORM_MISMATCH', `${concretePath} approval platform does not match ${entry.platform}`, { path: concretePath, platform: entry.platform }));
+        const digest = sha256(readFileSync(absolute));
+        if (approval.sha256 !== digest) issues.push(qualityIssue('VISUAL_BASELINE_DRIFT', `${concretePath} does not match its approved SHA-256`, { moduleSlug: module.moduleSlug, viewport: required.name, platform: entry.platform, path: concretePath }));
+        for (const field of ['approvedBy', 'approvedAt', 'reason']) {
+          if (!String(approval[field] ?? '').trim()) issues.push(qualityIssue('INCOMPLETE_VISUAL_APPROVAL', `${concretePath} approval lacks ${field}`, { path: concretePath }));
+        }
       }
-      const digest = sha256(readFileSync(absolute));
-      if (approval.sha256 !== digest) issues.push(qualityIssue('VISUAL_BASELINE_DRIFT', `${baselinePath} does not match its approved SHA-256`, { moduleSlug: module.moduleSlug, viewport: required.name, path: baselinePath }));
-      for (const field of ['approvedBy', 'approvedAt', 'reason']) {
-        if (!String(approval[field] ?? '').trim()) issues.push(qualityIssue('INCOMPLETE_VISUAL_APPROVAL', `${baselinePath} approval lacks ${field}`, { path: baselinePath }));
+    }
+  }
+  if (checkFiles) {
+    for (const approval of approvals.approvals ?? []) {
+      if (!requiredBaselinePaths.has(approval.baselinePath)) {
+        issues.push(qualityIssue('UNREFERENCED_VISUAL_APPROVAL', `${approval.baselinePath} is approved but not required by the current contract`, { path: approval.baselinePath }));
       }
     }
   }
@@ -134,6 +172,7 @@ export function createVisualNegativeFixture(name, contracts) {
   if (name === 'missing-brand-token') fixture.modules[0].brandTokens = [];
   else if (name === 'missing-viewport') fixture.modules[0].viewports = fixture.modules[0].viewports.filter((viewport) => viewport.name !== 'mobile');
   else if (name === 'invalid-route') fixture.modules[0].criticalRoute = 'not-a-route';
+  else if (name === 'invalid-platforms') fixture.baselinePlatforms = ['linux', 'linux'];
   else throw new Error(`Unknown visual negative fixture: ${name}`);
   return fixture;
 }
