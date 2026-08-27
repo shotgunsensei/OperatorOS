@@ -28,8 +28,8 @@ export const CALLCOMMAND_THEME: ModuleThemeTokens = {
   radius: { small: '7px', medium: '10px', large: '16px' },
   density: 'comfortable',
   typography: {
-    body: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    heading: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    body: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    heading: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
     accent: 'ui-monospace, "Cascadia Code", monospace',
   },
   imagery: { overlay: 'linear-gradient(135deg,rgba(16,185,129,.12),transparent 42%),radial-gradient(circle at 88% 2%,rgba(45,212,191,.1),transparent 32rem)' },

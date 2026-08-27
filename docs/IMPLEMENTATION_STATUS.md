@@ -9,8 +9,14 @@
   repository install/build path re-establishes exact pnpm `10.34.5` with the
   frozen root lockfile. Only the readiness-gated supervisor is public
   (`5000 -> 80`); API `5001` and Next `5002` remain internal.
-- The applicable GitHub Desktop stash work was reconciled without dropping the
-  stash or overwriting the provider repair. Source-derived route gaps were
+- The applicable GitHub Desktop stash work was reconciled without overwriting
+  the provider repair. A final three-tree audit found 37/57 substantive-stash
+  paths byte-identical to the integrated candidate, 12/57 with no remaining
+  merge delta, and eight superseded deltas that would restore v55 identity,
+  stale routes/parity, or the excluded signing-container fingerprint. That
+  stash was dropped. The second stash contained only pnpm/Playwright cache
+  state and a disposable test certificate/private key and was also dropped.
+  Source-derived route gaps were
   closed with executable shells and tests: BrandForgeOS Personas, SnapProofOS
   Cases and Findings, Script Ops Administration, TradeFlowKit workflow routes,
   safe installable TradeFlowKit/FaultlineLab PWA surfaces, and exact-host
@@ -18,6 +24,19 @@
   OutCall's unrecovered historical source is superseded by the owner's
   authorized, safety-first shared-runtime reconstruction; it remains globally
   `coming_soon` and provider-locked rather than pretending live delivery.
+- The browser typography used by the governed module shells is now app-owned:
+  pinned Fontsource Inter and Open Sans variable fonts are bundled and served
+  by Next.js. The previous system-font fallback produced different text
+  metrics on the official Playwright Linux container and GitHub's Ubuntu
+  runner. All 78 Linux/Windows baselines were regenerated through compiled
+  exact-host production runs, visually reviewed, approved by exact SHA-256,
+  and rerun with updates disabled. Windows passed 4/4 in 1.7 minutes and the
+  pinned Linux container passed 4/4 in 2.5 minutes at the unchanged 0.5%
+  pixel threshold with the existing WCAG and layout assertions active. The
+  screenshot identity retains a unique login but uses a deterministic tenant
+  display label, and the global-logout deep-link test now reopens a fresh page
+  after revocation so neither random glyph wrapping nor a competing shell
+  redirect can make the release result flaky.
 - Strict parity is green across all 13 modules and all **7,396** compiled
   capabilities: **4,281 `ACTIVE_NATIVE`**, **3,115
   `ACTIVE_SHARED_EQUIVALENT`**, **0 `OWNER_WAIVED`**, **0 `BLOCKED`**, and
@@ -41,7 +60,7 @@
   MFA is disabled.
 - Fresh `corepack pnpm verify:release` completed **14/14** stages with no failed
   stage. Evidence includes 1,291 clean-checkout tracked source files with zero
-  findings; 1,276 audited dependencies with zero critical or unresolved high
+  findings; 1,278 audited dependencies with zero critical or unresolved high
   advisories; 42/42
   unit/compiler tests; 1,203/1,203 API tests; 28/28 disposable database,
   clean-apply, and idempotent-reapply tests; four-workspace typecheck; ESLint

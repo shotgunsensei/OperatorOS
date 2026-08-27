@@ -17,7 +17,7 @@ const shell: React.CSSProperties = {
   colorScheme: 'dark',
   background:
     'radial-gradient(circle at 18% 0%,rgba(14,116,255,.25),transparent 38%),radial-gradient(circle at 86% 18%,rgba(139,92,246,.18),transparent 32%),#020711',
-  fontFamily: 'Inter,ui-sans-serif,system-ui,sans-serif',
+  fontFamily: '"Inter Variable",ui-sans-serif,system-ui,sans-serif',
 };
 const card: React.CSSProperties = {
   border: '1px solid rgba(56,189,248,.19)',

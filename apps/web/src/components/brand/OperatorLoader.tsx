@@ -107,7 +107,7 @@ export default function OperatorLoader({
         </div>
         <div
           style={{
-            fontFamily: 'var(--brand-font-display, "Space Grotesk", Inter, system-ui, sans-serif)',
+            fontFamily: 'var(--brand-font-display, "Inter Variable", system-ui, sans-serif)',
             fontSize: 16,
             fontWeight: 600,
             color: 'var(--brand-text-primary, #F8FAFC)',

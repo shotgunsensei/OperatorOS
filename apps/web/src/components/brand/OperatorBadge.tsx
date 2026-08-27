@@ -32,7 +32,7 @@ export default function OperatorBadge({
         borderRadius: 999,
         border: '1px solid var(--brand-border-soft, rgba(148, 163, 184, 0.18))',
         background: 'var(--brand-bg-glass, rgba(18, 24, 38, 0.72))',
-        fontFamily: 'var(--brand-font-display, "Space Grotesk", Inter, system-ui, sans-serif)',
+        fontFamily: 'var(--brand-font-display, "Inter Variable", system-ui, sans-serif)',
         fontSize: Math.max(10, size - 4),
         fontWeight: 600,
         color: 'var(--brand-text-secondary, #A7B0C0)',

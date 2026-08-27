@@ -46,8 +46,8 @@ export const SNAPPROOF_THEME: ModuleThemeTokens = {
   radius: { small: '6px', medium: '9px', large: '14px' },
   density: 'comfortable',
   typography: {
-    body: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    heading: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    body: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    heading: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
     accent: 'ui-monospace, "Cascadia Code", monospace',
   },
   imagery: { overlay: 'linear-gradient(135deg,rgba(239,68,68,.14),transparent 42%),linear-gradient(315deg,rgba(45,212,191,.07),transparent 34%)' },

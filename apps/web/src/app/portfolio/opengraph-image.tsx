@@ -30,7 +30,7 @@ export default function OG() {
           padding: '72px 80px',
           background: BG,
           color: TEXT,
-          fontFamily: 'Inter, system-ui, sans-serif',
+          fontFamily: '"Inter Variable", system-ui, sans-serif',
           position: 'relative',
         }}
       >

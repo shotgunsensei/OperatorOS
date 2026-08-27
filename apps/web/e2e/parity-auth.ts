@@ -46,6 +46,13 @@ export async function establishParitySession(request: APIRequestContext): Promis
   const pg = new Client({ connectionString: databaseUrl });
   await pg.connect();
   try {
+    // Keep the credential unique while making the customer-visible tenant
+    // label deterministic. Random glyph widths can otherwise change line
+    // wrapping and invalidate an unrelated visual baseline on narrow screens.
+    await pg.query(
+      `update tenants set name = 'Phase 21 Parity Tenant' where id = $1`,
+      [tenantId],
+    );
     const plan = await pg.query<{ id: string }>(`select id from subscription_plans where slug = 'elite' limit 1`);
     if (!plan.rows[0]) throw new Error('Elite plan is not seeded');
     await pg.query(

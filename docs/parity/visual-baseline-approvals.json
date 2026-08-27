@@ -7,780 +7,780 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-linux.png",
-      "sha256": "27cc4e300570c7e262d5a805ff38c68f28c3c09b74136f67a501d85f13d9bb89",
+      "sha256": "b15bff4ec1f0294dbf14e37995ed6f6ee29c9c2938f8c378052405e6999aeae7",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-win32.png",
-      "sha256": "82ccc14273e6bf541cb6ca01d30bfdacec02ebac4188f3ddea7f2e94a5ec53ca",
+      "sha256": "41be016c542d463339cf94d562a275632349f2370ca77178820e75f77e8093e6",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-linux.png",
-      "sha256": "49383ce5348fd0725c861ac5be791d4c9a20924c82d9aea7b37e4f7dbb5d8b13",
+      "sha256": "7acc34cc3362198ebad1ed5ca8917829a55b699c08bf83404aa76eb444129a9b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-win32.png",
-      "sha256": "689b24f9e0fd84cc27587680976ef738df7229c57484060c35dc1b8675395edb",
+      "sha256": "d36b5551b4a72ada9b56671a0291de634d0c2ea7485ac0bebba818af74e736e2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-linux.png",
-      "sha256": "8626b3c73371cbfa3940912f78bf610d9a8dcfc948c0fa5a69ba759bcbff1ee5",
+      "sha256": "be6232670fe6c069ae2485f57a02d3152a844be7a3433be4cd84b4dc3df33ed2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-win32.png",
-      "sha256": "87d0f82e03918709b52304c957c3622b3ee336a754978d8af65ce2759a955e8b",
+      "sha256": "3a7eea92f3c139494141c36e02c0bd7a18bc5ba097ba59f37137db9667fe1265",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-linux.png",
-      "sha256": "37cdb2c8ebfe4d20cc0536537ac3e60e0d46b6e5733c8c27297fc3574573f2e1",
+      "sha256": "32885b670e187ce1fa9d427fb95a7682efb0999d8ad9e75c8f3a44157f494ced",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-win32.png",
-      "sha256": "98f6edb7f56472c301a702e9b1754ba41a8cae0f3bc877cd522481c697af91ae",
+      "sha256": "faa5c4fab408f432b87a8045664fb62316f335f25b68e3410c3357c2daa627cd",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-linux.png",
-      "sha256": "f863e484acce0bf4bbf2d6f18c7996e2913967f8aa9f8701072ea9879812ac98",
+      "sha256": "a4bebafc952fd878054adc5ef1ecb5c4a6f5c68d75fe283c4e3f8547c47a8b3c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-win32.png",
-      "sha256": "11e3ad819e21a553df5db5c88dd427f55b10bef5d9e83bdd6a873fc09e71c49d",
+      "sha256": "96da4143e8accbedcf53c851cac270f296f2038ab794c149796c1cee945fca51",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-linux.png",
-      "sha256": "5bd13e5d24fd0544ac395b41b2d14fab6852161548f432d70e767344d3c08902",
+      "sha256": "a56180388020c980e47044d1b5dc9c1ce555438db210036ff08cc0f99dd4900d",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-win32.png",
-      "sha256": "c5d2daea09d4a5a5b4a926ebe5646c18a23123c0b09bbbaf2fc55a3dfb648e83",
+      "sha256": "ed03c8fdc12820e9f7be72cbbe0ed1b164478ed48f5f042f320f99fc6093edd4",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-linux.png",
-      "sha256": "47d2e0276b09efad57ad811819e0f7858fabbe4322cef864ea80567f0dad4467",
+      "sha256": "516e5512a32deeefb872c62a6a00225ceac9f30d3f5e4ab5e3cd7759fe2b8cd8",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-win32.png",
-      "sha256": "10ed5c0a3731eef95268e3aa87df8b1d8e465ccb29e3beff17e4ed81172720a3",
+      "sha256": "d017cdcabfc4d5cd40b8a5e6c1594f79eb64f0a2012783307d8edb352c63cc4a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-linux.png",
-      "sha256": "492c3763d74bab3d7b4610ca0912742c0cb747835591a6ab64df33c8f3db3d92",
+      "sha256": "4708e25e511b4066a20a29e192873560ef78404f1eff45e0928b3ac62058de36",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-win32.png",
-      "sha256": "eb5cca60e51add9000161f5468fbfbde3f0c39330dd61a0025bd4f3c4b80f921",
+      "sha256": "e9526dca7acbfddd32b39f0cadb6480f070e4fff462f16e1b650915c8056cae9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-linux.png",
-      "sha256": "b1e7300de2d2be978f6935506bb1d9bb9e87360b2b17a5a43dcdfed6857bc6fa",
+      "sha256": "919632d32c3f34cecb1f3c6b679193de1bbe4887a404b71fa478b5e2956b7c00",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-win32.png",
-      "sha256": "b973a59945106f5ae03801754629fde86a05478bb0ec28f5bec11f470950abd4",
+      "sha256": "bd727ce13e32ca4e1cbaec0177eda45a6743a0ca7b9f58d35213b33c47821def",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-linux.png",
-      "sha256": "6bd34618eb6012215c8e74ee2970a972361086ad12eb7aac182be2870fc18332",
+      "sha256": "45a7f0525fa197c79ea6f5a13aeefc8b0d09eaa1be1bf77dd2c39b93062b88bc",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-win32.png",
-      "sha256": "243b5d6fa0ab5e53c6599bba6ee115933ef49fd4f896544c3651a9152c76e6c3",
+      "sha256": "b36ac688ebad699645a118ebfbc702c67be522f66751623abd5e0afd83917a8b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-linux.png",
-      "sha256": "ed2a6613bf30f931cf18d4a96f19adb5c0f42a19d13531725097af36c9f56555",
+      "sha256": "d9ed8b7d168e760f5aa3838374c2bf0157c3ff17cc481f348b24114aeb9be587",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-win32.png",
-      "sha256": "f29a62d87a910b507af4d1105a3e872690c1b2ecada3de6772db53a19331e352",
+      "sha256": "9ae372e1da6089436348fbf3542abed5e460396db8e80cbc461dd6a304c88005",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-linux.png",
-      "sha256": "7c0caf68dc806804a187b3483a24fdac5c751bf66071bb275f213f4616b22966",
+      "sha256": "15284d86c6370d281beadd21af9a0a31ffa81ff73e9d2445cb9bdf204d5205e6",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-win32.png",
-      "sha256": "a3ddf9686bdb7e2a0b76105f40052be1a62bea29bab0c9acce392eae1b26027c",
+      "sha256": "5549e67344bde5a4149c1c8f753a8f8b1098768a7c93f7f105e86b7643699ffa",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-linux.png",
-      "sha256": "6a8085bd0e91aa6164e2ad3ae502b58ac4aa921581560e9b35b896ca9edb9509",
+      "sha256": "82b7c251bab00603840bdce2a3b0191ae20e795737ddc2c6ccef40f39f0742ad",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-win32.png",
-      "sha256": "e8f98ec7f728a9ffec33791ccf8c4ceeb3bd100d20254d8c999b762ae421336b",
+      "sha256": "e456b32e0dd2dc18e79fb3a2a404b39b1e4ce0c6e75c896cb2462d52b3ae2d8e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-linux.png",
-      "sha256": "829cde7f93bc7cbfcb51a01a88c3b97a6de61f7a07b7843bb7ef1b46a0161393",
+      "sha256": "9c1673b6596793d08e02389756bdebfe26dca5535994e555c107fa4067c77132",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-win32.png",
-      "sha256": "dac7f0e1b0dca15c631e70f83c38b63d2cc68e4e1ae88e6f7f9b5056df85c5d0",
+      "sha256": "33f2e210dd8edf1965dea88842cf7f905e25531e95a9e1af5e38ef11eb095c3f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-linux.png",
-      "sha256": "ab941fbdf76ace58211f146f323ed832b9350473d4cdda46aef7036ddb3cf1db",
+      "sha256": "b109f27138843b39174e06bed37258455968e97681032a7c96f57fe0366c7133",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-win32.png",
-      "sha256": "3c741d46cc945a9626c8e38ee61d439736c2f00fc058c71ed12093ff75a2171c",
+      "sha256": "bd62df87157a819e20a19b7efafac653ee547789d2fd19323724d181231cf44f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-linux.png",
-      "sha256": "ca4720ba7955b489bfe80ffef5f1e3b0668722ffdab5b72d7c85f14792e2c4e7",
+      "sha256": "9b780a27e681d5a6e879a3386b0847c9d46862b8924d80446c39d55d9c50af40",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-win32.png",
-      "sha256": "200a72a211b5b5c7ff0829a592cf1d71baf7ba81b899cc47e978a63825443d2a",
+      "sha256": "a1ef74eb9c6ebfd789d80ebd682fad8fc25fc7769812a6bdb77463235f03dcd6",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-linux.png",
-      "sha256": "18b3f56431ec3b3287c67b6358c16bdd2b04b27c8d7252a89e9ec7b283ae3f5e",
+      "sha256": "72d4941280f776dcb49cf20783dc37fbd6e30a12f81ecd0f1a96471fbff56d9a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-win32.png",
-      "sha256": "04d44ea76e8885a50e54cc0e5ba1761c964a1758a50942f5edef4282e46a01aa",
+      "sha256": "66267b336bef80f7773340758514214074b97e3c3cc40a5c79b3d5ba7c42ae51",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-linux.png",
-      "sha256": "e75bd83632b3ca25c369dea010718677f861836550ed8b3515f45ffa8399b5d0",
+      "sha256": "c08968a6f7c8f25f23f11e23ff31e0387ea9f4441abfba46ab7f50dedf63eaef",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-win32.png",
-      "sha256": "b9df6fc2368d9d6fd43e171796ef121252e1ba90133ab5321f1d0f112eefb4d7",
+      "sha256": "eb7ccd917ca7c7bb1cced16e882eb0439d55da22e382a3793d2af99ba91b2461",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-linux.png",
-      "sha256": "6575e2ad40f12b995dfd6dfa85048ba12d79def6b2a07f49aeab1b788afe7e78",
+      "sha256": "a9fbb9cd79f08ff490cac765606fd150ae0b05898e1c2327a9050070f0cc05e0",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-win32.png",
-      "sha256": "617403361cfc60a486cbb66cb0826efd0eb1067526ba7ef2b01d99a2fd6d8a50",
+      "sha256": "0b5a8a6b6ca8bf72686985dc93b80fefa3fafc48a2f90fc9902bbc32330d6ea2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-linux.png",
-      "sha256": "f2f3c05e7fbfd434900fa5cc74d51046566552b3b4c3736978111be7b72ffc65",
+      "sha256": "d6b8504ec41d029f52a3a697c6ade296e3a89c9616faf4d3d1df557939a02052",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-win32.png",
-      "sha256": "6617918875a8fc21d7632a55fca90f2d8f371cd01560c59f72a9c7a69abb4397",
+      "sha256": "155b24f72148c14b3fd63bb40d8551bb199c8e2228703a0ecc7584d6a6fdb89a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-linux.png",
-      "sha256": "0f853d6c77f94ab2e65fc75bf762ab44d721ee304dc3e5c857a91f7038eff1a6",
+      "sha256": "9f5692572637ecd71d1ffde67ee0854664c6b37a97bd7e7762a63991ac0db2e9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-win32.png",
-      "sha256": "073a80aaaceaee938e2b207fda722b6f90788c439900ae2238ce6567d29cce85",
+      "sha256": "da4015ee80640ace825ee4ad27166f2d514cf85c770d09c867b963dd7a2a9550",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-linux.png",
-      "sha256": "c8920b8f1604533ede717104b1d36531f245dda2cbe26ab96efb79bd0588e201",
+      "sha256": "603d534b741390148bbcc20678e4ab678c228439263561002523af33ceba710b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-win32.png",
-      "sha256": "d0901b99e03b8496851ab8d6b24d7bbd425932255697c0cad1c84ebb817bea81",
+      "sha256": "948d0d9ca46a68779be35ba8dfad21f3ca456d22549cee99557e6ca37a2ebf8c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-linux.png",
-      "sha256": "ddd8ec14550e90a34b969aa64d2b33fba026f6b3558948f7df46f58689fac516",
+      "sha256": "5b8c4ce89e3d2ec5a3e562c9fce9f66b8473daaee38036b83d4f8c943f13dba2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-win32.png",
-      "sha256": "2bfadbee1a41756ef1e5e2a776d93f7f11bd13381020084c1883a27d64b59ab8",
+      "sha256": "55c725740259bc66392956e0199e317d7860897ee34cc9678a06c098bed07f37",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-linux.png",
-      "sha256": "aad1073bdfe56c32b9a222775aaf850d04b1efb986e39c707de9718379fba462",
+      "sha256": "b65894b734a05902e4494dc7cdeb9e8389ab41b27087315728f66ef062b1ce65",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-win32.png",
-      "sha256": "3b628e45768df436bb2ac2d01dee6260ea310f0f9d16b84240c8878e716bf744",
+      "sha256": "b2b8b81e5c3033110405ecddf0914a545ae7f43036d0ecb05e6b1a1dec0b2bbe",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-linux.png",
-      "sha256": "aad860c248578400125397116a747be08519c209b59a3dbb22b93dd6bea36c65",
+      "sha256": "674d682854eeaa2203b0601fe29a540359cc5f368ee432975b53f1d8a7942824",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-win32.png",
-      "sha256": "1e55fa7612942fc7faafa1b6e044529d1c523d9ddf85ef0a3d397594e117784d",
+      "sha256": "1cb69c947b374cf09d70a495ba2968a702c1770f13f6d19f96514b5556d91b11",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-linux.png",
-      "sha256": "e729b252db0430e9180aa238d8984310475ec117b8d9fba150e915b626089096",
+      "sha256": "9ad924e5939ee59fba1b8ed0d93be7b69d87d58dc5ed58b1b6cad48bb7530a2a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-win32.png",
-      "sha256": "94e952650c31f5938bb444d89e54a7c5293983f384527aac96e470f16e36f71a",
+      "sha256": "1996e2f37c9324faf7b8b45bbcea6838395973e235973f843e9066dd35ffb68a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-linux.png",
-      "sha256": "b00d98a8d967228c01ba7bac5495ab144c36ff6b4c8c319d79f462d361f5f030",
+      "sha256": "ceeb2f42b9f0cce8d596740e5977eed265d034825a05f0ddf34c23cec2e12319",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-win32.png",
-      "sha256": "5bbdb51f5745187687840a85fc6a2ab383cae5d5b7b5e13212110a9eb1ee982f",
+      "sha256": "5c39bdbcc6e4127d6dc460871ac0969166de60654a6d1b902d8e7d99e9a316cd",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-linux.png",
-      "sha256": "76ce71881055657de21904deaf2310939f53dda88e8223a8e4adf3b48ba18f00",
+      "sha256": "f9585b3e6ee66863974a2bb79322eb364e3e0922bb5afdfc580c3507714cfc98",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-win32.png",
-      "sha256": "dce9222fa3a235a9434e289be953feb28c287afd6214c0cf102b6dac04c0a530",
+      "sha256": "56ea2d2aa4e67edd7b846e45c93f2157f195d661dc151acb400dd2f916628dea",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-linux.png",
-      "sha256": "8fd601a9c7a93658e5c952b419693836e9cdc1b32c59c88e7530a7c9bc1e778f",
+      "sha256": "4b091b402f42e575c9a7272881b2b91a5bdc5584a14e263dd0a4aee903e06e18",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-win32.png",
-      "sha256": "03bf16d31906cea125ed60c1f8380bd50874e3e82d17f3795888f5cda8d50728",
+      "sha256": "5c92a6507bea531e455dee7dedd889253dc73905a45c70cd3252d1d21711e71e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-linux.png",
-      "sha256": "fef5944ca7dcb9c9e7e30a534d77d8954e1ff9a827467596620893955554fe90",
+      "sha256": "52be688d15049237b1e2d33ac4455a2663c9f4c75fc354d36d78ee3181096656",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-win32.png",
-      "sha256": "769958731f7e04fe5c2c659112b0d8617aed80abf998d4767da2849bdd09484e",
+      "sha256": "818a4d43974a71acd5df770666eb15b8ac5bc1c522f14452a0ad9b9a2744d47f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-linux.png",
-      "sha256": "8a90140122b3112d7af32331c41e641ed591e67818f072800d78e5c7c85a19b8",
+      "sha256": "feb2115eef182ecdc0dcde4f28df0e72d7eab2261ec2702af46307ecde324a8f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-win32.png",
-      "sha256": "3875c529e1eafd34b7bfe54fbdee196216b9b5c377bd995219339c1a5de1c018",
+      "sha256": "4122654ac24b53e2691f7b4aaad1cbac4a8f130349bc53257ac1ef1442859eb4",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-linux.png",
-      "sha256": "e4a8860792126a6874d7b0156fd8fb17edd425560edf10dcfa8a693cafff87f7",
+      "sha256": "3c980989c12c36898e1154ccdb226abc88197d5a2688423ce051f25a8dc2b6eb",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-win32.png",
-      "sha256": "ff3184ac2433335ec0be2e91a040f31d85da00bb7e8f48d3c2534dd116e54c2c",
+      "sha256": "0948129992bb7aa50cf9efe00fab58f51c3f5e8b8e6f18ad98ad1d38de9d8b25",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-linux.png",
-      "sha256": "679d650532d8c414a1b11798cc336c003ebee419bc998164b71851e3404253a5",
+      "sha256": "f5eb0222c060d9e8d910dbc46c544b3a489ad470a9ab75682d471172b74627d0",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-win32.png",
-      "sha256": "54984a8bc9215a48bb29748592a796c226bba0b288564934aac6090a7f4acc09",
+      "sha256": "fd3faf2af6742332db7dc161674ef3764106b637b39552f6b7857a5f64186fec",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-linux.png",
-      "sha256": "07d01dc50cb9cdfb25f111573a34d03e4b76ef3d264e7b21cd94db31839c9ede",
+      "sha256": "ca97d552a67c2a5dd38ceef06a128abb8e293c637d8cc9be9625f95a0e0f6dfa",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-win32.png",
-      "sha256": "6eb80a35e7b5c458f015e1341638d3a8c609e3630ef98e8a8a68d014930a1d9a",
+      "sha256": "5d0d4ba7609dcbccc542b8cb943866331385635a2e000c4073a0b959d9dc354a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-linux.png",
-      "sha256": "39053bb6ba9f528e42b097380bb4c9ab34dc48fc014cbc10fd6976be754eec86",
+      "sha256": "4bdb9d856e444360efe3e368c5e91cc731224ad62b506ccace91e018fbf9123f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-win32.png",
-      "sha256": "3703866bb904a8961450c6ddf549e2d88b581db4650644199fbcaeb93d06578e",
+      "sha256": "7e99cd95ddda421d930ca19144edb82b4d23056925f149042a5ebc592ed0afde",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-linux.png",
-      "sha256": "d24aaa00fc468674555f3495bacc188fac49b1e072fdee0215e4dcbbc4e5c246",
+      "sha256": "18e211574807f9310f4c7b68eeda5e0e82f08a7a11b45f1d423199fe5904a14a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-win32.png",
-      "sha256": "8bef1026a4b7773834587ca43d44fad8d4af0b1320dc241870ca0b3b064efaf8",
+      "sha256": "d9ee1835d97e852fdd86b1cf93d6cbbeb1a9c05352f236285666b41bd43b40b7",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-linux.png",
-      "sha256": "37f2314dde74f070f24515808865c1bd1a4d9b72aa85a8578ce1e57a0e6292d8",
+      "sha256": "55b30efa3f7131b48c5033a1a75f1f26d6cf259da14f5eb221e80195dd682f68",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-win32.png",
-      "sha256": "c7acb07c9e6a1d400c8ef8c041f5b29fa74d5d7d3127d100994e568000092551",
+      "sha256": "1ce818a5a267dcf76d226116e3753b0feb32cd28f83a67ad1585d3688d49b735",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-linux.png",
-      "sha256": "922e1885ebf2980ccde206df7deaf800b990cf78900eb396c59469fd8e9b25ac",
+      "sha256": "d161ce44cab55a6de14a38fba83dbd2af686dc356a774a819c2e5be90fae6364",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-win32.png",
-      "sha256": "65262337e644fc248c47ef9fc300f63a2731d34f2d7200a89910cfbf18fce2ac",
+      "sha256": "7147716905f7f48b475bbe359b89d561d2b0b3586235d43b72e126d091999e5e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-linux.png",
-      "sha256": "d54d1cf8c980249b447e585a18a577b76374a02b0f8c338b7918330607e66639",
+      "sha256": "e8a5e0ab3a17267ded211a3f48a9b90e2f9d849b5eb9261f1109d6c192573aab",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-win32.png",
-      "sha256": "38f48161debabbcfc1d9abf5813c8e0b4908bfbbd31ae619369309715a6ab481",
+      "sha256": "e883a3bb0fcfdf56eda30153b0141bf84d8e7f82a4d36d1c784ab083af1fca88",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T00:06:46.928Z",
-      "reason": "Reviewed source-faithful Linux and Windows baselines across desktop, tablet, and mobile; isolated Linux production visual capture passed 4/4 with exact-host TLS, WCAG, responsive, and stable snapshot checks."
+      "approvedAt": "2026-08-27T01:06:18.015Z",
+      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
     }
   ]
 }

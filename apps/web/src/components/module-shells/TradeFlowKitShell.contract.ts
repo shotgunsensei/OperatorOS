@@ -40,9 +40,9 @@ export const TRADEFLOWKIT_THEME: ModuleThemeTokens = {
   radius: { small: '7px', medium: '9px', large: '14px' },
   density: 'comfortable',
   typography: {
-    body: '"Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    heading: '"Open Sans", ui-sans-serif, system-ui, sans-serif',
-    accent: '"Open Sans", ui-sans-serif, system-ui, sans-serif',
+    body: '"Open Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    heading: '"Open Sans Variable", ui-sans-serif, system-ui, sans-serif',
+    accent: '"Open Sans Variable", ui-sans-serif, system-ui, sans-serif',
   },
 };
 

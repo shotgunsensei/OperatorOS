@@ -35,8 +35,8 @@ export const PULSEDESK_THEME: ModuleThemeTokens = {
   radius: { small: '7px', medium: '10px', large: '14px' },
   density: 'comfortable',
   typography: {
-    body: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    heading: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    body: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    heading: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
     accent: 'ui-monospace, "Cascadia Code", monospace',
   },
   imagery: { overlay: 'linear-gradient(135deg,rgba(56,189,248,.10),transparent 48%)' },

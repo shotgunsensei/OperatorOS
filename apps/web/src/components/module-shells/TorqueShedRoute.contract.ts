@@ -43,8 +43,8 @@ export const TORQUESHED_THEME: ModuleThemeTokens = {
   radius: { small: '7px', medium: '11px', large: '16px' },
   density: 'compact',
   typography: {
-    body: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    heading: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    body: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    heading: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
     accent: 'ui-monospace, "Cascadia Code", monospace',
   },
   imagery: { overlay: 'linear-gradient(118deg,rgba(245,158,11,.08),transparent 45%)' },

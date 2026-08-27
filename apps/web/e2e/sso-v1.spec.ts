@@ -2537,7 +2537,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
     await page.getByTestId('button-launch-ninja-pool-hall').click();
-    const modulePage = page;
+    let modulePage = page;
     await expect(modulePage.getByTestId('ninja-pool-hall-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('ninja-pool-dashboard')).toBeVisible();
     await expect(modulePage.getByRole('link', { name: 'Online', exact: true })).toBeVisible();
@@ -2602,6 +2602,12 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     });
     expect(logoutAll.status, logoutAll.body).toBe(200);
 
+    // The signed-in app shell may begin its own central-auth navigation as
+    // soon as global revocation completes. Close that page so its redirect
+    // cannot race the deliberate module deep-link reauthentication check.
+    const browserContext = modulePage.context();
+    await modulePage.close();
+    modulePage = await browserContext.newPage();
     await modulePage.goto('https://operatorpoolhall.operatoros.net/profile');
     await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
     await modulePage.getByTestId('input-email').fill(identity.email);

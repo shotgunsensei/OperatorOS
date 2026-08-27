@@ -8,12 +8,13 @@ import {
   globalJsonLd,
   serializeJsonLd,
 } from '@/lib/seo';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/open-sans/wght.css';
 import './globals.css';
 
-// Keep production builds deterministic. The prior next/font Google loader
-// depended on WOFF2 URLs that now return 404 and blocked every deployment.
-// Brand typography remains centralized in brandCssVariables and uses native
-// platform fonts without a runtime or build-time third-party request.
+// Keep production builds deterministic. Fontsource packages are bundled by
+// Next.js and served from this application, so production builds and browser
+// screenshots never depend on Google Fonts, a CDN, or host-installed fonts.
 
 export const metadata: Metadata = {
   ...buildPublicMetadata({

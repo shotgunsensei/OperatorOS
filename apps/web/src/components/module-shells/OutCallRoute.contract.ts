@@ -28,8 +28,8 @@ export const OUTCALL_THEME: ModuleThemeTokens = {
   radius: { small: '8px', medium: '12px', large: '18px' },
   density: 'comfortable',
   typography: {
-    body: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    heading: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    body: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    heading: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
     accent: 'ui-monospace, "Cascadia Code", monospace',
   },
   imagery: { overlay: 'radial-gradient(circle at 90% 0,rgba(139,92,246,.18),transparent 34rem),linear-gradient(135deg,rgba(196,181,253,.05),transparent 45%)' },

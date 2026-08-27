@@ -43,8 +43,8 @@ export const FAULTLINELAB_THEME: ModuleThemeTokens = {
   radius: { small: '8px', medium: '12px', large: '18px' },
   density: 'comfortable',
   typography: {
-    body: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    heading: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    body: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    heading: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
     accent: 'ui-monospace, "Cascadia Code", monospace',
   },
   imagery: { overlay: 'linear-gradient(135deg,rgba(139,92,246,.18),transparent 44%),linear-gradient(315deg,rgba(34,211,238,.08),transparent 36%)' },

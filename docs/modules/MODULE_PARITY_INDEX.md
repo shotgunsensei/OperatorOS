@@ -20,6 +20,12 @@ preflight. This overlay supersedes historical blocked-count statements for
 current source truth, but does not claim GitHub CI, Replit deployment, live
 provider, DNS, production data, backup/rollback, or deployed acceptance.
 
+The 78 reviewed visual references now use app-bundled Inter and Open Sans
+variable fonts. Linux and Windows production-host runs both pass again with
+snapshot updates disabled and the existing 0.5% comparison threshold. This
+removes host font inventory from the acceptance result; it does not relax any
+visual, accessibility, overflow, route, or persisted-workflow assertion.
+
 ## Ecosystem identity and hierarchy overlay (2026-08-22)
 
 OperatorOS is the parent platform; TradeFlowKit, PulseDesk, and TechDeck are the

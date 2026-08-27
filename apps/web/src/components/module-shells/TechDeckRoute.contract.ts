@@ -42,8 +42,8 @@ export const TECHDECK_THEME: ModuleThemeTokens = {
   radius: { small: '6px', medium: '8px', large: '12px' },
   density: 'compact',
   typography: {
-    body: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    heading: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    body: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    heading: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
     accent: 'ui-monospace, "Cascadia Code", monospace',
   },
   imagery: { overlay: 'linear-gradient(130deg,rgba(56,189,248,.09),transparent 48%)' },

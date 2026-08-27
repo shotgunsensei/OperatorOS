@@ -48,7 +48,7 @@ export default function OperatorLogo({
       <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.1 }}>
         <span
           style={{
-            fontFamily: 'var(--brand-font-display, "Space Grotesk", Inter, system-ui, sans-serif)',
+            fontFamily: 'var(--brand-font-display, "Inter Variable", system-ui, sans-serif)',
             fontWeight: 700,
             fontSize: wordmarkSize,
             letterSpacing: '-0.01em',
@@ -60,7 +60,7 @@ export default function OperatorLogo({
         {tagline && (
           <span
             style={{
-              fontFamily: 'Inter, system-ui, sans-serif',
+              fontFamily: '"Inter Variable", system-ui, sans-serif',
               fontSize: Math.max(9, Math.round(wordmarkSize * 0.6)),
               color: 'var(--brand-text-muted, #6B7280)',
               letterSpacing: '0.02em',

@@ -33,7 +33,7 @@
   background: var(--tfk-background);
   color: var(--tfk-foreground);
   color-scheme: light;
-  font-family: "Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Open Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .workspace {

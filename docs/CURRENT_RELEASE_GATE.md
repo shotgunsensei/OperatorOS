@@ -21,6 +21,29 @@ encrypted TOTP, one-time MFA login challenges, one-way recovery codes, and the
 complete login/invitation/settings workflow without creating module-local
 identity authority.
 
+The final visual portability repair self-hosts pinned Inter and Open Sans
+variable-font packages in the Next.js build. OperatorOS and the module shells
+no longer depend on Google Fonts, a CDN, or host-installed Arial, Segoe UI,
+Inter, or Open Sans files. All 39 Linux and 39 Windows references were
+regenerated through the readiness-gated production supervisor, visually
+reviewed, bound to exact approval hashes, and then passed again on both
+platforms with snapshot updates disabled at the unchanged 0.5% threshold.
+This closes the GitHub-runner font-substitution failure without suppressing a
+layout change or weakening accessibility checks. The disposable visual
+identity now keeps its unique credential while assigning a fixed tenant
+display label before capture, so random glyph widths cannot change mobile
+header wrapping. Global-logout reauthentication also continues in a fresh
+browser page after server revocation, preventing the signed-in shell's own
+redirect from racing the deliberate module deep-link check.
+
+Both prior GitHub Desktop stashes were audited before removal. Of the 57
+source paths in the substantive stash, 37 were byte-identical to this
+candidate, 12 merged to no additional change, and the remaining eight carried
+superseded v55, route, parity, or signing-container state that would regress
+the current v56 candidate. The other stash contained only caches, Playwright
+last-run metadata, and a disposable test certificate/private key. No useful
+source remained exclusively in a stash.
+
 No waiver approval is required. FaultlineLab's former 501 blocked rows were
 source-to-executable-evidence mappings, not HTTP 500 failures; current
 FaultlineLab parity is 246 native plus 311 shared with zero blocked, while all

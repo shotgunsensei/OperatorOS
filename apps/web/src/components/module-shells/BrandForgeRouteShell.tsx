@@ -19,7 +19,7 @@ const theme: ModuleThemeTokens = {
   id: 'brandforge-magenta-creative-lab', colorScheme: 'dark', density: 'comfortable',
   colors: { background: '#09070f', panel: '#16101e', panelRaised: '#21132d', text: '#fff7ff', muted: '#c9b6cf', border: '#5d3a67', primary: '#f0abfc', secondary: '#a855f7', accent: '#fb7185', danger: '#fb7185', success: '#6ee7b7', focus: '#fbbf24' },
   radius: { small: '8px', medium: '13px', large: '20px' },
-  typography: { body: 'Inter,ui-sans-serif,system-ui,sans-serif', heading: 'Inter,ui-sans-serif,system-ui,sans-serif', accent: 'ui-monospace,"Cascadia Code",monospace' },
+  typography: { body: '"Inter Variable",ui-sans-serif,system-ui,sans-serif', heading: '"Inter Variable",ui-sans-serif,system-ui,sans-serif', accent: 'ui-monospace,"Cascadia Code",monospace' },
   imagery: { overlay: 'radial-gradient(circle at 82% 0,rgba(217,70,239,.18),transparent 32rem),radial-gradient(circle at 6% 10%,rgba(168,85,247,.12),transparent 28rem)' },
 };
 

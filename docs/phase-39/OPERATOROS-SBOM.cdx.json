@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:59e518ca-3c9b-4679-a4dd-bd731e8ded42",
+  "serialNumber": "urn:uuid:074f9578-0779-4b3f-a853-e7411d8b9fb5",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-08-26T22:04:46.186Z",
+    "timestamp": "2026-08-27T02:06:24.599Z",
     "component": {
       "type": "application",
       "name": "OperatorOS",
@@ -13,7 +13,7 @@
     "properties": [
       {
         "name": "operatoros:pnpm-lock-sha256",
-        "value": "59e518ca3c9bc67904ddbd731e8ded42fce0d2c5f82386b9c7cbc1670d0e2682"
+        "value": "074f957807793b3f2853e7411d8b9fb5a2469fa70b3bc94192dabb746a8220a3"
       }
     ]
   },
@@ -1375,6 +1375,20 @@
       "name": "@floating-ui/utils",
       "version": "0.2.12",
       "purl": "pkg:npm/%40floating-ui%2Futils@0.2.12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40fontsource-variable%2Finter@5.3.0",
+      "name": "@fontsource-variable/inter",
+      "version": "5.3.0",
+      "purl": "pkg:npm/%40fontsource-variable%2Finter@5.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40fontsource-variable%2Fopen-sans@5.3.0",
+      "name": "@fontsource-variable/open-sans",
+      "version": "5.3.0",
+      "purl": "pkg:npm/%40fontsource-variable%2Fopen-sans@5.3.0"
     },
     {
       "type": "library",
