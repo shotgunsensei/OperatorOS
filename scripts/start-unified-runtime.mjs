@@ -10,6 +10,7 @@ const DEFAULT_NEXT_PORT = 5002;
 const DEFAULT_STARTUP_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 500;
 const SHUTDOWN_GRACE_MS = 10_000;
+export const INTERNAL_SERVICE_HOST = '127.0.0.1';
 
 function parseInteger(raw, fallback, name, { min, max }) {
   const value = raw == null || raw === '' ? fallback : Number(raw);
@@ -209,7 +210,11 @@ export function createPublicGateway({ apiPort, nextPort }, { isReady = () => tru
 
 export async function startUnifiedRuntime(env = process.env) {
   const config = resolveRuntimeConfig(env);
-  const runtimeEnv = { ...env, INTERNAL_API_URL: env.INTERNAL_API_URL ?? config.internalApiUrl };
+  const runtimeEnv = {
+    ...env,
+    INTERNAL_API_URL: env.INTERNAL_API_URL ?? config.internalApiUrl,
+    INTERNAL_SERVICE_HOST,
+  };
   validateDeploymentEnvironment(runtimeEnv);
   const entrypoints = resolveRuntimeEntrypoints();
   for (const [name, path] of Object.entries(entrypoints)) {
@@ -306,7 +311,7 @@ export async function startUnifiedRuntime(env = process.env) {
   console.info(`[runtime] Fastify ready; starting Next on private port ${config.nextPort}`);
   const web = spawnNode(
     entrypoints.nextCli,
-    ['start', '-p', String(config.nextPort)],
+    ['start', '-p', String(config.nextPort), '-H', INTERNAL_SERVICE_HOST],
     { ...runtimeEnv, PORT: String(config.nextPort), INTERNAL_API_URL: config.internalApiUrl },
     resolve(process.cwd(), 'apps/web'),
   );

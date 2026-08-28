@@ -192,7 +192,7 @@ app.get('/', async (_req, reply) => {
 });
 
 const port = parseInt(process.env.PORT ?? '5002', 10);
-const host = '0.0.0.0';
+const host = process.env.INTERNAL_SERVICE_HOST?.trim() || '0.0.0.0';
 
 try {
   await app.listen({ port, host });
