@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -15,6 +16,7 @@ import {
 import { brand } from '@/lib/brand';
 import { useAuth } from '../../AuthProvider';
 import { primaryCtaTarget } from '@/lib/marketing-cta';
+import { OPERATOROS_ASSET_SIZE, OPERATOROS_LOGO_PATH } from '@/lib/brand-assets';
 
 const VALUE_STRIP = [
   { label: 'Sign in once', icon: KeyRound },
@@ -384,36 +386,25 @@ export default function Hero() {
             >
               <div
                 style={{
-                  maxWidth: 360,
-                  padding: 16,
+                  width: 250,
+                  minHeight: 250,
+                  padding: 8,
                   borderRadius: 16,
                   background: 'rgba(8,11,18,0.78)',
                   border: `1px solid ${brand.borderStrong}`,
                   backdropFilter: 'blur(14px)',
+                  boxShadow: '0 18px 46px rgba(0,0,0,0.32), 0 0 34px rgba(0,157,255,0.12)',
                 }}
               >
-                <div
-                  style={{
-                    color: brand.accentCyan,
-                    fontSize: 11,
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    marginBottom: 8,
-                  }}
-                >
-                  OperatorOS command layer
-                </div>
-                <div
-                  style={{
-                    color: brand.textPrimary,
-                    fontFamily: brand.fontDisplay,
-                    fontSize: 24,
-                    fontWeight: 800,
-                    lineHeight: 1.08,
-                  }}
-                >
-                  One login. Every operation.
-                </div>
+                <Image
+                  src={OPERATOROS_LOGO_PATH}
+                  alt="OperatorOS.net"
+                  width={OPERATOROS_ASSET_SIZE}
+                  height={OPERATOROS_ASSET_SIZE}
+                  priority
+                  sizes="250px"
+                  style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 12 }}
+                />
               </div>
 
               <div

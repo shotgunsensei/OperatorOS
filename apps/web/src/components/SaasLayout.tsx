@@ -7,6 +7,7 @@ import TenantMessenger from './TenantMessenger';
 import TenantSwitcher from './TenantSwitcher';
 import { buildNavSections } from '@/lib/sidebar-nav';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
+import OperatorLogo from './brand/OperatorLogo';
 import OperatorMark from './brand/OperatorMark';
 
 // Centralized palette. Re-exported below + via lib/design-tokens.ts so all
@@ -109,12 +110,15 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         }}
         data-testid="sidebar-logo"
       >
-        <OperatorMark size={32} glow />
-        {(isMobile || !collapsed) && (
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.02em' }}>OperatorOS</div>
-            <div style={{ fontSize: 11, color: colors.textMuted }}>Business operations workspace</div>
-          </div>
+        {(isMobile || !collapsed) ? (
+          <OperatorLogo
+            size={34}
+            wordmarkSize={14}
+            tagline="Business operations workspace"
+            style={{ flex: 1, minWidth: 0 }}
+          />
+        ) : (
+          <OperatorMark size={32} glow />
         )}
         {isMobile && (
           <button

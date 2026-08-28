@@ -15,10 +15,10 @@ export function GET(request: NextRequest) {
     theme_color: '#0284c7',
     categories: ['games', 'sports', 'entertainment'],
     icons: [{
-      src: '/icons/icon-512x512.svg',
-      sizes: '512x512',
-      type: 'image/svg+xml',
-      purpose: 'any maskable',
+      src: '/brand/operatoros-mark.png',
+      sizes: '1254x1254',
+      type: 'image/png',
+      purpose: 'any',
     }],
   }, {
     headers: {

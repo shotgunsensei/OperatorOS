@@ -12,6 +12,6 @@ export function GET() {
     background_color: '#0b0d0f',
     theme_color: '#111315',
     categories: ['automotive', 'productivity', 'utilities'],
-    icons: [{ src: '/favicon.ico', sizes: 'any', type: 'image/x-icon', purpose: 'any maskable' }],
+    icons: [{ src: '/brand/operatoros-mark.png', sizes: '1254x1254', type: 'image/png', purpose: 'any' }],
   }, { headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'public, max-age=3600' } });
 }
