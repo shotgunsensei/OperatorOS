@@ -17,9 +17,11 @@ export const brand = {
   textPrimary: '#F8FAFC',
   textSecondary: '#A7B0C0',
   textMuted: '#6B7280',
-  accentCyan: '#00E5FF',
-  accentBlue: '#2563EB',
-  accentViolet: '#7C3AED',
+  accentCyan: '#00C8FF',
+  accentBlue: '#078BFF',
+  // Stable token name retained for compatibility; the supplied logo uses an
+  // electric-blue secondary rather than the previous purple secondary.
+  accentViolet: '#1745E8',
   accentRed: '#EF233C',
   accentGreen: '#22C55E',
   accentAmber: '#F59E0B',
@@ -35,13 +37,13 @@ export const brand = {
   // Brand glow tokens for the gradient CTA — kept centralized so all
   // accents share the same cyan/violet falloff and Phase 2 components
   // don't reinvent them.
-  ctaGlowSoft: '0 0 0 1px rgba(0, 229, 255, 0.18), 0 10px 30px -10px rgba(124, 58, 237, 0.55)',
-  ctaGlowHover: '0 0 0 1px rgba(0, 229, 255, 0.32), 0 14px 36px -10px rgba(124, 58, 237, 0.75)',
-  ctaGlowLarge: '0 0 0 1px rgba(0, 229, 255, 0.22), 0 18px 48px -16px rgba(124, 58, 237, 0.7)',
-  markDropShadow: 'drop-shadow(0 0 12px rgba(0, 229, 255, 0.55))',
+  ctaGlowSoft: '0 0 0 1px rgba(0, 200, 255, 0.18), 0 10px 30px -10px rgba(23, 69, 232, 0.55)',
+  ctaGlowHover: '0 0 0 1px rgba(0, 200, 255, 0.32), 0 14px 36px -10px rgba(23, 69, 232, 0.75)',
+  ctaGlowLarge: '0 0 0 1px rgba(0, 200, 255, 0.22), 0 18px 48px -16px rgba(23, 69, 232, 0.7)',
+  markDropShadow: 'drop-shadow(0 0 12px rgba(0, 200, 255, 0.55))',
   markBgFill: 'rgba(8, 11, 18, 0.92)',
   // Radial backdrop used behind marketing hero headlines.
-  heroRadial: 'radial-gradient(60% 50% at 50% 30%, rgba(0, 229, 255, 0.12) 0%, rgba(124, 58, 237, 0.08) 45%, transparent 70%)',
+  heroRadial: 'radial-gradient(60% 50% at 50% 30%, rgba(0, 200, 255, 0.12) 0%, rgba(23, 69, 232, 0.1) 45%, transparent 70%)',
   // Module status badge palette — surfaced as tokens so marketing
   // components never reach for raw hex/rgba literals. Each tuple is
   // (text, background tint, border tint) and reuses the same hue as
@@ -56,9 +58,9 @@ export const brand = {
   statusComingSoonText:   '#A7B0C0',
   statusComingSoonBg:     'rgba(148, 163, 184, 0.10)',
   statusComingSoonBorder: 'rgba(148, 163, 184, 0.28)',
-  statusLockedText:   '#7C3AED',
-  statusLockedBg:     'rgba(124, 58, 237, 0.12)',
-  statusLockedBorder: 'rgba(124, 58, 237, 0.35)',
+  statusLockedText:   '#6E8FFF',
+  statusLockedBg:     'rgba(23, 69, 232, 0.14)',
+  statusLockedBorder: 'rgba(66, 115, 255, 0.38)',
   fontDisplay: '"Inter Variable", Arial, system-ui, sans-serif',
   fontBody: '"Inter Variable", Arial, system-ui, sans-serif',
   contentMaxWidth: 1200,

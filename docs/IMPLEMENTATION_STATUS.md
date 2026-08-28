@@ -1,5 +1,48 @@
 # OperatorOS implementation status
 
+## Canonical OperatorOS logo and site-wide brand rollout - SOURCE/LOCAL GREEN (2026-08-27)
+
+- The supplied `OpOS Logo` is preserved byte-for-byte as the canonical full
+  lockup at `apps/web/public/brand/operatoros-logo.png` (PNG, 1254 x 1254,
+  SHA-256 `73986b270793bde33dad1912caaa0a5b465bf1f08cada4850759ea4ec68f3621`).
+  A true-alpha, text-free 12-node emblem was recreated for compact contexts at
+  `apps/web/public/brand/operatoros-mark.png` (RGBA PNG, 1254 x 1254, SHA-256
+  `9e5892bcb85b06f3f610289d582b7575564ad932324b6c8a84ee36a584bdb790`).
+  The asset README and typed `brand-assets.ts` contract define which form is
+  allowed at each size.
+- Shared `OperatorMark` and `OperatorLogo` components now carry the identity
+  through the marketing navbar/footer, login and legal surfaces, SaaS shell,
+  Platform Command shell, application launcher, exact-host ecosystem header,
+  and public hero. The readable hero uses the complete supplied lockup; compact
+  navigation uses the isolated emblem plus an accessible, responsive
+  OperatorOS signature. The shared cyan/electric-blue brand tokens now follow
+  the supplied artwork without changing product-specific module themes.
+- Favicons, touch icons, PWA manifests, module webmanifests, and legacy direct
+  icon URLs use only the emblem and contain no rendered wordmark or `.net`
+  text. Organization JSON-LD uses the full lockup. The offline-generated social
+  card uses a source-faithful 12-node emblem and OperatorOS.net signature so
+  `next build` does not depend on a live URL or an unsupported relative asset.
+- Fresh source/local verification is green: brand asset contract **4/4**;
+  web TypeScript check; repository unit/compiler suite **46/46**; optimized web
+  build; full `build:production` across API, runner, SDK, and web; compiled
+  desktop/mobile branding acceptance **2/2** with zero horizontal overflow;
+  and direct 200/MIME/size checks for the full logo, compact mark, favicon,
+  manifest, and social card. The production build contains 34 Next routes.
+- The intentional shared-header visual change was exercised against an
+  isolated disposable PostgreSQL database. Seventy-two governed Linux/Windows
+  desktop, tablet, and mobile screenshots changed; all six OutCall screenshots
+  remained byte-identical because OutCall does not consume that header. All 78
+  reviewed hashes were rebound in the approval ledger, then rerun with snapshot
+  updates disabled: Windows **4/4** in 1.6 minutes and the pinned Playwright
+  Linux container **4/4** in 2.2 minutes, with the existing accessibility,
+  overflow, real-route, persistence, and 0.5% pixel assertions active.
+- This presentation change does not alter authentication, exact-host SSO,
+  tenants, roles, entitlements, billing, provider state, database release, or
+  module parity. Evidence is local source evidence on
+  `codex/operatoros-logo-branding`, based on
+  `d3e5a7edca0a225a91f8cceb1dc4285ddd2b5080`; no commit, push, Replit publish,
+  production database mutation, DNS change, or live acceptance was performed.
+
 ## Replit reconciliation and zero-gap release candidate - SOURCE/LOCAL RELEASE GATE GREEN (2026-08-26)
 
 - The release candidate is on `codex/green-release-gate`, based on pulled

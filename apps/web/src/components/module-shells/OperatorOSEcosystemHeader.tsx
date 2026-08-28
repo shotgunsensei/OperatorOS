@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CreditCard, Grid2X2, LifeBuoy, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import OperatorLogo from '@/components/brand/OperatorLogo';
 import TenantMessenger from '@/components/TenantMessenger';
 import { useTenant } from '@/components/TenantProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -45,7 +46,7 @@ export default function OperatorOSEcosystemHeader({
         .operatoros-ecosystem-header { background:#121820; color:#f1f5f9; border-bottom:1px solid #2b3746; padding:10px 18px; position:relative; z-index:20; }
         .operatoros-ecosystem-header__row { max-width:1320px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
         .operatoros-ecosystem-header__identity { min-width:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-        .operatoros-ecosystem-header__brand { color:#8bb9ff; font-weight:800; letter-spacing:.01em; font-size:13px; }
+        .operatoros-ecosystem-header__brand { display:inline-flex; color:#f1f5f9; text-decoration:none; }
         .operatoros-ecosystem-header__context { color:#aeb9c7; font-size:12px; overflow-wrap:anywhere; }
         .operatoros-ecosystem-header__nav { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
         .operatoros-ecosystem-header__link { display:inline-flex; align-items:center; gap:5px; min-height:40px; padding:8px 10px; color:#dbe4ee; border:1px solid transparent; border-radius:7px; background:transparent; font:inherit; font-size:12px; font-weight:650; text-decoration:none; cursor:pointer; }
@@ -57,7 +58,9 @@ export default function OperatorOSEcosystemHeader({
       <header className="operatoros-ecosystem-header" data-testid={`${moduleSlug}-ecosystem-header`}>
         <div className="operatoros-ecosystem-header__row">
           <div className="operatoros-ecosystem-header__identity">
-            <span className="operatoros-ecosystem-header__brand">OperatorOS</span>
+            <a className="operatoros-ecosystem-header__brand" href={PLATFORM_DOMAINS.root} aria-label="OperatorOS home">
+              <OperatorLogo size={28} wordmarkSize={13} showDomain={false} />
+            </a>
             <span aria-hidden="true">/</span>
             <strong>{moduleName}</strong>
             <span className="operatoros-ecosystem-header__context">

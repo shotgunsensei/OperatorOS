@@ -57,10 +57,9 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
   color: #f8fafc;
-  font-size: 15px;
-  font-weight: 850;
-  letter-spacing: .01em;
   text-decoration: none;
 }
 

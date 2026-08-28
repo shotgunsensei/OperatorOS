@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { brand, brandCssVariables } from '@/lib/brand';
+import { OPERATOROS_MARK_PATH } from '@/lib/brand-assets';
 import {
   buildPublicMetadata,
   DEFAULT_DESCRIPTION,
@@ -25,14 +26,12 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://operatoros.net'),
   manifest: '/manifest.json',
   icons: {
-    // Browsers always probe `/favicon.ico` even when an SVG icon is
-    // declared. Listing the SVG under both `icon` and `shortcut` keeps
-    // modern browsers happy, and `apps/web/src/app/favicon.ico/route.ts`
-    // serves a 200 for the legacy probe so Lighthouse / the console no
-    // longer report a 404 on every page load.
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    shortcut: ['/favicon.svg'],
-    apple: ['/favicon.svg'],
+    // Compact browser/install surfaces use the text-free emblem. The full
+    // wordmark is intentionally omitted because it cannot remain legible at
+    // favicon or touch-icon sizes.
+    icon: [{ url: OPERATOROS_MARK_PATH, type: 'image/png', sizes: '1254x1254' }],
+    shortcut: [OPERATOROS_MARK_PATH],
+    apple: [{ url: OPERATOROS_MARK_PATH, type: 'image/png', sizes: '1254x1254' }],
   },
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'OperatorOS' },
   // The browser console flagged `apple-mobile-web-app-capable` as

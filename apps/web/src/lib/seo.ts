@@ -71,7 +71,7 @@ export const globalJsonLd = {
       name: 'Shotgun Ninjas Productions',
       alternateName: SITE_NAME,
       url: SITE_ORIGIN,
-      logo: `${SITE_ORIGIN}/favicon.svg`,
+      logo: `${SITE_ORIGIN}/brand/operatoros-logo.png`,
     },
     {
       '@type': 'WebSite',

@@ -7,360 +7,360 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-linux.png",
-      "sha256": "b15bff4ec1f0294dbf14e37995ed6f6ee29c9c2938f8c378052405e6999aeae7",
+      "sha256": "e4e06847b269b2b629e21d8a4afbe4335bf6de1a333005270d233f88e32ff2ac",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-win32.png",
-      "sha256": "41be016c542d463339cf94d562a275632349f2370ca77178820e75f77e8093e6",
+      "sha256": "ef567bf5b29c3f10386862da63199a9e324f2d4be9fb65c9edf203f5ea1b5e0a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-linux.png",
-      "sha256": "7acc34cc3362198ebad1ed5ca8917829a55b699c08bf83404aa76eb444129a9b",
+      "sha256": "39be082e9425c0ad83ba0749d01ef15e59c32a96a2a979d8b0433a4de583b0e3",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-win32.png",
-      "sha256": "d36b5551b4a72ada9b56671a0291de634d0c2ea7485ac0bebba818af74e736e2",
+      "sha256": "4606ab8bc886617c22f920c3962c3d620f01c7f6106cdc7e6f75e07f695b6998",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-linux.png",
-      "sha256": "be6232670fe6c069ae2485f57a02d3152a844be7a3433be4cd84b4dc3df33ed2",
+      "sha256": "1f6b2f0f70db45b71e9f07be5bdbb08392ef0808183c913cad4177399ebaf766",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-win32.png",
-      "sha256": "3a7eea92f3c139494141c36e02c0bd7a18bc5ba097ba59f37137db9667fe1265",
+      "sha256": "24399e48c2a7ad2481583976c291cc8365fd4f9298664756b49947ffa577562b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-linux.png",
-      "sha256": "32885b670e187ce1fa9d427fb95a7682efb0999d8ad9e75c8f3a44157f494ced",
+      "sha256": "bbee3038e102733f65b3faad2047a3fb1e73a022c0fe1e2d2fe0ae92adda4f71",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-win32.png",
-      "sha256": "faa5c4fab408f432b87a8045664fb62316f335f25b68e3410c3357c2daa627cd",
+      "sha256": "1b46182154d409d04292a571979e4eb6a61183d3f3ae3db3eafd79d429aa9b06",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-linux.png",
-      "sha256": "a4bebafc952fd878054adc5ef1ecb5c4a6f5c68d75fe283c4e3f8547c47a8b3c",
+      "sha256": "da2cd455643b7a3c5b0c4bba1da53e41f5a604f8eb05ec0f423f24685c97dcba",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-win32.png",
-      "sha256": "96da4143e8accbedcf53c851cac270f296f2038ab794c149796c1cee945fca51",
+      "sha256": "7ff0000f1c28164c6d70fa84c2b54b7336dcb190abb36b59533faccc5bb9b474",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-linux.png",
-      "sha256": "a56180388020c980e47044d1b5dc9c1ce555438db210036ff08cc0f99dd4900d",
+      "sha256": "e2678df8bf2f549bd4ffe1dce7b8c8f3cabd4aa45d1df76b5b0eed7b143e9050",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-win32.png",
-      "sha256": "ed03c8fdc12820e9f7be72cbbe0ed1b164478ed48f5f042f320f99fc6093edd4",
+      "sha256": "e948f5f492215ab416f8a566698cb4f7548a919cb1c24e55fbac00281bb499e4",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-linux.png",
-      "sha256": "516e5512a32deeefb872c62a6a00225ceac9f30d3f5e4ab5e3cd7759fe2b8cd8",
+      "sha256": "5c096c5f1a12412305d9fb05df25471a9c27be798dfd824e8ffc90c340fcf0b3",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-win32.png",
-      "sha256": "d017cdcabfc4d5cd40b8a5e6c1594f79eb64f0a2012783307d8edb352c63cc4a",
+      "sha256": "f28af659a6623fae47edf263d9910a7ef7c78142ae682ac0df2fce5292c3c796",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-linux.png",
-      "sha256": "4708e25e511b4066a20a29e192873560ef78404f1eff45e0928b3ac62058de36",
+      "sha256": "3d4e6cf74421df9f2838c2fc3d13c00f9c1c96269e6fa9f265dd58f2aed64669",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-win32.png",
-      "sha256": "e9526dca7acbfddd32b39f0cadb6480f070e4fff462f16e1b650915c8056cae9",
+      "sha256": "b1c1b1e0b4217433145a2185d1e858df718a0656b945d7bf941b8fb685f3b767",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-linux.png",
-      "sha256": "919632d32c3f34cecb1f3c6b679193de1bbe4887a404b71fa478b5e2956b7c00",
+      "sha256": "b7822c28c9aa65606669e46a06d383c208fa6471cc326d2d3e2b2e092a17d54f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-win32.png",
-      "sha256": "bd727ce13e32ca4e1cbaec0177eda45a6743a0ca7b9f58d35213b33c47821def",
+      "sha256": "25541650c980ce7dc5effd6002197a70ca83001354d5d0c8d5a8f8f9c9555bb2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-linux.png",
-      "sha256": "45a7f0525fa197c79ea6f5a13aeefc8b0d09eaa1be1bf77dd2c39b93062b88bc",
+      "sha256": "7f8b2b1632f975972be7800ce3eda9e15f35bf9a68a5d2767cdfda97621e67cd",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-win32.png",
-      "sha256": "b36ac688ebad699645a118ebfbc702c67be522f66751623abd5e0afd83917a8b",
+      "sha256": "e3c7bc8e23355228852d408eb1040d74d09d5e7aa0c659794e4f0f128c85c451",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-linux.png",
-      "sha256": "d9ed8b7d168e760f5aa3838374c2bf0157c3ff17cc481f348b24114aeb9be587",
+      "sha256": "100181e38672b3724bae91a30589a55fb2503a3dfbcaf7be98e57624680f7349",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-win32.png",
-      "sha256": "9ae372e1da6089436348fbf3542abed5e460396db8e80cbc461dd6a304c88005",
+      "sha256": "05964ccbc8d0e653f68a25079719efdfe4eadb210101cb940b0fe8cebfe60b0e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-linux.png",
-      "sha256": "15284d86c6370d281beadd21af9a0a31ffa81ff73e9d2445cb9bdf204d5205e6",
+      "sha256": "68d4e0c7c3e34620293741302d2d8d915b7b05b36b2fa89f7a31ff246f2e2584",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-win32.png",
-      "sha256": "5549e67344bde5a4149c1c8f753a8f8b1098768a7c93f7f105e86b7643699ffa",
+      "sha256": "239e77b621fce7c24845a177f7a38cb930c7475aae98c383e5f50dc422fa7928",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-linux.png",
-      "sha256": "82b7c251bab00603840bdce2a3b0191ae20e795737ddc2c6ccef40f39f0742ad",
+      "sha256": "48cc05d8092ba168d8c53dcf4f8fb264320ad1e1dc480b84de43173152f05c0c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-win32.png",
-      "sha256": "e456b32e0dd2dc18e79fb3a2a404b39b1e4ce0c6e75c896cb2462d52b3ae2d8e",
+      "sha256": "7c53c11df8801007ab44a232e65f41368ddbb2d656ad0176b22c305fe8558529",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-linux.png",
-      "sha256": "9c1673b6596793d08e02389756bdebfe26dca5535994e555c107fa4067c77132",
+      "sha256": "ac213a89bfe14f1a49b6f0bb8ee670886456d00f7ff9235f79088b63adc35cb6",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-win32.png",
-      "sha256": "33f2e210dd8edf1965dea88842cf7f905e25531e95a9e1af5e38ef11eb095c3f",
+      "sha256": "19dc439420201c7a49862603fb5906c60cd2b9e10813744474ee5fe9a0f2be0e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-linux.png",
-      "sha256": "b109f27138843b39174e06bed37258455968e97681032a7c96f57fe0366c7133",
+      "sha256": "eb58fb724ba1c9f913652c327915d6eefc8102d7cf9ec1c8dcd33d1d510ded5b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-win32.png",
-      "sha256": "bd62df87157a819e20a19b7efafac653ee547789d2fd19323724d181231cf44f",
+      "sha256": "2b89bdcc1fb5826f8e609791dbcd26ce13770098b209001338554b4ef90aade9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-linux.png",
-      "sha256": "9b780a27e681d5a6e879a3386b0847c9d46862b8924d80446c39d55d9c50af40",
+      "sha256": "ecd8b2871e29def638fe12a9c5c4940974eab9e40f13af37587d7a2c327bc008",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-win32.png",
-      "sha256": "a1ef74eb9c6ebfd789d80ebd682fad8fc25fc7769812a6bdb77463235f03dcd6",
+      "sha256": "435b691a8c601f989b2868ca226b0f59ff184509712114b92e85af157c63d4f8",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-linux.png",
-      "sha256": "72d4941280f776dcb49cf20783dc37fbd6e30a12f81ecd0f1a96471fbff56d9a",
+      "sha256": "e8860306d7c38795fdebbbd2774518a0e5df29600a311be1aaedf5f01678090c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-win32.png",
-      "sha256": "66267b336bef80f7773340758514214074b97e3c3cc40a5c79b3d5ba7c42ae51",
+      "sha256": "9e606fd9dd803ab9d44aa2b947a4178602e7da549b2de7702524af516dd52987",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-linux.png",
-      "sha256": "c08968a6f7c8f25f23f11e23ff31e0387ea9f4441abfba46ab7f50dedf63eaef",
+      "sha256": "fb2e8923c4f6227dc27c0ecb16327ff3ec6c20585f8f568e1c084f39d838166b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-win32.png",
-      "sha256": "eb7ccd917ca7c7bb1cced16e882eb0439d55da22e382a3793d2af99ba91b2461",
+      "sha256": "5c2df8a35528e8c8931e852525817278e54b2611fce6e7f4ca256d55e0dcd7bd",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "outcall",
@@ -369,8 +369,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-linux.png",
       "sha256": "a9fbb9cd79f08ff490cac765606fd150ae0b05898e1c2327a9050070f0cc05e0",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "outcall",
@@ -379,8 +379,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-win32.png",
       "sha256": "0b5a8a6b6ca8bf72686985dc93b80fefa3fafc48a2f90fc9902bbc32330d6ea2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "outcall",
@@ -389,8 +389,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-linux.png",
       "sha256": "d6b8504ec41d029f52a3a697c6ade296e3a89c9616faf4d3d1df557939a02052",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "outcall",
@@ -399,8 +399,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-win32.png",
       "sha256": "155b24f72148c14b3fd63bb40d8551bb199c8e2228703a0ecc7584d6a6fdb89a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "outcall",
@@ -409,8 +409,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-linux.png",
       "sha256": "9f5692572637ecd71d1ffde67ee0854664c6b37a97bd7e7762a63991ac0db2e9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "outcall",
@@ -419,368 +419,368 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-win32.png",
       "sha256": "da4015ee80640ace825ee4ad27166f2d514cf85c770d09c867b963dd7a2a9550",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-linux.png",
-      "sha256": "603d534b741390148bbcc20678e4ab678c228439263561002523af33ceba710b",
+      "sha256": "388de3de4949a309c27d75b5e1e8f6a6e59eae68e700e0520aa3396f60ad29c9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-win32.png",
-      "sha256": "948d0d9ca46a68779be35ba8dfad21f3ca456d22549cee99557e6ca37a2ebf8c",
+      "sha256": "5246c54ade47d0213d566d5a655d5ab6c9054fdd57ff625995c06e519dbad9b9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-linux.png",
-      "sha256": "5b8c4ce89e3d2ec5a3e562c9fce9f66b8473daaee38036b83d4f8c943f13dba2",
+      "sha256": "790a4724faebfa76d29afcbd0340a3eba421be466e5f6ced13c4797ff0902f32",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-win32.png",
-      "sha256": "55c725740259bc66392956e0199e317d7860897ee34cc9678a06c098bed07f37",
+      "sha256": "5bdc2e11a2a8855b717c4bc4879a7637ed46415e4bfc706ad44448487ec0ea32",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-linux.png",
-      "sha256": "b65894b734a05902e4494dc7cdeb9e8389ab41b27087315728f66ef062b1ce65",
+      "sha256": "f61442fa9a294047b05cf218e5e9c2a55e64f2b3a46059a3b6156cd7283d6f44",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-win32.png",
-      "sha256": "b2b8b81e5c3033110405ecddf0914a545ae7f43036d0ecb05e6b1a1dec0b2bbe",
+      "sha256": "232cf1ea209a014f5113e68750de36c1cf34169af62f8f0d54993a6d73a627ed",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-linux.png",
-      "sha256": "674d682854eeaa2203b0601fe29a540359cc5f368ee432975b53f1d8a7942824",
+      "sha256": "94e4dc1549aae6fe9d3dffee45d917e56b03fa735c5d4f693832c7ff862ff1f9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-win32.png",
-      "sha256": "1cb69c947b374cf09d70a495ba2968a702c1770f13f6d19f96514b5556d91b11",
+      "sha256": "1e690d3338cb6660b8ca12564a8e0933203ff307d32daeeeb6f36ce180a4304e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-linux.png",
-      "sha256": "9ad924e5939ee59fba1b8ed0d93be7b69d87d58dc5ed58b1b6cad48bb7530a2a",
+      "sha256": "93b7584ee9062b06a8e55a9ab98954be0f8182ff0ab94ddc0af09564b9f6231c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-win32.png",
-      "sha256": "1996e2f37c9324faf7b8b45bbcea6838395973e235973f843e9066dd35ffb68a",
+      "sha256": "85899a85c0eba2758b36454f28b1e6e98b9dfe157f0c1269fed451320c579e55",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-linux.png",
-      "sha256": "ceeb2f42b9f0cce8d596740e5977eed265d034825a05f0ddf34c23cec2e12319",
+      "sha256": "b7c72bc3df7c0603cfa9c0987b824c33295b76bb75bd8528d9fb9925171a4e1f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-win32.png",
-      "sha256": "5c39bdbcc6e4127d6dc460871ac0969166de60654a6d1b902d8e7d99e9a316cd",
+      "sha256": "ab6539565460b6971f0dd4e721d693db722ae3deec40ce34d96067c9c277309f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-linux.png",
-      "sha256": "f9585b3e6ee66863974a2bb79322eb364e3e0922bb5afdfc580c3507714cfc98",
+      "sha256": "a4af064532df6d997cb19bbcc1fd178cfdb145a83251ae0b1228fed9631a20d8",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-win32.png",
-      "sha256": "56ea2d2aa4e67edd7b846e45c93f2157f195d661dc151acb400dd2f916628dea",
+      "sha256": "967973f9c8a28b757c825873ec8794fa12b1fc3f08afc0fdde82bb83d77bd882",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-linux.png",
-      "sha256": "4b091b402f42e575c9a7272881b2b91a5bdc5584a14e263dd0a4aee903e06e18",
+      "sha256": "e4408a54a681fffded66a865dddc831f3eb447e3ea12f14efa61ca8a1aaf2e90",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-win32.png",
-      "sha256": "5c92a6507bea531e455dee7dedd889253dc73905a45c70cd3252d1d21711e71e",
+      "sha256": "b89a7820082969b2e3fc09c2a8d1abb9b4523d6fb1350dbf16497735daa33534",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-linux.png",
-      "sha256": "52be688d15049237b1e2d33ac4455a2663c9f4c75fc354d36d78ee3181096656",
+      "sha256": "530362385ce0ac1bbb2299d2f0b05d044ea1ca438cb4dd3840cea28973b2ad83",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-win32.png",
-      "sha256": "818a4d43974a71acd5df770666eb15b8ac5bc1c522f14452a0ad9b9a2744d47f",
+      "sha256": "13b3341bfbe55416942035fa2f5ad0b1b1246a21374709eecbdc54f2300eb6d3",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-linux.png",
-      "sha256": "feb2115eef182ecdc0dcde4f28df0e72d7eab2261ec2702af46307ecde324a8f",
+      "sha256": "891c80332203c08f8fdb6a6764a8af4f88533f0f77edda271e8bd628bbc98fbb",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-win32.png",
-      "sha256": "4122654ac24b53e2691f7b4aaad1cbac4a8f130349bc53257ac1ef1442859eb4",
+      "sha256": "4aac1d4500b8719b7c55858ec087733f90c73cf9fc3be358d564ab2fb0102ad4",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-linux.png",
-      "sha256": "3c980989c12c36898e1154ccdb226abc88197d5a2688423ce051f25a8dc2b6eb",
+      "sha256": "83ab77f11108ad83b1939a572c6ac932c31b2871928e6eee0813fb1a0f3a21db",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-win32.png",
-      "sha256": "0948129992bb7aa50cf9efe00fab58f51c3f5e8b8e6f18ad98ad1d38de9d8b25",
+      "sha256": "1044a0b6b16154cf0b7449a50bdf09394c3363efda65e7aee16752ecdfa4a0cf",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-linux.png",
-      "sha256": "f5eb0222c060d9e8d910dbc46c544b3a489ad470a9ab75682d471172b74627d0",
+      "sha256": "4ad1c2ad064412ba20cfb509b5c93431201f487856b5a643b30419cc8213948b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-win32.png",
-      "sha256": "fd3faf2af6742332db7dc161674ef3764106b637b39552f6b7857a5f64186fec",
+      "sha256": "65b176dbacc10322c056fe278a2e42b965d70effb62c49a7811127c5959ee23f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-linux.png",
-      "sha256": "ca97d552a67c2a5dd38ceef06a128abb8e293c637d8cc9be9625f95a0e0f6dfa",
+      "sha256": "fd97f50c7da83bd9e63d055dfa3d5934fcffc57705ced29c8988cbf5fee9e70b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-win32.png",
-      "sha256": "5d0d4ba7609dcbccc542b8cb943866331385635a2e000c4073a0b959d9dc354a",
+      "sha256": "20a37395c58ad7aae9ab85fa99bdfe5f508fba344c43b85540e34086b4d01420",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-linux.png",
-      "sha256": "4bdb9d856e444360efe3e368c5e91cc731224ad62b506ccace91e018fbf9123f",
+      "sha256": "61d6b614cab9218ee3a6e2df636d3c7d89f0a4aa2aec8e523bac339067828664",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-win32.png",
-      "sha256": "7e99cd95ddda421d930ca19144edb82b4d23056925f149042a5ebc592ed0afde",
+      "sha256": "ea5b0a73620ca4346959f149e3725f091f4c8edfb3497d365c96d6a1ecd1eed7",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-linux.png",
-      "sha256": "18e211574807f9310f4c7b68eeda5e0e82f08a7a11b45f1d423199fe5904a14a",
+      "sha256": "4cee7abc0c8ec3ba9f7e8ba23875c0b15f177fb63beab5317cb8781d664fe204",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-win32.png",
-      "sha256": "d9ee1835d97e852fdd86b1cf93d6cbbeb1a9c05352f236285666b41bd43b40b7",
+      "sha256": "59e416b49b93785145d6acdde56d7b9b1dfeaa1781582cc3a5fdc717d490d23b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-linux.png",
-      "sha256": "55b30efa3f7131b48c5033a1a75f1f26d6cf259da14f5eb221e80195dd682f68",
+      "sha256": "5154cdcafdb26c6da90a3cba4f2007179f5bf85969e7de4ba9da4b67248918d5",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-win32.png",
-      "sha256": "1ce818a5a267dcf76d226116e3753b0feb32cd28f83a67ad1585d3688d49b735",
+      "sha256": "71de3d50bb9d96e1c8122225daba8690d71686f9dea60680043fe76377b7962c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-linux.png",
-      "sha256": "d161ce44cab55a6de14a38fba83dbd2af686dc356a774a819c2e5be90fae6364",
+      "sha256": "37c7f8814947d86ee741eed744d30ab2e6c6d00dbb92c871efa9e47b6f573249",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-win32.png",
-      "sha256": "7147716905f7f48b475bbe359b89d561d2b0b3586235d43b72e126d091999e5e",
+      "sha256": "d67141ad42aa1b4c5ce0f44465c9826874bc7288be13869e44fe43d4667e703f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-linux.png",
-      "sha256": "e8a5e0ab3a17267ded211a3f48a9b90e2f9d849b5eb9261f1109d6c192573aab",
+      "sha256": "2f8e2dcde9d4dcdaae8af4dc2b1f798e2ec67af01d6c593b41f9301a622c802b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-win32.png",
-      "sha256": "e883a3bb0fcfdf56eda30153b0141bf84d8e7f82a4d36d1c784ab083af1fca88",
+      "sha256": "af4408017e0156685fdd201e53d6750a3758de1eb34b37efd55ce0fc69913ee5",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-27T01:06:18.015Z",
-      "reason": "Self-hosted Inter and Open Sans variable fonts remove host-installed font substitution; Linux and Windows desktop, tablet, and mobile captures reviewed after exact-host production runs."
+      "approvedAt": "2026-08-28T02:00:50.225Z",
+      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
     }
   ]
 }

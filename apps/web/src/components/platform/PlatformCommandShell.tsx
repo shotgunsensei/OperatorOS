@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import OperatorLogo from '@/components/brand/OperatorLogo';
 import TenantMessenger from '@/components/TenantMessenger';
 import { platformViewToPath, type PlatformView } from '@/lib/platform-routes';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -159,7 +160,9 @@ export default function PlatformCommandShell({
                 {drawerOpen ? <X size={19} aria-hidden="true" /> : <Menu size={19} aria-hidden="true" />}
               </button>
             )}
-            <a className={styles.brand} href={PLATFORM_DOMAINS.root}>OperatorOS</a>
+            <a className={styles.brand} href={PLATFORM_DOMAINS.root} aria-label="OperatorOS home">
+              <OperatorLogo size={30} wordmarkSize={13} showDomain={false} />
+            </a>
             <span className={styles.commandMark}>Platform Command</span>
             <div className={styles.context} aria-label="Runtime identity">
               <span className={styles.badge} data-testid="platform-environment">{environment}</span>

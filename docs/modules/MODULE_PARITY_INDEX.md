@@ -1,5 +1,24 @@
 # OperatorOS module parity index
 
+## Canonical OperatorOS brand overlay (2026-08-27)
+
+All module capability, parity, entitlement, billing, tenant, role, provider,
+route, and database states remain unchanged. The supplied OperatorOS lockup is
+now the canonical readable brand asset, while favicons, touch icons, PWA
+manifests, compact navigation, and other constrained surfaces use the recreated
+text-free emblem. The shared exact-host ecosystem header consumes the new
+responsive signature without widening module authority or replacing any
+module's own product identity.
+
+The shared header intentionally changed 72 governed screenshots across Linux
+and Windows; OutCall's six screenshots remained byte-identical because it does
+not consume that header. All 78 desktop/tablet/mobile hashes were reviewed and
+re-approved, and clean non-update runs passed 4/4 on Windows and 4/4 in the
+pinned Playwright Linux container with the existing accessibility, overflow,
+route, persistence, and 0.5% comparison gates. This is source/local presentation
+evidence only. Commit, push, GitHub CI, Replit publication, deployed identity,
+DNS, production data, and live exact-host acceptance remain separate gates.
+
 ## Zero-gap release-candidate overlay (2026-08-26)
 
 The strict source-derived parity contract is green across all 13 registered

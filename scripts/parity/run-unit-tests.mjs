@@ -4,6 +4,7 @@ import { parseNodeTestSummary, requiredTestExitCode, runCaptured } from './lib/p
 
 const files = [
   'scripts/phase20-product-truth.test.mjs',
+  'scripts/operatoros-brand-assets.test.mjs',
   'scripts/parity/parity-compiler.test.mjs',
   'scripts/parity/quality-gates.test.mjs',
   'scripts/phase22-shared-equivalent-contract.test.mjs',
