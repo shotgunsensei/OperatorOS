@@ -387,10 +387,21 @@ test('marketing shell · /login route exposes the full auth state machine', () =
 });
 
 test('marketing shell · PWA icon set is rebranded to the Operator mark', () => {
-  // Phase 1 contract: every manifest/apple-touch/PWA icon must render
-  // the new Operator mark, not the legacy "OS" tile. We assert on each
-  // referenced file individually because manifest-only checks would
-  // miss stale files on disk that the browser still caches.
+  // The approved compact identity is the true-alpha PNG mark. Active PWA and
+  // browser metadata must reference it, while legacy direct SVG URLs remain a
+  // text-free emblem rather than the retired "OS" tile.
+  const manifest = JSON.parse(read('public/manifest.json')) as {
+    icons?: Array<{ src?: string; sizes?: string; type?: string; purpose?: string }>;
+  };
+  assert.deepEqual(manifest.icons, [{
+    src: '/brand/operatoros-mark.png',
+    sizes: '1254x1254',
+    type: 'image/png',
+    purpose: 'any',
+  }]);
+  assert.match(read('src/app/layout.tsx'), /OPERATOROS_MARK_PATH/);
+  assert.match(read('src/app/favicon.ico/route.ts'), /operatoros-mark\.png/);
+
   const iconFiles = [
     'public/icons/icon-48x48.svg',
     'public/icons/icon-72x72.svg',
@@ -402,10 +413,8 @@ test('marketing shell · PWA icon set is rebranded to the Operator mark', () => 
   ];
   for (const f of iconFiles) {
     const src = read(f);
-    // Brand mark uses the new bg + accent palette; legacy used #0d1117
-    // + #58a6ff and embedded the text "OS"/"OperatorOS".
-    assert.match(src, /#080B12/i, `${f} should use the new brand background`);
-    assert.match(src, /#00E5FF/i, `${f} should use the new cyan accent`);
+    assert.match(src, /OperatorOS emblem/i, `${f} should identify the compact emblem`);
+    assert.doesNotMatch(src, /<text\b/i, `${f} must remain text-free at compact sizes`);
     assert.doesNotMatch(src, />OS</, `${f} must not embed the legacy "OS" wordmark`);
     assert.doesNotMatch(src, /#58a6ff/i, `${f} must not use the legacy GitHub blue accent`);
   }

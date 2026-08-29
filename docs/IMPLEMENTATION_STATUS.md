@@ -1,5 +1,99 @@
 # OperatorOS implementation status
 
+## PR #87 release-gate repair - SOURCE/LOCAL RELEASE GATE GREEN (2026-08-29)
+
+- GitHub Actions run `33222819035` for PR #87 failed only the API and
+  `exact-host-visual-accessibility` stages. The API failures were stale branding
+  assertions and raw color values in the shared `OperatorLogo`; the browser
+  artifact showed Next attempting to proxy module traffic to
+  `https://localhost:5002` and failing with OpenSSL `EPROTO wrong version
+  number` while the private Next server was HTTP-only.
+- The exact-host failure was caused by a loopback identity mismatch: Next 15
+  canonicalized the middleware URL from `127.0.0.1` to `localhost`, treated the
+  rewritten origin as external to the server started on `127.0.0.1`, and
+  self-proxied over the public HTTPS scheme. The supervised runtime now binds
+  only the private Next process to `localhost`, keeps the API and runner on
+  `127.0.0.1`, validates the configurable Next gateway target against an
+  explicit loopback-only allowlist, and routes WebSockets to the correct
+  private service. The Replit boundary remains one public mapping, supervisor
+  `5000 -> 80`; API `5001` and Next/runner `5002` remain private.
+- The brand contract now centralizes the approved lockup gradients and accents
+  in the shared brand tokens. The PWA regression asserts the active manifest,
+  layout, and favicon use the approved true-alpha PNG mark, while legacy direct
+  SVG fallbacks remain text-free and exclude the retired blue treatment. The
+  canonical full-logo and compact-mark PNG bytes and hashes were not changed.
+- Focused source verification passed: the final runtime/navigation contract
+  suite passed **12/12**; deployment scope reported the authoritative root
+  lockfile, `externalPorts: [80]`, and zero issues; web typecheck and
+  `git diff --check` passed. A separate exact-host visual reproduction passed
+  the static module contract for **13/13** modules and all **4/4** previously
+  failing TradeFlowKit browser assertions.
+- The complete `corepack pnpm verify:release` gate passed **14/14** stages
+  against an isolated disposable PostgreSQL 16 database: unit **46/46**, API
+  **1,204/1,204**, database apply/reapply integration **28/28**, route-control
+  static verification with **1,304** active route capabilities and zero
+  failures, visual contract **13/13** modules, exact-host production-browser
+  acceptance **21/21**, the separate visual regression suite **4/4**, all four
+  workspace typechecks, API/runner/Next production builds, **34/34** generated
+  Next route entries, production hardening/security, and core preflight.
+- Replacement GitHub run `33267341743` confirmed the original branding and
+  exact-host repairs: API passed **1,203/1,203**, exact-host acceptance passed
+  **21/21**, and all three TradeFlowKit visual cases passed. It also exposed a
+  separate fresh-tenant FaultlineLab race on Linux: the initial catalog and
+  daily-challenge requests ran the 56-case reconciliation concurrently, one
+  returned HTTP 500, and a later retry succeeded.
+- FaultlineLab starter reconciliation is now deduplicated per tenant inside an
+  API process and serialized across API replicas with a PostgreSQL
+  transaction-scoped advisory lock. A current-state fast path avoids repeated
+  upserts, and the transaction verifies the complete 56-case catalog before it
+  commits. An eight-request concurrent first-read regression passed with every
+  response HTTP 200 and exactly **56** challenges, **56** current versions, and
+  **56** migration references. The full catalog action/score/reload suite
+  passed **2/2**, and the production exact-host visual reproduction passed
+  **4/4**.
+- This is source/local evidence for the PR repair, not a merge, Replit publish,
+  production database mutation, DNS/provider change, or deployed authenticated
+  acceptance result. GitHub CI must rerun on the follow-up repair commit before
+  the PR can be called remote-gate green.
+
+## Replit launch port-boundary hotfix - SOURCE/LOCAL GREEN (2026-08-28)
+
+- The post-merge `main` commit `7b1f4ca8af5021961b7326c2c0a313c1cd7b9ae0`
+  reintroduced Replit public mappings for API `5001 -> 3001` and runner/Next
+  internal port `5002 -> 3000`. That bypassed the readiness-gated public
+  supervisor and made `corepack pnpm build:production` fail immediately in
+  `verify:deployment-scope` with `externalPorts: [80, 3001, 3000]`. Main commit
+  `f6410659022f053cdecf044fa1028ee8632c2974` and the independent scoped
+  `codex/replit-launch-hotfix` both removed those mappings. PR #87 was resolved
+  against current `main` by retaining the stronger main implementation: only
+  supervisor port `5000 -> 80` is public, while API `5001`, runner `5002`, and
+  the private Next process explicitly bind to loopback.
+- A separate local launch reproduction without configured secrets confirmed
+  the plain-text symptom: the API fails closed with `SESSION_SECRET is required
+  at boot and must not be empty`, after which the Next `/healthz` proxy returns
+  `500 Internal Server Error` with `ECONNREFUSED` to `localhost:5001`. No fake,
+  default, client-visible, or checked-in session secret was added. A Replit
+  workspace launch still requires the real `SESSION_SECRET` to be present in
+  Replit Secrets.
+- Fresh focused verification passed: `corepack pnpm
+  verify:deployment-scope` reports one authoritative lock, `externalPorts:
+  [80]`, and zero issues; `corepack pnpm --dir apps/api exec tsx --test
+  --test-concurrency=1 test/replit-unified-runtime.test.ts` passed **3/3**;
+  `node --test scripts/phase39/deployment-scope.test.mjs` passed **6/6**; and
+  `git diff --check` passed.
+- With `INTERNAL_API_URL=http://localhost:5001`, a fresh `corepack pnpm
+  build:production` passed deployment scope, FaultlineLab catalog checks
+  **4/4**, all four workspace typechecks, and API/runner/Next production builds;
+  Next generated **34/34** route entries. This is source/local build evidence,
+  not a Replit publish or authenticated deployed acceptance result.
+- Live read-only checks at diagnosis time remained distinct from the hotfix:
+  `https://operatoros.net/` returned 200, `https://operatoros.net/readyz`
+  returned ready with database release v56, and unauthenticated app/module hosts
+  reached the exact-host auth login. That deployment identified current-main
+  publication marker `6dffd7c84a0505c868a790fcc156c5bb825fce2d` with the
+  loopback hardening included. Resolving PR #87 did not perform another Replit
+  publication, production database mutation, DNS change, or provider change.
+
 ## Canonical OperatorOS logo and site-wide brand rollout - SOURCE/LOCAL GREEN (2026-08-27)
 
 - The supplied `OpOS Logo` is preserved byte-for-byte as the canonical full

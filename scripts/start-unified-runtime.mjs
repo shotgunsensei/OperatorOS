@@ -11,6 +11,8 @@ const DEFAULT_STARTUP_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 500;
 const SHUTDOWN_GRACE_MS = 10_000;
 export const INTERNAL_SERVICE_HOST = '127.0.0.1';
+export const NEXT_INTERNAL_HOST = 'localhost';
+const LOOPBACK_SERVICE_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
 function parseInteger(raw, fallback, name, { min, max }) {
   const value = raw == null || raw === '' ? fallback : Number(raw);
@@ -39,7 +41,7 @@ export function resolveRuntimeConfig(env = process.env) {
     nextPort,
     startupTimeoutMs,
     apiReadyUrl: `http://127.0.0.1:${apiPort}/readyz`,
-    nextReadyUrl: `http://127.0.0.1:${nextPort}/healthz`,
+    nextReadyUrl: `http://${NEXT_INTERNAL_HOST}:${nextPort}/healthz`,
     internalApiUrl: `http://localhost:${apiPort}`,
   };
 }
@@ -158,14 +160,20 @@ function writeBootstrapResponse(request, response) {
   response.end(method === 'HEAD' ? undefined : body);
 }
 
-export function createPublicGateway({ apiPort, nextPort }, { isReady = () => true } = {}) {
+export function createPublicGateway(
+  { apiPort, nextPort },
+  { isReady = () => true, nextHost = INTERNAL_SERVICE_HOST } = {},
+) {
+  if (!LOOPBACK_SERVICE_HOSTS.has(nextHost)) {
+    throw new Error('The internal Next host must remain loopback-only');
+  }
   const server = http.createServer((request, response) => {
     if (!isReady()) {
       writeBootstrapResponse(request, response);
       return;
     }
     const upstream = http.request({
-      hostname: '127.0.0.1',
+      hostname: nextHost,
       port: nextPort,
       method: request.method,
       path: request.url,
@@ -188,7 +196,7 @@ export function createPublicGateway({ apiPort, nextPort }, { isReady = () => tru
     }
     const websocketPath = request.url?.startsWith('/ws/') === true;
     const upstream = http.request({
-      hostname: '127.0.0.1',
+      hostname: websocketPath ? INTERNAL_SERVICE_HOST : nextHost,
       port: websocketPath ? apiPort : nextPort,
       method: request.method,
       path: websocketPath ? request.url.slice(3) : request.url,
@@ -246,7 +254,10 @@ export async function startUnifiedRuntime(env = process.env) {
     process.once(signal, () => shutdown(0, `received ${signal}`));
   }
 
-  publicGateway = createPublicGateway(config, { isReady: () => runtimeReady });
+  publicGateway = createPublicGateway(config, {
+    isReady: () => runtimeReady,
+    nextHost: NEXT_INTERNAL_HOST,
+  });
   try {
     await new Promise((resolvePromise, reject) => {
       const handleListenError = (error) => reject(error);
@@ -311,7 +322,7 @@ export async function startUnifiedRuntime(env = process.env) {
   console.info(`[runtime] Fastify ready; starting Next on private port ${config.nextPort}`);
   const web = spawnNode(
     entrypoints.nextCli,
-    ['start', '-p', String(config.nextPort), '-H', INTERNAL_SERVICE_HOST],
+    ['start', '-p', String(config.nextPort), '-H', NEXT_INTERNAL_HOST],
     { ...runtimeEnv, PORT: String(config.nextPort), INTERNAL_API_URL: config.internalApiUrl },
     resolve(process.cwd(), 'apps/web'),
   );

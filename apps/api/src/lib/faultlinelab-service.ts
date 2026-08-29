@@ -43,10 +43,31 @@ export function faultlineFirst(result: { rows: unknown[] }): Record<string, any>
   return result.rows[0] ? faultlineCamelRow(result.rows[0]) : null;
 }
 
-export async function ensureFaultlineStarterContent(
+async function faultlineStarterContentIsCurrent(
+  tenantId: string,
+  executor: Executor,
+): Promise<boolean> {
+  const result = await executor.execute(sql`
+    SELECT COUNT(DISTINCT m.source_id)::int AS current_count
+    FROM faultlinelab_migration_refs m
+    JOIN faultlinelab_challenges c
+      ON c.tenant_id=m.tenant_id AND c.id=m.target_id
+    JOIN faultlinelab_challenge_versions v
+      ON v.tenant_id=c.tenant_id AND v.challenge_id=c.id
+      AND v.version_number=c.current_version_number
+    WHERE m.tenant_id=${tenantId}
+      AND m.source_commit=${FAULTLINELAB_SOURCE_COMMIT}
+      AND m.source_type='starter_challenge'
+      AND m.target_type='challenge'
+      AND c.scope='tenant' AND c.status='published' AND c.archived_at IS NULL
+  `);
+  return Number(result.rows[0]?.current_count ?? 0) === FAULTLINELAB_STARTER_CHALLENGES.length;
+}
+
+async function reconcileFaultlineStarterContent(
   tenantId: string,
   actorUserId: string,
-  executor: Executor = db,
+  executor: Executor,
 ): Promise<void> {
   for (const starter of FAULTLINELAB_STARTER_CHALLENGES) {
     const challengeId = faultlineStableUuid(
@@ -132,6 +153,40 @@ export async function ensureFaultlineStarterContent(
         source_commit=EXCLUDED.source_commit, target_id=EXCLUDED.target_id,
         source_fingerprint=EXCLUDED.source_fingerprint, imported_at=NOW()
     `);
+  }
+}
+
+const activeStarterReconciliations = new Map<string, Promise<void>>();
+
+export async function ensureFaultlineStarterContent(
+  tenantId: string,
+  actorUserId: string,
+): Promise<void> {
+  const active = activeStarterReconciliations.get(tenantId);
+  if (active) return active;
+
+  const reconciliation = db.transaction(async (tx) => {
+    // The workspace loads the catalog and daily challenge in parallel.
+    // Deduplicate inside this process and serialize across API replicas so
+    // fresh-tenant reads cannot race through hundreds of per-case upserts.
+    await tx.execute(sql`
+      SELECT pg_advisory_xact_lock(
+        hashtextextended(${`operatoros:faultlinelab:starter:${tenantId}`}, 0::bigint)
+      )
+    `);
+    if (await faultlineStarterContentIsCurrent(tenantId, tx)) return;
+    await reconcileFaultlineStarterContent(tenantId, actorUserId, tx);
+    if (!(await faultlineStarterContentIsCurrent(tenantId, tx))) {
+      throw new Error('FaultlineLab starter catalog reconciliation did not complete');
+    }
+  });
+  activeStarterReconciliations.set(tenantId, reconciliation);
+  try {
+    await reconciliation;
+  } finally {
+    if (activeStarterReconciliations.get(tenantId) === reconciliation) {
+      activeStarterReconciliations.delete(tenantId);
+    }
   }
 }
 
