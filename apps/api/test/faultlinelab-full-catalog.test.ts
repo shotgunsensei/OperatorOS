@@ -72,6 +72,44 @@ after(async () => {
   if (app) await app.close();
 });
 
+test('concurrent first reads reconcile one complete FaultlineLab starter catalog', async () => {
+  const manifest = faultlineStarterManifest();
+  const responses = await Promise.all(
+    Array.from({ length: 8 }, (_value, index) =>
+      inject(
+        'GET',
+        index % 2 === 0
+          ? '/v1/modules/faultlinelab/challenges'
+          : '/v1/modules/faultlinelab/daily',
+      ),
+    ),
+  );
+  for (const response of responses) {
+    assert.equal(response.statusCode, 200, response.body);
+  }
+  for (const response of responses.filter((_response, index) => index % 2 === 0)) {
+    assert.equal(response.json().challenges.length, manifest.discoveredCount);
+  }
+
+  const counts = await db.execute(sql`
+    SELECT
+      (SELECT COUNT(*)::int FROM faultlinelab_challenges
+        WHERE tenant_id=${owner.currentTenantId} AND scope='tenant' AND archived_at IS NULL) AS challenge_count,
+      (SELECT COUNT(*)::int FROM faultlinelab_challenge_versions
+        WHERE tenant_id=${owner.currentTenantId}) AS version_count,
+      (SELECT COUNT(*)::int FROM faultlinelab_migration_refs
+        WHERE tenant_id=${owner.currentTenantId} AND source_type='starter_challenge') AS migration_count
+  `);
+  assert.deepEqual(
+    counts.rows[0],
+    {
+      challenge_count: manifest.discoveredCount,
+      version_count: manifest.discoveredCount,
+      migration_count: manifest.discoveredCount,
+    },
+  );
+});
+
 test('compiler-discovered catalog imports idempotently and every case can act, score, and reload', async () => {
   const manifest = faultlineStarterManifest();
   const firstCatalogResponse = await inject('GET', '/v1/modules/faultlinelab/challenges');

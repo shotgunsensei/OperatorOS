@@ -30,15 +30,30 @@
   failing TradeFlowKit browser assertions.
 - The complete `corepack pnpm verify:release` gate passed **14/14** stages
   against an isolated disposable PostgreSQL 16 database: unit **46/46**, API
-  **1,203/1,203**, database apply/reapply integration **28/28**, route-control
+  **1,204/1,204**, database apply/reapply integration **28/28**, route-control
   static verification with **1,304** active route capabilities and zero
   failures, visual contract **13/13** modules, exact-host production-browser
   acceptance **21/21**, the separate visual regression suite **4/4**, all four
   workspace typechecks, API/runner/Next production builds, **34/34** generated
   Next route entries, production hardening/security, and core preflight.
+- Replacement GitHub run `33267341743` confirmed the original branding and
+  exact-host repairs: API passed **1,203/1,203**, exact-host acceptance passed
+  **21/21**, and all three TradeFlowKit visual cases passed. It also exposed a
+  separate fresh-tenant FaultlineLab race on Linux: the initial catalog and
+  daily-challenge requests ran the 56-case reconciliation concurrently, one
+  returned HTTP 500, and a later retry succeeded.
+- FaultlineLab starter reconciliation is now deduplicated per tenant inside an
+  API process and serialized across API replicas with a PostgreSQL
+  transaction-scoped advisory lock. A current-state fast path avoids repeated
+  upserts, and the transaction verifies the complete 56-case catalog before it
+  commits. An eight-request concurrent first-read regression passed with every
+  response HTTP 200 and exactly **56** challenges, **56** current versions, and
+  **56** migration references. The full catalog action/score/reload suite
+  passed **2/2**, and the production exact-host visual reproduction passed
+  **4/4**.
 - This is source/local evidence for the PR repair, not a merge, Replit publish,
   production database mutation, DNS/provider change, or deployed authenticated
-  acceptance result. GitHub CI must rerun on the pushed repair commit before
+  acceptance result. GitHub CI must rerun on the follow-up repair commit before
   the PR can be called remote-gate green.
 
 ## Replit launch port-boundary hotfix - SOURCE/LOCAL GREEN (2026-08-28)
