@@ -10,6 +10,8 @@ const repoRoot = resolve(__dirname, '../../..');
 const launcherPath = resolve(repoRoot, 'scripts/start-unified-runtime.mjs');
 const launcher = await import(pathToFileURL(launcherPath).href);
 const preflight = await import(pathToFileURL(resolve(repoRoot, 'scripts/production-env-preflight.mjs')).href);
+const apiSource = readFileSync(resolve(repoRoot, 'apps/api/src/index.ts'), 'utf8');
+const runnerSource = readFileSync(resolve(repoRoot, 'apps/runner-gateway/src/index.ts'), 'utf8');
 
 test('unified Replit launcher validates production authority and port separation', () => {
   const valid = {
@@ -49,6 +51,7 @@ test('unified Replit launcher validates production authority and port separation
     apiEntry: resolve('C:\\workspace', 'apps/api/dist/apps/api/src/index.js'),
     nextCli: resolve('C:\\workspace', 'apps/web/node_modules/next/dist/bin/next'),
   });
+  assert.equal(launcher.INTERNAL_SERVICE_HOST, '127.0.0.1');
 });
 
 test('Replit deployment uses the supervised readiness-gated runtime', () => {
@@ -82,6 +85,9 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /apps\/api\/dist\/apps\/api\/src\/index\.js/);
   assert.match(source, /apps\/web\/node_modules\/next\/dist\/bin\/next/);
   assert.match(source, /resolve\(process\.cwd\(\), 'apps\/web'\)/);
+  assert.match(source, /\['start', '-p', String\(config\.nextPort\), '-H', INTERNAL_SERVICE_HOST\]/);
+  assert.match(apiSource, /process\.env\.INTERNAL_SERVICE_HOST\?\.trim\(\) \|\| '0\.0\.0\.0'/);
+  assert.match(runnerSource, /process\.env\.INTERNAL_SERVICE_HOST\?\.trim\(\) \|\| '0\.0\.0\.0'/);
   assert.doesNotMatch(source, /corepack|spawnPnpm/);
   assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
   assert.equal(

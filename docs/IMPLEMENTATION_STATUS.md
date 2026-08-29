@@ -6,10 +6,12 @@
   reintroduced Replit public mappings for API `5001 -> 3001` and runner/Next
   internal port `5002 -> 3000`. That bypassed the readiness-gated public
   supervisor and made `corepack pnpm build:production` fail immediately in
-  `verify:deployment-scope` with `externalPorts: [80, 3001, 3000]`. The scoped
-  `codex/replit-launch-hotfix` correction removes those two mappings and again
-  exposes only supervisor port `5000 -> 80`; API `5001` and Next `5002` remain
-  loopback-only deployment services.
+  `verify:deployment-scope` with `externalPorts: [80, 3001, 3000]`. Main commit
+  `f6410659022f053cdecf044fa1028ee8632c2974` and the independent scoped
+  `codex/replit-launch-hotfix` both removed those mappings. PR #87 was resolved
+  against current `main` by retaining the stronger main implementation: only
+  supervisor port `5000 -> 80` is public, while API `5001`, runner `5002`, and
+  the private Next process explicitly bind to loopback.
 - A separate local launch reproduction without configured secrets confirmed
   the plain-text symptom: the API fails closed with `SESSION_SECRET is required
   at boot and must not be empty`, after which the Next `/healthz` proxy returns
@@ -31,11 +33,10 @@
 - Live read-only checks at diagnosis time remained distinct from the hotfix:
   `https://operatoros.net/` returned 200, `https://operatoros.net/readyz`
   returned ready with database release v56, and unauthenticated app/module hosts
-  reached the exact-host auth login. That deployment identified commit
-  `6dffd7c84a0505c868a790fcc156c5bb825fce2d`, which is not the current local
-  `main` commit and is not available in this checkout's Git object database.
-  No Replit publication, production database mutation, DNS/provider change,
-  commit, or push was performed by this hotfix.
+  reached the exact-host auth login. That deployment identified current-main
+  publication marker `6dffd7c84a0505c868a790fcc156c5bb825fce2d` with the
+  loopback hardening included. Resolving PR #87 did not perform another Replit
+  publication, production database mutation, DNS change, or provider change.
 
 ## Canonical OperatorOS logo and site-wide brand rollout - SOURCE/LOCAL GREEN (2026-08-27)
 

@@ -1587,7 +1587,7 @@ app.get<{ Params: { workspaceId: string } }>(
 serveUI(app);
 
 const port = parseInt(process.env.PORT ?? '5001', 10);
-const host = '0.0.0.0';
+const host = process.env.INTERNAL_SERVICE_HOST?.trim() || '0.0.0.0';
 
 // -- Capability banner ------------------------------------------------------
 // Logs which optional features are enabled/disabled at boot so operators have

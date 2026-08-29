@@ -5,3 +5,4 @@
 - [Next.js SEO validation](nextjs-seo-validation.md) — use a crawler UA for metadata checks; browser UAs may receive streamed metadata, and ImageResponse supports restricted CSS.
 - [Module route metadata scope](module-route-metadata-scope.md) — apply index-control metadata at a shared dynamic segment when sibling catch-all pages also serve private content.
 - [Replit provider scan marker](replit-provider-scan.md) — exact provider pnpm tuples may retain workspace signals; use the deployment-only marker for a bounded exception.
+- [Replit internal ports](replit-internal-ports.md) — bind API, runner, and production Next to loopback or Replit may regenerate public mappings that fail publishing.

@@ -19,6 +19,7 @@ localPort = 5000
 externalPort = 80
 
 
+
 [env]
 PORT = "5000"
 
@@ -48,7 +49,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=5001 tsx apps/api/src/index.ts & PORT=5002 tsx apps/runner-gateway/src/index.ts & sleep 2 && cd apps/web && INTERNAL_API_URL=http://localhost:5001 npx next dev -p 5000"
+args = "INTERNAL_SERVICE_HOST=127.0.0.1 PORT=5001 tsx apps/api/src/index.ts & INTERNAL_SERVICE_HOST=127.0.0.1 PORT=5002 tsx apps/runner-gateway/src/index.ts & sleep 2 && cd apps/web && INTERNAL_API_URL=http://localhost:5001 npx next dev -p 5000"
 waitForPort = 5000
 
 [userenv]
