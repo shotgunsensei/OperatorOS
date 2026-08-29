@@ -43,7 +43,7 @@ test('unified Replit launcher validates production authority and port separation
     nextPort: 5002,
     startupTimeoutMs: 120000,
     apiReadyUrl: 'http://127.0.0.1:5001/readyz',
-    nextReadyUrl: 'http://127.0.0.1:5002/healthz',
+    nextReadyUrl: 'http://localhost:5002/healthz',
     internalApiUrl: 'http://localhost:5001',
   });
   assert.deepEqual(launcher.resolveRuntimeEntrypoints('C:\\workspace'), {
@@ -52,6 +52,7 @@ test('unified Replit launcher validates production authority and port separation
     nextCli: resolve('C:\\workspace', 'apps/web/node_modules/next/dist/bin/next'),
   });
   assert.equal(launcher.INTERNAL_SERVICE_HOST, '127.0.0.1');
+  assert.equal(launcher.NEXT_INTERNAL_HOST, 'localhost');
 });
 
 test('Replit deployment uses the supervised readiness-gated runtime', () => {
@@ -85,7 +86,7 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /apps\/api\/dist\/apps\/api\/src\/index\.js/);
   assert.match(source, /apps\/web\/node_modules\/next\/dist\/bin\/next/);
   assert.match(source, /resolve\(process\.cwd\(\), 'apps\/web'\)/);
-  assert.match(source, /\['start', '-p', String\(config\.nextPort\), '-H', INTERNAL_SERVICE_HOST\]/);
+  assert.match(source, /\['start', '-p', String\(config\.nextPort\), '-H', NEXT_INTERNAL_HOST\]/);
   assert.match(apiSource, /process\.env\.INTERNAL_SERVICE_HOST\?\.trim\(\) \|\| '0\.0\.0\.0'/);
   assert.match(runnerSource, /process\.env\.INTERNAL_SERVICE_HOST\?\.trim\(\) \|\| '0\.0\.0\.0'/);
   assert.doesNotMatch(source, /corepack|spawnPnpm/);
@@ -130,7 +131,7 @@ test('public gateway responds during bootstrap and proxies only after readiness'
   let ready = false;
   const gateway = launcher.createPublicGateway(
     { apiPort: upstreamAddress.port, nextPort: upstreamAddress.port },
-    { isReady: () => ready },
+    { isReady: () => ready, nextHost: '127.0.0.1' },
   );
   await new Promise<void>((resolvePromise, reject) => {
     gateway.once('error', reject);

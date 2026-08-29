@@ -42,6 +42,15 @@ export const brand = {
   ctaGlowLarge: '0 0 0 1px rgba(0, 200, 255, 0.22), 0 18px 48px -16px rgba(23, 69, 232, 0.7)',
   markDropShadow: 'drop-shadow(0 0 12px rgba(0, 200, 255, 0.55))',
   markBgFill: 'rgba(8, 11, 18, 0.92)',
+  // Shared horizontal-lockup treatment. Keep the metallic wordmark and
+  // electric-blue signature aligned with the supplied artwork without
+  // duplicating raw colors inside each consuming component.
+  wordmarkMetalGradient: 'linear-gradient(180deg, #FFFFFF 0%, #E9EEF5 42%, #9AA9BC 100%)',
+  wordmarkBlueGradient: 'linear-gradient(180deg, #14D9FF 0%, #078BFF 48%, #1745E8 100%)',
+  wordmarkBlueGlow: '0 0 14px rgba(0, 170, 255, 0.28)',
+  wordmarkDomainAccent: '#0797FF',
+  wordmarkDomainLineIn: 'linear-gradient(90deg, transparent, #00C8FF)',
+  wordmarkDomainLineOut: 'linear-gradient(90deg, #00C8FF, transparent)',
   // Radial backdrop used behind marketing hero headlines.
   heroRadial: 'radial-gradient(60% 50% at 50% 30%, rgba(0, 200, 255, 0.12) 0%, rgba(23, 69, 232, 0.1) 45%, transparent 70%)',
   // Module status badge palette — surfaced as tokens so marketing
@@ -89,6 +98,12 @@ export const brandCssVariables = `
   --brand-cta-glow-soft: ${brand.ctaGlowSoft};
   --brand-cta-glow-hover: ${brand.ctaGlowHover};
   --brand-cta-glow-large: ${brand.ctaGlowLarge};
+  --brand-wordmark-metal-gradient: ${brand.wordmarkMetalGradient};
+  --brand-wordmark-blue-gradient: ${brand.wordmarkBlueGradient};
+  --brand-wordmark-blue-glow: ${brand.wordmarkBlueGlow};
+  --brand-wordmark-domain-accent: ${brand.wordmarkDomainAccent};
+  --brand-wordmark-domain-line-in: ${brand.wordmarkDomainLineIn};
+  --brand-wordmark-domain-line-out: ${brand.wordmarkDomainLineOut};
   --brand-font-display: ${brand.fontDisplay};
   --brand-font-body: ${brand.fontBody};
 `.trim();

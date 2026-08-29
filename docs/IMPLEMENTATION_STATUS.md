@@ -1,5 +1,46 @@
 # OperatorOS implementation status
 
+## PR #87 release-gate repair - SOURCE/LOCAL RELEASE GATE GREEN (2026-08-29)
+
+- GitHub Actions run `33222819035` for PR #87 failed only the API and
+  `exact-host-visual-accessibility` stages. The API failures were stale branding
+  assertions and raw color values in the shared `OperatorLogo`; the browser
+  artifact showed Next attempting to proxy module traffic to
+  `https://localhost:5002` and failing with OpenSSL `EPROTO wrong version
+  number` while the private Next server was HTTP-only.
+- The exact-host failure was caused by a loopback identity mismatch: Next 15
+  canonicalized the middleware URL from `127.0.0.1` to `localhost`, treated the
+  rewritten origin as external to the server started on `127.0.0.1`, and
+  self-proxied over the public HTTPS scheme. The supervised runtime now binds
+  only the private Next process to `localhost`, keeps the API and runner on
+  `127.0.0.1`, validates the configurable Next gateway target against an
+  explicit loopback-only allowlist, and routes WebSockets to the correct
+  private service. The Replit boundary remains one public mapping, supervisor
+  `5000 -> 80`; API `5001` and Next/runner `5002` remain private.
+- The brand contract now centralizes the approved lockup gradients and accents
+  in the shared brand tokens. The PWA regression asserts the active manifest,
+  layout, and favicon use the approved true-alpha PNG mark, while legacy direct
+  SVG fallbacks remain text-free and exclude the retired blue treatment. The
+  canonical full-logo and compact-mark PNG bytes and hashes were not changed.
+- Focused source verification passed: the final runtime/navigation contract
+  suite passed **12/12**; deployment scope reported the authoritative root
+  lockfile, `externalPorts: [80]`, and zero issues; web typecheck and
+  `git diff --check` passed. A separate exact-host visual reproduction passed
+  the static module contract for **13/13** modules and all **4/4** previously
+  failing TradeFlowKit browser assertions.
+- The complete `corepack pnpm verify:release` gate passed **14/14** stages
+  against an isolated disposable PostgreSQL 16 database: unit **46/46**, API
+  **1,203/1,203**, database apply/reapply integration **28/28**, route-control
+  static verification with **1,304** active route capabilities and zero
+  failures, visual contract **13/13** modules, exact-host production-browser
+  acceptance **21/21**, the separate visual regression suite **4/4**, all four
+  workspace typechecks, API/runner/Next production builds, **34/34** generated
+  Next route entries, production hardening/security, and core preflight.
+- This is source/local evidence for the PR repair, not a merge, Replit publish,
+  production database mutation, DNS/provider change, or deployed authenticated
+  acceptance result. GitHub CI must rerun on the pushed repair commit before
+  the PR can be called remote-gate green.
+
 ## Replit launch port-boundary hotfix - SOURCE/LOCAL GREEN (2026-08-28)
 
 - The post-merge `main` commit `7b1f4ca8af5021961b7326c2c0a313c1cd7b9ae0`

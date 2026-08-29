@@ -2,6 +2,7 @@
 
 import React from 'react';
 import OperatorMark from './OperatorMark';
+import { brand } from '@/lib/brand';
 
 interface OperatorLogoProps {
   size?: number;
@@ -54,13 +55,13 @@ export default function OperatorLogo({
         <span style={{ display: 'inline-flex', alignItems: 'baseline', whiteSpace: 'nowrap' }}>
           <span
             style={{
-              fontFamily: 'var(--brand-font-display, "Inter Variable", system-ui, sans-serif)',
+              fontFamily: brand.fontDisplay,
               fontWeight: 850,
               fontStyle: 'italic',
               fontSize: wordmarkSize,
               letterSpacing: '-0.055em',
-              color: '#F8FAFC',
-              background: 'linear-gradient(180deg, #FFFFFF 0%, #E9EEF5 42%, #9AA9BC 100%)',
+              color: brand.textPrimary,
+              background: brand.wordmarkMetalGradient,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -70,17 +71,17 @@ export default function OperatorLogo({
           </span>
           <span
             style={{
-              fontFamily: 'var(--brand-font-display, "Inter Variable", system-ui, sans-serif)',
+              fontFamily: brand.fontDisplay,
               fontWeight: 900,
               fontStyle: 'italic',
               fontSize: wordmarkSize * 1.08,
               letterSpacing: '-0.06em',
-              color: '#078BFF',
-              background: 'linear-gradient(180deg, #14D9FF 0%, #078BFF 48%, #1745E8 100%)',
+              color: brand.accentBlue,
+              background: brand.wordmarkBlueGradient,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              textShadow: '0 0 14px rgba(0, 170, 255, 0.28)',
+              textShadow: brand.wordmarkBlueGlow,
             }}
           >
             OS
@@ -90,9 +91,9 @@ export default function OperatorLogo({
           <span
             style={{
               marginTop: 3,
-              fontFamily: '"Inter Variable", system-ui, sans-serif',
+              fontFamily: brand.fontBody,
               fontSize: Math.max(9, Math.round(wordmarkSize * 0.58)),
-              color: 'var(--brand-text-muted, #8090A4)',
+              color: brand.textMuted,
               letterSpacing: '0.035em',
             }}
           >
@@ -100,19 +101,19 @@ export default function OperatorLogo({
           </span>
         ) : showDomain ? (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
-            <span style={{ width: 15, height: 1, background: 'linear-gradient(90deg, transparent, #00C8FF)' }} />
+            <span style={{ width: 15, height: 1, background: brand.wordmarkDomainLineIn }} />
             <span
               style={{
-                fontFamily: 'var(--brand-font-display, "Inter Variable", system-ui, sans-serif)',
+                fontFamily: brand.fontDisplay,
                 fontSize: Math.max(8, Math.round(wordmarkSize * 0.52)),
                 fontWeight: 700,
                 letterSpacing: '0.18em',
-                color: '#0797FF',
+                color: brand.wordmarkDomainAccent,
               }}
             >
               .net
             </span>
-            <span style={{ flex: 1, minWidth: 15, height: 1, background: 'linear-gradient(90deg, #00C8FF, transparent)' }} />
+            <span style={{ flex: 1, minWidth: 15, height: 1, background: brand.wordmarkDomainLineOut }} />
           </span>
         ) : null}
       </span>
