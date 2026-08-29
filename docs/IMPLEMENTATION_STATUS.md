@@ -1,5 +1,42 @@
 # OperatorOS implementation status
 
+## Replit launch port-boundary hotfix - SOURCE/LOCAL GREEN (2026-08-28)
+
+- The post-merge `main` commit `7b1f4ca8af5021961b7326c2c0a313c1cd7b9ae0`
+  reintroduced Replit public mappings for API `5001 -> 3001` and runner/Next
+  internal port `5002 -> 3000`. That bypassed the readiness-gated public
+  supervisor and made `corepack pnpm build:production` fail immediately in
+  `verify:deployment-scope` with `externalPorts: [80, 3001, 3000]`. The scoped
+  `codex/replit-launch-hotfix` correction removes those two mappings and again
+  exposes only supervisor port `5000 -> 80`; API `5001` and Next `5002` remain
+  loopback-only deployment services.
+- A separate local launch reproduction without configured secrets confirmed
+  the plain-text symptom: the API fails closed with `SESSION_SECRET is required
+  at boot and must not be empty`, after which the Next `/healthz` proxy returns
+  `500 Internal Server Error` with `ECONNREFUSED` to `localhost:5001`. No fake,
+  default, client-visible, or checked-in session secret was added. A Replit
+  workspace launch still requires the real `SESSION_SECRET` to be present in
+  Replit Secrets.
+- Fresh focused verification passed: `corepack pnpm
+  verify:deployment-scope` reports one authoritative lock, `externalPorts:
+  [80]`, and zero issues; `corepack pnpm --dir apps/api exec tsx --test
+  --test-concurrency=1 test/replit-unified-runtime.test.ts` passed **3/3**;
+  `node --test scripts/phase39/deployment-scope.test.mjs` passed **6/6**; and
+  `git diff --check` passed.
+- With `INTERNAL_API_URL=http://localhost:5001`, a fresh `corepack pnpm
+  build:production` passed deployment scope, FaultlineLab catalog checks
+  **4/4**, all four workspace typechecks, and API/runner/Next production builds;
+  Next generated **34/34** route entries. This is source/local build evidence,
+  not a Replit publish or authenticated deployed acceptance result.
+- Live read-only checks at diagnosis time remained distinct from the hotfix:
+  `https://operatoros.net/` returned 200, `https://operatoros.net/readyz`
+  returned ready with database release v56, and unauthenticated app/module hosts
+  reached the exact-host auth login. That deployment identified commit
+  `6dffd7c84a0505c868a790fcc156c5bb825fce2d`, which is not the current local
+  `main` commit and is not available in this checkout's Git object database.
+  No Replit publication, production database mutation, DNS/provider change,
+  commit, or push was performed by this hotfix.
+
 ## Canonical OperatorOS logo and site-wide brand rollout - SOURCE/LOCAL GREEN (2026-08-27)
 
 - The supplied `OpOS Logo` is preserved byte-for-byte as the canonical full
