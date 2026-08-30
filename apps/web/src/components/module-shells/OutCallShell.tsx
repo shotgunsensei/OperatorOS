@@ -9,7 +9,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { OUTCALL_NAVIGATION, OUTCALL_THEME, resolveOutCallRoute } from './OutCallRoute.contract';
 
 interface OutCallShellProps { baseUrl?: string; routePath?: string }
@@ -43,7 +43,7 @@ export default function OutCallShell({ routePath }: OutCallShellProps) {
     utilityActions={[
       { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'outcall-return-command-center' },
       { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound, testId: 'outcall-profile' },
-      { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'outcall-help' },
+      { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'outcall', page: route.canonicalPath }), icon: LifeBuoy, testId: 'outcall-help' },
     ]}
     page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: route.area === 'compliance' ? null : <Link className="outcall-action" href={hrefFor('/compliance')}><ShieldCheck size={15}/>Safety and privacy</Link>, detailLabel: route.recordId }}
     state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}

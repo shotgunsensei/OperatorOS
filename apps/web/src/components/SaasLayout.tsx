@@ -6,6 +6,7 @@ import { useAuth } from './AuthProvider';
 import TenantMessenger from './TenantMessenger';
 import TenantSwitcher from './TenantSwitcher';
 import { buildNavSections } from '@/lib/sidebar-nav';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules/navigation.js';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 import OperatorLogo from './brand/OperatorLogo';
 import OperatorMark from './brand/OperatorMark';
@@ -374,7 +375,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
             {!isMobile && 'Switch module'}
           </button>
           <a
-            href="https://operatoros.net/john"
+            href={DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl}
             aria-label="Open help and support"
             title="Help and support"
             style={{ minWidth: isMobile ? 44 : 38, minHeight: isMobile ? 44 : 38, borderRadius: 8, border: `1px solid ${colors.border}`, color: colors.text, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}

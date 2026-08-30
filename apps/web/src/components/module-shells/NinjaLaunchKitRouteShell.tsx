@@ -12,6 +12,7 @@ import {
   Grid2X2,
   LayoutDashboard,
   Layers3,
+  LifeBuoy,
   Palette,
   Rocket,
   Settings,
@@ -25,7 +26,7 @@ import {
 } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const Workspace = dynamic(() => import('./NinjaLaunchKitProductShell'), {
   loading: () => (
@@ -255,6 +256,7 @@ export default function NinjaLaunchKitRouteShell({
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2 },
         { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound },
+        { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'ninja-launch-kit', page: current === 'overview' ? '/dashboard' : `/${current}` }), icon: LifeBuoy },
       ]}
       page={copy[current]}
       state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}

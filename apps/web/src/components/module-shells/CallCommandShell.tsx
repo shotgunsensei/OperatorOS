@@ -9,7 +9,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { CALLCOMMAND_NAVIGATION, CALLCOMMAND_THEME, resolveCallCommandRoute } from './CallCommandRoute.contract';
 
 interface CallCommandShellProps { baseUrl?: string; routePath?: string }
@@ -45,7 +45,7 @@ export default function CallCommandShell({ routePath }: CallCommandShellProps) {
     utilityActions={[
       { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'callcommand-return-command-center' },
       { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound, testId: 'callcommand-profile' },
-      { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'callcommand-help' },
+      { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'callcommand-ai', page: route.canonicalPath }), icon: LifeBuoy, testId: 'callcommand-help' },
     ]}
     page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: route.area === 'calls' ? null : <Link className="callcommand-action" href={hrefFor('/calls')}><PhoneCall size={15}/>Review calls</Link>, detailLabel: route.recordId }}
     state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}

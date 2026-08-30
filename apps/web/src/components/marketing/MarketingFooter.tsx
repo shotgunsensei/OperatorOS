@@ -11,6 +11,7 @@ const COL_PRODUCT = [
   { href: '/ecosystem', label: 'Ecosystem' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/how-it-works', label: 'How it works' },
+  { href: '/help', label: 'Help Center' },
 ];
 
 const COL_MODULES = [
@@ -23,6 +24,7 @@ const COL_ACTIONS = [
   { href: '/login', label: 'Sign in' },
   { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, label: 'Open console' },
   { href: '/modules', label: 'View modules' },
+  { href: '/help', label: 'Help and support' },
   { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];
 

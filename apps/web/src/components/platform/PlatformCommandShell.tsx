@@ -26,7 +26,7 @@ import { useAuth } from '@/components/AuthProvider';
 import OperatorLogo from '@/components/brand/OperatorLogo';
 import TenantMessenger from '@/components/TenantMessenger';
 import { platformViewToPath, type PlatformView } from '@/lib/platform-routes';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { PLATFORM_DOMAINS } from '../../../../../packages/sdk/src/ecosystem.js';
 import styles from './PlatformCommandShell.module.css';
 
@@ -180,7 +180,7 @@ export default function PlatformCommandShell({
             <a className={styles.accountLink} href={DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl}>
               <UserRound size={16} aria-hidden="true" /><span>Profile and security</span>
             </a>
-            <a className={styles.accountLink} href={DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl}>
+            <a className={styles.accountLink} href={buildOperatorOSHelpUrl({ module: 'platform-command' })}>
               <LifeBuoy size={16} aria-hidden="true" /><span>Help and support</span>
             </a>
             {accessState !== 'loading' && (

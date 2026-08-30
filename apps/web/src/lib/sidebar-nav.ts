@@ -3,6 +3,7 @@ import {
   Building2, Users as UsersIcon, Boxes, ShieldCheck, Mail, ServerCog,
   type LucideIcon,
 } from 'lucide-react';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules/navigation.js';
 
 export interface NavItem {
   id: string;
@@ -61,7 +62,7 @@ export function buildNavSections(opts: SidebarRoleFlags): NavSection[] {
     items: [
       { id: 'billing', label: 'Workspace plan', Icon: Receipt },
       { id: 'settings', label: 'Profile and security', Icon: SettingsIcon },
-      { id: 'contact', label: 'Help and support', Icon: Mail, href: 'https://operatoros.net/john' },
+      { id: 'contact', label: 'Help and support', Icon: Mail, href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl },
     ],
   });
 

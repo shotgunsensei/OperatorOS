@@ -2,6 +2,19 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current searchable Help Center overlay — 2026-08-29
+
+OperatorOS, Platform Command, and every one of the 13 catalog modules now have
+active, searchable Help coverage at `/help`. The 193 page guides describe
+current customer-facing functions, normal operating steps, access boundaries,
+provider/safety limits, and direct routes. Shared and module-specific Help
+controls no longer use the `/john` portfolio page. This changes customer
+guidance and navigation only: it does not change a module's consolidation
+state, entitlement, billing, tenant/RBAC authority, provider readiness, data
+cutover, or deployed-acceptance status. Source/local contracts, browser Help
+acceptance, workspace typecheck, and the production build pass; Replit publish
+and deployed exact-host acceptance were not performed.
+
 ## Current ecosystem identity and hierarchy overlay — 2026-08-22
 
 OperatorOS remains the parent authority. TradeFlowKit, PulseDesk, and TechDeck

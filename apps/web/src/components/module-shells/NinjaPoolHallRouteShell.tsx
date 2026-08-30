@@ -10,6 +10,7 @@ import {
   Crosshair,
   Grid2X2,
   History,
+  LifeBuoy,
   Settings,
   Target,
   Trophy,
@@ -25,7 +26,7 @@ import {
 } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const Workspace = dynamic(() => import('./NinjaPoolHallShell'), {
   loading: () => (
@@ -260,6 +261,11 @@ export default function NinjaPoolHallRouteShell({
             label: 'Profile',
             href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl,
             icon: UserRound,
+          },
+          {
+            label: 'Help',
+            href: buildOperatorOSHelpUrl({ module: 'ninja-pool-hall', page: current === 'home' ? '/' : `/${current}` }),
+            icon: LifeBuoy,
           },
         ]}
         page={copy[current]}

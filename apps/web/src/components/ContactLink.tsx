@@ -1,22 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Mail } from 'lucide-react';
+import { LifeBuoy } from 'lucide-react';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules/navigation.js';
 
 /**
- * ContactLink — a small fixed "Contact" pill for pages that don't render one of
- * the shared shells (marketing navbar/footer or the console sidebar), so the
- * Contact link is reachable on every page.
- *
- * It points at the root-domain contact page with an ABSOLUTE URL so it resolves
- * to operatoros.net/john regardless of which subdomain the current page is
- * served from.
+ * Legacy component name retained for import compatibility. The fixed action
+ * is now Help and support so auth, invite, admin, and fallback pages never send
+ * a customer to the hidden owner portfolio when they need product guidance.
  */
-export const CONTACT_URL = 'https://operatoros.net/john';
+export const CONTACT_URL = DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl;
 
 export default function ContactLink() {
   return (
-    <aside aria-label="Support contact">
+    <aside aria-label="Help and support">
       <a
         href={CONTACT_URL}
         className="operatoros-floating-contact"
@@ -44,8 +41,8 @@ export default function ContactLink() {
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
         }}
       >
-        <Mail size={15} />
-        <span>Contact</span>
+        <LifeBuoy size={15} />
+        <span>Help</span>
       </a>
       <style>{`@media (max-width: 720px) { .operatoros-floating-contact { bottom: 76px !important; right: 12px !important; } }`}</style>
     </aside>

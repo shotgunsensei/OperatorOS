@@ -40,7 +40,7 @@ export default function ModuleApplicationShellHarness() {
       utilityActions={[
         { label: 'My Apps', href: '/app', icon: Grid2X2 },
         { label: 'Settings', href: '/__harness/settings', icon: Settings },
-        { label: 'Help', href: '/john', icon: HelpCircle },
+        { label: 'Help', href: '/help', icon: HelpCircle },
       ]}
       page={{ eyebrow: 'Ocean telemetry', title: 'Currents', subtitle: 'A dark cyan representative shell with no TradeFlowKit visual tokens.' }}
     >

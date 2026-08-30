@@ -9,7 +9,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { SNAPPROOF_NAVIGATION, SNAPPROOF_THEME, resolveSnapProofRoute } from './SnapProofRoute.contract';
 
 interface SnapProofShellProps { baseUrl?: string; routePath?: string }
@@ -64,7 +64,7 @@ export default function SnapProofShell({ routePath }: SnapProofShellProps) {
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'snapproofos-return-command-center' },
         { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound, testId: 'snapproofos-profile' },
-        { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'snapproofos-help' },
+        { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'snapproofos', page: route.canonicalPath }), icon: LifeBuoy, testId: 'snapproofos-help' },
       ]}
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
       state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}

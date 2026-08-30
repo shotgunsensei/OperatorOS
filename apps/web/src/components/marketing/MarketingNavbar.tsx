@@ -21,6 +21,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/ecosystem', label: 'Ecosystem' },
   { href: '/how-it-works', label: 'How it works' },
   { href: '/pricing', label: 'Pricing' },
+  { href: '/help', label: 'Help' },
   { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];
 
