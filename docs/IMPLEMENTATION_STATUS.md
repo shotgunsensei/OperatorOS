@@ -1,5 +1,47 @@
 # OperatorOS implementation status
 
+## Canonical customer-facing module names - SOURCE/LOCAL GREEN / DEPLOYMENT PENDING (2026-08-30)
+
+- Registered module identity now comes from the SDK catalog on every customer
+  and administrator projection. The stable internal slugs
+  `ninja-pool-hall`, `ninja-launch-kit`, and `ninjamation` continue to own
+  routes, entitlements, Stripe bindings, schemas, test IDs, migration
+  provenance, and compatibility aliases, while the displayed names are
+  **Operator Pool Hall**, **Deploy Ops**, and **Script Ops**.
+- The release-v56 `module_catalog` seed now repairs the display name as well as
+  the canonical origin for every first-party catalog row. Custom modules remain
+  editable because they are outside the SDK catalog. The authenticated
+  `/v1/modules`, `/v1/modules/:slug`, and `/v1/me/modules` projections, tenant
+  administration, billing, Platform Command, and legacy admin surfaces also
+  canonicalize known names. Both module-edit APIs reject attempts to restore a
+  retired first-party name with `CANONICAL_MODULE_NAME_REQUIRED` and heal
+  pre-existing identity drift when another field is edited.
+- Workspace Home now uses the canonical registry name for every registered
+  launch card instead of preferring a database-returned label. This closes the
+  screenshot-observed path while retaining server-owned entitlement, CTA,
+  tenant, role, status, pricing, and launch authority.
+- Focused disposable-PostgreSQL coverage passed **7/7** after deliberately
+  writing all three retired names. It proves startup repair, canonical list,
+  detail, and launchpad API responses, both admin mutation policies, URL policy,
+  and custom-module editability. The broader identity/launcher group passed
+  **17/17**, and the focused launcher static contract passed **3/3**. The full
+  API suite then passed **1,204/1,204**, failed **0**, and retained **6**
+  expected HTTP-only skips because no Next development server was running.
+- `corepack pnpm typecheck` passed API, runner gateway, web, and TorqueShed
+  native. With `INTERNAL_API_URL=http://localhost:5001`, `corepack pnpm
+  build:production` passed deployment-scope validation, FaultlineLab **4/4**,
+  all four workspace typechecks, API/runner/Next production builds, and all
+  **35/35** generated Next routes. `corepack pnpm db:plan` still reports the
+  existing non-destructive release v56 with 56 ordered steps.
+- A full v56 apply succeeded on an isolated disposable PostgreSQL 16 database.
+  After the three catalog rows were deliberately changed back to their retired
+  names, a full reapply succeeded and the final rows were exactly Deploy Ops,
+  Operator Pool Hall, and Script Ops. The disposable database is test evidence
+  only. No production database, deployment, publish, DNS, billing/provider
+  state, entitlement, or customer data was changed. Production backup,
+  reviewed release/merge, publish, and authenticated deployed acceptance remain
+  separate gates.
+
 ## Searchable OperatorOS and module Help Center - SOURCE/LOCAL GREEN (2026-08-29)
 
 - The shared Help and support destination no longer opens the hidden `/john`

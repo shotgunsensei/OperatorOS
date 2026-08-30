@@ -66,6 +66,8 @@ import {
   MODULE_CATALOG,
   getCanonicalModuleBaseUrl,
   getCanonicalModuleBaseUrlMismatch,
+  getCanonicalModuleDisplayName,
+  getCanonicalModuleDisplayNameMismatch,
   pickEnv,
 } from '@operatoros/sdk';
 import { tenantInvites } from '../schema.js';
@@ -914,7 +916,11 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (!slug) continue;
       (byModule[m.moduleId] ||= []).push(slug);
     }
-    const enriched = rows.map(r => ({ ...r, includedInPlans: byModule[r.id] ?? [] }));
+    const enriched = rows.map(r => ({
+      ...r,
+      name: getCanonicalModuleDisplayName(r.slug) ?? r.name,
+      includedInPlans: byModule[r.id] ?? [],
+    }));
     return { modules: enriched, total: enriched.length };
   });
 
@@ -924,6 +930,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     const { slug, name } = body;
     if (!slug || !SLUG_RE.test(slug)) return badRequest(reply, 'slug must be a-z, 0-9, dashes (3-64 chars)');
     if (!name) return badRequest(reply, 'name is required');
+    const canonicalName = getCanonicalModuleDisplayName(slug);
+    const canonicalNameMismatch = getCanonicalModuleDisplayNameMismatch(slug, name);
+    if (canonicalNameMismatch) {
+      return badRequest(
+        reply,
+        `name for catalog module '${slug}' must exactly match its canonical customer-facing identity`,
+        { code: 'CANONICAL_MODULE_NAME_REQUIRED', slug, ...canonicalNameMismatch },
+      );
+    }
     if (body.status && !VALID_MODULE_STATUSES.includes(body.status)) {
       return badRequest(reply, `status must be one of ${VALID_MODULE_STATUSES.join(', ')}`);
     }
@@ -949,7 +964,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (collision) return reply.code(409).send({ error: 'Slug already in use', code: 'SLUG_TAKEN' });
 
     const [created] = await db.insert(modules).values({
-      slug, name,
+      slug, name: canonicalName ?? name,
       description: body.description ?? '',
       iconUrl: body.iconUrl ?? null,
       category: body.category ?? 'app',
@@ -1011,6 +1026,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         return badRequest(reply, `planMin must be one of ${VALID_PLAN_MIN.join(', ')}`);
       }
       const targetSlug = typeof body.slug === 'string' ? body.slug : slug;
+      const canonicalName = getCanonicalModuleDisplayName(targetSlug);
+      const canonicalNameMismatch = getCanonicalModuleDisplayNameMismatch(targetSlug, body.name);
+      if (canonicalNameMismatch) {
+        return badRequest(
+          reply,
+          `name for catalog module '${targetSlug}' must exactly match its canonical customer-facing identity`,
+          { code: 'CANONICAL_MODULE_NAME_REQUIRED', slug: targetSlug, ...canonicalNameMismatch },
+        );
+      }
       const canonicalBaseUrl = getCanonicalModuleBaseUrl(targetSlug);
       const canonicalUrlMismatch = getCanonicalModuleBaseUrlMismatch(targetSlug, body.baseUrl);
       if (canonicalUrlMismatch) {
@@ -1045,8 +1069,10 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         if (body[k] !== undefined) updates[k] = body[k];
       }
       // Any mutation of a known first-party row also heals pre-existing URL
-      // drift. Custom/admin-created modules retain their validated URL.
+      // and display-name drift. Custom/admin-created modules retain their
+      // validated URL and editable name.
       if (canonicalBaseUrl) updates.baseUrl = canonicalBaseUrl;
+      if (canonicalName) updates.name = canonicalName;
       const [after] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
 
       await writeAudit({
@@ -1373,7 +1399,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const mismatch = declared != null && lookup.unitAmountCents != null && declared !== lookup.unitAmountCents;
       out.push({
         slug: m.slug,
-        name: m.name,
+        name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
         status: m.status,
         declaredAddonPriceCents: declared,
         envKey: lookup.envKey,
@@ -1534,7 +1560,10 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       let created;
       try {
         created = await createAddonStripePrice({
-          moduleSlug: slug, moduleName: before.name, unitAmountCents: raw, currency,
+          moduleSlug: slug,
+          moduleName: getCanonicalModuleDisplayName(before.slug) ?? before.name,
+          unitAmountCents: raw,
+          currency,
         });
       } catch (err: any) {
         const msg = err?.message || 'Stripe price creation failed';
@@ -2654,7 +2683,13 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const revoked = allRows.filter(m => m.accessSource === 'override' && !m.grant);
 
       return {
-        module: { id: mod.id, slug: mod.slug, name: mod.name, status: mod.status, planMin: mod.planMin },
+        module: {
+          id: mod.id,
+          slug: mod.slug,
+          name: getCanonicalModuleDisplayName(mod.slug) ?? mod.name,
+          status: mod.status,
+          planMin: mod.planMin,
+        },
         members, revoked,
         counts: {
           total: members.length,
@@ -2717,13 +2752,27 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const overrides = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.userId, id));
       const allModules = await db.select().from(modules);
       const modById = Object.fromEntries(allModules.map(m => [m.id, m]));
-      const enriched = overrides.map(o => ({
-        ...o, moduleSlug: modById[o.moduleId]?.slug, moduleName: modById[o.moduleId]?.name,
-      }));
+      const enriched = overrides.map(o => {
+        const module = modById[o.moduleId];
+        return {
+          ...o,
+          moduleSlug: module?.slug,
+          moduleName: module
+            ? getCanonicalModuleDisplayName(module.slug) ?? module.name
+            : undefined,
+        };
+      });
       const addons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, id));
-      const enrichedAddons = addons.map(a => ({
-        ...a, moduleSlug: modById[a.moduleId]?.slug, moduleName: modById[a.moduleId]?.name,
-      }));
+      const enrichedAddons = addons.map(a => {
+        const module = modById[a.moduleId];
+        return {
+          ...a,
+          moduleSlug: module?.slug,
+          moduleName: module
+            ? getCanonicalModuleDisplayName(module.slug) ?? module.name
+            : undefined,
+        };
+      });
       const [targetUser] = await db.select({ currentTenantId: users.currentTenantId })
         .from(users).where(eq(users.id, id)).limit(1);
       const breakdowns: any[] = [];

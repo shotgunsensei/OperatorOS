@@ -6,6 +6,8 @@ import {
   MODULE_CATALOG_BY_SLUG,
   getCanonicalModuleBaseUrl,
   getCanonicalModuleBaseUrlMismatch,
+  getCanonicalModuleDisplayName,
+  getCanonicalModuleDisplayNameMismatch,
 } from '@operatoros/sdk';
 import { db } from '../src/db.js';
 import {
@@ -13,6 +15,7 @@ import {
   modules,
   planModules,
   platformComponents,
+  tenantModules,
   users,
 } from '../src/schema.js';
 import { signToken } from '../src/lib/auth.js';
@@ -31,6 +34,11 @@ import {
 
 const KNOWN_SLUG = 'techdeck';
 const CANONICAL_URL = 'https://techdeck.operatoros.net';
+const RENAMED_MODULES = Object.freeze({
+  'ninja-pool-hall': { legacy: 'Ninja Pool Hall', canonical: 'Operator Pool Hall' },
+  'ninja-launch-kit': { legacy: 'Ninja Launch Kit', canonical: 'Deploy Ops' },
+  ninjamation: { legacy: 'Ninjamation', canonical: 'Script Ops' },
+});
 
 let app: any;
 let superAdmin: any;
@@ -184,7 +192,18 @@ test('catalog publishes one exact HTTPS OperatorOS origin for all 13 modules', (
     MODULE_CATALOG_BY_SLUG['ninja-launch-kit'].canonicalBaseUrl,
     'https://deployops.operatoros.net',
   );
+  for (const [slug, identity] of Object.entries(RENAMED_MODULES)) {
+    assert.equal(MODULE_CATALOG_BY_SLUG[slug].name, identity.canonical);
+    assert.equal(getCanonicalModuleDisplayName(slug), identity.canonical);
+    assert.deepEqual(
+      getCanonicalModuleDisplayNameMismatch(slug, identity.legacy),
+      { canonicalName: identity.canonical, receivedName: identity.legacy },
+    );
+    assert.equal(getCanonicalModuleDisplayNameMismatch(slug, identity.canonical), null);
+  }
   assert.equal(getCanonicalModuleBaseUrl('custom-module'), undefined);
+  assert.equal(getCanonicalModuleDisplayName('custom-module'), undefined);
+  assert.equal(getCanonicalModuleDisplayNameMismatch('custom-module', 'Custom Module'), null);
   assert.equal(
     getCanonicalModuleBaseUrlMismatch(KNOWN_SLUG, `${CANONICAL_URL}/`)?.canonicalBaseUrl,
     CANONICAL_URL,
@@ -192,18 +211,27 @@ test('catalog publishes one exact HTTPS OperatorOS origin for all 13 modules', (
   );
 });
 
-test('startup seeding repairs known URL drift and ignores legacy URL env values', async () => {
+test('startup seeding repairs known URL and display-name drift and ignores legacy URL env values', async () => {
   const previous = process.env.TECHDECK_URL;
   process.env.TECHDECK_URL = 'https://techdeck.app';
   try {
     await db.update(modules)
       .set({ baseUrl: 'https://drift.invalid', updatedAt: new Date() })
       .where(eq(modules.slug, KNOWN_SLUG));
+    for (const [slug, identity] of Object.entries(RENAMED_MODULES)) {
+      await db.update(modules)
+        .set({ name: identity.legacy, updatedAt: new Date() })
+        .where(eq(modules.slug, slug));
+    }
 
     await seedModules();
 
     const [row] = await db.select().from(modules).where(eq(modules.slug, KNOWN_SLUG)).limit(1);
     assert.equal(row.baseUrl, CANONICAL_URL);
+    for (const [slug, identity] of Object.entries(RENAMED_MODULES)) {
+      const [moduleRow] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      assert.equal(moduleRow.name, identity.canonical, `${slug} seed repairs its public identity`);
+    }
   } finally {
     if (previous === undefined) delete process.env.TECHDECK_URL;
     else process.env.TECHDECK_URL = previous;
@@ -223,7 +251,72 @@ test('startup seeding relocks OutCall while Phase 37 source and provider gates a
   assert.equal(outcall?.status, 'coming_soon');
 });
 
-test('Platform Command rejects catalog URL mutation and heals drift on other edits', async () => {
+test('authenticated module APIs project canonical names even if a catalog row drifts', async () => {
+  const moduleRows = await db.select().from(modules)
+    .where(inArray(modules.slug, Object.keys(RENAMED_MODULES)));
+  const [insertedTenantModuleRows] = await Promise.all([
+    db.insert(tenantModules).values(moduleRows.map(module => ({
+      tenantId: superAdmin.currentTenantId,
+      moduleId: module.id,
+      status: 'enabled' as const,
+      source: 'admin' as const,
+      allowAllMembers: true,
+    }))).returning(),
+  ]);
+  try {
+    for (const [slug, identity] of Object.entries(RENAMED_MODULES)) {
+      await db.update(modules)
+        .set({ name: identity.legacy, updatedAt: new Date() })
+        .where(eq(modules.slug, slug));
+    }
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/v1/modules',
+      headers: bearer(superAdmin),
+    });
+    assert.equal(listed.statusCode, 200, listed.body);
+    const summaries = listed.json().modules as Array<{ module: { slug: string; name: string } }>;
+    for (const [slug, identity] of Object.entries(RENAMED_MODULES)) {
+      assert.equal(
+        summaries.find(summary => summary.module.slug === slug)?.module.name,
+        identity.canonical,
+        `${slug} list projection uses the canonical display name`,
+      );
+
+      const detail = await app.inject({
+        method: 'GET',
+        url: `/v1/modules/${slug}`,
+        headers: bearer(superAdmin),
+      });
+      assert.equal(detail.statusCode, 200, detail.body);
+      assert.equal(detail.json().module.name, identity.canonical);
+    }
+
+    const launchpad = await app.inject({
+      method: 'GET',
+      url: '/v1/me/modules',
+      headers: bearer(superAdmin),
+    });
+    assert.equal(launchpad.statusCode, 200, launchpad.body);
+    const launchpadModules = launchpad.json().modules as Array<{ slug: string; name: string }>;
+    for (const [slug, identity] of Object.entries(RENAMED_MODULES)) {
+      assert.equal(
+        launchpadModules.find(module => module.slug === slug)?.name,
+        identity.canonical,
+        `${slug} launchpad projection uses the canonical display name`,
+      );
+    }
+  } finally {
+    if (insertedTenantModuleRows.length > 0) {
+      await db.delete(tenantModules)
+        .where(inArray(tenantModules.id, insertedTenantModuleRows.map(row => row.id)));
+    }
+    await seedModules();
+  }
+});
+
+test('Platform Command rejects catalog identity mutation and heals drift on other edits', async () => {
   const rejected = await app.inject({
     method: 'PATCH',
     url: `/v1/platform/modules/${KNOWN_SLUG}`,
@@ -234,9 +327,22 @@ test('Platform Command rejects catalog URL mutation and heals drift on other edi
   assert.equal(rejected.json().code, 'CANONICAL_MODULE_URL_REQUIRED');
   assert.equal(rejected.json().canonicalBaseUrl, CANONICAL_URL);
 
+  const nameRejected = await app.inject({
+    method: 'PATCH',
+    url: '/v1/platform/modules/ninjamation',
+    headers: bearer(superAdmin),
+    payload: { name: RENAMED_MODULES.ninjamation.legacy },
+  });
+  assert.equal(nameRejected.statusCode, 400, nameRejected.body);
+  assert.equal(nameRejected.json().code, 'CANONICAL_MODULE_NAME_REQUIRED');
+  assert.equal(nameRejected.json().canonicalName, RENAMED_MODULES.ninjamation.canonical);
+
   await db.update(modules)
     .set({ baseUrl: 'https://drift.invalid', updatedAt: new Date() })
     .where(eq(modules.slug, KNOWN_SLUG));
+  await db.update(modules)
+    .set({ name: RENAMED_MODULES.ninjamation.legacy, updatedAt: new Date() })
+    .where(eq(modules.slug, 'ninjamation'));
   const healed = await app.inject({
     method: 'PATCH',
     url: `/v1/platform/modules/${KNOWN_SLUG}`,
@@ -245,9 +351,18 @@ test('Platform Command rejects catalog URL mutation and heals drift on other edi
   });
   assert.equal(healed.statusCode, 200, healed.body);
   assert.equal(healed.json().module.baseUrl, CANONICAL_URL);
+
+  const nameHealed = await app.inject({
+    method: 'PATCH',
+    url: '/v1/platform/modules/ninjamation',
+    headers: bearer(superAdmin),
+    payload: { description: MODULE_CATALOG_BY_SLUG.ninjamation.description },
+  });
+  assert.equal(nameHealed.statusCode, 200, nameHealed.body);
+  assert.equal(nameHealed.json().module.name, RENAMED_MODULES.ninjamation.canonical);
 });
 
-test('legacy module admin surface enforces the same canonical URL contract', async () => {
+test('legacy module admin surface enforces the same canonical identity contract', async () => {
   const rejected = await app.inject({
     method: 'PATCH',
     url: `/v1/modules/admin/${KNOWN_SLUG}`,
@@ -258,6 +373,19 @@ test('legacy module admin surface enforces the same canonical URL contract', asy
   assert.equal(rejected.json().code, 'CANONICAL_MODULE_URL_REQUIRED');
   assert.equal(rejected.json().canonicalBaseUrl, CANONICAL_URL);
 
+  const nameRejected = await app.inject({
+    method: 'PATCH',
+    url: '/v1/modules/admin/ninja-launch-kit',
+    headers: bearer(superAdmin),
+    payload: { name: RENAMED_MODULES['ninja-launch-kit'].legacy },
+  });
+  assert.equal(nameRejected.statusCode, 400, nameRejected.body);
+  assert.equal(nameRejected.json().code, 'CANONICAL_MODULE_NAME_REQUIRED');
+  assert.equal(
+    nameRejected.json().canonicalName,
+    RENAMED_MODULES['ninja-launch-kit'].canonical,
+  );
+
   const accepted = await app.inject({
     method: 'PATCH',
     url: `/v1/modules/admin/${KNOWN_SLUG}`,
@@ -266,6 +394,15 @@ test('legacy module admin surface enforces the same canonical URL contract', asy
   });
   assert.equal(accepted.statusCode, 200, accepted.body);
   assert.equal(accepted.json().module.baseUrl, CANONICAL_URL);
+
+  const nameAccepted = await app.inject({
+    method: 'PATCH',
+    url: '/v1/modules/admin/ninja-launch-kit',
+    headers: bearer(superAdmin),
+    payload: { name: RENAMED_MODULES['ninja-launch-kit'].canonical },
+  });
+  assert.equal(nameAccepted.statusCode, 200, nameAccepted.body);
+  assert.equal(nameAccepted.json().module.name, RENAMED_MODULES['ninja-launch-kit'].canonical);
 });
 
 test('custom modules retain the existing safe HTTP(S) URL policy', async () => {
@@ -289,9 +426,10 @@ test('custom modules retain the existing safe HTTP(S) URL policy', async () => {
     method: 'PATCH',
     url: `/v1/modules/admin/${slug}`,
     headers: bearer(superAdmin),
-    payload: { baseUrl: 'http://localhost:4400' },
+    payload: { name: 'Renamed Custom URL Fixture', baseUrl: 'http://localhost:4400' },
   });
   assert.equal(updated.statusCode, 200, updated.body);
+  assert.equal(updated.json().module.name, 'Renamed Custom URL Fixture');
   assert.equal(updated.json().module.baseUrl, 'http://localhost:4400');
 
   const unsafe = await app.inject({

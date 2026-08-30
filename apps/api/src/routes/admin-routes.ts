@@ -34,6 +34,7 @@ import {
   registerAuditEnforcement,
   registerPlatformFailureLogging,
 } from '../lib/audit.js';
+import { getCanonicalModuleDisplayName } from '@operatoros/sdk';
 
 const ADMIN_PREFIXES = ['/v1/admin', '/api/admin'] as const;
 const LAUNCHABLE_TENANT_MODULE_STATUSES = new Set(['enabled', 'trial', 'purchased', 'beta']);
@@ -136,7 +137,7 @@ async function tenantModuleStatus(tenantId: string) {
       return {
         moduleId: module.id,
         moduleSlug: module.slug,
-        moduleName: module.name,
+        moduleName: getCanonicalModuleDisplayName(module.slug) ?? module.name,
         entitlementKey: module.slug,
         category: module.category,
         status: module.status,

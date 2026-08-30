@@ -647,10 +647,11 @@ export async function seedModules() {
         ...tfkPushConfig,
       });
     } else {
-      // Re-apply the immutable catalog URL on every restart. We deliberately
-      // scope reconciliation to `baseUrl` + the catalog-derived `status` for
-      // live-default modules — admin-edited fields like
-      // `planMin`, `ord`, `description`, `name`, `iconUrl` are preserved.
+      // Re-apply immutable catalog identity on every restart. First-party
+      // display names and origins are SDK-owned customer-facing contracts;
+      // custom/admin-created modules remain editable because they never enter
+      // this catalog loop. Other admin-edited fields such as `planMin`, `ord`,
+      // `description`, and `iconUrl` remain preserved.
       //
       // Status policy:
       //   - defaultStatus === 'live'                   → flip to 'live'
@@ -659,6 +660,9 @@ export async function seedModules() {
       //     `beta` without us stomping it on every restart).
       const updates: Record<string, unknown> = { updatedAt: new Date() };
       updates.baseUrl = m.baseUrl;
+      if (existing[0].name !== m.name) {
+        updates.name = m.name;
+      }
       // Back-fill metadata.addonPriceCents on rows that pre-date the
       // addon-price seeding (existing.metadata is null OR missing the
       // key). Never overwrite a value an admin has already set.
@@ -675,13 +679,6 @@ export async function seedModules() {
       // must fail closed again on the next release/seed run.
       if (spec.slug === 'outcall' && spec.defaultStatus === 'coming_soon') {
         updates.status = 'coming_soon';
-      }
-      // Task #66 catalog rename: existing rows that pre-date the
-      // BrandForgeOS rename keep getting nudged to the canonical name.
-      // (The slug rename itself is handled idempotently by
-      // `launchFixPreSeed` BEFORE this seeder runs.)
-      if (spec.slug === 'brandforgeos' && existing[0].name !== 'BrandForgeOS') {
-        updates.name = 'BrandForgeOS';
       }
       // Task #109: keep TradeFlowKit's push adapter pointed at the
       // tradeflowkit_v1 shape (bearer-token, flat body). Only nudge rows

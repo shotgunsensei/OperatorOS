@@ -1,5 +1,36 @@
 # OperatorOS current release gate
 
+## Customer-facing module identity repair - SOURCE/LOCAL PASS, LIVE RELEASE PENDING (2026-08-30)
+
+The current source candidate closes the stale catalog-name path that allowed
+authenticated Workspace Home, catalog, tenant, billing, and administrator
+surfaces to show Ninja Pool Hall, Ninja Launch Kit, or Ninjamation after their
+approved public rename. The canonical display identities are now Operator Pool
+Hall, Deploy Ops, and Script Ops. Their existing slugs, routes, database
+schemas, entitlement keys, Stripe keys, migration IDs, and redirect aliases do
+not change.
+
+The SDK catalog owns first-party display names. Release-v56 module seeding
+repairs persisted name drift idempotently; authenticated API projections use
+the SDK name defensively; both module-admin mutation paths reject a retired
+catalog name; and Workspace Home renders the registry name for registered
+cards. Custom/admin-created modules remain editable.
+
+Fresh source/local evidence passes 7/7 focused disposable-database/API tests,
+17/17 broader identity and launcher contracts, 3/3 focused launcher contracts,
+the full API suite at 1,204/1,204 with 6 expected HTTP-only skips, all four
+workspace typechecks, and the production build with 35/35 generated routes. A
+read-only database plan remains v56/56 and non-destructive. A full v56
+disposable apply, deliberate three-row legacy-name drift, and full reapply
+finished successfully; the final rows matched all three canonical names.
+
+Release status remains **SOURCE/LOCAL PASS; PRODUCTION HOLD**. This branch was
+not merged, pushed, published, or deployed, and no production database was
+read or mutated. Production backup, reviewed promotion, v56 apply through the
+readiness-gated runtime, exact deployed commit/build identity, authenticated
+Workspace Home/catalog/tenant/billing acceptance, monitoring, and rollback
+proof remain required.
+
 ## Current reconciled candidate - SOURCE/LOCAL PASS, LIVE RELEASE PENDING (2026-08-26)
 
 The `codex/green-release-gate` candidate preserves the pulled Replit

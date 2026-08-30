@@ -10,6 +10,7 @@ import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
 import { hasPlatformAdminAuthority } from './rbac.js';
 import { resolveTenantModuleAccess } from './tenant-entitlements.js';
+import { getCanonicalModuleDisplayName } from '@operatoros/sdk';
 
 /**
  * Access-source taxonomy — the single source of truth for how a user got
@@ -298,7 +299,7 @@ export async function getUserModules(userId: string, tenantId: string): Promise<
       module: {
         id: m.id,
         slug: m.slug,
-        name: m.name,
+        name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
         description: m.description,
         iconUrl: m.iconUrl,
         category: m.category,
@@ -339,7 +340,9 @@ export async function getModuleForUser(userId: string, tenantId: string, moduleS
   const component = m.componentId ? await loadComponentRef(m.componentId) : null;
   return {
     module: {
-      id: m.id, slug: m.slug, name: m.name, description: m.description,
+      id: m.id, slug: m.slug,
+      name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
+      description: m.description,
       iconUrl: m.iconUrl, category: m.category, status: m.status,
       planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord, component,
     },
