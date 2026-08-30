@@ -1,5 +1,25 @@
 # OperatorOS module parity index
 
+## Canonical customer-facing module-name overlay (2026-08-30)
+
+The SDK catalog, release-v56 module seeding, authenticated module/launchpad
+APIs, tenant and billing projections, administrator surfaces, and Workspace
+Home now converge on Operator Pool Hall, Deploy Ops, and Script Ops for the
+stable `ninja-pool-hall`, `ninja-launch-kit`, and `ninjamation` keys. The seed
+repairs stale persisted names on apply/reapply, known-module mutation rejects a
+retired display name, and custom modules remain editable.
+
+Focused disposable database/API coverage passes 7/7, the broader
+identity/launcher group passes 17/17, the complete API gate passes 1,204/1,204
+with 6 expected HTTP-only skips, all workspace typechecks pass, and the
+production build passes with 35 routes. A full disposable v56 apply and
+reapply repaired deliberately reintroduced legacy names. This is an identity
+consistency repair only: no capability, application classification, module
+state, tenant/RBAC rule, entitlement, billing binding, provider state, route,
+schema, or data-cutover state changes. Production deployment and
+authenticated acceptance remain open, so no module is promoted to
+consolidation state 5.
+
 ## Searchable Help Center overlay (2026-08-29)
 
 All 13 catalog modules now have an active Help action and a dedicated,

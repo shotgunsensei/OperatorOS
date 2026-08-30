@@ -29,6 +29,8 @@ import {
 import {
   getCanonicalModuleBaseUrl,
   getCanonicalModuleBaseUrlMismatch,
+  getCanonicalModuleDisplayName,
+  getCanonicalModuleDisplayNameMismatch,
 } from '@operatoros/sdk';
 
 // Map APP_ENV/NODE_ENV to the spec env tri-state: prod | staging | dev.
@@ -283,7 +285,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       .sort((a, b) => a.ord - b.ord)
       .map(m => ({
         slug: m.slug,
-        name: m.name,
+        name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
         description: m.description,
         category: m.category,
         iconUrl: m.iconUrl,
@@ -1226,6 +1228,16 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const body = (request.body ?? {}) as any;
 
     const canonicalBaseUrl = getCanonicalModuleBaseUrl(slug);
+    const canonicalName = getCanonicalModuleDisplayName(slug);
+    const canonicalNameMismatch = getCanonicalModuleDisplayNameMismatch(slug, body.name);
+    if (canonicalNameMismatch) {
+      return reply.code(400).send({
+        error: `name for catalog module '${slug}' must exactly match its canonical customer-facing identity`,
+        code: 'CANONICAL_MODULE_NAME_REQUIRED',
+        slug,
+        ...canonicalNameMismatch,
+      });
+    }
     const canonicalUrlMismatch = getCanonicalModuleBaseUrlMismatch(slug, body.baseUrl);
     if (canonicalUrlMismatch) {
       return reply.code(400).send({
@@ -1253,9 +1265,11 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const updates: any = { updatedAt: new Date() };
     ['name', 'description', 'iconUrl', 'category', 'baseUrl', 'status', 'planMin', 'requiresOrg', 'ord', 'metadata']
       .forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
-    // Repair any historical drift whenever a known first-party row is
-    // touched. Custom/admin-created modules retain their validated URL.
+    // Repair any historical identity drift whenever a known first-party row
+    // is touched. Custom/admin-created modules retain their validated URL and
+    // editable display name.
     if (canonicalBaseUrl) updates.baseUrl = canonicalBaseUrl;
+    if (canonicalName) updates.name = canonicalName;
     const [updated] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
     if (!updated) return reply.code(404).send({ error: 'Module not found' });
     await logAudit(user.id, 'module_updated', undefined, { slug, updates }, getClientIp(request));

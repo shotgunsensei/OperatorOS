@@ -18,10 +18,19 @@ test('Command Center launchpad is registry-driven and starts authorization on th
   const launchRuntime = readRepoFile('apps/web/src/lib/launch.ts');
   const login = readRepoFile('apps/web/src/app/login/page.tsx');
   const registry = readRepoFile('apps/web/src/lib/operatoros-registry.ts');
+  const moduleRoutes = readRepoFile('apps/api/src/routes/module-routes.ts');
+  const entitlementService = readRepoFile('apps/api/src/lib/entitlement-service.ts');
 
   assert.match(registry, /OPERATOROS_MODULE_REGISTRY/);
   assert.match(page, /COMMAND_CENTER_MODULES/);
   assert.match(page, /buildLaunchpadModule/);
+  assert.doesNotMatch(
+    page,
+    /name:\s*summary/,
+    'registered launcher cards must use registry-owned canonical display names',
+  );
+  assert.match(moduleRoutes, /name:\s*getCanonicalModuleDisplayName\(m\.slug\)\s*\?\?\s*m\.name/);
+  assert.match(entitlementService, /name:\s*getCanonicalModuleDisplayName\(m\.slug\)\s*\?\?\s*m\.name/);
   assert.match(page, /command-center-tenant-selector/);
   assert.match(page, /button-command-center-platform/);
   assert.match(page, /button-command-center-manage-modules/);

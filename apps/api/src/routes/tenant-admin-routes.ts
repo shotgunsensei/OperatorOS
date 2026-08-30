@@ -41,6 +41,7 @@ import {
   isTenantInviteToken,
   TenantInvitationError,
 } from '../lib/tenant-invitations.js';
+import { getCanonicalModuleDisplayName } from '@operatoros/sdk';
 
 const INVITE_TTL_DAYS = 14;
 const TENANT_USER_SAFE_FIELDS = ['id', 'tenantId', 'userId', 'role'] as const;
@@ -554,7 +555,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         return {
           moduleId: tm.moduleId,
           moduleSlug: mod?.slug ?? null,
-          moduleName: mod?.name ?? null,
+          moduleName: mod ? getCanonicalModuleDisplayName(mod.slug) ?? mod.name : null,
           tenantModuleStatus: tm.status,
           allowAllMembers: tm.allowAllMembers,
           accessLevel: grant?.accessLevel ?? 'none',
@@ -655,7 +656,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
             tenantModuleId: tm.id,
             moduleId: tm.moduleId,
             moduleSlug: m?.slug ?? null,
-            moduleName: m?.name ?? null,
+            moduleName: m ? getCanonicalModuleDisplayName(m.slug) ?? m.name : null,
             category: m?.category ?? null,
             status: tm.status,
             source: tm.source,
@@ -807,7 +808,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
           s = {
             moduleId,
             moduleSlug: mod.slug,
-            moduleName: mod.name,
+            moduleName: getCanonicalModuleDisplayName(mod.slug) ?? mod.name,
             total: 0,
             byDay: {},
           };
@@ -895,7 +896,12 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       if (addonModuleIds.length > 0) {
         const modRows = await db.select({ id: modules.id, slug: modules.slug, name: modules.name })
           .from(modules).where(inArray(modules.id, addonModuleIds));
-        for (const m of modRows) addonModuleMap.set(m.id, { slug: m.slug, name: m.name });
+        for (const m of modRows) {
+          addonModuleMap.set(m.id, {
+            slug: m.slug,
+            name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
+          });
+        }
       }
       const addons = activeAddonSubs.map(s => {
         const mod = addonModuleMap.get(s.moduleId);

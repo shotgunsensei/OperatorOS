@@ -215,7 +215,7 @@ function buildLaunchpadModule(
     return {
       registry,
       summary,
-      name: summary?.module.name ?? registry.name,
+      name: registry.name,
       description,
       category: summary?.module.category ?? registry.category,
       statusLabel: dbStatus === 'beta' ? 'Beta' : 'Ready to use',
@@ -253,7 +253,7 @@ function buildLaunchpadModule(
     return {
       registry,
       summary,
-      name: summary.module.name,
+      name: registry.name,
       description,
       category: summary.module.category ?? registry.category,
       statusLabel: 'Available to add',
@@ -272,7 +272,7 @@ function buildLaunchpadModule(
     return {
       registry,
       summary,
-      name: summary.module.name,
+      name: registry.name,
       description,
       category: summary.module.category ?? registry.category,
       statusLabel: 'Another plan needed',
@@ -290,7 +290,7 @@ function buildLaunchpadModule(
   return {
     registry,
     summary,
-    name: summary.module.name,
+    name: registry.name,
     description,
     category: summary.module.category ?? registry.category,
     statusLabel: 'Access needed',

@@ -34,6 +34,7 @@ import {
   CORE_PRODUCTS,
   getAdditionalSeatPriceCents,
   FREE_WITH_ANY_ACCOUNT,
+  getCanonicalModuleDisplayName,
 } from '@operatoros/sdk';
 import { changeFreeCompanionModule } from '../lib/product-entitlements.js';
 
@@ -198,7 +199,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       const cents = (row.metadata as Record<string, unknown> | null)?.addonPriceCents;
       return {
         slug: row.slug,
-        name: row.name,
+        name: getCanonicalModuleDisplayName(row.slug) ?? row.name,
         addonPriceCents: typeof cents === 'number' ? cents : null,
       };
     });

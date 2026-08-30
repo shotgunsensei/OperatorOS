@@ -2,6 +2,23 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current canonical module-name repair overlay — 2026-08-30
+
+All first-party catalog rows and authenticated customer/admin projections now
+use SDK-owned display identities. Existing persisted rows for
+`ninja-pool-hall`, `ninja-launch-kit`, and `ninjamation` are repaired
+idempotently to Operator Pool Hall, Deploy Ops, and Script Ops during the
+existing release-v56 `module_catalog` step. Both module-edit APIs reject
+retired names for known catalog slugs, while custom modules remain editable.
+Workspace Home also treats the canonical registry as display-name authority.
+
+This changes only first-party customer-facing labels. Stable slugs, routes,
+schemas, entitlements, Stripe bindings, migrations, and redirect aliases are
+preserved. Focused database/API, broader identity, typecheck, production-build,
+and disposable apply/reapply evidence pass locally. No module consolidation
+state changes, and no production apply, publish, deployment, or deployed
+browser acceptance occurred.
+
 ## Current searchable Help Center overlay — 2026-08-29
 
 OperatorOS, Platform Command, and every one of the 13 catalog modules now have

@@ -303,6 +303,24 @@ export const MODULE_CATALOG_BY_SLUG: Readonly<Record<string, ModuleCatalogEntry>
   Object.fromEntries(MODULE_CATALOG.map((m) => [m.slug, m])),
 );
 
+/** Return the canonical customer-facing name for a first-party catalog slug. */
+export function getCanonicalModuleDisplayName(slug: string): string | undefined {
+  return MODULE_CATALOG_BY_SLUG[slug]?.name;
+}
+
+/**
+ * Validate an attempted display-name mutation. Custom/admin-created slugs
+ * have no canonical identity and retain their editable name.
+ */
+export function getCanonicalModuleDisplayNameMismatch(
+  slug: string,
+  candidate: unknown,
+): { canonicalName: string; receivedName: unknown } | null {
+  const canonicalName = getCanonicalModuleDisplayName(slug);
+  if (!canonicalName || candidate === undefined || candidate === canonicalName) return null;
+  return { canonicalName, receivedName: candidate };
+}
+
 /** Return the immutable production origin for a first-party catalog slug. */
 export function getCanonicalModuleBaseUrl(slug: string): string | undefined {
   return MODULE_CATALOG_BY_SLUG[slug]?.canonicalBaseUrl;
