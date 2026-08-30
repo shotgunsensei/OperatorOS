@@ -29,8 +29,32 @@ async function establish(page: Page, product: Product) {
 
 async function noOverflow(page:Page,path:string){const amount=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);expect(amount,`${path} horizontal overflow`).toBeLessThanOrEqual(1)}
 
+async function assertMessengerPriority(page: Page, product: Product) {
+  await expect(page.getByTestId('tenant-messenger-toggle')).toBeVisible();
+  await page.getByTestId('tenant-messenger-toggle').click();
+  await expect(page.getByTestId('tenant-messenger-panel')).toBeVisible();
+  const priority = await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>('[data-testid="tenant-messenger-panel"]');
+    const backdrop = document.querySelector<HTMLElement>('[data-testid="tenant-messenger-backdrop"]');
+    const topAtModule = document.elementFromPoint(12, 12);
+    return {
+      panelPortalledToBody: panel?.parentElement === document.body,
+      backdropPortalledToBody: backdrop?.parentElement === document.body,
+      topLayer: topAtModule?.closest<HTMLElement>('[data-operatoros-priority-layer]')?.dataset.operatorosPriorityLayer ?? null,
+    };
+  });
+  expect(priority, `${product.slug} messenger priority`).toEqual({
+    panelPortalledToBody: true,
+    backdropPortalledToBody: true,
+    topLayer: 'messenger-backdrop',
+  });
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('tenant-messenger-panel')).toHaveCount(0);
+}
+
 for (const product of products) test(`${product.slug} owns stable major routes, history, responsive layout, and accessibility`,async({page})=>{
   test.setTimeout(300_000);const consoleErrors:string[]=[];const serverErrors:string[]=[];page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});page.on('response',r=>{if(r.status()>=500)serverErrors.push(`${r.status()} ${r.url()}`)});await establish(page,product);consoleErrors.length=0;serverErrors.length=0;await page.emulateMedia({reducedMotion:'reduce',colorScheme:'dark'});
+  await assertMessengerPriority(page, product);
   for(const path of product.routes){const response=await page.goto(`${product.host}${path}`,{waitUntil:'networkidle'});expect(response?.status(),`${product.slug}${path}`).toBeLessThan(400);await expect(page.getByTestId(product.shell)).toBeVisible();await expect(page.locator('body')).not.toContainText(/coming soon|not implemented|placeholder action/iu);await noOverflow(page,path)}
   expect(page.context().pages(),`${product.slug} ordinary navigation stays in one tab`).toHaveLength(1);
   await page.goBack();await expect(page).not.toHaveURL(`${product.host}${product.routes.at(-1)}`);await page.reload({waitUntil:'networkidle'});await expect(page.getByTestId(product.shell)).toBeVisible();

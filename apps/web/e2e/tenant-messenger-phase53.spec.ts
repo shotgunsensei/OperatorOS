@@ -110,3 +110,37 @@ test('P53-E2E-002: messenger remains usable as a full-screen title-bar surface o
     await session.context.close();
   }
 });
+
+test('P53-E2E-003: messenger modal tier escapes shell stacking contexts and outranks module controls', async ({ browser }) => {
+  const session = await login(
+    browser,
+    required(OWNER_EMAIL, 'E2E_MESSENGER_OWNER_EMAIL'),
+    required(OWNER_PASSWORD, 'E2E_MESSENGER_OWNER_PASSWORD'),
+  );
+  try {
+    await openMessenger(session.page);
+    await session.page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.dataset.testid = 'module-layer-priority-probe';
+      probe.style.cssText = 'position:fixed;inset:0;z-index:9999;background:transparent;pointer-events:auto';
+      document.body.appendChild(probe);
+    });
+    const priority = await session.page.evaluate(() => {
+      const panel = document.querySelector<HTMLElement>('[data-testid="tenant-messenger-panel"]');
+      const backdrop = document.querySelector<HTMLElement>('[data-testid="tenant-messenger-backdrop"]');
+      const topAtModuleControl = document.elementFromPoint(12, 12);
+      return {
+        panelPortalledToBody: panel?.parentElement === document.body,
+        backdropPortalledToBody: backdrop?.parentElement === document.body,
+        topLayer: topAtModuleControl?.closest<HTMLElement>('[data-operatoros-priority-layer]')?.dataset.operatorosPriorityLayer ?? null,
+      };
+    });
+    expect(priority).toEqual({
+      panelPortalledToBody: true,
+      backdropPortalledToBody: true,
+      topLayer: 'messenger-backdrop',
+    });
+  } finally {
+    await session.context.close();
+  }
+});

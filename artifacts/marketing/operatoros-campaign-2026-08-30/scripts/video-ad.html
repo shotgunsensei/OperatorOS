@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OperatorOS — One Command Layer. Three Operating Tracks.</title>
+  <style>
+    :root {
+      --bg: #080b12;
+      --panel: #0d1117;
+      --white: #f8fafc;
+      --secondary: #a7b0c0;
+      --muted: #6b7280;
+      --cyan: #00c8ff;
+      --blue: #078bff;
+      --violet: #6e8fff;
+      --red: #ef233c;
+      --green: #22c55e;
+      --dur: 15s;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--bg); }
+    body { font-family: "Segoe UI", Arial, sans-serif; color: var(--white); }
+    .stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: var(--bg); isolation: isolate; }
+    .scene { position: absolute; inset: 0; opacity: 0; overflow: hidden; animation-duration: var(--dur); animation-timing-function: linear; animation-fill-mode: both; animation-play-state: paused; }
+    .bg { position: absolute; inset: -6%; background-size: cover; background-position: center; filter: saturate(1.08) contrast(1.06); animation: drift var(--dur) ease-in-out both paused; }
+    .scene::after { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, rgba(8,11,18,.97) 0%, rgba(8,11,18,.62) 45%, rgba(8,11,18,.78) 100%); }
+    .track::after { background: linear-gradient(110deg, rgba(8,11,18,.97) 0%, rgba(8,11,18,.80) 49%, rgba(8,11,18,.34) 100%); }
+    .stage.play .scene, .stage.play .bg, .stage.play .motion { animation-play-state: running; }
+    .s1 { animation-name: s1; }
+    .s2 { animation-name: s2; }
+    .s3 { animation-name: s3; }
+    .s4 { animation-name: s4; }
+    .s5 { animation-name: s5; }
+    .s6 { animation-name: s6; }
+    .s7 { animation-name: s7; }
+    @keyframes s1 { 0%{opacity:0} 1.5%{opacity:1} 13.8%{opacity:1} 16%{opacity:0} 100%{opacity:0} }
+    @keyframes s2 { 0%,13%{opacity:0} 15%{opacity:1} 27.8%{opacity:1} 30%{opacity:0} 100%{opacity:0} }
+    @keyframes s3 { 0%,27%{opacity:0} 29%{opacity:1} 41.8%{opacity:1} 44%{opacity:0} 100%{opacity:0} }
+    @keyframes s4 { 0%,41%{opacity:0} 43%{opacity:1} 55.8%{opacity:1} 58%{opacity:0} 100%{opacity:0} }
+    @keyframes s5 { 0%,55%{opacity:0} 57%{opacity:1} 69.8%{opacity:1} 72%{opacity:0} 100%{opacity:0} }
+    @keyframes s6 { 0%,69%{opacity:0} 71%{opacity:1} 84.8%{opacity:1} 87%{opacity:0} 100%{opacity:0} }
+    @keyframes s7 { 0%,84%{opacity:0} 86%{opacity:1} 100%{opacity:1} }
+    @keyframes drift { from { transform: scale(1.04) translate3d(-1.2%, .7%, 0); } to { transform: scale(1.16) translate3d(1.2%, -1.2%, 0); } }
+    .motion { animation-duration: var(--dur); animation-timing-function: linear; animation-fill-mode: both; animation-play-state: paused; }
+    .beam { position: absolute; z-index: 2; top: -30%; bottom: -30%; width: 24%; transform: translateX(-160%) rotate(12deg); background: linear-gradient(90deg, transparent, rgba(0,200,255,.18), transparent); filter: blur(9px); animation-name: beam; }
+    @keyframes beam { 0%{transform:translateX(-160%) rotate(12deg)} 100%{transform:translateX(650%) rotate(12deg)} }
+    .grid { position: absolute; z-index: 2; inset: 0; opacity: .20; background-image: linear-gradient(rgba(0,200,255,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.11) 1px,transparent 1px); background-size: 74px 74px; mask-image: linear-gradient(transparent 10%,black 42%,transparent 95%); animation-name: grid; }
+    @keyframes grid { from{background-position:0 0} to{background-position:148px 74px} }
+    .brand { position: absolute; z-index: 5; display: flex; align-items: center; gap: 20px; }
+    .brand img { width: 82px; height: 82px; object-fit: contain; filter: drop-shadow(0 0 16px rgba(0,200,255,.55)); }
+    .brand-name { font-size: 34px; line-height: .95; font-weight: 900; letter-spacing: 2px; }
+    .brand-name b { color: var(--cyan); }
+    .brand-sub { margin-top: 8px; color: var(--secondary); font-size: 13px; font-weight: 800; letter-spacing: 4px; }
+    .content { position: absolute; z-index: 4; }
+    .eyebrow { color: var(--cyan); font-size: 24px; line-height: 1.2; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; }
+    h1, h2, p { margin: 0; }
+    h1 { margin-top: 28px; max-width: 1000px; font-size: 86px; line-height: .98; letter-spacing: -4px; font-weight: 950; text-wrap: balance; }
+    .sub { margin-top: 30px; max-width: 850px; color: var(--secondary); font-size: 30px; line-height: 1.35; font-weight: 600; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 38px; }
+    .pill { display: inline-flex; align-items: center; min-height: 52px; padding: 10px 22px; border: 1px solid rgba(0,200,255,.65); border-radius: 999px; background: rgba(13,17,23,.82); font-size: 19px; font-weight: 800; }
+    .pill::before { content: ""; width: 10px; height: 10px; margin-right: 12px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 16px var(--cyan); }
+    .pill.green { border-color: rgba(34,197,94,.72); }
+    .pill.green::before { background: var(--green); box-shadow: 0 0 16px var(--green); }
+    .command-mark { width: 210px; height: 210px; object-fit: contain; filter: drop-shadow(0 0 42px rgba(0,200,255,.70)); animation: markPulse 2.2s ease-in-out infinite alternate; }
+    @keyframes markPulse { from{transform:scale(.96);filter:drop-shadow(0 0 24px rgba(0,200,255,.45))} to{transform:scale(1.04);filter:drop-shadow(0 0 54px rgba(0,200,255,.85))} }
+    .centered { text-align: center; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(86%, 1200px); }
+    .centered .eyebrow { color: var(--secondary); }
+    .centered h1 { max-width: none; }
+    .centered .pill-row { justify-content: center; }
+    .track .eyebrow { color: var(--accent); }
+    .track-name { margin-top: 28px; font-size: 92px; line-height: .95; letter-spacing: -4px; font-weight: 950; }
+    .track-audience { margin-top: 18px; color: var(--secondary); font-size: 30px; font-weight: 650; }
+    .price { margin-top: 44px; font-size: 112px; line-height: .9; font-weight: 950; }
+    .price small { color: var(--secondary); font-size: 28px; font-weight: 700; }
+    .outcome { margin-top: 28px; max-width: 880px; color: var(--accent); font-size: 34px; line-height: 1.2; font-weight: 850; }
+    .include { margin-top: 48px; display: inline-flex; padding: 18px 24px; border-radius: 16px; color: var(--white); background: rgba(13,17,23,.86); border: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); font-size: 22px; font-weight: 750; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; margin-top: 46px; }
+    .price-card { position: relative; min-height: 178px; padding: 24px; overflow: hidden; border-radius: 22px; background: rgba(13,17,23,.91); border: 1px solid var(--card); text-align: left; }
+    .price-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: var(--card); }
+    .price-card .label { color: var(--card); font-size: 16px; font-weight: 900; letter-spacing: 2px; }
+    .price-card .product { margin-top: 16px; font-size: 30px; font-weight: 900; }
+    .price-card .amount { margin-top: 12px; font-size: 52px; font-weight: 950; }
+    .price-card .amount small { color: var(--secondary); font-size: 18px; }
+    .cta { display: inline-flex; justify-content: center; align-items: center; min-width: 520px; min-height: 76px; margin-top: 44px; padding: 16px 32px; border-radius: 999px; background: linear-gradient(90deg,var(--cyan),var(--blue)); color: #051016; font-size: 27px; font-weight: 950; box-shadow: 0 18px 64px rgba(0,139,255,.34); }
+    .url { margin-top: 22px; color: var(--secondary); font-size: 24px; font-weight: 750; letter-spacing: .5px; }
+    .fine { margin-top: 18px; color: var(--muted); font-size: 16px; font-weight: 650; }
+
+    body.vertical .brand { left: 60px; top: 70px; }
+    body.vertical .content:not(.centered) { left: 60px; right: 92px; top: 230px; bottom: 300px; }
+    body.vertical h1 { font-size: 82px; }
+    body.vertical .s1 h1 { max-width: 860px; }
+    body.vertical .track-name { font-size: 94px; }
+    body.vertical .pricing-grid { grid-template-columns: 1fr; gap: 14px; margin-top: 36px; }
+    body.vertical .price-card { min-height: 138px; padding: 19px 24px; display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 20px; }
+    body.vertical .price-card .label { grid-column: 1 / -1; }
+    body.vertical .price-card .product { margin-top: 5px; font-size: 27px; }
+    body.vertical .price-card .amount { margin-top: 5px; font-size: 45px; }
+    body.vertical .s6 .centered { top: 49%; width: 90%; }
+    body.vertical .s6 h1 { font-size: 64px; }
+    body.vertical .s7 .command-mark { width: 260px; height: 260px; }
+    body.vertical .s7 h1 { font-size: 70px; }
+    body.vertical .cta { min-width: min(820px,90vw); }
+
+    body.square .brand { left: 54px; top: 48px; }
+    body.square .brand img { width: 64px; height: 64px; }
+    body.square .brand-name { font-size: 27px; }
+    body.square .brand-sub { font-size: 10px; }
+    body.square .content:not(.centered) { left: 54px; right: 60px; top: 168px; bottom: 64px; }
+    body.square .eyebrow { font-size: 19px; }
+    body.square h1 { font-size: 62px; line-height: 1; letter-spacing: -3px; }
+    body.square .sub { font-size: 23px; }
+    body.square .track-name { font-size: 68px; }
+    body.square .track-audience { font-size: 23px; }
+    body.square .price { margin-top: 28px; font-size: 82px; }
+    body.square .outcome { font-size: 27px; }
+    body.square .include { margin-top: 30px; font-size: 18px; }
+    body.square .pricing-grid { margin-top: 30px; }
+    body.square .price-card { min-height: 155px; padding: 18px; }
+    body.square .price-card .label { font-size: 12px; }
+    body.square .price-card .product { font-size: 22px; }
+    body.square .price-card .amount { font-size: 40px; }
+    body.square .s6 h1 { font-size: 54px; }
+    body.square .cta { min-width: 470px; min-height: 64px; font-size: 23px; }
+    body.square .url { font-size: 19px; }
+    body.square .command-mark { width: 170px; height: 170px; }
+
+    body.landscape .brand { left: 112px; top: 62px; }
+    body.landscape .content:not(.centered) { left: 112px; right: 110px; top: 238px; bottom: 88px; max-width: 1050px; }
+    body.landscape h1 { font-size: 92px; max-width: 1100px; }
+    body.landscape .s1 h1 { max-width: 1150px; }
+    body.landscape .track-name { font-size: 106px; }
+    body.landscape .price { font-size: 118px; }
+    body.landscape .pricing-grid { max-width: 1450px; margin-left: auto; margin-right: auto; }
+    body.landscape .s6 h1 { font-size: 76px; }
+    body.landscape .centered { width: 90%; }
+  </style>
+</head>
+<body>
+  <main id="stage" class="stage">
+    <div class="grid motion"></div>
+    <div class="beam motion"></div>
+
+    <section class="scene s1">
+      <div class="bg" style="background-image:url('{{MASTER}}')"></div>
+      <div class="brand"><img src="{{MARK}}" alt=""><div><div class="brand-name">OPERATOR<b>OS</b></div><div class="brand-sub">THE COMMAND LAYER</div></div></div>
+      <div class="content">
+        <div class="eyebrow">Disconnected tools create operational drag.</div>
+        <h1>YOUR BUSINESS DOESN'T NEED ANOTHER PILE OF APPS.</h1>
+        <p class="sub">Revenue. Healthcare operations. IT and MSP work. Each business runs differently.</p>
+        <div class="pill-row"><div class="pill">Three business types</div><div class="pill green">One connected operation</div></div>
+      </div>
+    </section>
+
+    <section class="scene s2">
+      <div class="bg" style="background-image:url('{{NEXUS}}')"></div>
+      <div class="content centered">
+        <img class="command-mark" src="{{MARK}}" alt="">
+        <div class="eyebrow">OperatorOS · $0 command layer</div>
+        <h1>IT NEEDS ONE COMMAND LAYER.</h1>
+        <p class="sub" style="margin-left:auto;margin-right:auto">One sign-in. Organization context. Billing. Entitlements. Module launch. Audit history.</p>
+      </div>
+    </section>
+
+    <section class="scene track s3" style="--accent:var(--green)">
+      <div class="bg" style="background-image:url('{{TRADEFLOWKIT}}')"></div>
+      <div class="brand"><img src="{{MARK}}" alt=""><div><div class="brand-name">OPERATOR<b>OS</b></div><div class="brand-sub">OPERATING TRACK 01</div></div></div>
+      <div class="content">
+        <div class="eyebrow">Service & Revenue</div>
+        <div class="track-name">TradeFlowKit</div>
+        <div class="track-audience">For service businesses and operators</div>
+        <div class="price">$149<small>/month</small></div>
+        <div class="outcome">Run the path from quote to payment.</div>
+        <div class="include">5 operator seats + 1 companion application included</div>
+      </div>
+    </section>
+
+    <section class="scene track s4" style="--accent:var(--cyan)">
+      <div class="bg" style="background-image:url('{{PULSEDESK}}')"></div>
+      <div class="brand"><img src="{{MARK}}" alt=""><div><div class="brand-name">OPERATOR<b>OS</b></div><div class="brand-sub">OPERATING TRACK 02</div></div></div>
+      <div class="content">
+        <div class="eyebrow">Healthcare Operations</div>
+        <div class="track-name">PulseDesk</div>
+        <div class="track-audience">For healthcare operations teams</div>
+        <div class="price">$149<small>/month</small></div>
+        <div class="outcome">Coordinate departments, assets, and escalations.</div>
+        <div class="include">5 operator seats + 1 companion application included</div>
+      </div>
+    </section>
+
+    <section class="scene track s5" style="--accent:var(--violet)">
+      <div class="bg" style="background-image:url('{{TECHDECK}}')"></div>
+      <div class="brand"><img src="{{MARK}}" alt=""><div><div class="brand-name">OPERATOR<b>OS</b></div><div class="brand-sub">OPERATING TRACK 03</div></div></div>
+      <div class="content">
+        <div class="eyebrow">IT & MSP Operations</div>
+        <div class="track-name">TechDeck</div>
+        <div class="track-audience">For IT teams, MSPs, and technical operators</div>
+        <div class="price">$99<small>/month</small></div>
+        <div class="outcome">Operate support, endpoints, networks, and scripts.</div>
+        <div class="include">5 operator seats + 1 companion application included</div>
+      </div>
+    </section>
+
+    <section class="scene s6">
+      <div class="bg" style="background-image:url('{{MASTER}}')"></div>
+      <div class="content centered">
+        <div class="eyebrow">Transparent monthly pricing</div>
+        <h1>OPERATOROS <span style="color:var(--cyan)">$0</span>. CHOOSE YOUR TRACK.</h1>
+        <div class="pricing-grid">
+          <div class="price-card" style="--card:var(--green)"><div class="label">SERVICE & REVENUE</div><div class="product">TradeFlowKit</div><div class="amount">$149<small>/mo</small></div></div>
+          <div class="price-card" style="--card:var(--cyan)"><div class="label">HEALTHCARE OPERATIONS</div><div class="product">PulseDesk</div><div class="amount">$149<small>/mo</small></div></div>
+          <div class="price-card" style="--card:var(--violet)"><div class="label">IT & MSP OPERATIONS</div><div class="product">TechDeck</div><div class="amount">$99<small>/mo</small></div></div>
+        </div>
+        <div class="pill-row"><div class="pill green">5 seats included</div><div class="pill">1 companion app included</div></div>
+      </div>
+    </section>
+
+    <section class="scene s7">
+      <div class="bg" style="background-image:url('{{NEXUS}}')"></div>
+      <div class="content centered">
+        <img class="command-mark" src="{{MARK}}" alt="">
+        <div class="eyebrow">One command layer. Your operating track.</div>
+        <h1>BUILD THE STACK YOUR OPERATION NEEDS.</h1>
+        <div class="cta">Build Your Stack →</div>
+        <div class="url">operatoros.net/pricing</div>
+        <div class="fine">Monthly pricing shown · Final price confirmed at checkout · Terms apply</div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const format = new URLSearchParams(location.search).get('format') || 'vertical';
+    document.body.classList.add(format);
+    window.startAd = () => document.getElementById('stage').classList.add('play');
+    window.__AD_READY__ = true;
+  </script>
+</body>
+</html>
