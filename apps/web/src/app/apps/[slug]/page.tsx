@@ -29,7 +29,7 @@ import SnapProofShell from '@/components/module-shells/SnapProofShell';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
 // Mirrors the server's UserModuleSummary shape returned by
 // GET /v1/modules/:slug. Defined inline (rather than imported from the
@@ -200,8 +200,8 @@ function InternalAppContent() {
               <Link href="/app?page=apps" style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 13px', borderRadius: radius.sm, background: semantic.accent, color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: fontSize.sm }}>
                 Browse other tools
               </Link>
-              <a href={DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl} style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 13px', borderRadius: radius.sm, border: `1px solid ${semantic.border}`, color: semantic.text, textDecoration: 'none', fontWeight: 700, fontSize: fontSize.sm }}>
-                Contact support
+              <a href={buildOperatorOSHelpUrl({ module: slug })} style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 13px', borderRadius: radius.sm, border: `1px solid ${semantic.border}`, color: semantic.text, textDecoration: 'none', fontWeight: 700, fontSize: fontSize.sm }}>
+                Open help guide
               </a>
             </div>
           </div>

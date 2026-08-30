@@ -1,5 +1,47 @@
 # OperatorOS implementation status
 
+## Searchable OperatorOS and module Help Center - SOURCE/LOCAL GREEN (2026-08-29)
+
+- The shared Help and support destination no longer opens the hidden `/john`
+  portfolio/biography page. `packages/modules/navigation.ts` now owns the
+  credential-free `https://operatoros.net/help` destination and a bounded
+  page-aware URL builder that accepts only stable module slugs and relative
+  module paths. The OperatorOS console sidebar/top bar, Platform Command,
+  shared ecosystem header, inaccessible-module recovery card, and all 13
+  dedicated module shells now open the Help Center. Module utility actions
+  include the current canonical page so customers land on the relevant guide.
+- `/help` is a public, responsive, searchable Help Center with **15** product
+  guides and **193** page guides: OperatorOS, super-admin Platform Command,
+  all three Main Modules, and all ten Companion Applications. Search covers
+  product/page names, paths, page purpose, functions, normal workflow, access
+  boundaries, availability, and safety/provider notes. Every page guide has a
+  direct product link, a shareable Help URL, named functions, ordered operating
+  steps, and explicit role or provider limits where applicable. OutCall and
+  other provider-gated functions remain documented honestly; the guide does
+  not convert a source/local or disabled capability into a live-provider claim.
+- The public marketing navigation, footer, and sitemap expose the Help Center.
+  Contact and legal-policy references may still use `/john` as the intentional
+  owner/contact page, but no product Help or support control routes there.
+  The Help Center retains a real support escalation through the existing
+  `john@shotgunninjas.com` address and warns customers not to email passwords,
+  tokens, or secret values.
+- Focused contract verification passed **22/22** across Help coverage, page-aware
+  URL safety, module registry/navigation, and role-aware sidebar behavior. The
+  broader customer-experience, marketing, SEO, and Platform Command set passed
+  **46**, failed **0**, and skipped **6** expected HTTP-only cases when no dev
+  server was running. A production-server browser suite passed **2/2**: global
+  help search selected the TechDeck Tickets guide and the 390 x 844 page-aware
+  link opened the correct guide without horizontal overflow.
+- `corepack pnpm typecheck` passed all four checked workspaces. With
+  `INTERNAL_API_URL=http://localhost:5001`, `corepack pnpm build:production`
+  passed deployment-scope verification, FaultlineLab catalog **4/4**, all four
+  workspace typechecks, API/runner/Next production builds, and generated
+  **35/35** Next routes including dynamic `/help`. Desktop 1280-wide and mobile
+  390-wide full-page renders were reviewed from the production build. This is
+  source/local evidence on `codex/searchable-help-center`; no commit, push,
+  merge, Replit publish, production data/provider/DNS mutation, or deployed
+  exact-host acceptance was performed.
+
 ## PR #87 release-gate repair - SOURCE/LOCAL RELEASE GATE GREEN (2026-08-29)
 
 - GitHub Actions run `33222819035` for PR #87 failed only the API and

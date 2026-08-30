@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { middleware } from '../../web/src/middleware.js';
 import {
+  buildOperatorOSHelpUrl,
   buildOperatorOSNavigationUrls,
   DEFAULT_OPERATOROS_APPS_URL,
   resolveOperatorOSAppsUrl,
@@ -82,8 +83,21 @@ test('shared navigation contract exposes one canonical platform URL set', () => 
   assert.equal(urls.appsUrl, DEFAULT_OPERATOROS_APPS_URL);
   assert.equal(new URL(urls.profileUrl).searchParams.get('page'), 'settings');
   assert.equal(new URL(urls.billingUrl).searchParams.get('page'), 'billing');
+  assert.equal(urls.supportUrl, 'https://operatoros.net/help');
   assert.equal(new URL(urls.logoutUrl).pathname, '/logout');
   assert.equal(new URL(urls.logoutUrl).hostname, 'app.operatoros.net');
+});
+
+test('help navigation is public, page-aware, and rejects unsafe context', () => {
+  assert.equal(buildOperatorOSHelpUrl(), 'https://operatoros.net/help');
+  const help = new URL(buildOperatorOSHelpUrl({ module: 'techdeck', page: '/tickets/example' }));
+  assert.equal(help.origin, 'https://operatoros.net');
+  assert.equal(help.pathname, '/help');
+  assert.equal(help.searchParams.get('module'), 'techdeck');
+  assert.equal(help.searchParams.get('page'), '/tickets/example');
+  assert.throws(() => buildOperatorOSHelpUrl({ module: '../john' }));
+  assert.throws(() => buildOperatorOSHelpUrl({ page: 'https://evil.example/' }));
+  assert.throws(() => buildOperatorOSHelpUrl({ page: '/tickets\\foreign' }));
 });
 
 test('every registry entry exposes the complete module navigation metadata', () => {

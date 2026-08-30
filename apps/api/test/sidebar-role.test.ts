@@ -32,14 +32,14 @@ test('regular user sees only Workspace + Account, in that order', () => {
   assert.ok(!itemIds.includes('platform'), 'no Platform entry for non-super-admin');
 });
 
-test('Help and support is an external account link to the canonical OperatorOS contact page', () => {
+test('Help and support opens the canonical searchable OperatorOS Help Center', () => {
   const sections = buildNavSections({ isSuperAdmin: false, isTenantAdmin: false });
   const account = sections.find(section => section.label === 'Account');
   const contact = account?.items.find(item => item.id === 'contact');
 
   assert.ok(contact, 'Account section must include help and support');
   assert.equal(contact.label, 'Help and support');
-  assert.equal(contact.href, 'https://operatoros.net/john');
+  assert.equal(contact.href, 'https://operatoros.net/help');
 });
 
 test('tenant admin sees Workspace + Organization + Account, in that order', () => {

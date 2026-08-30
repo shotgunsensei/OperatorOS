@@ -1,5 +1,27 @@
 # OperatorOS module parity index
 
+## Searchable Help Center overlay (2026-08-29)
+
+All 13 catalog modules now have an active Help action and a dedicated,
+searchable product guide. Together with OperatorOS and Platform Command, the
+public `/help` surface contains 15 guides and 193 page guides covering each
+canonical customer-facing navigation area, its real functions, the normal
+workflow, role/access boundaries, provider or safety limits, direct product
+links, and shareable page-aware Help URLs. Shared console, Platform Command,
+ecosystem-header, unavailable-module, and dedicated-shell Help entry points no
+longer route to the `/john` portfolio/biography page.
+
+The guide is documentation and navigation over current source truth. It does
+not activate a provider, widen a role, grant an entitlement, change tenant
+scope, promote a consolidation state, or convert local evidence into deployed
+acceptance. OutCall remains catalog-coming-soon/provider-gated and the guide
+states that boundary. Focused contracts passed 22/22; broader customer,
+marketing, SEO, and platform contracts passed 46 with 6 expected HTTP-only
+skips; production-server Help browser acceptance passed 2/2 including
+390 x 844 overflow; all workspace typechecks and the production build passed
+with 35/35 generated Next routes. Deployment and live exact-host acceptance
+remain separate gates.
+
 ## Canonical OperatorOS brand overlay (2026-08-27)
 
 All module capability, parity, entitlement, billing, tenant, role, provider,

@@ -27,7 +27,7 @@ import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import {
   PULSEDESK_NAVIGATION,
   PULSEDESK_THEME,
@@ -128,7 +128,7 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'pulsedesk-return-command-center' },
         { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound, testId: 'pulsedesk-profile' },
-        { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'pulsedesk-help' },
+        { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'pulsedesk', page: route.canonicalPath }), icon: LifeBuoy, testId: 'pulsedesk-help' },
       ]}
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
       state={isLoading ? 'loading' : !hasTenantContext ? 'empty' : restrictedProviderRoute ? 'forbidden' : 'ready'}

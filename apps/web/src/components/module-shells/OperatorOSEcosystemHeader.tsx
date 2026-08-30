@@ -6,7 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import OperatorLogo from '@/components/brand/OperatorLogo';
 import TenantMessenger from '@/components/TenantMessenger';
 import { useTenant } from '@/components/TenantProvider';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { PLATFORM_DOMAINS } from '../../../../../packages/sdk/src/ecosystem.js';
 
 export default function OperatorOSEcosystemHeader({
@@ -37,7 +37,7 @@ export default function OperatorOSEcosystemHeader({
     { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, Icon: Grid2X2 },
     { label: 'Profile and security', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, Icon: UserRound },
     { label: 'Billing and plans', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl, Icon: CreditCard },
-    { label: 'Help and support', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, Icon: LifeBuoy },
+    { label: 'Help and support', href: buildOperatorOSHelpUrl({ module: moduleSlug }), Icon: LifeBuoy },
   ];
 
   return (

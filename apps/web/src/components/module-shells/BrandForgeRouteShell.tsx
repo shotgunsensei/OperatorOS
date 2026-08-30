@@ -4,12 +4,12 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useCallback, useMemo } from 'react';
-import { Activity, BarChart3, CalendarDays, CheckCircle2, FileText, Grid2X2, LayoutDashboard, Megaphone, Palette, PlugZap, Settings, Sparkles, UserRound, Users } from 'lucide-react';
+import { Activity, BarChart3, CalendarDays, CheckCircle2, FileText, Grid2X2, LayoutDashboard, LifeBuoy, Megaphone, Palette, PlugZap, Settings, Sparkles, UserRound, Users } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell, type ModuleRouteManifestGroup, type ModuleThemeTokens } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const BrandForgeWorkspace = dynamic(() => import('./BrandForgeWorkspace'), {
   loading: () => <div role="status" aria-busy="true"><Activity size={18}/> Loading this creative route…</div>,
@@ -82,7 +82,7 @@ export default function BrandForgeRouteShell({ routePath }: { baseUrl?: string; 
   return <ModuleApplicationShell moduleId="brandforgeos" moduleName="BrandForgeOS" theme={theme} currentPath={hrefFor(currentArea === 'dashboard' ? '/' : `/${currentArea}`)} navigation={navigation}
     brand={<Link href={hrefFor('/')} style={{ color:'#fff7ff', textDecoration:'none', fontWeight:900 }}>BrandForge<span style={{color:'#f0abfc'}}>OS</span></Link>}
     organization={{ label:'Organization', value:activeTenant?.name ?? tenantId ?? 'No organization selected' }} accessContext={{label:'Access',value:user?.platformRole==='super_admin'?'Platform administrator':activeRole ?? 'member'}}
-    utilityActions={[{label:'My Apps',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,icon:Grid2X2},{label:'Profile',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl,icon:UserRound}]}
+    utilityActions={[{label:'My Apps',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,icon:Grid2X2},{label:'Profile',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl,icon:UserRound},{label:'Help',href:buildOperatorOSHelpUrl({module:'brandforgeos',page:currentArea==='dashboard'?'/':`/${currentArea}`}),icon:LifeBuoy}]}
     page={{...page}} state={authLoading||tenantLoading?'loading':!tenantId?'empty':'ready'} stateMessage={!tenantId?'Choose an organization before opening BrandForgeOS.':undefined} mobileNavigation="drawer" testId="brandforgeos-module-shell" pageHeaderTestId="brandforgeos-module-header">
     {tenantId && <BrandForgeWorkspace key={`${tenantId}-${currentArea}`} routePath={currentArea === 'dashboard' ? '/' : `/${currentArea}`} embedded />}
   </ModuleApplicationShell>;

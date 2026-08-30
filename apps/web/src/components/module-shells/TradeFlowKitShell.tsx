@@ -16,6 +16,8 @@ import {
   CreditCard,
   FileText,
   GitBranch,
+  Grid2X2,
+  LifeBuoy,
   ListChecks,
   Receipt,
   Search,
@@ -24,6 +26,7 @@ import {
   Moon,
   PhoneCall,
   Sun,
+  UserRound,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -33,7 +36,7 @@ import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow, { type TradeFlowKitRevenueView } from './TradeFlowKitRevenueFlow';
 import TradeFlowKitOperations, { type TradeFlowKitOperationsView } from './TradeFlowKitOperations';
@@ -353,6 +356,11 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
       )}
       organization={{ label: 'Organization', value: tenantLabel, title: tenantLabel, testId: 'tradeflowkit-tenant-badge' }}
       accessContext={{ label: 'Access', value: roleLabel, testId: 'tradeflowkit-role-badge' }}
+      utilityActions={[
+        { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2 },
+        { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound },
+        { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'tradeflowkit', page: currentManifestPath }), icon: LifeBuoy },
+      ]}
       topActions={(
         <>
           <Link className={styles.iconButton} href={`${hrefFor('/dashboard')}#tradeflowkit-global-search-input`} aria-label="Open TradeFlowKit search"><Search size={17} /></Link>

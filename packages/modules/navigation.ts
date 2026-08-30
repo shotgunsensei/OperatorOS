@@ -35,6 +35,11 @@ export interface OperatorOSNavigationIdentity {
   }[];
 }
 
+export interface OperatorOSHelpTarget {
+  module?: string | null;
+  page?: string | null;
+}
+
 export interface OperatorOSModuleNavigationContract extends OperatorOSNavigationUrls, OperatorOSNavigationIdentity {
   version: typeof OPERATOROS_NAVIGATION_CONTRACT_VERSION;
   module: { id: string; slug: string; name: string };
@@ -110,9 +115,31 @@ export function buildOperatorOSNavigationUrls(appsUrl = DEFAULT_OPERATOROS_APPS_
     appsUrl: canonicalAppsUrl,
     profileUrl: pageUrl('settings'),
     billingUrl: pageUrl('billing'),
-    supportUrl: `${PLATFORM_DOMAINS.root}/john`,
+    supportUrl: buildOperatorOSHelpUrl(),
     logoutUrl: logout.toString(),
   };
+}
+
+/**
+ * Build a public, credential-free Help Center URL. A module or canonical page
+ * may be supplied so every shell can land on the relevant guide without
+ * moving identity, tenant, or authorization data into the URL.
+ */
+export function buildOperatorOSHelpUrl(target: OperatorOSHelpTarget = {}): string {
+  const url = new URL('/help', PLATFORM_DOMAINS.root);
+  const moduleId = target.module?.trim();
+  if (moduleId) {
+    if (!/^[a-z0-9-]{1,64}$/u.test(moduleId)) throw new Error('Help module must be a stable module slug');
+    url.searchParams.set('module', moduleId);
+  }
+  const page = target.page?.trim();
+  if (page) {
+    if (!page.startsWith('/') || page.length > 240 || /[\\\u0000-\u001f]/u.test(page)) {
+      throw new Error('Help page must be a bounded relative module path');
+    }
+    url.searchParams.set('page', page);
+  }
+  return url.toString();
 }
 
 export const DEFAULT_OPERATOROS_NAVIGATION_URLS = Object.freeze(buildOperatorOSNavigationUrls());

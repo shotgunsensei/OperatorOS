@@ -9,7 +9,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import {
   FAULTLINELAB_NAVIGATION,
   FAULTLINELAB_THEME,
@@ -85,7 +85,7 @@ export default function FaultlineLabShell({ routePath }: FaultlineLabShellProps)
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'faultlinelab-return-command-center' },
         { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound, testId: 'faultlinelab-profile' },
-        { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'faultlinelab-help' },
+        { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'faultlinelab', page: route.canonicalPath }), icon: LifeBuoy, testId: 'faultlinelab-help' },
       ]}
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId ?? route.challengeId }}
       state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}

@@ -30,7 +30,7 @@ import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import {
   TECHDECK_NAVIGATION,
   TECHDECK_THEME,
@@ -136,7 +136,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'techdeck-return-command-center' },
         { label: 'Profile', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl, icon: UserRound, testId: 'techdeck-profile' },
-        { label: 'Help', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl, icon: LifeBuoy, testId: 'techdeck-help' },
+        { label: 'Help', href: buildOperatorOSHelpUrl({ module: 'techdeck', page: route.canonicalPath }), icon: LifeBuoy, testId: 'techdeck-help' },
       ]}
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
       state={isLoading ? 'loading' : !hasTenantContext ? 'empty' : 'ready'}
