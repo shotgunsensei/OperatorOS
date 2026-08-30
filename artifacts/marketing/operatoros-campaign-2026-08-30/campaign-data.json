@@ -1,0 +1,85 @@
+{
+  "campaign": {
+    "name": "One Command Layer. Three Operating Tracks.",
+    "slug": "three_tracks_launch",
+    "brand": "OperatorOS",
+    "landingPage": "https://operatoros.net/pricing",
+    "primaryCta": "Build Your Stack",
+    "concept": "OperatorOS is the free command layer. A business chooses the main operating track that matches how it works, then adds companion applications and seats as needed.",
+    "launchStatus": "approval_ready_not_published"
+  },
+  "pricing": {
+    "commandLayerMonthly": 0,
+    "includedSeats": 5,
+    "includedCompanionApplications": 1,
+    "additionalCompanionMonthly": 29,
+    "additionalSeatMonthly": 15,
+    "freeWithAnyAccount": ["TorqueShed", "FaultlineLab", "Operator Pool Hall"]
+  },
+  "tracks": [
+    {
+      "id": "tradeflowkit",
+      "number": "01",
+      "track": "Service & Revenue",
+      "product": "TradeFlowKit",
+      "audience": "Service businesses and operators",
+      "monthly": 149,
+      "accent": "#22C55E",
+      "shortOutcome": "Run the path from quote to payment.",
+      "features": ["Quotes, invoices, jobs, and payments", "Revenue-flow visibility", "Customer and work coordination"],
+      "image": "apps/web/public/media/operatoros/module-tradeflowkit.png"
+    },
+    {
+      "id": "pulsedesk",
+      "number": "02",
+      "track": "Healthcare Operations",
+      "product": "PulseDesk",
+      "audience": "Healthcare operations teams",
+      "monthly": 149,
+      "accent": "#00C8FF",
+      "shortOutcome": "Coordinate departments, assets, and escalations.",
+      "features": ["Operational request coordination", "Department escalation visibility", "Inventory and asset workflows"],
+      "image": "apps/web/public/media/operatoros/module-pulsedesk.png"
+    },
+    {
+      "id": "techdeck",
+      "number": "03",
+      "track": "IT & MSP Operations",
+      "product": "TechDeck",
+      "audience": "IT teams, MSPs, and technical operators",
+      "monthly": 99,
+      "accent": "#6E8FFF",
+      "shortOutcome": "Operate support, endpoints, networks, and scripts.",
+      "features": ["Engineer-first operations console", "Ticket and endpoint visibility", "Network and automation workflows"],
+      "image": "apps/web/public/media/operatoros/module-techdeck.png"
+    }
+  ],
+  "copy": {
+    "google": {
+      "headlines": ["One OS. Three Tracks.", "OperatorOS Starts at $0", "Pick Your Business Track", "Run Work From One Login", "Build Your Operations Stack", "TradeFlowKit: $149/Month", "PulseDesk: $149/Month", "TechDeck: $99/Month", "5 Operator Seats Included", "One Companion App Included", "Extra Apps: $29/Month", "Extra Seats: $15/Month", "Stop Juggling Business Apps", "One Command Layer for Work", "Build Your Stack Today"],
+      "longHeadlines": ["One command layer. Three operating tracks built around the way your business works.", "Choose TradeFlowKit, PulseDesk, or TechDeck and run it through OperatorOS."],
+      "descriptions": ["OperatorOS is $0. Paid tracks include 5 seats and one companion application.", "Choose revenue, healthcare operations, or IT/MSP workflows. Build your stack.", "TechDeck starts at $99/month. TradeFlowKit and PulseDesk are $149/month.", "Add companion apps for $29/month and extra seats for $15/month each."],
+      "businessName": "OperatorOS"
+    },
+    "meta": {
+      "primaryText": ["One command layer. Three operating tracks. Choose the OperatorOS stack built for your business.", "Service business, healthcare operations, or IT/MSP? Pick your track and run from one command layer.", "OperatorOS is $0. Paid tracks include 5 seats and one companion app. Build the stack you need.", "TechDeck is $99/mo. TradeFlowKit and PulseDesk are $149/mo. Each includes 5 seats + 1 companion app.", "Stop juggling disconnected tools. Sign in once, choose your track, and run your operation."],
+      "headlines": ["One OS. Three Operating Tracks.", "Pick the Track Built for Your Work", "OperatorOS Starts at $0", "Build Your Operations Stack"],
+      "descriptions": ["5 seats + 1 app included", "Choose your business track", "Build your stack"]
+    },
+    "linkedin": {
+      "introText": ["One command layer. Three operating tracks. Choose the OperatorOS stack that matches how your organization actually works.", "TradeFlowKit for service revenue. PulseDesk for healthcare operations. TechDeck for IT and MSP teams. One OperatorOS login.", "OperatorOS is $0. Every paid main track includes 5 operator seats and one selectable companion application."],
+      "headlines": ["Choose the Operating Track Built for Your Business", "One Command Layer for Revenue, Healthcare, or IT Operations", "Build Your OperatorOS Stack"],
+      "descriptions": ["Three main modules. One secure command layer.", "5 seats and one companion app included.", "Plans start at $99 per month."]
+    },
+    "tiktok": {
+      "adText": ["One command layer. Three business tracks. Pick yours.", "Revenue, healthcare ops, or IT/MSP? Build your stack.", "OperatorOS is $0. Paid tracks start at $99/month.", "Stop juggling tools. Start operating from one place."],
+      "displayName": "OperatorOS"
+    },
+    "organic": {
+      "facebook": "Your business does not need another pile of disconnected apps. It needs a command layer.\n\nOperatorOS gives you one account, one organization, and three main operating tracks:\n\n• TradeFlowKit — service and revenue operations — $149/month\n• PulseDesk — healthcare operations — $149/month\n• TechDeck — IT and MSP operations — $99/month\n\nEvery paid track includes 5 operator seats and one companion application. OperatorOS itself is $0, and TorqueShed, FaultlineLab, and Operator Pool Hall are free with any account.\n\nBuild the stack your operation actually needs: https://operatoros.net/pricing",
+      "linkedin": "Most businesses do not have a software shortage. They have a coordination problem.\n\nOperatorOS is the command layer: centralized sign-in, organization context, billing, entitlements, module launch, and audit history. Then you choose the operating track that matches the work:\n\n1. TradeFlowKit — quote-to-payment and revenue operations — $149/month\n2. PulseDesk — healthcare operations coordination — $149/month\n3. TechDeck — engineer-first IT and MSP operations — $99/month\n\nEach paid main module includes 5 operator seats and one selectable companion application. Additional companion applications are $29/month; additional seats are $15/month each.\n\nSee the full stack builder: https://operatoros.net/pricing",
+      "instagram": "ONE COMMAND LAYER. THREE OPERATING TRACKS.\n\n💼 TradeFlowKit — service + revenue operations — $149/mo\n🏥 PulseDesk — healthcare operations — $149/mo\n🖥️ TechDeck — IT + MSP operations — $99/mo\n\nEach paid track includes 5 seats + 1 companion app. OperatorOS is $0.\n\nBuild your stack at operatoros.net/pricing\n\n#OperatorOS #BusinessOperations #MSP #HealthcareOperations #ServiceBusiness #SaaS #WorkflowAutomation #SmallBusinessTech",
+      "tiktok": "Your business type picks the track. OperatorOS keeps the whole stack connected. Plans start at $99/month. Build yours at operatoros.net/pricing. #OperatorOS #BusinessTok #MSPTok #Operations #SaaS"
+    }
+  }
+}

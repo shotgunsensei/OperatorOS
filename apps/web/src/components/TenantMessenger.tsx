@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from './AuthProvider';
 import { useTenant } from './TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
@@ -403,10 +404,12 @@ export default function TenantMessenger() {
         {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 
-      {open && (
+      {typeof document !== 'undefined' && createPortal(
         <>
-          <button className={styles.backdrop} type="button" aria-label="Close messenger" onClick={() => setOpen(false)} />
-          <section className={`${styles.panel} ${selectedId ? styles.panelConversation : ''}`} role="dialog" aria-modal="true" aria-label="Organization messenger" data-testid="tenant-messenger-panel">
+          {open && (
+            <>
+              <button className={styles.backdrop} type="button" aria-label="Close messenger" onClick={() => setOpen(false)} data-testid="tenant-messenger-backdrop" data-operatoros-priority-layer="messenger-backdrop" />
+              <section className={`${styles.panel} ${selectedId ? styles.panelConversation : ''}`} role="dialog" aria-modal="true" aria-label="Organization messenger" data-testid="tenant-messenger-panel" data-operatoros-priority-layer="messenger-panel">
             <aside className={styles.sidebar}>
               <div className={styles.sidebarHeader}>
                 <span className={`${styles.connection} ${socketState === 'open' ? styles.connectionOpen : ''}`} aria-hidden="true" />
@@ -514,10 +517,13 @@ export default function TenantMessenger() {
                 <div className={styles.state} style={{ margin: 'auto', maxWidth: 380 }}><MoreHorizontal size={28} /><h2 style={{ color: '#eef5ff', fontSize: 17 }}>Organization messenger</h2><p>Select a saved conversation or start a tenant-private direct or group message.</p></div>
               )}
             </div>
-          </section>
-        </>
+              </section>
+            </>
+          )}
+          <div aria-live="assertive" aria-atomic="true">{toast && <div className={styles.toast} data-operatoros-priority-layer="messenger-toast">{toast}</div>}</div>
+        </>,
+        document.body,
       )}
-      <div aria-live="assertive" aria-atomic="true">{toast && <div className={styles.toast}>{toast}</div>}</div>
     </div>
   );
 }

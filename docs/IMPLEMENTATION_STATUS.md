@@ -1,5 +1,43 @@
 # OperatorOS implementation status
 
+## Cross-module Messages overlay priority - SOURCE/LOCAL GREEN / BROWSER RERUN PENDING (2026-08-30)
+
+- The shared `TenantMessenger` modal surfaces now render through a React portal
+  directly under `document.body`. The Messages trigger remains in each
+  authenticated title bar, but the backdrop, panel, and notification no longer
+  inherit that title bar's stacking context. This fixes Operator Pool Hall's
+  sticky game-mode toolbar painting over the open Messages window.
+- A complete source scan of `apps/web/src/components/module-shells` and
+  `apps/web/src/components/module-application-shell` found a highest module
+  layer of **70** (the responsive module drawer). Operator Pool Hall's sticky
+  toolbar and the shared ecosystem header were both layer **20**, which
+  explains the source-order collision. The platform-owned Messages layers are
+  now reserved at **12000** for the backdrop, **12010** for the panel, and
+  **12020** for in-app message notifications. This also exceeds the existing
+  non-module floating controls at layer 9999.
+- `P53-UI-003` recursively scans every consolidated module shell and fails if
+  any module layer reaches the Messages modal tier. `P53-E2E-003` proves the
+  portal escapes its shell and wins hit-testing over a layer-9999 control. The
+  Phase 51 exact-host route matrix now applies the same body-portal and
+  top-paint assertion to BrandForgeOS, StudyForge AI, Deploy Ops, Script Ops,
+  and Operator Pool Hall.
+- Verification on the clean source branch `codex/messenger-overlay-priority`:
+  `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1
+  test/shared-platform-ui-static.test.ts` passed **3/3** with zero skips;
+  focused ESLint passed with zero warnings; `corepack pnpm --dir apps/web
+  typecheck` passed; and `corepack pnpm typecheck` passed API, runner gateway,
+  web, and TorqueShed native. With
+  `INTERNAL_API_URL=http://127.0.0.1:5001`, `corepack pnpm --dir apps/web build`
+  compiled and generated **35/35** Next routes. Playwright successfully
+  discovered all **8** modified messenger/route-matrix cases.
+- Authenticated browser execution was not claimed in this run because no
+  disposable `DATABASE_URL`, messenger synthetic-user secrets, or local
+  API/web listeners were available. The machine exposed Node 24.16.0 rather
+  than the release-gate Node 20 runtime, so this is focused source/local
+  evidence, not a fresh release certification. No database, billing, provider,
+  deployment, DNS, customer, or production state changed, and no module parity
+  state was promoted.
+
 ## Canonical customer-facing module names - SOURCE/LOCAL GREEN / DEPLOYMENT PENDING (2026-08-30)
 
 - Registered module identity now comes from the SDK catalog on every customer
