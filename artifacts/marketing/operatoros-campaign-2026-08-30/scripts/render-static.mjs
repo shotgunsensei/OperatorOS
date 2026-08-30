@@ -198,24 +198,25 @@ function pricingSvg(w, h) {
   const isLandscape = w / h > 1.5;
   if (isLandscape) {
     const left = 46;
-    const cardsX = 560;
+    const cardsX = 558;
+    const cardW = w - cardsX - 46;
+    const cardH = 92;
     const cardGap = 14;
-    const cardW = (w - cardsX - 46 - cardGap * 2) / 3;
     return svgShell(w, h, `
       <rect width="${w}" height="${h}" fill="${palette.bg}"/>
       <image href="${nexusUri}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" opacity="0.62"/>
       <rect width="${w}" height="${h}" fill="url(#shade)"/>
       ${brandLockup(left, 28, 64)}
       <text x="${left}" y="158" fill="${palette.cyan}" font-family="${font}" font-size="17" font-weight="850" letter-spacing="3">TRANSPARENT MONTHLY PRICING</text>
-      <text x="${left}" y="218" fill="${palette.white}" font-family="${font}" font-size="52" font-weight="900">THE COMMAND LAYER</text>
-      <text x="${left}" y="272" fill="${palette.white}" font-family="${font}" font-size="52" font-weight="900">STARTS AT <tspan fill="${palette.cyan}">$0</tspan>.</text>
+      <text x="${left}" y="218" fill="${palette.white}" font-family="${font}" font-size="46" font-weight="900">THE COMMAND LAYER</text>
+      <text x="${left}" y="268" fill="${palette.white}" font-family="${font}" font-size="46" font-weight="900">STARTS AT <tspan fill="${palette.cyan}">$0</tspan>.</text>
       <text x="${left}" y="314" fill="${palette.secondary}" font-family="${font}" font-size="20">Then choose the operating track your business needs.</text>
       ${pill({ x: left, y: 350, width: 250, text: '5 seats included', accent: palette.green, fontSize: 17 })}
       ${pill({ x: left, y: 395, width: 318, text: '1 companion app included', accent: palette.violet, fontSize: 17 })}
       ${pill({ x: left, y: 440, width: 260, text: 'Extra apps · $29/mo', fontSize: 17 })}
       ${pill({ x: left, y: 485, width: 265, text: 'Extra seats · $15/mo', accent: palette.red, fontSize: 17 })}
-      ${data.tracks.map((track, index) => trackCard(track, cardsX + index * (cardW + cardGap), 188, cardW, 245, false)).join('')}
-      ${cta(cardsX, 466, w - cardsX - 46, 62, 'Build Your Stack at operatoros.net/pricing', 20)}
+      ${data.tracks.map((track, index) => trackCard(track, cardsX, 172 + index * (cardH + cardGap), cardW, cardH, true)).join('')}
+      ${cta(cardsX, 496, cardW, 62, 'Build Your Stack at operatoros.net/pricing', 20)}
       <text x="${w - 46}" y="${h - 22}" text-anchor="end" fill="${palette.muted}" font-family="${font}" font-size="12">Monthly pricing shown · Final price confirmed at checkout · Terms apply</text>
     `);
   }
@@ -234,6 +235,16 @@ function pricingSvg(w, h) {
     ${data.tracks.map((track, index) => trackCard(track, 46, 440 + index * (cardH + 18), w - 92, cardH, false)).join('')}
     ${pill({ x: 46, y: 1080, width: 306, text: 'Extra apps · $29/mo', fontSize: 18 })}
     ${pill({ x: 366, y: 1080, width: 310, text: 'Extra seats · $15/mo', accent: palette.red, fontSize: 18 })}
+    <g transform="translate(46 1190)" filter="url(#shadow)">
+      <rect width="${w - 92}" height="360" rx="26" fill="#0D1117" fill-opacity="0.88" stroke="${palette.cyan}" stroke-opacity="0.35"/>
+      <text x="28" y="55" fill="${palette.green}" font-family="${font}" font-size="18" font-weight="850" letter-spacing="3">FREE WITH ANY ACCOUNT</text>
+      <text x="28" y="105" fill="${palette.white}" font-family="${font}" font-size="27" font-weight="800">TorqueShed · FaultlineLab · Operator Pool Hall</text>
+      <line x1="28" y1="144" x2="${w - 148}" y2="144" stroke="${palette.secondary}" stroke-opacity="0.22"/>
+      <text x="28" y="194" fill="${palette.violet}" font-family="${font}" font-size="18" font-weight="850" letter-spacing="3">CHOOSE 1 COMPANION APPLICATION</text>
+      <text x="28" y="242" fill="${palette.white}" font-family="${font}" font-size="23" font-weight="750">SnapProofOS · BrandForgeOS · StudyForge AI</text>
+      <text x="28" y="282" fill="${palette.white}" font-family="${font}" font-size="23" font-weight="750">Deploy Ops · CallCommand AI · Script Ops</text>
+      <text x="28" y="326" fill="${palette.secondary}" font-family="${font}" font-size="18">One selection included; additional companion applications are $29/month.</text>
+    </g>
     ${cta(46, h - 146, w - 92, 72, 'Build Your Stack', 25)}
     <text x="${w / 2}" y="${h - 32}" text-anchor="middle" fill="${palette.secondary}" font-family="${font}" font-size="18">operatoros.net/pricing · Monthly pricing shown · Terms apply</text>
   `);

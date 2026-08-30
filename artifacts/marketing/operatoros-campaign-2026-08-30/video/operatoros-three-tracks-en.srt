@@ -1,0 +1,27 @@
+1
+00:00:00,000 --> 00:00:02,150
+Your business doesn't need another pile of apps.
+
+2
+00:00:02,150 --> 00:00:04,200
+It needs one command layer.
+
+3
+00:00:04,200 --> 00:00:06,300
+Service & Revenue · TradeFlowKit · $149/month
+
+4
+00:00:06,300 --> 00:00:08,400
+Healthcare Operations · PulseDesk · $149/month
+
+5
+00:00:08,400 --> 00:00:10,650
+IT & MSP Operations · TechDeck · $99/month
+
+6
+00:00:10,650 --> 00:00:12,900
+OperatorOS $0 · 5 seats + 1 companion app included
+
+7
+00:00:12,900 --> 00:00:15,100
+Build Your Stack · operatoros.net/pricing

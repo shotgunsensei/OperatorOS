@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-08-30T19:25:21.731Z",
+  "renderer": "Playwright CSS motion graphics + FFmpeg H.264/AAC",
+  "browserExecutable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "ffmpegVersion": "ffmpeg version 9.0.1-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+  "durationSeconds": 15.1,
+  "framesPerSecond": 30,
+  "audio": {
+    "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-original-score.wav",
+    "origin": "Locally generated mathematical waveforms; no samples or third-party music."
+  },
+  "outputs": [
+    {
+      "format": "vertical",
+      "width": 1080,
+      "height": 1920,
+      "webm": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-vertical-1080x1920.webm",
+        "bytes": 2064796
+      },
+      "mp4": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-vertical-1080x1920.mp4",
+        "bytes": 8617416
+      },
+      "poster": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-vertical-1080x1920-poster.png",
+        "bytes": 866785
+      }
+    },
+    {
+      "format": "square",
+      "width": 1080,
+      "height": 1080,
+      "webm": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-square-1080x1080.webm",
+        "bytes": 1904868
+      },
+      "mp4": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-square-1080x1080.mp4",
+        "bytes": 6018024
+      },
+      "poster": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-square-1080x1080-poster.png",
+        "bytes": 644314
+      }
+    },
+    {
+      "format": "landscape",
+      "width": 1920,
+      "height": 1080,
+      "webm": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-landscape-1920x1080.webm",
+        "bytes": 2174738
+      },
+      "mp4": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-landscape-1920x1080.mp4",
+        "bytes": 9300887
+      },
+      "poster": {
+        "path": "C:\\Dev\\OperatorOS\\artifacts\\marketing\\operatoros-campaign-2026-08-30\\video\\operatoros-three-tracks-landscape-1920x1080-poster.png",
+        "bytes": 910187
+      }
+    }
+  ]
+}

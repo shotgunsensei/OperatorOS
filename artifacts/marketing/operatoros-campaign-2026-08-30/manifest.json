@@ -1,0 +1,772 @@
+{
+  "campaign": "One Command Layer. Three Operating Tracks.",
+  "status": "approval_ready_not_published",
+  "generatedAt": "2026-08-30T19:30:05.197Z",
+  "sourceTruth": {
+    "repositoryPricing": "packages/sdk/src/products.ts",
+    "livePricing": "https://operatoros.net/pricing",
+    "releaseAuthority": "docs/CURRENT_RELEASE_GATE.md",
+    "verifiedDate": "2026-08-30"
+  },
+  "counts": {
+    "files": 63,
+    "staticPng": 16,
+    "editableSvg": 12,
+    "mp4": 3,
+    "webm": 3,
+    "copyAndGuides": 9
+  },
+  "files": [
+    {
+      "path": "campaign-data.json",
+      "bytes": 7208,
+      "sha256": "42EE843901ADD5EB5F5CE85BB30CB4192447127CF2E9813B4B668EF9EDBC1B87"
+    },
+    {
+      "path": "copy/copy-validation.csv",
+      "bytes": 4600,
+      "sha256": "E993965EB240DBEFB71611D4C9070B237878110BB47FBFD9EA5BFBA330414BDC"
+    },
+    {
+      "path": "copy/google-responsive-copy.csv",
+      "bytes": 2158,
+      "sha256": "53FBC883C9C6D15ABC371A5F16CD314826E088E9B4138F46C3C14793B606EAAF"
+    },
+    {
+      "path": "copy/organic-social-posts.md",
+      "bytes": 2745,
+      "sha256": "448EDBD5624DEE1BA4FA9332BD07FEA36414D336195B3FE1D5B61F2368BF04DD"
+    },
+    {
+      "path": "copy/paid-ad-copy.md",
+      "bytes": 3455,
+      "sha256": "A8CE4AFAD117C80CB82A2F6842206FDCC17780DA9431E9E28C21F6A839B97596"
+    },
+    {
+      "path": "copy/paid-social-copy.csv",
+      "bytes": 3171,
+      "sha256": "2865461440CE1700F29031A512A040568316B5BEC522CE026F4D7A2B2372C414"
+    },
+    {
+      "path": "copy/platform-upload-guide.md",
+      "bytes": 3315,
+      "sha256": "DC2F9BB8F915455EF7AD75CD07870798DC01F81766BC8F57AAB21C078AA4B1AC"
+    },
+    {
+      "path": "copy/SOURCES.md",
+      "bytes": 2168,
+      "sha256": "26E8AC739BE8DA242583C5945C1AB80A6EF177DDCF4AFB89493A474F7485FD59"
+    },
+    {
+      "path": "copy/utm-links.csv",
+      "bytes": 2705,
+      "sha256": "46C97D5B2407976EE200F2E7EB367ABEBC9CD5CDE9DD80EFB33DCED49BEBC941"
+    },
+    {
+      "path": "copy/video-scripts.md",
+      "bytes": 2208,
+      "sha256": "12236C6E89B70EE895FBA8F74E9EC7E6E145793096017DE6089F7AF04ADFCF58"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3338,
+      "sha256": "C250DE83C0269662547F7AC54346DFBDB4C8D440E761000B7CD319AE684416E9"
+    },
+    {
+      "path": "scripts/build-distributions.ps1",
+      "bytes": 2636,
+      "sha256": "00E195C4F11241271C414A13D7F38404D72E5F4342ABBE4067153927F1A9E603"
+    },
+    {
+      "path": "scripts/build-manifest.mjs",
+      "bytes": 3543,
+      "sha256": "ED1FE715EB7DA412719AE823CB262431E83C39BDF6F61AC950ED1E4380CCF314"
+    },
+    {
+      "path": "scripts/render-audio.py",
+      "bytes": 3367,
+      "sha256": "DA51D4FBFFD5425FF6DD45E9A0D1919489F4956B91641B278DCCBC72E79032D7"
+    },
+    {
+      "path": "scripts/render-copy.mjs",
+      "bytes": 13530,
+      "sha256": "E8F2E06CEBE411E079A4AEC3956DA7C8CB8066767E2D22D0B924CEB3BE85808E"
+    },
+    {
+      "path": "scripts/render-static.mjs",
+      "bytes": 24496,
+      "sha256": "B361FE41883455D2C7643962C85A18B7FFE58DDCFC1423A34DF1B16A92D548AA"
+    },
+    {
+      "path": "scripts/render-videos.mjs",
+      "bytes": 7858,
+      "sha256": "D61A43937FD0A39D8CF939384296C7E7FFBEF42816947192F69B583D544BE96A"
+    },
+    {
+      "path": "scripts/video-ad.html",
+      "bytes": 16372,
+      "sha256": "9DE0CFF679656E67534499871BD4FDE9CB393E95905C3179EB4E6DE4339B7E13"
+    },
+    {
+      "path": "source/IMAGEGEN-PROMPT.md",
+      "bytes": 2486,
+      "sha256": "52F784F67C657BAE15E7199BB8C3A422FCFD59EC5C2355C87D6CDFC6AA62F5E2"
+    },
+    {
+      "path": "source/three-tracks-command-core.png",
+      "bytes": 2149563,
+      "sha256": "47ED00AF605645FE6157174F1DA4AFA90BFF6BE78F51898C1C644338DACBE566",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1672,
+        "height": 941,
+        "channels": 3,
+        "hasAlpha": false
+      }
+    },
+    {
+      "path": "static/editable/operatoros-overview-feed-1080x1350.svg",
+      "bytes": 5004289,
+      "sha256": "7524EAF5455A9AC540E9A4CE0EBF0243008A6EA0C3A893373387D5087923019D",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1350,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-overview-landscape-1200x628.svg",
+      "bytes": 5004279,
+      "sha256": "14C313549F1E7EEF6D8653DE53406F049FF22637561919364BCF6E6B38314A58",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1200,
+        "height": 628,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-overview-square-1200x1200.svg",
+      "bytes": 5004286,
+      "sha256": "9900A2A6DF6BA4424A8C1BBCBE4562E02D2D7AC833AED9177607BB51CE17F4C3",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1200,
+        "height": 1200,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-overview-story-1080x1920.svg",
+      "bytes": 5004328,
+      "sha256": "073C1D5777C6D005EDD6E50B8E7222FE6CACFF57629B362E313F3C03A42ED6CB",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-pricing-landscape-1200x628.svg",
+      "bytes": 4885283,
+      "sha256": "3B7CA4C07D3CD95EB1729B29D4505BC6D2FD01CAF1D5153C6491291354E1A30A",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1200,
+        "height": 628,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-pricing-story-1080x1920.svg",
+      "bytes": 4885775,
+      "sha256": "3F5EA39014C3D356963D7329021ADB091D3FCD04286A46EC6BB6E79312D27FFD",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-track-pulsedesk-square-1080x1080.svg",
+      "bytes": 4723199,
+      "sha256": "C9EA644EE1C605C1BB4DB053D6AF51EC5676421C0B85F6CFEE112CFA0FDB31D9",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1080,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-track-pulsedesk-story-1080x1920.svg",
+      "bytes": 4724018,
+      "sha256": "7AB8D5B54340C60066F2B00540E95AE239D4B7820BC861E16F4FFB13885403B9",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-track-techdeck-square-1080x1080.svg",
+      "bytes": 4655287,
+      "sha256": "C1CDB33110B2DE672D0E7968BC177DA26D08F43AD693DDDF3570D03A480E4A3B",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1080,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-track-techdeck-story-1080x1920.svg",
+      "bytes": 4656106,
+      "sha256": "6C5C1DB8E2D3452BC3301B14DFA26608A1BC5DB3325277D15FB0D30DEEA5D150",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-track-tradeflowkit-square-1080x1080.svg",
+      "bytes": 4649694,
+      "sha256": "DC8110FF440751A38A563C335855561136E5FF22A60EA2BAD4969E624B864FD1",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1080,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/editable/operatoros-track-tradeflowkit-story-1080x1920.svg",
+      "bytes": 4650513,
+      "sha256": "E90229741F93C6F866B6733591101E87F739C35EA634CDC3EF1AEFEE69BEDE0F",
+      "media": {
+        "type": "editable_vector",
+        "format": "svg",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/google-rda-clean-landscape-1200x628.png",
+      "bytes": 1093842,
+      "sha256": "FD970C14431CD922F64C5FBD752AAACFD568AE84E98166ABC2FD403FD56BB5F0",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1200,
+        "height": 628,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/google-rda-clean-square-1200x1200.png",
+      "bytes": 1797962,
+      "sha256": "37B7E60DB6A3E181B5DF2A7348CD70BAD087EF0FFC5975B0D2E63447D3E0320F",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1200,
+        "height": 1200,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/google-rda-clean-vertical-900x1600.png",
+      "bytes": 1608422,
+      "sha256": "F96AEAEE44138613D8212A4174F33F4ADC0D7EF3C00B86082E893660B8181002",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 900,
+        "height": 1600,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-logo-square-1200x1200.png",
+      "bytes": 873217,
+      "sha256": "94CAB39655C22B08F35971ED058A7148EAB21273C801DB1A1996D8BDCCCC8631",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1200,
+        "height": 1200,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-overview-feed-1080x1350.png",
+      "bytes": 1067467,
+      "sha256": "CBC3DF544805A22BFCE4EF7DBB8DC96CA6A070C62ED0FB273937200F64453686",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1350,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-overview-landscape-1200x628.png",
+      "bytes": 662223,
+      "sha256": "B2F8D5D9818D233B0AF12DB17E1BCB08C120DD1B35949B909177AC593BF3D325",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1200,
+        "height": 628,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-overview-square-1200x1200.png",
+      "bytes": 1092884,
+      "sha256": "DCF2BF1BE92C7CF1A4077A8B1BED07873FDBB3E05EB8D2E00D15CD551A450777",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1200,
+        "height": 1200,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-overview-story-1080x1920.png",
+      "bytes": 1116304,
+      "sha256": "8D051E4522ADDE04662C78F05A51E46E205FF59399C055F6A0F1C67D01D0A2EF",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-pricing-landscape-1200x628.png",
+      "bytes": 498116,
+      "sha256": "195F63C1C74136BBCCA47D8CE01A1C547D65C80EC66A7983218057D1FA0BB7D9",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1200,
+        "height": 628,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-pricing-story-1080x1920.png",
+      "bytes": 625923,
+      "sha256": "90B372BE2636F3284D95AE74D9EDFB884B07C151DDDF7C0D290B9A1ACB5338AB",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-track-pulsedesk-square-1080x1080.png",
+      "bytes": 693416,
+      "sha256": "6D88F28EDEB7BDF17D336FA6F8962C9E1BAE85301CAD172ADA77D54A9F4569A4",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1080,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-track-pulsedesk-story-1080x1920.png",
+      "bytes": 895394,
+      "sha256": "B0A9709A802D9A4311D3D6626FB9FB5AECFA7C264544E77A32EF8CAFA8B0228C",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-track-techdeck-square-1080x1080.png",
+      "bytes": 705346,
+      "sha256": "6BA49F279CC9F066E09AE4ADA5678188EE17C0F48A11557CEF927374CEBCC530",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1080,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-track-techdeck-story-1080x1920.png",
+      "bytes": 936258,
+      "sha256": "D083FA27A7EE113F9C5BCE532D8F976CD13DB3F77B3CCF50234BF07F3FCB8E20",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-track-tradeflowkit-square-1080x1080.png",
+      "bytes": 579419,
+      "sha256": "027817DB84D063FA7E58E6AC0DD9AF9F8D4EE3CC06F47388C2AF432474275B91",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1080,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "static/operatoros-track-tradeflowkit-story-1080x1920.png",
+      "bytes": 710364,
+      "sha256": "51B91785EE7EEF8F73CD5B5BBC75738C7E122365D44C037DEF0CCB0B2A7644FB",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1920,
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-en.srt",
+      "bytes": 544,
+      "sha256": "30988C3BD1C5755104200C70023AC896C80352829F1C1167C88BE6911838905D"
+    },
+    {
+      "path": "video/operatoros-three-tracks-landscape-1920x1080-poster.png",
+      "bytes": 910187,
+      "sha256": "5452EF93477F53F10B85BB52C18054F055DED43A9E88581C3D896DC1A923295B",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1920,
+        "height": 1080,
+        "channels": 3,
+        "hasAlpha": false
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-landscape-1920x1080.mp4",
+      "bytes": 9300887,
+      "sha256": "EA95454109A1E84E4277CA4EE1BEDCF7C6A0A1585BFC32C44827C937BAC45510",
+      "media": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1920,
+            "height": 1080,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "30/1"
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+          }
+        ],
+        "format": {
+          "duration": "15.100000",
+          "size": "9300887"
+        }
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-landscape-1920x1080.webm",
+      "bytes": 2174738,
+      "sha256": "37598DA31A3EA6E3E287A6CCBD8D5640D16697BA1AE17B483A92E61AC2D00925",
+      "media": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "vp8",
+            "codec_type": "video",
+            "width": 1920,
+            "height": 1080,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "25/1"
+          }
+        ],
+        "format": {
+          "duration": "16.720000",
+          "size": "2174738"
+        }
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-original-score.wav",
+      "bytes": 2918444,
+      "sha256": "208F27035FBF43D4D15DE905B0E9FBC9888858ADA37ECDF12B27685BE94C8458",
+      "media": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "pcm_s16le",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+          }
+        ],
+        "format": {
+          "duration": "15.200000",
+          "size": "2918444"
+        }
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-square-1080x1080-poster.png",
+      "bytes": 644314,
+      "sha256": "94CDDFD67D02B94E1C0CC64FA1E3E2CA38FD5B0EE0666C21843E7DD88D29CC28",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1080,
+        "channels": 3,
+        "hasAlpha": false
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-square-1080x1080.mp4",
+      "bytes": 6018024,
+      "sha256": "34AE9D517B5FA8F429D5D70A0B19BB2393C9AAE25CBF7D53A7553B2091B59F93",
+      "media": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1080,
+            "height": 1080,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "30/1"
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+          }
+        ],
+        "format": {
+          "duration": "15.100000",
+          "size": "6018024"
+        }
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-square-1080x1080.webm",
+      "bytes": 1904868,
+      "sha256": "45703905F0A77A9B5C5E77CC42AE2BBE01C1B4B1BEEB55EDA9C34C3EAC0F1C6B",
+      "media": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "vp8",
+            "codec_type": "video",
+            "width": 1080,
+            "height": 1080,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "25/1"
+          }
+        ],
+        "format": {
+          "duration": "16.600000",
+          "size": "1904868"
+        }
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-vertical-1080x1920-poster.png",
+      "bytes": 866785,
+      "sha256": "62314D840010D25A5AF1B1140E4356AC30E04C07E0F29055CBB4988FB967FFDD",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1080,
+        "height": 1920,
+        "channels": 3,
+        "hasAlpha": false
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-vertical-1080x1920.mp4",
+      "bytes": 8617416,
+      "sha256": "CDC9AC787691D6D23701DFD4A3CDC0A5756D15CA82D4C0BA87ADAC5190022611",
+      "media": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1080,
+            "height": 1920,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "30/1"
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+          }
+        ],
+        "format": {
+          "duration": "15.100000",
+          "size": "8617416"
+        }
+      }
+    },
+    {
+      "path": "video/operatoros-three-tracks-vertical-1080x1920.webm",
+      "bytes": 2064796,
+      "sha256": "9ECB9AB1319489AAE3AD515E14F2F5D3F47227D6AEA73B75987EF45701848ADD",
+      "media": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "vp8",
+            "codec_type": "video",
+            "width": 1080,
+            "height": 1920,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "25/1"
+          }
+        ],
+        "format": {
+          "duration": "16.200000",
+          "size": "2064796"
+        }
+      }
+    },
+    {
+      "path": "video/qa/landscape-contact-sheet.png",
+      "bytes": 1075065,
+      "sha256": "D893BD989BD5315E470C11CDAF5D6CC4C0DBAB8BC97C6BC521A037DDCB8CC2C7",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1960,
+        "height": 564,
+        "channels": 3,
+        "hasAlpha": false
+      }
+    },
+    {
+      "path": "video/qa/square-contact-sheet.png",
+      "bytes": 716472,
+      "sha256": "2929C91FAE2CEFB921F62EB8BF820B86BAD1FA9176CBAE9D2C31F70A0369733E",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1120,
+        "height": 564,
+        "channels": 3,
+        "hasAlpha": false
+      }
+    },
+    {
+      "path": "video/qa/vertical-contact-sheet.png",
+      "bytes": 1038845,
+      "sha256": "2828A470788980DFA759B2E3122869A5A83497F6CC4F22D34D7C09F6B92259C7",
+      "media": {
+        "type": "image",
+        "format": "png",
+        "width": 1120,
+        "height": 984,
+        "channels": 3,
+        "hasAlpha": false
+      }
+    },
+    {
+      "path": "video/video-render-report.json",
+      "bytes": 2690,
+      "sha256": "EBDBF6B4E303EFBF2274ABD11D797C80A17080C108A1AB16752E4892E272568E"
+    }
+  ]
+}
