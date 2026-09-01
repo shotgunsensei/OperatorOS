@@ -43,10 +43,21 @@ import {
   MFA_CHALLENGE_TTL_SECONDS,
   regenerateAuthMfaRecoveryCodes,
 } from '../lib/auth-mfa.js';
+import {
+  confirmEmailVerificationToken,
+  invalidateEmailVerificationTokens,
+  issueEmailVerificationToken,
+} from '../lib/email-verification.js';
+import {
+  buildEmailVerificationUrl,
+  sendEmailVerification,
+} from '../lib/email-service.js';
+import { resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
 
 const AUTH_IP_RATE_LIMIT = 10;
 const AUTH_RATE_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_PER_ACCOUNT_LIMIT = 4;
+const EMAIL_VERIFICATION_RATE_LIMIT = 4;
 
 function getIp(request: any): string {
   return (request.ip as string) ?? 'unknown';
@@ -93,6 +104,25 @@ function validateName(name: string): string | null {
   return null;
 }
 
+async function sendVerificationForAddress(email: string, requestedIp: string): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [user] = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
+  if (!user || user.status !== 'active' || user.emailVerifiedAt) return;
+
+  const issued = await issueEmailVerificationToken(user.id, requestedIp);
+  const delivery = await sendEmailVerification({
+    to: user.email,
+    verifyUrl: buildEmailVerificationUrl(issued.token),
+    expiresAt: issued.expiresAt,
+  });
+  await logAudit(user.id, 'email_verification_requested', user.id, {
+    provider: delivery.provider,
+    delivered: delivery.ok,
+    error: delivery.error ?? null,
+    expiresAt: issued.expiresAt.toISOString(),
+  }, requestedIp);
+}
+
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/register', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
@@ -113,35 +143,69 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const normalizedEmail = email.toLowerCase().trim();
 
     const existing = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
-    if (existing.length > 0) {
-      return reply.code(202).send({ ok: true });
+    let user: typeof users.$inferSelect | null = existing[0] ?? null;
+    if (!user) {
+      const passwordHash = await hashPassword(password);
+      user = await db.transaction(async tx => {
+        const [createdUser] = await tx.insert(users).values({
+          email: normalizedEmail,
+          passwordHash,
+          name: name.trim(),
+          role: 'user',
+          status: 'active',
+        }).onConflictDoNothing({ target: users.email }).returning();
+
+        // A concurrent request may have won the unique-email race. Preserve
+        // the non-enumerating response without mutating that existing account.
+        if (!createdUser) return null;
+
+        const { tenant } = await ensurePersonalTenantWithDatabase(tx, createdUser);
+        await ensureFreeAccountAppsWithDatabase(tx, tenant.id, createdUser.id);
+        return createdUser;
+      });
+      if (user) {
+        await logUserActivity(user.id, 'registered', 'user', user.id);
+        await logAudit(user.id, 'user_registered', user.id, { email: normalizedEmail });
+      }
     }
 
-    const passwordHash = await hashPassword(password);
-    const user = await db.transaction(async tx => {
-      const [createdUser] = await tx.insert(users).values({
-        email: normalizedEmail,
-        passwordHash,
-        name: name.trim(),
-        role: 'user',
-        status: 'active',
-      }).onConflictDoNothing({ target: users.email }).returning();
-
-      // A concurrent request may have won the unique-email race. Preserve
-      // the non-enumerating response without mutating that existing account.
-      if (!createdUser) return null;
-
-      const { tenant } = await ensurePersonalTenantWithDatabase(tx, createdUser);
-      await ensureFreeAccountAppsWithDatabase(tx, tenant.id, createdUser.id);
-      return createdUser;
-    });
-
-    if (!user) return reply.code(202).send({ ok: true });
-
-    await logUserActivity(user.id, 'registered', 'user', user.id);
-    await logAudit(user.id, 'user_registered', user.id, { email: normalizedEmail });
-
+    // The response remains identical for new, existing, verified, and
+    // unverified addresses. Delivery details and account existence never
+    // cross the public boundary.
+    await sendVerificationForAddress(normalizedEmail, ip);
     return reply.code(202).send({ ok: true });
+  });
+
+  app.post('/v1/auth/email-verification/request', async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    setAuthResponseHeaders(reply);
+    const ip = getIp(request);
+    const { email } = (request.body ?? {}) as { email?: string };
+    const emailErr = validateEmail(email ?? '');
+    if (emailErr) return reply.code(400).send({ error: emailErr, code: 'VALIDATION_ERROR' });
+    const normalizedEmail = email!.trim().toLowerCase();
+    if (
+      !checkRateLimit(`email-verification:ip:${ip}`, EMAIL_VERIFICATION_RATE_LIMIT, AUTH_RATE_WINDOW_MS)
+      || !checkRateLimit(`email-verification:email:${normalizedEmail}`, EMAIL_VERIFICATION_RATE_LIMIT, AUTH_RATE_WINDOW_MS)
+    ) {
+      return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
+    }
+    await sendVerificationForAddress(normalizedEmail, ip);
+    return reply.code(202).send({ ok: true });
+  });
+
+  app.post('/v1/auth/email-verification/confirm', async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    setAuthResponseHeaders(reply);
+    const { token } = (request.body ?? {}) as { token?: string };
+    const confirmed = await confirmEmailVerificationToken(token ?? '');
+    if (!confirmed) {
+      return reply.code(400).send({ error: 'Verification link is invalid or expired.', code: 'EMAIL_VERIFICATION_INVALID' });
+    }
+    await logAudit(confirmed.userId, 'email_verified', confirmed.userId, {
+      verifiedAt: confirmed.verifiedAt.toISOString(),
+    }, request.ip);
+    return { ok: true, verifiedAt: confirmed.verifiedAt.toISOString() };
   });
 
   // Invitation-specific registration creates a normal OperatorOS account and
@@ -186,6 +250,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
           name: name.trim(),
           role: 'user',
           status: 'active',
+          emailVerifiedAt: new Date(),
         }).onConflictDoNothing({ target: users.email }).returning();
         if (!createdUser) {
           const conflict: any = new Error('An account already exists for this invited email. Sign in to join the organization.');
@@ -509,6 +574,21 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'Session metadata unavailable', code: 'SESSION_METADATA_MISSING' });
     }
 
+    let moduleAccessExpiresAt: Date | null = null;
+    if (session.sessionType === 'module') {
+      const access = await resolveTenantModuleAccess(user.id, session.tenantId, session.moduleId);
+      if (!access.hasAccess) {
+        reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
+        return reply.code(403).send({
+          error: 'Module access is no longer active.',
+          code: 'MODULE_ACCESS_DENIED',
+          moduleId: session.moduleId,
+          reason: access.reason,
+        });
+      }
+      moduleAccessExpiresAt = access.expiresAt ?? null;
+    }
+
     if (!sessionNeedsRefresh(session)) {
       return {
         ok: true,
@@ -517,6 +597,9 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       };
     }
 
+    const moduleMaxAge = moduleAccessExpiresAt
+      ? Math.max(1, Math.floor((moduleAccessExpiresAt.getTime() - Date.now()) / 1000))
+      : undefined;
     const token = signToken({
       userId: user.id,
       email: user.email,
@@ -526,7 +609,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       ...(session.sessionType === 'module'
         ? { tenantId: session.tenantId, moduleId: session.moduleId }
         : {}),
-    });
+    }, { expiresInSeconds: moduleMaxAge });
 
     await db.insert(revokedSessionTokens).values({
       tokenHash: request.authTokenFingerprint,
@@ -537,7 +620,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       expiresAt: new Date(session.exp * 1000),
       reason: 'session_refresh',
     }).onConflictDoNothing();
-    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions({ maxAge: moduleMaxAge }));
     await logAudit(user.id, 'session_refreshed', user.id, {
       scope: session.sessionType,
       moduleId: session.moduleId ?? null,
@@ -699,9 +782,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const oldEmail = user.email;
     const [updated] = await db.update(users).set({
       email: normalizedEmail,
+      emailVerifiedAt: null,
       tokenVersion: sql`token_version + 1`,
       updatedAt: new Date(),
     }).where(eq(users.id, user.id)).returning();
+    await invalidateEmailVerificationTokens(user.id);
     await logAudit(user.id, 'email_changed', user.id, { oldEmail, newEmail: normalizedEmail }, request.ip);
     await logUserActivity(user.id, 'email_changed', 'user', user.id, { oldEmail, newEmail: normalizedEmail });
 

@@ -86,7 +86,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export function signToken(payload: JWTPayload): string {
+export function signToken(payload: JWTPayload, options: { expiresInSeconds?: number } = {}): string {
   const claims = { ...payload, sessionVersion: SESSION_CONTRACT_VERSION };
   if (!isJwtPayload(claims)) {
     throw new Error('Invalid OperatorOS session payload');
@@ -94,7 +94,12 @@ export function signToken(payload: JWTPayload): string {
   return jwt.sign(
     claims,
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRY, algorithm: JWT_ALGORITHM },
+    {
+      expiresIn: options.expiresInSeconds
+        ? Math.max(1, Math.floor(options.expiresInSeconds))
+        : JWT_EXPIRY,
+      algorithm: JWT_ALGORITHM,
+    },
   );
 }
 

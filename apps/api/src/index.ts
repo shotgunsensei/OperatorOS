@@ -52,6 +52,7 @@ import { registerSnapProofOsPhase32Routes } from './routes/snapproofos-phase32-r
 import { registerCrossModuleDataFabricRoutes } from './routes/cross-module-data-fabric-routes.js';
 import { registerOperatorOsMessagingComplianceRoutes } from './routes/operatoros-messaging-compliance-routes.js';
 import { registerTenantMessengerRoutes } from './routes/tenant-messenger-routes.js';
+import { registerCoreSuiteTrialRoutes } from './routes/core-suite-trial-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import {
   startTorqueAssistReservationReaper,
@@ -301,6 +302,7 @@ await registerSnapProofOsPhase32Routes(app);
 await registerCrossModuleDataFabricRoutes(app);
 await registerOperatorOsMessagingComplianceRoutes(app);
 await registerTenantMessengerRoutes(app);
+await registerCoreSuiteTrialRoutes(app);
 
 if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
   await verifyOperatorOSDatabaseRelease();

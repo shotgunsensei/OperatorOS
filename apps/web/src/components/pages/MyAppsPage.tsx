@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Loader2,
   Lock,
+  MailCheck,
   Rocket,
   Settings,
   ShieldCheck,
@@ -32,7 +33,7 @@ import {
   space,
 } from '@/lib/design-tokens';
 import { isSuperAdmin, isTenantAdmin as hasTenantAdminRole } from '@/lib/rbac';
-import { modulesApi, tenantApi } from '@/lib/auth';
+import { authApi, modulesApi, tenantApi, trialApi, type CoreSuiteTrialStatus } from '@/lib/auth';
 import {
   COMMAND_CENTER_MODULES,
   type OperatorOSModuleRegistryEntry,
@@ -43,7 +44,7 @@ interface MyAppsPageProps {
   onNavigate: (page: string) => void;
 }
 
-type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
+type AccessSource = 'plan' | 'addon' | 'trial' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
 
 interface ModuleComponentRef {
@@ -71,6 +72,7 @@ interface ModuleSummary {
   cta: ModuleCta;
   upgrade_target_plan?: string | null;
   addon_price_cents?: number | null;
+  access_expires_at?: string | null;
   reason?: string;
 }
 
@@ -211,6 +213,7 @@ function buildLaunchpadModule(
       source === 'admin_role' ? 'Administrator access'
       : source === 'addon' ? 'Add-on active'
       : source === 'override' ? 'Access granted'
+      : source === 'trial' ? '7-day evaluation access'
       : 'Included in your plan';
     return {
       registry,
@@ -323,6 +326,8 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   const [recentSlugs, setRecentSlugs] = useState<string[]>([]);
   const [switchingTenant, setSwitchingTenant] = useState(false);
   const [repairingTenant, setRepairingTenant] = useState(false);
+  const [trial, setTrial] = useState<CoreSuiteTrialStatus | null>(null);
+  const [trialBusy, setTrialBusy] = useState(false);
 
   const userIsPlatformAdmin = isSuperAdmin((user as any)?.platformRole);
   const userIsTenantAdmin = hasTenantAdminRole(activeRole, (user as any)?.platformRole);
@@ -353,6 +358,20 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   useEffect(() => {
     setRecentSlugs(readRecent());
   }, []);
+
+  const loadTrial = async () => {
+    try {
+      const response = await trialApi.status();
+      setTrial(response.trial);
+    } catch {
+      setTrial(null);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) void loadTrial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   useEffect(() => {
     let alive = true;
@@ -414,6 +433,48 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   const recordLaunch = (card: LaunchpadModule) => {
     pushRecent(card.registry.slug);
     setRecentSlugs(readRecent());
+  };
+
+  const handleTrialAction = async () => {
+    if (!trial || trialBusy) return;
+    if (trial.state === 'expired' || trial.state === 'revoked' || trial.state === 'already_used') {
+      onNavigate('billing');
+      return;
+    }
+    setTrialBusy(true);
+    try {
+      if (trial.state === 'verification_required') {
+        await authApi.requestEmailVerification(user?.email ?? '');
+        toast('Verification email requested. Open the single-use link in your inbox, then return here.', 'success');
+        return;
+      }
+      if (trial.state === 'eligible') {
+        const response = await trialApi.start();
+        setTrial(response.trial);
+        toast('Your seven-day Main Module trial is active.', 'success');
+        if (response.trial.personalTenantId && activeTenant?.id !== response.trial.personalTenantId) {
+          await switchTenant(response.trial.personalTenantId);
+        } else {
+          await load();
+        }
+        return;
+      }
+      if (trial.state === 'active' && trial.personalTenantId && activeTenant?.id !== trial.personalTenantId) {
+        await switchTenant(trial.personalTenantId);
+      }
+    } catch (error: any) {
+      if (error?.code === 'EMAIL_VERIFICATION_REQUIRED') {
+        await loadTrial();
+        toast('Verify your email address before starting the trial.', 'error');
+      } else if (error?.code === 'TRIAL_ALREADY_USED') {
+        await loadTrial();
+        toast('This verified email has already used the evaluation trial.', 'error');
+      } else {
+        toast(error?.error || 'The trial action could not be completed. Nothing changed.', 'error');
+      }
+    } finally {
+      setTrialBusy(false);
+    }
   };
 
   const handleTenantChange = async (tenantId: string) => {
@@ -526,6 +587,65 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
           </div>
         </div>
       </header>
+
+      {trial && trial.state !== 'unavailable' && (
+        <section
+          data-testid="core-suite-trial-card"
+          aria-label="Main Module evaluation trial"
+          style={{
+            marginBottom: space.xl,
+            padding: '18px 20px',
+            borderRadius: radius.lg,
+            border: `1px solid ${trial.state === 'active' ? semantic.accentSuccess + '88' : semantic.accent + '66'}`,
+            background: trial.state === 'active'
+              ? 'linear-gradient(135deg, rgba(63,185,80,0.13), rgba(79,140,255,0.08)), #121820'
+              : 'linear-gradient(135deg, rgba(79,140,255,0.13), rgba(188,140,255,0.08)), #121820',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+            gap: space.lg,
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', gap: 9, alignItems: 'center', color: trial.state === 'active' ? semantic.accentSuccess : semantic.accent, fontSize: fontSize.xs, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {trial.state === 'verification_required' ? <MailCheck size={15} /> : <Clock size={15} />}
+              No card required
+            </div>
+            <h2 style={{ color: '#fff', fontSize: 20, margin: '8px 0 5px' }}>
+              {trial.state === 'active' ? 'Your Main Module trial is active' : trial.state === 'eligible' ? 'Try the Main Modules for seven days' : trial.state === 'verification_required' ? 'Verify your email to start the trial' : 'Your evaluation period has ended'}
+            </h2>
+            <p style={{ color: semantic.textMuted, fontSize: fontSize.body, lineHeight: 1.55, margin: 0 }}>
+              TradeFlowKit, TechDeck, and PulseDesk {trial.state === 'active'
+                ? `are unlocked in your personal workspace${trial.endsAt ? ` until ${new Date(trial.endsAt).toLocaleString()}` : ''}.`
+                : trial.state === 'eligible'
+                  ? 'will unlock only in your personal workspace. Companion applications remain separately gated.'
+                  : trial.state === 'verification_required'
+                    ? 'A single-use email link proves the identity eligible for this one-time offer.'
+                    : 'Your records are preserved. A server-confirmed plan or add-on restores paid access.'}
+            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            {(trial.state !== 'active' || activeTenant?.id !== trial.personalTenantId) && (
+              <button
+                type="button"
+                data-testid="button-core-suite-trial-action"
+                disabled={trialBusy}
+                onClick={() => void handleTrialAction()}
+                style={{ ...buttonStyles.primary, minHeight: 42, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #58a6ff, #8b5cf6)' }}
+              >
+                {trialBusy && <Loader2 size={15} className="spin" />}
+                {trial.state === 'verification_required'
+                  ? 'Send verification email'
+                  : trial.state === 'eligible'
+                    ? 'Start my 7-day trial'
+                    : trial.state === 'active'
+                      ? 'Switch to trial workspace'
+                      : 'View plans'}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       {showSetup && <section
         data-testid="ecosystem-activation-path"

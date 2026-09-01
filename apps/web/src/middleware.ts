@@ -77,7 +77,7 @@ const MAX_LOGIN_REDIRECTS = 3;
 // redirect target. The navigation contract resolves from the registered app
 // host, so this constant is always `https://app.operatoros.net/`.
 const CANONICAL_APP_URL = DEFAULT_OPERATOROS_APPS_URL;
-const AUTH_ENTRY_MODES = new Set(['register', 'forgot-password', 'reset-password']);
+const AUTH_ENTRY_MODES = new Set(['register', 'forgot-password', 'reset-password', 'verify-email']);
 
 function withAuthSecurityHeaders(res: NextResponse): NextResponse {
   res.headers.set('Cache-Control', 'no-store');
@@ -411,6 +411,10 @@ async function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModu
   const requestedMode = isCanonicalLoginEntry ? req.nextUrl.searchParams.get('mode') : null;
   if (requestedMode && AUTH_ENTRY_MODES.has(requestedMode)) {
     url.searchParams.set('mode', requestedMode);
+    if (requestedMode === 'verify-email') {
+      const verificationToken = req.nextUrl.searchParams.get('token');
+      if (verificationToken) url.searchParams.set('token', verificationToken);
+    }
   }
   const res = NextResponse.redirect(url, 307);
   const secureCookie = onOperatorOSHost || req.nextUrl.protocol === 'https:';

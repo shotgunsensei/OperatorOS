@@ -117,6 +117,22 @@ function checkCore(env, issues, warnings) {
       message: 'is not used by SSO v1 and should be removed unless an emergency rollback is approved',
     });
   }
+  if (['1', 'true'].includes(String(env.OPERATOROS_SELF_SERVICE_TRIALS_ENABLED).toLowerCase())) {
+    requirePresent(env, issues, 'core', [
+      'OPERATOROS_TRIAL_IDENTITY_HMAC_SECRET',
+      'RESEND_API_KEY',
+    ]);
+    if (
+      isPresent(env, 'OPERATOROS_TRIAL_IDENTITY_HMAC_SECRET')
+      && env.OPERATOROS_TRIAL_IDENTITY_HMAC_SECRET.trim().length < 32
+    ) {
+      addIssue(issues, 'core', 'OPERATOROS_TRIAL_IDENTITY_HMAC_SECRET', 'must contain at least 32 characters when trials are enabled');
+    }
+    const trialSender = isPresent(env, 'EMAIL_FROM') || isPresent(env, 'INVITE_FROM_EMAIL');
+    if (!trialSender) {
+      addIssue(issues, 'core', 'EMAIL_FROM', 'or INVITE_FROM_EMAIL is required when trials are enabled');
+    }
+  }
 
   if (isPresent(env, 'CORS_ALLOWED_ORIGINS')) {
     const values = env.CORS_ALLOWED_ORIGINS.split(',').map(value => value.trim()).filter(Boolean);

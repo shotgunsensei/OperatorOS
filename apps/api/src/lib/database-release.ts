@@ -57,6 +57,7 @@ import { ensureAuthMfaTables } from './auth-mfa-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
+import { ensureCoreSuiteTrialTables } from './core-suite-trial-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -126,6 +127,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   auth_mfa_tables: ensureAuthMfaTables,
   callcommand_commercial_runtime: ensureCallCommandCommercialTables,
   callcommand_managed_number_provisioning: ensureCallCommandManagedNumberTables,
+  core_suite_trial_tables: ensureCoreSuiteTrialTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -360,6 +362,19 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
         WHERE table_schema='public' AND table_name='callcommand_number_orders' AND column_name='provisioning_state'
       )
       AS callcommand_managed_number_provisioning
+      ,EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='users' AND column_name='email_verified_at'
+      )
+      AND to_regclass('public.email_verification_tokens') IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='email_verification_tokens' AND column_name='email_fingerprint'
+      )
+      AND to_regclass('public.account_trials') IS NOT NULL
+      AND to_regclass('public.uq_account_trials_identity_offer') IS NOT NULL
+      AND to_regclass('public.uq_account_trials_user_offer') IS NOT NULL
+      AS core_suite_trial_tables
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

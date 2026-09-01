@@ -5,6 +5,16 @@ Status: current execution plan
 Authority: `docs/IMPLEMENTATION_STATUS.md` records the latest evidence and
 `docs/modules/MODULE_PARITY_INDEX.md` records module state.
 
+## Release v59 evaluation status
+
+The verified-email Core Suite evaluation is source/local implemented behind a
+default-off feature flag. It grants one 168-hour personal-workspace window for
+TradeFlowKit, TechDeck, and PulseDesk without changing permanent-free,
+companion, billing, data-retention, or module-parity boundaries. Production
+activation remains a gated release operation requiring backup/apply, stable
+HMAC and email configuration, external-inbox and exact-host expiry acceptance,
+paid entitlement restoration evidence, monitoring, and rollback readiness.
+
 ## Phase 40 certification status
 
 Phase 40 evaluated candidate

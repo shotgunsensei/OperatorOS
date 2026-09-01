@@ -24,6 +24,7 @@ import LoginPage from '@/components/pages/LoginPage';
 import RegisterPage from '@/components/pages/RegisterPage';
 import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/components/pages/ResetPasswordPage';
+import VerifyEmailPage from '@/components/pages/VerifyEmailPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import ContactLink from '@/components/ContactLink';
 import { brand } from '@/lib/brand';
@@ -42,7 +43,7 @@ function safeNext(raw: string | null): string {
   return sanitizeReturnTo(raw, '/app');
 }
 
-type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
+type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password' | 'verify-email';
 
 function LoginGate() {
   const { user, loading } = useAuth();
@@ -54,7 +55,7 @@ function LoginGate() {
   // the request body rather than read from the URL.
   const initialMode: AuthMode = ((): AuthMode => {
     const m = params.get('mode');
-    if (m === 'register' || m === 'forgot-password' || m === 'reset-password') return m;
+    if (m === 'register' || m === 'forgot-password' || m === 'reset-password' || m === 'verify-email') return m;
     return 'login';
   })();
   const [mode, setMode] = React.useState<AuthMode>(initialMode);
@@ -62,7 +63,7 @@ function LoginGate() {
   const transactionStarted = React.useRef(false);
 
   useEffect(() => {
-    if (loading || !user || transactionStarted.current) return;
+    if (mode === 'verify-email' || loading || !user || transactionStarted.current) return;
     transactionStarted.current = true;
 
     const clientId = params.get('client_id');
@@ -112,9 +113,9 @@ function LoginGate() {
     // auth-host session makes the second hop silent.
     if (next.startsWith('/')) router.replace(next);
     else window.location.assign(next);
-  }, [loading, user, next, router]);
+  }, [loading, mode, user, next, router]);
 
-  if (loading || (user && !launchError)) {
+  if (loading || (mode !== 'verify-email' && user && !launchError)) {
     return (
       <div
         style={{
@@ -162,6 +163,8 @@ function LoginGate() {
       return <ForgotPasswordPage onSwitch={(target) => setMode(target)} />;
     case 'reset-password':
       return <ResetPasswordPage onSwitch={() => setMode('login')} />;
+    case 'verify-email':
+      return <VerifyEmailPage onSwitch={() => setMode('login')} />;
     case 'login':
     default:
       return <LoginPage onSwitch={(target) => setMode(target)} />;

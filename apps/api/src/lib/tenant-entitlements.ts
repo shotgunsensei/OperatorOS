@@ -31,6 +31,7 @@ import {
 } from './product-entitlements.js';
 import { hasPlatformAdminAuthority } from './rbac.js';
 import { moduleAccessLevelToEffective, tenantRoleToEffective } from './role-aliases.js';
+import { resolveCoreSuiteTrialAccess } from './core-suite-trial.js';
 
 const LAUNCHABLE_TENANT_MODULE_STATUSES = ['enabled', 'trial', 'purchased', 'beta'] as const;
 const LAUNCHABLE_GLOBAL_MODULE_STATUSES = new Set(['live', 'active', 'beta']);
@@ -65,7 +66,7 @@ export type TenantModuleGrantSource =
   | 'addon'
   | 'trial';
 
-export type TenantModuleAccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
+export type TenantModuleAccessSource = 'plan' | 'addon' | 'trial' | 'override' | 'admin_role' | null;
 export type TenantModuleAccessLevel = 'none' | 'viewer' | 'user' | 'manager';
 
 export interface UserTenantMembership {
@@ -89,6 +90,7 @@ export interface TenantModuleAccessDecision {
   tenantModule: TenantModuleRow | null;
   userModuleAccess: TenantUserModuleAccessRow | null;
   viaPlatformRole: boolean;
+  expiresAt?: Date | null;
 }
 
 export class TenantEntitlementError extends Error {
@@ -138,6 +140,7 @@ function entitlementTypeFromGrantSource(
 
 function sourceFromTenantModule(tm: TenantModuleRow | null | undefined): TenantModuleAccessSource {
   if (!tm) return 'plan';
+  if (tm.status === 'trial' || tm.source === 'trial') return 'trial';
   return tm.status === 'purchased' || tm.source === 'addon' ? 'addon' : 'plan';
 }
 
@@ -495,6 +498,26 @@ export async function resolveTenantModuleAccess(
       tenantModule: null,
       userModuleAccess,
       viaPlatformRole: false,
+    };
+  }
+
+  // The evaluation trial is intentionally the last grant source. Real plan,
+  // add-on, tenant entitlement, and explicit access rows win first. It is
+  // user-bound, personal-workspace-only, and evaluated against database time
+  // on every request; no persisted tenant-wide grant can outlive its window.
+  const trial = await resolveCoreSuiteTrialAccess(userId, tenantId, module.slug);
+  if (trial.granted) {
+    return {
+      tenantId,
+      moduleSlug: module.slug,
+      moduleId: module.id,
+      hasAccess: true,
+      source: 'trial',
+      accessLevel: tenantViewer ? 'viewer' : 'user',
+      tenantModule: null,
+      userModuleAccess,
+      viaPlatformRole: false,
+      expiresAt: trial.expiresAt,
     };
   }
 

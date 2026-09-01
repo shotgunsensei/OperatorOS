@@ -19,9 +19,10 @@ import { getCanonicalModuleDisplayName } from '@operatoros/sdk';
  *   2. override    — explicit per-user grant or revoke
  *   3. addon       — paid per-module subscription
  *   4. plan        — comes with the user's active plan
- *   5. null        — no access (locked / coming_soon / disabled / no entitlement)
+ *   5. trial       — time-bounded Main Module access in the owner's personal workspace
+ *   6. null        — no access (locked / coming_soon / disabled / no entitlement)
  */
-export type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
+export type AccessSource = 'plan' | 'addon' | 'trial' | 'override' | 'admin_role' | null;
 
 /**
  * Spec-aligned CTA taxonomy. Frontends MUST match on these literals
@@ -75,6 +76,7 @@ export interface UserModuleSummary {
   cta: ModuleCta;
   upgrade_target_plan: string | null;
   addon_price_cents: number | null;
+  access_expires_at: string | null;
   reason?: string;
 }
 
@@ -314,6 +316,7 @@ export async function getUserModules(userId: string, tenantId: string): Promise<
       cta,
       upgrade_target_plan: upgradeTarget,
       addon_price_cents: addonPriceCents,
+      access_expires_at: access.expiresAt?.toISOString() ?? null,
       reason: access.reason,
     });
   }
@@ -351,6 +354,7 @@ export async function getModuleForUser(userId: string, tenantId: string, moduleS
     cta,
     upgrade_target_plan: upgradeTarget,
     addon_price_cents: addonPriceCents,
+    access_expires_at: access.expiresAt?.toISOString() ?? null,
     reason: access.reason,
   };
 }
@@ -521,6 +525,7 @@ async function hasModuleAccessTenantScoped(
       hasAccess: decision.hasAccess,
       source: decision.source,
       reason: decision.reason,
+      expiresAt: decision.expiresAt ?? null,
     };
   } catch (err) {
     console.error('[entitlement] hasModuleAccess (tenant-scoped) error:', err);

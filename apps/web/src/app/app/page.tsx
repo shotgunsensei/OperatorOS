@@ -11,6 +11,7 @@ import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/components/pages/ResetPasswordPage';
 import SuspendedPage from '@/components/pages/SuspendedPage';
 import UnauthorizedPage from '@/components/pages/UnauthorizedPage';
+import VerifyEmailPage from '@/components/pages/VerifyEmailPage';
 import AiToolsPage from '@/components/pages/AiToolsPage';
 import BillingPage from '@/components/pages/BillingPage';
 import SettingsPage from '@/components/pages/SettingsPage';
@@ -45,6 +46,16 @@ function initialConsolePage(): string {
   return requested && LINKABLE_CONSOLE_PAGES.has(requested) ? requested : 'my-apps';
 }
 
+type AuthPage = 'login' | 'register' | 'forgot-password' | 'reset-password' | 'verify-email';
+
+function initialAuthPage(): AuthPage {
+  if (typeof window === 'undefined') return 'login';
+  const mode = new URLSearchParams(window.location.search).get('mode');
+  return mode === 'register' || mode === 'forgot-password' || mode === 'reset-password' || mode === 'verify-email'
+    ? mode
+    : 'login';
+}
+
 /**
  * Console route — /app
  *
@@ -65,7 +76,7 @@ function initialConsolePage(): string {
 function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
   const { activeRole: tenantRole } = useTenant();
-  const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
+  const [authPage, setAuthPage] = useState<AuthPage>(initialAuthPage);
   const [activePage, setActivePage] = useState<string>(initialConsolePage);
 
   useEffect(() => {
@@ -94,6 +105,7 @@ function AppContent() {
     if (authPage === 'register') return <RegisterPage onSwitch={handleSwitch} />;
     if (authPage === 'forgot-password') return <ForgotPasswordPage onSwitch={handleSwitch} />;
     if (authPage === 'reset-password') return <ResetPasswordPage onSwitch={handleSwitch} />;
+    if (authPage === 'verify-email') return <VerifyEmailPage onSwitch={handleSwitch} />;
     return <LoginPage onSwitch={handleSwitch} />;
   }
 

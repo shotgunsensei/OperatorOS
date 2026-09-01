@@ -83,6 +83,12 @@ export const authApi = {
   resetPassword: (token: string, newPassword: string) =>
     apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
 
+  requestEmailVerification: (email: string) =>
+    apiFetch('/auth/email-verification/request', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  confirmEmailVerification: (token: string) =>
+    apiFetch('/auth/email-verification/confirm', { method: 'POST', body: JSON.stringify({ token }) }),
+
   updateProfile: (data: { name?: string; avatarUrl?: string }) =>
     apiFetch('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
 
@@ -3026,4 +3032,33 @@ export const modulesApi = {
     apiFetch('/billing/addons/subscribe', { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
   cancelAddon: (moduleSlug: string) =>
     apiFetch('/billing/addons/cancel', { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
+};
+
+export type CoreSuiteTrialState =
+  | 'unavailable'
+  | 'verification_required'
+  | 'eligible'
+  | 'active'
+  | 'expired'
+  | 'revoked'
+  | 'already_used';
+
+export interface CoreSuiteTrialStatus {
+  offerCode: string;
+  policyVersion: number;
+  durationDays: 7;
+  durationHours: 168;
+  modules: readonly ['tradeflowkit', 'techdeck', 'pulsedesk'];
+  featureEnabled: boolean;
+  emailVerified: boolean;
+  personalTenantId: string | null;
+  state: CoreSuiteTrialState;
+  startedAt: string | null;
+  endsAt: string | null;
+  remainingSeconds: number;
+}
+
+export const trialApi = {
+  status: () => apiFetch('/trials/core-suite') as Promise<{ trial: CoreSuiteTrialStatus }>,
+  start: () => apiFetch('/trials/core-suite/start', { method: 'POST' }) as Promise<{ trial: CoreSuiteTrialStatus }>,
 };

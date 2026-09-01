@@ -26,6 +26,12 @@ export interface InviteEmailInput {
   expiresAt: Date;
 }
 
+export interface EmailVerificationInput {
+  to: string;
+  verifyUrl: string;
+  expiresAt: Date;
+}
+
 export interface SendResult {
   ok: boolean;
   provider: 'disabled' | 'test' | 'resend';
@@ -121,7 +127,15 @@ export function getEmailFromHealth(): { configured: boolean; provider: 'resend' 
   };
 }
 
-async function sendViaResend(input: InviteEmailInput): Promise<SendResult> {
+interface TransactionalEmail {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  testId: string;
+}
+
+async function sendViaResend(input: TransactionalEmail): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY!;
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -132,9 +146,9 @@ async function sendViaResend(input: InviteEmailInput): Promise<SendResult> {
     body: JSON.stringify({
       from: getFromAddress(),
       to: [input.to],
-      subject: inviteSubject(input),
-      text: inviteText(input),
-      html: inviteHtml(input),
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
     }),
     signal: AbortSignal.timeout(15_000),
   });
@@ -150,11 +164,11 @@ async function sendViaResend(input: InviteEmailInput): Promise<SendResult> {
   return { ok: true, provider: 'resend', id: data.id };
 }
 
-function sendViaTest(_input: InviteEmailInput): SendResult {
-  return { ok: true, provider: 'test', id: 'operatoros-test-invite' };
+function sendViaTest(input: TransactionalEmail): SendResult {
+  return { ok: true, provider: 'test', id: input.testId };
 }
 
-export async function sendInviteEmail(input: InviteEmailInput): Promise<SendResult> {
+async function sendTransactionalEmail(input: TransactionalEmail): Promise<SendResult> {
   try {
     const resendConfigured = Boolean(
       process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL),
@@ -177,6 +191,48 @@ export async function sendInviteEmail(input: InviteEmailInput): Promise<SendResu
   }
 }
 
+export async function sendInviteEmail(input: InviteEmailInput): Promise<SendResult> {
+  return sendTransactionalEmail({
+    to: input.to,
+    subject: inviteSubject(input),
+    text: inviteText(input),
+    html: inviteHtml(input),
+    testId: 'operatoros-test-invite',
+  });
+}
+
+export async function sendEmailVerification(input: EmailVerificationInput): Promise<SendResult> {
+  const expires = input.expiresAt.toUTCString();
+  const text = [
+    'Verify your OperatorOS email address',
+    '',
+    'Confirm this address to make verified-account features available:',
+    input.verifyUrl,
+    '',
+    `This single-use link expires on ${expires}.`,
+    '',
+    'If you did not request this email, you can safely ignore it.',
+    '',
+    '— OperatorOS',
+  ].join('\n');
+  const html = `<!doctype html>
+<html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;line-height:1.5">
+  <h1 style="font-size:20px">Verify your OperatorOS email</h1>
+  <p>Confirm this address to make verified-account features available.</p>
+  <p><a href="${escapeAttr(input.verifyUrl)}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:600">Verify email</a></p>
+  <p style="color:#555;font-size:13px">Or paste this link into your browser:<br><a href="${escapeAttr(input.verifyUrl)}">${escapeHtml(input.verifyUrl)}</a></p>
+  <p style="color:#555;font-size:13px">This single-use link expires on ${escapeHtml(expires)}.</p>
+  <p style="color:#888;font-size:12px">If you did not request this email, you can safely ignore it.</p>
+</body></html>`;
+  return sendTransactionalEmail({
+    to: input.to,
+    subject: 'Verify your OperatorOS email address',
+    text,
+    html,
+    testId: 'operatoros-test-email-verification',
+  });
+}
+
 /**
  * Construct the user-facing accept URL for an invite token. We point at the
  * web app (not the bare API) so the recipient hits a normal browser flow that
@@ -194,4 +250,23 @@ export function buildInviteAcceptUrl(token: string): string {
     resolveAppBaseUrl()
   ).replace(/\/+$/, '');
   return `${base}/invites/${encodeURIComponent(token)}`;
+}
+
+export function buildEmailVerificationUrl(token: string): string {
+  const configured = (
+    process.env.OPERATOROS_BASE_URL ||
+    process.env.APP_BASE_URL ||
+    process.env.WEB_BASE_URL ||
+    resolveAppBaseUrl()
+  ).replace(/\/+$/, '');
+  const url = new URL(configured);
+  if (url.hostname === 'operatoros.net' || url.hostname.endsWith('.operatoros.net')) {
+    url.protocol = 'https:';
+    url.port = '';
+    url.hostname = 'auth.operatoros.net';
+  }
+  url.pathname = '/login';
+  const params = new URLSearchParams({ mode: 'verify-email', token });
+  url.search = params.toString();
+  return url.toString();
 }

@@ -153,6 +153,8 @@ export async function ensureSchemaReady() {
   await ensureTenantInvitationConsent();
   const { ensureAuthMfaTables } = await import('../src/lib/auth-mfa-db-init.js');
   await ensureAuthMfaTables();
+  const { ensureCoreSuiteTrialTables } = await import('../src/lib/core-suite-trial-db-init.js');
+  await ensureCoreSuiteTrialTables();
   await ensureTestPlans();
 }
 

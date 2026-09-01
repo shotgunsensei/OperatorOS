@@ -1,5 +1,22 @@
 # OperatorOS module parity index
 
+## Core Suite verified-email evaluation overlay (2026-09-01)
+
+Release v59 changes shared OperatorOS access policy, not product capability or
+module completeness. One verified account may evaluate TradeFlowKit, TechDeck,
+and PulseDesk for the same 168-hour server-owned window in its personal tenant.
+The allowlist is exact; organization tenants, permanent-free applications,
+companions, and all other modules retain their existing entitlement boundaries.
+
+Trial access is isolated from Stripe and `tenant_modules`, subordinate to
+explicit denies and paid plan/add-on grants, rechecked across SSO/session
+refresh, and capped at the database expiry. Expiry removes only this access
+source and preserves all module records. Focused trial, email, release,
+auth/SSO, customer-shell, typecheck, production-build, and disposable
+apply/reapply evidence passes locally. No deployed browser/email/Stripe or
+production database evidence exists, so TradeFlowKit, TechDeck, and PulseDesk
+retain their prior consolidation states; no module is promoted to state 5.
+
 ## CallCommand managed-number provisioning overlay (2026-08-31)
 
 Release v58 now supplies the OperatorOS-native number lifecycle missing from

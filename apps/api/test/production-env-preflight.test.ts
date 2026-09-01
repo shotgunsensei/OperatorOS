@@ -102,6 +102,28 @@ test('P22-PREFLIGHT-001: core readiness requires an exact 32-byte shared secret 
   assert.ok(malformed.issues.some((issue: { name: string }) => issue.name === 'SHARED_SECRET_ENCRYPTION_KEY'));
 });
 
+test('enabled self-service trials require a stable identity HMAC and transactional email', () => {
+  const missing = preflight.evaluateProductionEnvironment({
+    ...coreEnv,
+    OPERATOROS_SELF_SERVICE_TRIALS_ENABLED: '1',
+  });
+  assert.equal(missing.ok, false);
+  assert.deepEqual(missing.issues.map((issue: { name: string }) => issue.name), [
+    'OPERATOROS_TRIAL_IDENTITY_HMAC_SECRET',
+    'RESEND_API_KEY',
+    'EMAIL_FROM',
+  ]);
+
+  const configured = preflight.evaluateProductionEnvironment({
+    ...coreEnv,
+    OPERATOROS_SELF_SERVICE_TRIALS_ENABLED: '1',
+    OPERATOROS_TRIAL_IDENTITY_HMAC_SECRET: 'trial-identity-test-secret-32-characters-plus',
+    RESEND_API_KEY: 're_test_placeholder',
+    EMAIL_FROM: 'OperatorOS <hello@operatoros.net>',
+  });
+  assert.equal(configured.ok, true);
+});
+
 test('production preflight rejects wildcard, insecure, credentialed, and localhost CORS origins', () => {
   for (const value of [
     '*',

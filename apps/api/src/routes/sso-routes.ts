@@ -471,7 +471,7 @@ async function verifyTenantEntitlement(
   user: AuthenticatedUser,
   tenantId: string,
   module: OperatorOSModuleRegistryEntry,
-): Promise<{ ok: boolean; reason?: string; source?: string | null; accessLevel?: string }> {
+): Promise<{ ok: boolean; reason?: string; source?: string | null; accessLevel?: string; expiresAt?: Date | null }> {
   if (!module.requiresSubscription) return { ok: true };
   const decision = await resolveTenantModuleAccess(user.id, tenantId, module.id);
   return {
@@ -479,7 +479,13 @@ async function verifyTenantEntitlement(
     reason: decision.reason,
     source: decision.source,
     accessLevel: decision.accessLevel,
+    expiresAt: decision.expiresAt ?? null,
   };
+}
+
+function moduleSessionMaxAgeSeconds(expiresAt: Date | null | undefined): number | undefined {
+  if (!expiresAt) return undefined;
+  return Math.max(1, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
 }
 
 function tokenError(err: unknown): { statusCode: number; code: string; error: string } {
@@ -863,6 +869,7 @@ async function browserExchangeSsoHandler(request: FastifyRequest, reply: Fastify
   }
 
   let tenantContext: ResolvedSsoTenant | null = null;
+  let moduleAccessExpiresAt: Date | null = null;
   if (!platformSession) {
     const resolvedTenant = await resolveTenantForSso(user as AuthenticatedUser, tenantId!);
     if (!resolvedTenant.ok) {
@@ -896,6 +903,7 @@ async function browserExchangeSsoHandler(request: FastifyRequest, reply: Fastify
         reason: entitlement.reason,
       });
     }
+    moduleAccessExpiresAt = entitlement.expiresAt ?? null;
   }
 
   const updated = await db.update(ssoHandoffTokens).set({
@@ -910,13 +918,14 @@ async function browserExchangeSsoHandler(request: FastifyRequest, reply: Fastify
     return reply.code(409).send({ error: 'Authorization code was already used', code: 'CODE_REPLAYED' });
   }
 
+  const moduleMaxAge = platformSession ? undefined : moduleSessionMaxAgeSeconds(moduleAccessExpiresAt);
   const sessionToken = signToken(buildBrowserSessionPayload({
     userId: user.id,
     email: user.email,
     role: user.role,
     tokenVersion: user.tokenVersion,
-  }, module, tenantId));
-  reply.setCookie(SESSION_COOKIE_NAME, sessionToken, getSessionCookieOptions());
+  }, module, tenantId), { expiresInSeconds: moduleMaxAge });
+  reply.setCookie(SESSION_COOKIE_NAME, sessionToken, getSessionCookieOptions({ maxAge: moduleMaxAge }));
   const clearCookieOptions = getSessionClearCookieOptions();
   reply.clearCookie(SSO_STATE_COOKIE_NAME, clearCookieOptions);
   reply.clearCookie(SSO_NONCE_COOKIE_NAME, clearCookieOptions);
@@ -1192,6 +1201,7 @@ async function consumeSsoHandler(request: FastifyRequest, reply: FastifyReply) {
     return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
   }
 
+  const moduleMaxAge = moduleSessionMaxAgeSeconds(entitlement.expiresAt);
   const sessionToken = signToken({
     userId: user.id,
     email: user.email,
@@ -1200,8 +1210,8 @@ async function consumeSsoHandler(request: FastifyRequest, reply: FastifyReply) {
     sessionType: 'module',
     tenantId: claims.tenantId,
     moduleId: module.id,
-  });
-  reply.setCookie(SESSION_COOKIE_NAME, sessionToken, getSessionCookieOptions());
+  }, { expiresInSeconds: moduleMaxAge });
+  reply.setCookie(SESSION_COOKIE_NAME, sessionToken, getSessionCookieOptions({ maxAge: moduleMaxAge }));
 
   await auditSso(request, {
     actorUserId: user.id,
