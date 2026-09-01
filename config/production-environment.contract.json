@@ -35,6 +35,57 @@
       "ALLOW_UNSAFE_COMMANDS"
     ]
   },
+  "callcommand": {
+    "required": [
+      "OPENAI_API_KEY",
+      "OPENAI_PROJECT_ID",
+      "OPENAI_WEBHOOK_SECRET",
+      "CALLCOMMAND_SIP_ROUTE_SECRET",
+      "CALLCOMMAND_REALTIME_MODEL",
+      "TWILIO_VERIFY_SERVICE_SID",
+      "STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY",
+      "STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY",
+      "STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY"
+    ],
+    "minimumLengths": {
+      "CALLCOMMAND_SIP_ROUTE_SECRET": 32
+    },
+    "exact": {
+      "TWILIO_PUBLIC_BASE_URL": "https://callcommand-ai.operatoros.net"
+    },
+    "patterns": {
+      "OPENAI_PROJECT_ID": {
+        "source": "^proj_[A-Za-z0-9_-]+$",
+        "message": "must be an OpenAI project ID beginning with proj_"
+      },
+      "OPENAI_WEBHOOK_SECRET": {
+        "source": "^whsec_[A-Za-z0-9_-]+$",
+        "message": "must be an OpenAI webhook signing secret beginning with whsec_"
+      },
+      "TWILIO_VERIFY_SERVICE_SID": {
+        "source": "^VA[A-Za-z0-9]+$",
+        "message": "must be a Twilio Verify Service SID"
+      },
+      "STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY": {
+        "source": "^price_[A-Za-z0-9_-]+$",
+        "message": "must be a Stripe Price ID"
+      },
+      "STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY": {
+        "source": "^price_[A-Za-z0-9_-]+$",
+        "message": "must be a Stripe Price ID"
+      },
+      "STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY": {
+        "source": "^price_[A-Za-z0-9_-]+$",
+        "message": "must be a Stripe Price ID"
+      }
+    },
+    "allowedValues": {
+      "CALLCOMMAND_REALTIME_MODEL": [
+        "gpt-realtime-2.1-mini",
+        "gpt-realtime-2.1"
+      ]
+    }
+  },
   "canonicalModuleUrls": {
     "TRADEFLOWKIT_URL": "https://tradeflowkit.operatoros.net",
     "TORQUESHED_URL": "https://torqueshed.operatoros.net",

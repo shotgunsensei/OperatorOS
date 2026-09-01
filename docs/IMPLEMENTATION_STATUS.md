@@ -1,5 +1,94 @@
 # OperatorOS implementation status
 
+## CallCommand managed-number provisioning overlay - SOURCE/LOCAL IMPLEMENTED / LIVE ACCEPTANCE BLOCKED (2026-08-31)
+
+- Additive release v58 completes the managed-number vertical over the existing
+  CallCommand commercial runtime: tenant Twilio subaccount create/reuse,
+  encrypted subaccount credentials, current US local/toll-free search, exact
+  number acquisition, durable provisioning states, agent/workflow onboarding,
+  automatic HTTPS POST routing, health gating/repair, separate number billing,
+  grace/suspension, release hold/cancel/execute, and provider/Stripe/database
+  reconciliation.
+- Provisioning replays resolve before billing projection or provider access;
+  changed-payload keys conflict. Ambiguous provider timeouts recover the exact
+  subaccount inventory, provider-confirmed/local-write failures remain visible,
+  inventory races refresh safely, and no automated repair releases an orphan.
+  The first active local number is included; additional local and toll-free
+  licensed quantities are separate from the base module, concurrent lanes,
+  and the append-only usage ledger.
+- The customer UI now provides Get New Number, Forward Existing, and Connect
+  Provider paths; local/toll-free search; server-owned zero/one/many agent and
+  workflow selection; live-readiness facts; health/repair/reconcile; Call It
+  Now; and two-stage number release. Platform Command adds privacy-minimized
+  subaccount, local/toll-free, active-call, provider-failure, orphan, routing,
+  billing, compliance, cost, revenue, and release telemetry without secrets.
+- Fresh source/local evidence: all 21 CallCommand API test files passed
+  **162/162** with zero skips on disposable PostgreSQL and mock telephony;
+  commercial web contract **6/6**; release/environment contracts **13/13**;
+  all four workspace typechecks; v58 58-step plan and idempotent apply/reapply;
+  production build including FaultlineLab **4/4** and **35/35** Next pages.
+  The repository defines no lint command, so no lint result is claimed.
+- The live CallCommand preflight fails closed on absent production core,
+  OpenAI, Twilio/Verify, and the concurrent-lane/additional-local/toll-free
+  Stripe Price inputs. No production database apply, real number purchase,
+  provider callback/SIP call, real Stripe settlement, deployment, merge, push,
+  or publish was performed. Status remains source/local implemented and live
+  acceptance blocked. See `docs/callcommand/MANAGED_NUMBER_PROVISIONING.md`.
+
+## CallCommand commercial runtime overlay - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-31)
+
+- CallCommand's general commercial path now extends the existing OperatorOS-owned
+  Phase 35/37 module instead of creating child identity, tenant, role, billing,
+  provider-secret, or audit authority. Signed Twilio Programmable Voice ingress
+  resolves the exact general/non-MSP line, admits one atomic PostgreSQL
+  concurrent-call lane, and emits fixed TLS SIP to OpenAI Realtime. The signed
+  OpenAI incoming-call route revalidates the tenant, exact provider
+  account/credential/number/route, agent, published flow, activation, and lane,
+  then opens one isolated sideband controller with server-compiled instructions
+  and closed tools.
+- Additive release v57 owns tenant telephony accounts, replay-safe number
+  orders, runtime/overflow settings, capacity entitlements and leases,
+  append-only usage, agent knowledge, transfer verification, durable BYO
+  connection type, and unique managed commercial-alert ownership. General and
+  MSP profiles/channels cannot be cross-assigned. Activation locks the exact
+  channel/profile/flow/account/secret rows; signed ingress, consent continuation,
+  and OpenAI acceptance repeat selected-line readiness.
+- The commercial workspace now guides a tenant through new-number search and
+  confirmed provisioning, scenario-specific existing-number connection,
+  structured AI receptionist editing, editable workflow templates,
+  independently saved channel alerts, server-observed transfer verification,
+  no-cost simulation, exact readiness, real call detail/usage, and concurrency
+  changes. Server-derived capabilities allow module viewers to read while
+  denying writes. Provider/catalog absence remains visibly unavailable rather
+  than simulated.
+- Central OperatorOS Stripe handling now models one included base lane plus a
+  licensed **$49/month additional-lane** quantity under lookup key
+  `operatoros_callcommand_concurrent_lane_monthly_v1`. Requests and provider
+  mutations are idempotent; pending quantity grants no capacity; signed webhook
+  settlement controls effective lanes; quantity zero schedules confirmed
+  period-end cancellation; deletion clears stale subscription/item identifiers
+  so a later purchase starts a fresh Checkout. The internal usage/cost ledger is
+  not represented as a live Stripe usage meter.
+- Final source/local verification passed **149/149** CallCommand API tests
+  across 20 files with zero skips, the commercial web contract **6/6**, and the
+  production-environment contract **11/11**. `corepack pnpm typecheck` passed
+  API, runner gateway, web, and TorqueShed native. `corepack pnpm
+  build:production` passed deployment-scope and FaultlineLab **4/4**, all
+  typechecks/builds, and **35/35** generated Next pages. Release v57 planned 57
+  non-destructive steps and passed clean disposable PostgreSQL apply plus
+  immediate reapply.
+- The real `--callcommand-ready` production preflight failed closed because
+  production core, exact-host, OpenAI, Twilio/Verify, encryption, and Stripe
+  Price inputs are intentionally absent; it printed no secret values. No
+  compiled production supervisor start, authenticated deployed browser run,
+  live provider/Stripe transaction, production database backup/apply, DNS,
+  publish, merge, push, or deployment was performed. General caller
+  verification strategies, complete transfer busy/no-answer/return-to-AI
+  orchestration, SMS, richer advanced workflow/knowledge/admin tooling, and a
+  product-approved Stripe usage-overage meter remain product backlog. This
+  overlay therefore does not promote CallCommand to production/state 5.
+
+
 ## Cross-module Messages overlay priority - SOURCE/LOCAL GREEN / BROWSER RERUN PENDING (2026-08-30)
 
 - The shared `TenantMessenger` modal surfaces now render through a React portal

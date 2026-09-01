@@ -39,6 +39,8 @@ import { ensureNinjaLaunchKitPhase34Tables } from './ninja-launch-kit-phase34-db
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureCallCommandPhase35Tables } from './callcommand-phase35-db-init.js';
 import { ensureCallCommandMspTables } from './callcommand-msp-db-init.js';
+import { ensureCallCommandCommercialTables } from './callcommand-commercial-db-init.js';
+import { ensureCallCommandManagedNumberTables } from './callcommand-managed-number-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import { ensureNinjamationPhase36Tables } from './ninjamation-phase36-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
@@ -122,6 +124,8 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   identity_onboarding_integrity: ensureIdentityOnboardingIntegrity,
   tenant_invitation_consent: ensureTenantInvitationConsent,
   auth_mfa_tables: ensureAuthMfaTables,
+  callcommand_commercial_runtime: ensureCallCommandCommercialTables,
+  callcommand_managed_number_provisioning: ensureCallCommandManagedNumberTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -333,6 +337,29 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       AND to_regclass('public.idx_auth_mfa_recovery_active') IS NOT NULL
       AND to_regclass('public.idx_auth_mfa_challenge_user_active') IS NOT NULL
       AS auth_mfa_tables
+      ,to_regclass('public.callcommand_tenant_runtime_settings') IS NOT NULL
+      AND to_regclass('public.callcommand_telephony_accounts') IS NOT NULL
+      AND to_regclass('public.callcommand_number_orders') IS NOT NULL
+      AND to_regclass('public.callcommand_capacity_entitlements') IS NOT NULL
+      AND to_regclass('public.callcommand_lane_leases') IS NOT NULL
+      AND to_regclass('public.callcommand_usage_events') IS NOT NULL
+      AND to_regclass('public.callcommand_agent_knowledge') IS NOT NULL
+      AND to_regclass('public.callcommand_transfer_verifications') IS NOT NULL
+      AND to_regclass('public.uq_callcommand_live_session_active_call') IS NOT NULL
+      AND to_regclass('public.uq_callcommand_live_session_active_provider') IS NOT NULL
+      AS callcommand_commercial_runtime
+      ,to_regclass('public.callcommand_number_billing_entitlements') IS NOT NULL
+      AND to_regclass('public.callcommand_number_reconciliation_issues') IS NOT NULL
+      AND to_regclass('public.uq_callcommand_number_order_provider_number_provision') IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='callcommand_channels' AND column_name='lifecycle_state'
+      )
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='callcommand_number_orders' AND column_name='provisioning_state'
+      )
+      AS callcommand_managed_number_provisioning
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

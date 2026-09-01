@@ -10,6 +10,7 @@ import {
 import { getActiveTenantId, moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import CallCommandMspWorkspace from './CallCommandMspWorkspace';
+import CallCommandCommercialWorkspace from './CallCommandCommercialWorkspace';
 import type { CallCommandRouteArea } from './CallCommandRoute.contract';
 
 type Row = Record<string, any>;
@@ -47,6 +48,7 @@ const button: React.CSSProperties = {
   color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7,
 };
 const quietButton: React.CSSProperties = { ...button, background: '#13232d', border: '1px solid rgba(94,234,212,.2)' };
+const commercialViews: CallCommandRouteArea[] = ['overview', 'setup', 'numbers', 'agents', 'workflows', 'calls', 'usage', 'health'];
 
 function message(error: unknown, fallback: string) {
   return (error as any)?.error || (error as any)?.message || fallback;
@@ -79,6 +81,7 @@ export default function CallCommandWorkspace({ view, recordId, hrefFor = path =>
 
   const refresh = useCallback(async () => {
     if (['organizations', 'compliance'].includes(view)) return;
+    if (commercialViews.includes(view)) return;
     try {
       const workspace = await moduleShellApi.callcommand.productWorkspace() as Workspace;
       setData(workspace);
@@ -96,6 +99,10 @@ export default function CallCommandWorkspace({ view, recordId, hrefFor = path =>
   const activeChannel = data?.channels.find(item => item.status === 'active') ?? null;
   const activeProfile = data?.profiles.find(item => item.status === 'active') ?? null;
   const telephonyReady = data?.providers.telephony?.configured === true;
+
+  if (commercialViews.includes(view)) {
+    return <CallCommandCommercialWorkspace view={view} recordId={recordId} hrefFor={hrefFor}/>;
+  }
 
   async function run(name: string, work: () => Promise<unknown>, success: string) {
     if (busy) return;
@@ -129,8 +136,8 @@ export default function CallCommandWorkspace({ view, recordId, hrefFor = path =>
   return <section data-testid={`callcommand-${view}-route`} data-callcommand-view={view} style={{ minWidth: 0, color: semantic.text }}>
       {!['organizations', 'compliance'].includes(view) && <section data-testid="banner-callcommand-provider" style={{ ...card, display: 'flex', gap: 12, alignItems: 'center', marginBottom: space.lg, borderColor: telephonyReady ? 'rgba(52,211,153,.45)' : 'rgba(251,191,36,.45)' }}>
         <Radio size={18} color={telephonyReady ? '#34d399' : '#fbbf24'} />
-        <div style={{ flex: 1 }}><strong>{telephonyReady ? 'Twilio voice provider connected' : 'Twilio voice provider unavailable'}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{telephonyReady ? `Calls use ${data?.providers.telephony?.fromNumber || 'the approved business number'}; signed webhooks and real redirects are enabled.` : 'Configuration, flows, simulations, and call review remain available. Live calls and transfers will fail honestly until an administrator configures Twilio.'}</div></div>
-        <Pill tone={telephonyReady ? 'good' : 'warn'}>{telephonyReady ? 'provider ready' : 'setup required'}</Pill>
+        <div style={{ flex: 1 }}><strong>{telephonyReady ? 'Twilio runtime credential available' : 'Twilio voice provider unavailable'}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{telephonyReady ? `The shared runtime can resolve ${data?.providers.telephony?.fromNumber || 'a provider identity'}. This does not prove that this tenant's number, routing, or workflow is ready; use Health and readiness for those checks.` : 'Configuration, flows, simulations, and call review remain available. Live calls and transfers will fail honestly until an administrator configures Twilio.'}</div></div>
+        <Pill tone={telephonyReady ? 'warn' : 'warn'}>{telephonyReady ? 'credential only' : 'setup required'}</Pill>
       </section>}
 
       {error && <div role="alert" data-testid="text-callcommand-error" style={{ ...card, borderColor: 'rgba(251,113,133,.5)', color: '#fda4af', marginBottom: space.md }}><AlertTriangle size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{error}</div>}
@@ -184,7 +191,7 @@ export default function CallCommandWorkspace({ view, recordId, hrefFor = path =>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(230px,1fr))',gap:space.md}}>
           <Field label="Verified external transfer target"><input style={input} placeholder="+15551234567" value={target.phone} onChange={event=>setTarget({...target,phone:event.target.value})}/></Field>
           <Field label="Target label"><input style={input} value={target.label} onChange={event=>setTarget({...target,label:event.target.value})}/></Field>
-          <button disabled={!!busy||!/^\+[1-9]\d{7,14}$/.test(target.phone)} style={{...button,alignSelf:'end'}} onClick={()=>run('target',()=>moduleShellApi.callcommand.productCreateTarget({kind:'external',label:target.label,phone:target.phone,verified:true}),'Verified transfer target saved.')}><Plus size={15}/>Add target</button>
+          <button disabled={!!busy||!/^\+[1-9]\d{7,14}$/.test(target.phone)} style={{...button,alignSelf:'end'}} onClick={()=>run('target',()=>moduleShellApi.callcommand.productCreateTarget({kind:'external',label:target.label,phone:target.phone}),'Transfer target saved as pending verification.')}><Plus size={15}/>Add pending target</button>
         </div>
         {!activeSession ? <Empty icon={<Radio/>} text="No live call is active. Use the deterministic live-call simulator below or connect the signed Twilio voice webhook."/> : <div style={{marginTop:14,padding:14,border:'1px solid rgba(45,212,191,.3)',borderRadius:10}}><div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><Pill tone="good">{activeSession.state}</Pill><strong>{activeSession.callerPhoneMasked}</strong><span style={{color:semantic.textMuted}}>sequence {activeSession.sequence}</span><button style={quietButton} onClick={()=>run('urgent',()=>moduleShellApi.callcommand.productUpdateSession(activeSession.id,{urgent:!activeSession.urgent,note:'Operator reviewed the live session.'}),'Switchboard state updated.')}>{activeSession.urgent?'Clear urgent':'Mark urgent'}</button><button style={quietButton} onClick={()=>run('end',()=>moduleShellApi.callcommand.productEndSession(activeSession.id),'Live session ended.')}>End</button>{data?.targets[0]&&<button style={button} onClick={()=>run('transfer',()=>moduleShellApi.callcommand.productTransfer(activeSession.id,data.targets[0].id),'Twilio accepted the live redirect.')}>Transfer</button>}</div></div>}
       </section>}
@@ -193,7 +200,7 @@ export default function CallCommandWorkspace({ view, recordId, hrefFor = path =>
         <SectionTitle icon={<Inbox/>} title="Call intelligence and simulation" subtitle="Transcript, structured analysis, caller-phone preservation, flow trace, provider provenance, and validated PDF reports." />
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,300px),1fr))',gap:space.lg}}>
           <div><div style={{display:'grid',gap:8}}>{data?.calls.length ? data.calls.map(item=><button key={item.id} data-call-id={item.id} onClick={()=>{setSelectedCallId(item.id);router.push(hrefFor(`/calls/${item.id}`));}} style={{textAlign:'left',padding:11,borderRadius:9,border:`1px solid ${selectedCall?.id===item.id?'rgba(52,211,153,.5)':'rgba(94,234,212,.14)'}`,background:selectedCall?.id===item.id?'rgba(16,185,129,.1)':'#0b151d',color:semantic.text,cursor:'pointer'}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><strong>{item.subjectName||item.phoneMasked}</strong><Pill tone={item.priority==='urgent'?'bad':item.status==='completed'?'good':'neutral'}>{item.priority||item.status}</Pill></div><small style={{color:semantic.textMuted}}>{item.direction} · {item.provider} · {item.status}</small></button>) : <Empty icon={<PhoneCall/>} text="No calls yet."/>}</div></div>
-          <div>{selectedCall ? <><div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}><h3 style={{margin:0,flex:1}}>{selectedCall.subjectName||selectedCall.phoneMasked}</h3><Pill>{selectedCall.sentiment||'not analyzed'}</Pill><button style={quietButton} disabled={!!busy} onClick={downloadReport}><Download size={14}/>PDF</button></div><p style={{color:semantic.textMuted}}>{selectedCall.summary||'Analysis has not run yet.'}</p><Field label="Transcript / deterministic fixture"><textarea data-testid="input-callcommand-transcript" style={{...input,minHeight:120}} value={transcript} onChange={event=>setTranscript(event.target.value)}/></Field><button style={{...button,marginTop:10}} disabled={!!busy||transcript.trim().length<10} onClick={()=>run('process',()=>moduleShellApi.callcommand.productProcessCall(selectedCall.id,{transcript,mode:'auto'}),'Call intelligence persisted and automation evaluated.')}><Bot size={15}/>Analyze and dispatch</button></> : <><Field label="Simulation transcript"><textarea style={{...input,minHeight:120}} value={transcript} onChange={event=>setTranscript(event.target.value)}/></Field><button data-testid="button-callcommand-place-test-call" style={{...button,marginTop:10}} disabled={!!busy||!activeChannel||!activeProfile} onClick={()=>{ if (!activeChannel || !activeProfile) return; void run('simulate',()=>moduleShellApi.callcommand.productSimulate({channelId:activeChannel.id,profileId:activeProfile.id,callerName:'Acceptance caller',callerPhone:'+15555550100',transcript,idempotencyKey:`ui-sim-${Date.now()}`}),'Deterministic simulation created and processed.'); }}><PhoneCall size={15}/>Run live-call simulation</button></>}</div>
+          <div>{selectedCall ? <><div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}><h3 style={{margin:0,flex:1}}>{selectedCall.subjectName||selectedCall.phoneMasked}</h3><Pill>{selectedCall.sentiment||'not analyzed'}</Pill><button style={quietButton} disabled={!!busy} onClick={downloadReport}><Download size={14}/>PDF</button></div><p style={{color:semantic.textMuted}}>{selectedCall.summary||'Analysis has not run yet.'}</p><Field label="Persisted transcript"><pre style={{...input,minHeight:120,whiteSpace:'pre-wrap',fontFamily:'inherit',margin:0}}>{selectedCall.transcript||'No transcript was retained for this call.'}</pre></Field></> : <><Field label="Simulation transcript"><textarea style={{...input,minHeight:120}} value={transcript} onChange={event=>setTranscript(event.target.value)}/></Field><button data-testid="button-callcommand-place-test-call" style={{...button,marginTop:10}} disabled={!!busy||!activeChannel||!activeProfile} onClick={()=>{ if (!activeChannel || !activeProfile) return; void run('simulate',()=>moduleShellApi.callcommand.productSimulate({channelId:activeChannel.id,profileId:activeProfile.id,callerName:'Acceptance caller',callerPhone:'+15555550100',transcript,idempotencyKey:`ui-sim-${Date.now()}`}),'Deterministic simulation created and processed.'); }}><PhoneCall size={15}/>Run live-call simulation</button></>}</div>
         </div>
       </section>}
 

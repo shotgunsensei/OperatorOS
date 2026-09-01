@@ -408,6 +408,22 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
             <Pill tone={h.ai?.openaiKeyConfigured ? 'green' : 'muted'}>openai</Pill>
           </div>
         </Card>
+        <Card data-testid="card-callcommand-infrastructure" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>CallCommand numbers</div>
+          <div style={{ fontSize: 28, fontWeight: 700 }}>
+            {s.callCommandInfrastructure?.activeNumbers ?? 0}{' '}
+            <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.callCommandInfrastructure?.managedNumbers ?? 0}</span>
+          </div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>
+            {s.callCommandInfrastructure?.localNumbers ?? 0} local · {s.callCommandInfrastructure?.tollFreeNumbers ?? 0} toll-free · {s.callCommandInfrastructure?.activeCalls ?? 0} active calls
+          </div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+            {s.callCommandInfrastructure?.actionRequired ?? 0} action required · {s.callCommandInfrastructure?.releasePending ?? 0} release pending
+          </div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+            {s.callCommandInfrastructure?.orphanNumbers ?? 0} orphans · {s.callCommandInfrastructure?.routingDrift ?? 0} routing drift · {s.callCommandInfrastructure?.stripeMismatches ?? 0} billing mismatches
+          </div>
+        </Card>
       </div>
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

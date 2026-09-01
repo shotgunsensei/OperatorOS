@@ -28,6 +28,14 @@ test('production environment contract is machine-readable and owns core deployme
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.INTERNAL_API_URL, 'http://localhost:5001');
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.OPERATOROS_DATABASE_RELEASE_MODE, 'apply');
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.RUNNER_MODE, 'disabled');
+  assert.equal(
+    preflight.PRODUCTION_ENVIRONMENT_CONTRACT.callcommand.exact.TWILIO_PUBLIC_BASE_URL,
+    'https://callcommand-ai.operatoros.net',
+  );
+  assert.deepEqual(
+    preflight.PRODUCTION_ENVIRONMENT_CONTRACT.callcommand.allowedValues.CALLCOMMAND_REALTIME_MODEL,
+    ['gpt-realtime-2.1-mini', 'gpt-realtime-2.1'],
+  );
   assert.deepEqual(
     preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.unset,
     ['APP_URL', 'COOKIE_DOMAIN', 'NEXT_PUBLIC_API_URL'],
@@ -143,6 +151,13 @@ test('all readiness profiles pass with live shared-runtime providers', () => {
     TWILIO_ALLOWED_COUNTRIES: 'US,CA',
     OUTCALL_LIVE_PROVIDER: 'enabled',
     OPENAI_API_KEY: 'sk-test-placeholder',
+    OPENAI_PROJECT_ID: 'proj_testplaceholder',
+    OPENAI_WEBHOOK_SECRET: 'whsec_testplaceholder',
+    CALLCOMMAND_SIP_ROUTE_SECRET: 'callcommand-sip-route-secret-32-plus',
+    CALLCOMMAND_REALTIME_MODEL: 'gpt-realtime-2.1-mini',
+    STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY: 'price_callcommand_lane',
+    STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY: 'price_callcommand_local_number',
+    STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY: 'price_callcommand_toll_free_number',
   };
   const profiles = preflight.resolveProfiles(['--all']);
   const report = preflight.evaluateProductionEnvironment(env, profiles);
@@ -197,12 +212,97 @@ test('revenue preflight requires the TorqueShed kill switch, mode, and release p
   );
 });
 
-test('CallCommand accepts a bound Replit connector without copied Twilio secrets', () => {
-  const report = preflight.evaluateProductionEnvironment({
+test('CallCommand accepts a bound Replit connector without copied Twilio secrets only when shared providers are ready', () => {
+  const connectorEnv = {
     ...coreEnv,
     TWILIO_PUBLIC_BASE_URL: 'https://callcommand-ai.operatoros.net',
     REPLIT_CONNECTORS_HOSTNAME: 'connectors.example.invalid',
     REPL_IDENTITY: 'test-identity',
+  };
+  const missingProviders = preflight.evaluateProductionEnvironment(connectorEnv, ['core', 'callcommand']);
+  assert.equal(missingProviders.ok, false);
+  assert.ok(missingProviders.issues.some((issue: { name: string }) => issue.name === 'OPENAI_API_KEY'));
+  assert.ok(missingProviders.issues.some((issue: { name: string }) => issue.name === 'TWILIO_VERIFY_SERVICE_SID'));
+  assert.ok(missingProviders.issues.some(
+    (issue: { name: string }) => issue.name === 'STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY',
+  ));
+  assert.equal(missingProviders.issues.some((issue: { name: string }) => issue.name === 'TWILIO_CREDENTIALS'), false);
+
+  const report = preflight.evaluateProductionEnvironment({
+    ...connectorEnv,
+    OPENAI_API_KEY: 'sk-test-placeholder',
+    OPENAI_PROJECT_ID: 'proj_testplaceholder',
+    OPENAI_WEBHOOK_SECRET: 'whsec_testplaceholder',
+    CALLCOMMAND_SIP_ROUTE_SECRET: 'callcommand-sip-route-secret-32-plus',
+    CALLCOMMAND_REALTIME_MODEL: 'gpt-realtime-2.1-mini',
+    TWILIO_VERIFY_SERVICE_SID: 'VAtestplaceholder',
+    STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY: 'price_callcommand_lane',
+    STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY: 'price_callcommand_local_number',
+    STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY: 'price_callcommand_toll_free_number',
   }, ['core', 'callcommand']);
   assert.equal(report.ok, true);
+});
+
+test('CallCommand readiness requires the Realtime, verification, and lane billing runtime contract', () => {
+  const report = preflight.evaluateProductionEnvironment({
+    ...coreEnv,
+    TWILIO_PUBLIC_BASE_URL: 'https://callcommand-ai.operatoros.net',
+    TWILIO_ACCOUNT_SID: 'ACtestplaceholder',
+    TWILIO_AUTH_TOKEN: 'test-placeholder',
+    TWILIO_FROM_NUMBER: '+15555550100',
+  }, ['core', 'callcommand']);
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(
+    report.issues
+      .filter((issue: { profile: string }) => issue.profile === 'callcommand')
+      .map((issue: { name: string }) => issue.name),
+    [
+      'OPENAI_API_KEY',
+      'OPENAI_PROJECT_ID',
+      'OPENAI_WEBHOOK_SECRET',
+      'CALLCOMMAND_SIP_ROUTE_SECRET',
+      'CALLCOMMAND_REALTIME_MODEL',
+      'TWILIO_VERIFY_SERVICE_SID',
+      'STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY',
+      'STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY',
+      'STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY',
+    ],
+  );
+});
+
+test('CallCommand readiness rejects malformed provider identifiers, weak routing secrets, and unsupported models', () => {
+  const report = preflight.evaluateProductionEnvironment({
+    ...coreEnv,
+    TWILIO_PUBLIC_BASE_URL: 'https://callcommand-ai.operatoros.net',
+    TWILIO_ACCOUNT_SID: 'ACtestplaceholder',
+    TWILIO_AUTH_TOKEN: 'test-placeholder',
+    TWILIO_FROM_NUMBER: '+15555550100',
+    OPENAI_API_KEY: 'sk-test-placeholder',
+    OPENAI_PROJECT_ID: 'project-not-openai-shaped',
+    OPENAI_WEBHOOK_SECRET: 'openai-webhook-secret',
+    CALLCOMMAND_SIP_ROUTE_SECRET: 'too-short',
+    CALLCOMMAND_REALTIME_MODEL: 'gpt-realtime-experimental',
+    TWILIO_VERIFY_SERVICE_SID: 'verify-service',
+    STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY: 'callcommand-lane-price',
+    STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY: 'callcommand-local-number-price',
+    STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY: 'callcommand-toll-free-number-price',
+  }, ['core', 'callcommand']);
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(
+    report.issues
+      .filter((issue: { profile: string }) => issue.profile === 'callcommand')
+      .map((issue: { name: string }) => issue.name),
+    [
+      'CALLCOMMAND_SIP_ROUTE_SECRET',
+      'OPENAI_PROJECT_ID',
+      'OPENAI_WEBHOOK_SECRET',
+      'TWILIO_VERIFY_SERVICE_SID',
+      'STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY',
+      'STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY',
+      'STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY',
+      'CALLCOMMAND_REALTIME_MODEL',
+    ],
+  );
 });

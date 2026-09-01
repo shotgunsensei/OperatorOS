@@ -33,7 +33,6 @@ function headers(user: typeof ownerA, tenantId = user.currentTenantId) {
 async function clean(tenantId: string) {
   await db.execute(sql`DELETE FROM callcommand_reports WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_transfer_logs WHERE tenant_id=${tenantId}`);
-  await db.execute(sql`DELETE FROM callcommand_action_runs WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_flow_traces WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_live_sessions WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_ingestion_events WHERE tenant_id=${tenantId}`);
@@ -41,6 +40,7 @@ async function clean(tenantId: string) {
   await db.execute(sql`DELETE FROM callcommand_tickets WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_leads WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_tasks WHERE tenant_id=${tenantId}`);
+  await db.execute(sql`DELETE FROM callcommand_action_runs WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_automation_rules WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_events WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM callcommand_followups WHERE tenant_id=${tenantId}`);
@@ -105,7 +105,7 @@ test('Phase 35 versions and publishes a validated flow, then binds it to a chann
     { key: 'ticket', type: 'action', config: { actionType: 'ticket', title: 'Urgent response' } },
     { key: 'task', type: 'action', config: { actionType: 'task', title: 'Review request' } },
   ] };
-  const flow = await app.inject({ method: 'POST', url: '/v1/modules/callcommand-ai/product/flows', headers: headers(ownerA), payload: { name: 'Priority dispatch', graph } });
+  const flow = await app.inject({ method: 'POST', url: '/v1/modules/callcommand-ai/product/flows', headers: headers(ownerA), payload: { name: 'Priority dispatch', productMode: 'msp', graph } });
   assert.equal(flow.statusCode, 201, flow.body); flowId = flow.json().flow.id; assert.equal(flow.json().validation.reachable, 3);
   const versioned = await app.inject({ method: 'PUT', url: `/v1/modules/callcommand-ai/product/flows/${flowId}`, headers: headers(ownerA), payload: { graph } });
   assert.equal(versioned.statusCode, 200, versioned.body); assert.equal(versioned.json().flow.version, 2);
@@ -137,8 +137,9 @@ test('Phase 35 runs complete call intelligence, flow trace, rule actions, work q
 });
 
 test('Phase 35 switchboard returns honest provider-unavailable transfer and supports session quick actions', async () => {
-  const target = await app.inject({ method: 'POST', url: '/v1/modules/callcommand-ai/product/transfer-targets', headers: headers(ownerA), payload: { label: 'On-call operator', kind: 'external', phone: '+15550004545', verified: true } });
+  const target = await app.inject({ method: 'POST', url: '/v1/modules/callcommand-ai/product/transfer-targets', headers: headers(ownerA), payload: { label: 'On-call operator', kind: 'external', phone: '+15550004545' } });
   assert.equal(target.statusCode, 201, target.body);
+  await db.execute(sql`UPDATE callcommand_transfer_targets SET verified_at=NOW() WHERE tenant_id=${ownerA.currentTenantId} AND id=${target.json().target.id}`);
   const update = await app.inject({ method: 'PATCH', url: `/v1/modules/callcommand-ai/product/switchboard/sessions/${sessionId}`, headers: headers(ownerA), payload: { urgent: true, note: 'Operator acknowledged.' } });
   assert.equal(update.statusCode, 200, update.body); assert.equal(update.json().session.urgent, true);
   const transfer = await app.inject({ method: 'POST', url: `/v1/modules/callcommand-ai/product/switchboard/sessions/${sessionId}/transfer`, headers: headers(ownerA), payload: { targetId: target.json().target.id } });

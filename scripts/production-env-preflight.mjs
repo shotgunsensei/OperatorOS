@@ -234,13 +234,28 @@ function checkEmail(env, issues) {
 }
 
 function checkCallCommand(env, issues) {
-  if (env.TWILIO_PUBLIC_BASE_URL !== 'https://callcommand-ai.operatoros.net') {
-    addIssue(
-      issues,
-      'callcommand',
-      'TWILIO_PUBLIC_BASE_URL',
-      'must equal https://callcommand-ai.operatoros.net',
-    );
+  const contract = PRODUCTION_ENVIRONMENT_CONTRACT.callcommand;
+  requirePresent(env, issues, 'callcommand', contract.required);
+
+  for (const [name, minimum] of Object.entries(contract.minimumLengths)) {
+    if (isPresent(env, name) && env[name].trim().length < minimum) {
+      addIssue(issues, 'callcommand', name, `must contain at least ${minimum} characters`);
+    }
+  }
+  for (const [name, expected] of Object.entries(contract.exact)) {
+    if (env[name] !== expected) {
+      addIssue(issues, 'callcommand', name, `must equal ${expected}`);
+    }
+  }
+  for (const [name, rule] of Object.entries(contract.patterns)) {
+    if (isPresent(env, name) && !new RegExp(rule.source).test(env[name].trim())) {
+      addIssue(issues, 'callcommand', name, rule.message);
+    }
+  }
+  for (const [name, allowedValues] of Object.entries(contract.allowedValues)) {
+    if (isPresent(env, name) && !allowedValues.includes(env[name])) {
+      addIssue(issues, 'callcommand', name, `must equal one of: ${allowedValues.join(', ')}`);
+    }
   }
 
   const envCredentials = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER']

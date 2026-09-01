@@ -385,6 +385,9 @@ importers:
       fastify:
         specifier: ^5.10.0
         version: 5.12.0
+      openai:
+        specifier: 6.49.0
+        version: 6.49.0(ws@8.21.3(bufferutil@4.1.0))(zod@3.25.76)
       pg:
         specifier: ^8.16.3
         version: 8.23.0
@@ -400,6 +403,9 @@ importers:
       twilio:
         specifier: ^5.10.4
         version: 5.13.1
+      ws:
+        specifier: '>=8.21.1'
+        version: 8.21.3(bufferutil@4.1.0)
     devDependencies:
       '@types/pg':
         specifier: ^8.15.5
@@ -407,6 +413,9 @@ importers:
       '@types/qrcode':
         specifier: 1.5.5
         version: 1.5.5
+      '@types/ws':
+        specifier: 8.18.1
+        version: 8.18.1
       tsx:
         specifier: ^4.20.5
         version: 4.23.12

@@ -139,6 +139,10 @@ export async function ensureSchemaReady() {
   await ensureCallCommandPhase35Tables();
   const { ensureCallCommandMspTables } = await import('../src/lib/callcommand-msp-db-init.js');
   await ensureCallCommandMspTables();
+  const { ensureCallCommandCommercialTables } = await import('../src/lib/callcommand-commercial-db-init.js');
+  await ensureCallCommandCommercialTables();
+  const { ensureCallCommandManagedNumberTables } = await import('../src/lib/callcommand-managed-number-db-init.js');
+  await ensureCallCommandManagedNumberTables();
   const { ensureCrossModuleDataFabricTables } = await import('../src/lib/cross-module-data-fabric-db-init.js');
   await ensureCrossModuleDataFabricTables();
   const { ensureTenantMessengerTables } = await import('../src/lib/tenant-messenger-db-init.js');
