@@ -203,6 +203,9 @@ export const users = pgTable('users', {
   failedLoginCount: integer('failed_login_count').notNull().default(0),
   lockedUntil: timestamp('locked_until'),
   tokenVersion: integer('token_version').notNull().default(0),
+  // A trial-eligible identity must prove control of its mailbox. This value is
+  // server-owned and is cleared whenever the account email changes.
+  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -211,6 +214,19 @@ export const users = pgTable('users', {
   index('idx_users_email').on(t.email),
   index('idx_users_status').on(t.status),
   index('idx_users_platform_role').on(t.platformRole),
+]);
+
+export const emailVerificationTokens = pgTable('email_verification_tokens', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+  emailFingerprint: varchar('email_fingerprint', { length: 64 }).notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  requestedIp: varchar('requested_ip', { length: 64 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('idx_email_verification_tokens_user_active').on(t.userId, t.expiresAt),
 ]);
 
 export const subscriptionPlans = pgTable('subscription_plans', {
@@ -666,6 +682,7 @@ export type SystemEventRow = typeof systemEvents.$inferSelect;
 export type SystemNotificationRow = typeof systemNotifications.$inferSelect;
 export type WorkspaceSnapshotRow = typeof workspaceSnapshots.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
+export type EmailVerificationTokenRow = typeof emailVerificationTokens.$inferSelect;
 export type SubscriptionPlanRow = typeof subscriptionPlans.$inferSelect;
 export type SubscriptionRow = typeof subscriptions.$inferSelect;
 export type SaasWorkspaceRow = typeof saasWorkspaces.$inferSelect;
@@ -707,6 +724,36 @@ export const tenants = pgTable('tenants', {
   index('idx_tenants_owner').on(t.ownerUserId),
   index('idx_tenants_type').on(t.type),
   index('idx_tenants_status').on(t.status),
+]);
+
+/**
+ * Durable, non-Stripe evaluation trials. The HMAC identity fingerprint and
+ * offer code survive account/workspace deletion so a verified email cannot
+ * claim the same offer again. Access itself is always user-bound and limited
+ * to the recorded personal tenant; no tenant module grant is materialized.
+ */
+export const accountTrials = pgTable('account_trials', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  subjectUserId: varchar('subject_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  trialTenantId: varchar('trial_tenant_id', { length: 36 }).references(() => tenants.id, { onDelete: 'set null' }),
+  identityFingerprint: varchar('identity_fingerprint', { length: 64 }).notNull(),
+  identityKeyVersion: integer('identity_key_version').notNull().default(1),
+  offerCode: varchar('offer_code', { length: 80 }).notNull(),
+  policyVersion: integer('policy_version').notNull().default(1),
+  status: text('status', { enum: ['active', 'revoked'] }).notNull().default('active'),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  convertedAt: timestamp('converted_at', { withTimezone: true }),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  revokedReason: varchar('revoked_reason', { length: 240 }),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_account_trials_identity_offer').on(t.identityFingerprint, t.offerCode),
+  uniqueIndex('uq_account_trials_user_offer').on(t.subjectUserId, t.offerCode).where(sql`${t.subjectUserId} IS NOT NULL`),
+  index('idx_account_trials_subject_status').on(t.subjectUserId, t.status, t.endsAt),
+  index('idx_account_trials_tenant_status').on(t.trialTenantId, t.status, t.endsAt),
 ]);
 
 export const tenantEntitlements = pgTable('tenant_entitlements', {
@@ -817,6 +864,7 @@ export const tenantInvites = pgTable('tenant_invites', {
 ]);
 
 export type TenantRow = typeof tenants.$inferSelect;
+export type AccountTrialRow = typeof accountTrials.$inferSelect;
 export type TenantUserRow = typeof tenantUsers.$inferSelect;
 export type TenantEntitlementRow = typeof tenantEntitlements.$inferSelect;
 export type TenantModuleRow = typeof tenantModules.$inferSelect;

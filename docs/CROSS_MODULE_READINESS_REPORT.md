@@ -1,5 +1,22 @@
 # Cross-module readiness report
 
+## Release v59 Core Suite evaluation overlay (2026-09-01)
+
+OperatorOS now owns a distinct, durable evaluation access source for exactly
+TradeFlowKit, TechDeck, and PulseDesk. The grant is bound to one verified email
+identity and the user's personal tenant for 168 hours, is evaluated after
+explicit tenant and paid entitlement sources, and cannot cross into an
+organization tenant. Exact-host module sessions are revalidated and bounded by
+the evaluation end. Permanent-free and companion application paths are not
+changed, and expiry preserves tenant-owned application data.
+
+The focused v59, email, entitlement, SSO/session, UI, release, typecheck, build,
+and disposable PostgreSQL gates pass locally. No production email, Stripe,
+database, deployment, or browser evidence was produced. This shared access
+overlay therefore changes no module readiness or consolidation state, and
+production remains blocked on the release-v59 acceptance gates in
+`docs/CURRENT_RELEASE_GATE.md`.
+
 ## Replit publish-scan overlay (2026-08-21)
 
 No module readiness state changes. GitHub main's empty Replit marker `9cb875e`

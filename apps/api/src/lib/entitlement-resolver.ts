@@ -55,8 +55,10 @@ export interface EntitlementModuleEntry {
   /** Merged feature flags: plan_modules.feature_flags_json overlaid with
    *  tenant_modules.metadata.features. Empty object if neither configured. */
   features: ModuleFeatureMap;
-  /** How the user got access: 'plan' | 'addon' | 'override' | 'admin_role' | null */
-  source: 'plan' | 'addon' | 'override' | 'admin_role' | null;
+  /** How the user got access: paid plan/add-on, evaluation trial, override, or platform authority. */
+  source: 'plan' | 'addon' | 'trial' | 'override' | 'admin_role' | null;
+  /** Request-time access expiry. Present for evaluation-trial grants only. */
+  expiresAt: string | null;
 }
 
 export interface EntitlementSnapshot {
@@ -206,6 +208,7 @@ export async function resolveEntitlements(
       moduleRole,
       features,
       source: s.access_source,
+      expiresAt: s.access_expires_at,
     };
   });
 

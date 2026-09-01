@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 56 ordered step identifiers without secrets
+`db:plan` is read-only and prints 59 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -39,6 +39,33 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+Release v59 appends `core_suite_trial_tables` after the v58 managed-number
+provisioning step. It adds `users.email_verified_at`, hashed single-use email
+verification tokens, and the durable once-per-email Core Suite evaluation
+ledger. Before production apply, require a verified backup covering users,
+sessions, tenants, memberships, entitlements, billing, platform audit, trial
+identity fingerprints, and all module data. Backup evidence must never include
+verification tokens, HMAC key material, email-provider secrets, or customer
+records. After apply, reconcile the release state, verification-token and trial
+constraints/indexes, and trial/audit counts before enabling self-service starts.
+
+Disabling `OPERATOROS_SELF_SERVICE_TRIALS_ENABLED` stops new starts but retains
+active promised windows. The additive table and column may remain during an
+application rollback. Do not route trial-derived module sessions through an
+older artifact that cannot cap them to the database end. Retain the v59
+entitlement/session guards, disable new starts and wait for active windows to
+end, or restore a pre-v59 backup into a new database and switch traffic after
+validation.
+
+### Release v59 disposable rehearsal (2026-09-01)
+
+On an isolated PostgreSQL 16 Docker database, the supported root release path
+applied and verified all 59 ordered non-destructive operations in 19,924 ms with
+final step `core_suite_trial_tables`. An immediate second application verified
+the same release in 2,189 ms. Focused runtime coverage proves the exact
+168-hour window, once-used ledger, personal-tenant isolation, expiry, and paid
+plan/add-on precedence. No production database was contacted or modified.
 
 Release v56 appends `auth_mfa_tables` after the v55 invitation-consent step. It
 adds encrypted TOTP enrollment state, one-way recovery-code hashes with

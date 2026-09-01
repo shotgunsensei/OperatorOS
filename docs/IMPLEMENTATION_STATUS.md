@@ -1,5 +1,48 @@
 # OperatorOS implementation status
 
+## Core Suite verified-email evaluation trial - SOURCE/LOCAL IMPLEMENTED / LIVE ACCEPTANCE BLOCKED (2026-09-01)
+
+- Additive release v59 implements one no-card 168-hour evaluation of exactly
+  TradeFlowKit, TechDeck, and PulseDesk in the verified user's server-resolved
+  personal workspace. The offer is durable and idempotent per normalized-email
+  HMAC fingerprint; account recreation cannot erase its used state, and an
+  active retry returns the original window without extending it.
+- OperatorOS remains the only identity, tenant, launch, entitlement, billing,
+  and audit authority. The evaluation is a separate final access fallback,
+  never a Stripe subscription or `tenant_modules` grant. Explicit deny,
+  server-confirmed plan access, and server-confirmed add-ons retain precedence.
+  Organization workspaces do not inherit the personal evaluation. Permanent
+  free applications and companion applications keep their existing paths.
+- Email verification uses expiring, single-use, hashed tokens; request responses
+  are non-enumerating and rate-limited by caller IP plus normalized email.
+  Email changes clear verification. Trial-derived module sessions are rechecked
+  and capped to the database end time across SSO issue, exchange, consume, and
+  refresh. Expiry removes access only; it does not delete module records.
+- The customer Workspace Home now explains the exact three-app offer, requests
+  verification, starts the no-card trial, switches to the personal workspace,
+  shows the server-owned expiry, and explains preserved data and paid recovery.
+  Self-service starts are disabled by default behind
+  `OPERATOROS_SELF_SERVICE_TRIALS_ENABLED`.
+- Fresh source/local evidence: the combined v59 auth, email, trial, release,
+  preflight, module-session, and SSO regression gate passes **72/72**;
+  affected customer-shell contracts pass **59/59** with six expected HTTP-only
+  skips; all four workspace typechecks pass; and the production build generates
+  **35/35** Next pages. Release v59 plans 59 non-destructive steps and applied
+  plus reapplied successfully from a clean isolated PostgreSQL 16 database in
+  19,924 ms and 2,189 ms.
+- The correctly configured complete API aggregate exercised 1,296 tests:
+  1,285 passed, five failed, and six HTTP-only tests skipped. Two failures were
+  stale v59 route-count/release-identity expectations; both were repaired and
+  pass in the final 72/72 gate. The remaining three are pre-existing brittle
+  CallCommand commercial source-slicing assertions in untouched telephony
+  files, so no broad-green aggregate claim is made.
+- No production database was read or mutated; no real email was delivered; no
+  Stripe state was created or changed; and no commit, merge, push, publish, or
+  deployment was performed. Production remains on hold pending backup, reviewed
+  v59 promotion, stable trial HMAC/email configuration, external-inbox and
+  exact-host trial/expiry acceptance, paid plan/add-on restoration evidence,
+  monitoring, and restore-and-switch rollback readiness.
+
 ## CallCommand managed-number provisioning overlay - SOURCE/LOCAL IMPLEMENTED / LIVE ACCEPTANCE BLOCKED (2026-08-31)
 
 - Additive release v58 completes the managed-number vertical over the existing

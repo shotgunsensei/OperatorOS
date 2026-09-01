@@ -69,7 +69,7 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
               style={{ display: 'block', margin: '0 auto 16px' }}
             />
             <p style={{ color: colors.text, fontSize: 14, marginBottom: 24 }}>
-              If this email is new, your account has been created. Please sign in to continue.
+              If this email is new, your account has been created. Check your inbox for the verification link, then sign in to continue.
             </p>
             <button data-testid="button-go-login" onClick={() => onSwitch('login')}
               style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: colors.accent, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>

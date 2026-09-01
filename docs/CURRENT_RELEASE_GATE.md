@@ -1,5 +1,43 @@
 # OperatorOS current release gate
 
+## Release v59 Core Suite evaluation - SOURCE/LOCAL PASS, PRODUCTION HOLD (2026-09-01)
+
+Release v59 adds one no-card, once-per-verified-email, 168-hour personal-workspace
+evaluation of TradeFlowKit, TechDeck, and PulseDesk. It does not grant company
+workspaces, permanent-free applications, companion applications, or any module
+outside the immutable three-item offer. It does not create Stripe or tenant
+grant state. Paid plan/add-on access remains server-confirmed and has precedence;
+module data remains stored when evaluation access ends.
+
+The durable ledger uses a versioned HMAC of normalized email, PostgreSQL time,
+user/offer and identity/offer uniqueness, and nullable subject references that
+survive account deletion. Verification tokens are hashed, expiring, single-use,
+and reset on email change. Exact-host SSO and module refresh recheck entitlement
+and prevent a trial-derived session from outliving the database window.
+
+Source/local evidence passes the combined 72/72 auth, email, trial, release,
+preflight and SSO/session gate, 59/59 affected customer-shell checks with six expected HTTP-only
+skips, all four workspace typechecks, the production build with 35/35 generated
+routes, and a 59-step non-destructive release plan plus disposable apply/reapply.
+The full API aggregate is not claimed green: after two v59 expectations were
+corrected, three untouched CallCommand source-slicing contract failures remain.
+
+Status remains **SOURCE/LOCAL PASS; PRODUCTION HOLD**. Before activation:
+
+1. review and back up the production database, then promote the exact v59
+   artifact through the readiness-gated supervisor;
+2. configure a stable high-entropy
+   `OPERATOROS_TRIAL_IDENTITY_HMAC_SECRET`, transactional email provider/sender,
+   and only then set `OPERATOROS_SELF_SERVICE_TRIALS_ENABLED=1`;
+3. prove external inbox verification, duplicate-start idempotency, personal vs.
+   organization isolation, exact-host launch/refresh, post-expiry denial with
+   data preservation, and paid plan/add-on restoration;
+4. reconcile trial/audit counts, observe monitoring, and retain a verified
+   restore-to-new-database traffic-switch path.
+
+No production database, provider, billing, deployment, DNS, merge, push, or
+publish action was performed by this change.
+
 ## Customer-facing module identity repair - SOURCE/LOCAL PASS, LIVE RELEASE PENDING (2026-08-30)
 
 The current source candidate closes the stale catalog-name path that allowed

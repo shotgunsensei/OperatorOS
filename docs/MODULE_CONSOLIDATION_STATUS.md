@@ -2,6 +2,20 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current Core Suite evaluation overlay — 2026-09-01
+
+Release v59 adds an OperatorOS-owned evaluation access source for exactly
+TradeFlowKit, TechDeck, and PulseDesk. It is once per verified email, 168 hours,
+and confined to the user's personal tenant. It neither rewrites product code
+nor changes module data, permanent-free grants, companion gates, provider
+readiness, billing settlement, or capability ledgers. Expiry removes only the
+trial access source.
+
+Focused source/local policy, database, email, entitlement, SSO/session, UI,
+typecheck, build, and release evidence passes. Production email, billing,
+database, deployment, and exact-host browser acceptance remain open. No module
+consolidation state changes.
+
 ## Current canonical module-name repair overlay — 2026-08-30
 
 All first-party catalog rows and authenticated customer/admin projections now

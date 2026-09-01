@@ -144,7 +144,7 @@ test('global account mutations are unavailable on child module hosts', () => {
 test('rejected public auth hosts return the sent reply without a second response attempt', () => {
   const source = readFileSync(resolve(repoRoot, 'apps/api/src/routes/auth-routes.ts'), 'utf8');
   const guardedRoutes = source.match(/if \(!enforcePlatformPublicAuthHost\(request, reply\)\) return reply;/g) ?? [];
-  assert.equal(guardedRoutes.length, 10, 'every public auth host guard must return the already-sent reply');
+  assert.equal(guardedRoutes.length, 12, 'every public auth host guard must return the already-sent reply');
   assert.doesNotMatch(
     source,
     /if \(!enforcePlatformPublicAuthHost\(request, reply\)\) return;/,

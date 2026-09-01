@@ -11,13 +11,18 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 58);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 59);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 58);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 58);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 59);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 59);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'callcommand_managed_number_provisioning');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'core_suite_trial_tables');
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'core_suite_trial_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_managed_number_provisioning'),
+    'verified-email evaluation trials must be an additive release step after v58',
+  );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_managed_number_provisioning')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_commercial_runtime'),
@@ -309,6 +314,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /column_name = 'declined_at'/);
   assert.match(releaseSource, /conname = 'tenant_invites_single_decision_check'/);
   assert.match(releaseSource, /to_regclass\('public\.idx_tenant_invites_pending'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.email_verification_tokens'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.account_trials'\)/);
+  assert.match(releaseSource, /table_name='email_verification_tokens' AND column_name='email_fingerprint'/);
+  const saasInit = read('apps/api/src/lib/saas-db-init.ts');
+  assert.match(saasInit, /ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
 

@@ -10,7 +10,7 @@ import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 import { EmptyState, ErrorState, PageHeader } from '@/components/ExperiencePrimitives';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 
-type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
+type AccessSource = 'plan' | 'addon' | 'trial' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
 
 interface ModuleComponentRef {
