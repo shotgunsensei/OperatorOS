@@ -1,12 +1,13 @@
 import {
-  Activity, Bot, Building2, FileAudio, FileText, Gauge, Headphones, ListChecks,
-  Network, PhoneCall, RadioTower, Settings, ShieldCheck,
+  Activity, Bot, Building2, CreditCard, Gauge, Headphones, HeartPulse, ListChecks,
+  Network, PhoneCall, RadioTower, Settings, ShieldCheck, Sparkles, Workflow,
 } from 'lucide-react';
 import type { ModuleRouteManifestGroup, ModuleThemeTokens } from '@/components/module-application-shell';
 
 export type CallCommandRouteArea =
-  | 'overview' | 'calls' | 'recordings' | 'transcripts' | 'analysis' | 'actions'
-  | 'automations' | 'numbers' | 'providers' | 'organizations' | 'compliance' | 'settings';
+  | 'overview' | 'setup' | 'calls' | 'actions' | 'agents' | 'workflows' | 'numbers'
+  | 'usage' | 'health' | 'providers' | 'organizations' | 'compliance' | 'settings'
+  | 'recordings' | 'transcripts' | 'analysis' | 'automations';
 
 export interface CallCommandRouteState {
   area: CallCommandRouteArea;
@@ -36,35 +37,43 @@ export const CALLCOMMAND_THEME: ModuleThemeTokens = {
 };
 
 export const CALLCOMMAND_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
-  { id: 'call-operations', label: 'Call operations', items: [
-    { id: 'overview', canonicalPath: '/', label: 'Switchboard', icon: Gauge, activeMatch: { kind: 'exact' } },
-    { id: 'calls', canonicalPath: '/calls', label: 'Calls', icon: PhoneCall, activeMatch: { kind: 'prefix' } },
-    { id: 'recordings', canonicalPath: '/recordings', label: 'Recordings', icon: FileAudio, activeMatch: { kind: 'prefix' } },
-    { id: 'transcripts', canonicalPath: '/transcripts', label: 'Transcripts', icon: FileText, activeMatch: { kind: 'prefix' } },
-    { id: 'analysis', canonicalPath: '/analysis', label: 'Analysis', icon: Activity, activeMatch: { kind: 'prefix' } },
-    { id: 'actions', canonicalPath: '/actions', label: 'Actions', icon: ListChecks, activeMatch: { kind: 'prefix' } },
+  { id: 'getting-started', label: 'Getting started', items: [
+    { id: 'overview', canonicalPath: '/', label: 'Operations overview', icon: Gauge, activeMatch: { kind: 'exact' } },
+    { id: 'setup', canonicalPath: '/setup', label: 'Set up CallCommand', icon: Sparkles, activeMatch: { kind: 'prefix' } },
   ] },
-  { id: 'configuration', label: 'Configuration', items: [
-    { id: 'automations', canonicalPath: '/automations', label: 'Automations', icon: Bot, activeMatch: { kind: 'prefix' } },
-    { id: 'numbers', canonicalPath: '/numbers', label: 'Numbers and channels', icon: RadioTower, activeMatch: { kind: 'prefix' } },
-    { id: 'providers', canonicalPath: '/providers', label: 'Providers', icon: Network, activeMatch: { kind: 'prefix' } },
+  { id: 'callcommand-configuration', label: 'Your receptionist', items: [
+    { id: 'numbers', canonicalPath: '/numbers', label: 'Phone numbers', icon: RadioTower, activeMatch: { kind: 'prefix' } },
+    { id: 'agents', canonicalPath: '/agents', label: 'AI receptionists', icon: Bot, activeMatch: { kind: 'prefix' } },
+    { id: 'workflows', canonicalPath: '/workflows', label: 'Call workflows', icon: Workflow, activeMatch: { kind: 'prefix' } },
+  ] },
+  { id: 'call-operations', label: 'Operations', items: [
+    { id: 'calls', canonicalPath: '/calls', label: 'Calls and history', icon: PhoneCall, activeMatch: { kind: 'prefix' } },
+    { id: 'actions', canonicalPath: '/actions', label: 'Follow-up work', icon: ListChecks, activeMatch: { kind: 'prefix' } },
+    { id: 'usage', canonicalPath: '/usage', label: 'Usage and billing', icon: CreditCard, activeMatch: { kind: 'prefix' } },
+    { id: 'health', canonicalPath: '/health', label: 'Health and readiness', icon: HeartPulse, activeMatch: { kind: 'prefix' } },
   ] },
   { id: 'msp-assurance', label: 'MSP assurance', items: [
     { id: 'organizations', canonicalPath: '/organizations', label: 'Organizations', icon: Building2, activeMatch: { kind: 'prefix' } },
+    { id: 'providers', canonicalPath: '/providers', label: 'Advanced providers', icon: Network, activeMatch: { kind: 'prefix' } },
     { id: 'compliance', canonicalPath: '/compliance', label: 'Compliance', icon: ShieldCheck, activeMatch: { kind: 'prefix' } },
     { id: 'settings', canonicalPath: '/settings', label: 'Settings', icon: Settings, activeMatch: { kind: 'prefix' } },
   ] },
 ] as const;
 
 const copy: Record<CallCommandRouteArea, Pick<CallCommandRouteState, 'eyebrow' | 'title' | 'subtitle'>> = {
-  overview: { eyebrow: 'Live communications', title: 'Switchboard', subtitle: 'Monitor call posture and operator-controlled sessions without overstating provider availability.' },
-  calls: { eyebrow: 'Call intelligence', title: 'Calls', subtitle: 'Review durable call records, outcomes, provenance, and validated report artifacts.' },
-  recordings: { eyebrow: 'Consent-bound media', title: 'Recordings', subtitle: 'Review recording availability under explicit consent, provider, retention, and access controls.' },
-  transcripts: { eyebrow: 'Structured call record', title: 'Transcripts', subtitle: 'Review or process persisted transcripts without treating generated analysis as provider fact.' },
-  analysis: { eyebrow: 'Bounded intelligence', title: 'Analysis', subtitle: 'Inspect summaries, sentiment, priority, extracted fields, and deterministic flow results.' },
-  actions: { eyebrow: 'Follow-up operations', title: 'Actions', subtitle: 'Review idempotent ticket, lead, task, and explicitly bounded action outcomes.' },
-  automations: { eyebrow: 'Policy-driven routing', title: 'Automations', subtitle: 'Manage receptionist profiles, validated versioned flows, and allowlisted automation rules.' },
-  numbers: { eyebrow: 'Telephony configuration', title: 'Numbers and channels', subtitle: 'Configure channels, consent behavior, business hours, and signed-webhook provider state.' },
+  overview: { eyebrow: 'Call operations', title: 'Operations overview', subtitle: 'See live activity, setup progress, call outcomes, capacity, and anything that needs attention.' },
+  setup: { eyebrow: 'Guided activation', title: 'Set up CallCommand', subtitle: 'Choose a number, create your receptionist, select a workflow, test it, and see exactly what remains before going live.' },
+  calls: { eyebrow: 'Call history', title: 'Calls and history', subtitle: 'Review caller outcomes, summaries, timelines, workflow actions, recordings, and analysis provenance.' },
+  recordings: { eyebrow: 'Call history', title: 'Calls and history', subtitle: 'Review consent-bound recording availability from the associated call record.' },
+  transcripts: { eyebrow: 'Call history', title: 'Calls and history', subtitle: 'Review the persisted, read-only transcript from the associated call record.' },
+  analysis: { eyebrow: 'Call history', title: 'Calls and history', subtitle: 'Review summaries, provenance, workflow traces, and actions from the associated call record.' },
+  actions: { eyebrow: 'Follow-up work', title: 'Follow-up work', subtitle: 'Review tickets, leads, tasks, alerts, and other persisted actions created from calls.' },
+  agents: { eyebrow: 'AI receptionist', title: 'AI receptionists', subtitle: 'Describe your business and how your receptionist should greet, help, collect information, and escalate.' },
+  workflows: { eyebrow: 'Call handling', title: 'Call workflows', subtitle: 'Start from an editable business template, choose follow-up actions, and assign the result to a phone number.' },
+  automations: { eyebrow: 'Call handling', title: 'Call workflows', subtitle: 'Start from an editable business template, choose follow-up actions, and assign the result to a phone number.' },
+  numbers: { eyebrow: 'Business phone lines', title: 'Phone numbers', subtitle: 'Get a CallCommand number or connect the number your customers already know.' },
+  usage: { eyebrow: 'Capacity and cost', title: 'Usage and billing', subtitle: 'See actual call capacity, active lanes, minutes, included usage, and provider-backed pricing.' },
+  health: { eyebrow: 'Go-live readiness', title: 'Health and readiness', subtitle: 'See what is healthy, what needs attention, and the exact next step for each integration.' },
   providers: { eyebrow: 'Provider truth', title: 'Providers', subtitle: 'Review telephony and MSP adapters, schema fingerprints, health reasons, and kill switches.' },
   organizations: { eyebrow: 'Verified MSP association', title: 'Organizations and support contacts', subtitle: 'Manage directory-backed support profiles, trusted lines, contacts, and rotatable SupportLinks.' },
   compliance: { eyebrow: 'Assurance and evidence', title: 'Compliance and call evidence', subtitle: 'Review consent, prohibited actions, assurance levels, hash-linked audit, and onboarding gates.' },
@@ -78,24 +87,27 @@ export function resolveCallCommandRoute(routePath?: string): CallCommandRouteSta
   const path = `/${raw.replace(/^\/(?:modules|apps)\/callcommand-ai\/?/u, '').split('/').filter(Boolean).join('/')}`;
   const [root, recordId] = path.split('/').filter(Boolean);
   if (!root || ['dashboard', 'app', 'switchboard', 'simulate', 'simulate-live-call'].includes(root)) return state('overview', '/');
+  if (['setup', 'getting-started', 'onboarding'].includes(root)) return state('setup', '/setup');
   if (root === 'calls' || root === 'operations') return state('calls', '/calls', recordId);
-  if (root === 'recordings') return state('recordings', '/recordings', recordId);
-  if (root === 'transcripts') return state('transcripts', '/transcripts', recordId);
-  if (root === 'analysis') return state('analysis', '/analysis', recordId);
+  if (['recordings', 'transcripts', 'analysis'].includes(root)) return state('calls', '/calls', recordId);
   if (['actions', 'work', 'tickets', 'leads', 'tasks'].includes(root)) return state('actions', '/actions', recordId);
-  if (['automations', 'automation-rules', 'profiles', 'receptionist-profiles', 'flows', 'channels'].includes(root)) return state('automations', '/automations', recordId);
-  if (['numbers', 'transfer-targets'].includes(root)) return state('numbers', '/numbers', recordId);
-  if (['providers', 'setup', 'integrations'].includes(root)) return state('providers', '/providers', recordId);
-  if (['organizations', 'contacts', 'onboarding'].includes(root)) return state('organizations', '/organizations', recordId);
+  if (['agents', 'profiles', 'receptionist-profiles'].includes(root)) return state('agents', '/agents', recordId);
+  if (['workflows', 'automations', 'automation-rules', 'flows'].includes(root)) return state('workflows', '/workflows', recordId);
+  if (['numbers', 'channels', 'transfer-targets'].includes(root)) return state('numbers', '/numbers', recordId);
+  if (['usage', 'billing'].includes(root)) return state('usage', '/usage');
+  if (['health', 'readiness'].includes(root) || root === 'integrations' && recordId === 'health') return state('health', '/health');
+  if (['providers', 'integrations'].includes(root)) return state('providers', '/providers', recordId);
+  if (['organizations', 'contacts'].includes(root)) return state('organizations', '/organizations', recordId);
   if (['compliance', 'consent', 'suppressions', 'audit', 'policy', 'action-catalog'].includes(root)) return state('compliance', '/compliance', recordId);
-  if (['settings', 'billing'].includes(root)) return state('settings', '/settings');
+  if (root === 'settings') return state('settings', '/settings');
   return state('overview', '/');
 }
 
 export const CALLCOMMAND_LEGACY_REDIRECTS = {
   '/dashboard': '/', '/app': '/', '/switchboard': '/', '/tickets': '/actions', '/leads': '/actions', '/tasks': '/actions',
-  '/profiles': '/automations', '/receptionist-profiles': '/automations', '/flows': '/automations', '/channels': '/automations',
-  '/automation-rules': '/automations', '/setup/telephony': '/providers', '/integrations': '/providers', '/transfer-targets': '/numbers',
+  '/profiles': '/agents', '/receptionist-profiles': '/agents', '/flows': '/workflows', '/channels': '/numbers',
+  '/automation-rules': '/workflows', '/automations': '/workflows', '/setup/telephony': '/health', '/integrations': '/providers', '/integrations/health': '/health', '/transfer-targets': '/numbers',
+  '/recordings': '/calls', '/transcripts': '/calls', '/analysis': '/calls',
   '/consent': '/compliance', '/suppressions': '/compliance', '/audit': '/compliance', '/policy': '/compliance',
-  '/action-catalog': '/compliance', '/onboarding': '/organizations', '/billing': '/settings',
+  '/action-catalog': '/compliance', '/onboarding': '/setup', '/billing': '/usage',
 } as const;

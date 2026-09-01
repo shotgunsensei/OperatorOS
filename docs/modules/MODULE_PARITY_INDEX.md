@@ -1,5 +1,61 @@
 # OperatorOS module parity index
 
+## CallCommand managed-number provisioning overlay (2026-08-31)
+
+Release v58 now supplies the OperatorOS-native number lifecycle missing from
+the earlier commercial-runtime overlay: tenant Twilio subaccount create/reuse,
+encrypted credentials, current local/toll-free search, idempotent exact-number
+acquisition and ambiguous-result recovery, persisted agent/workflow assignment,
+automatic route configuration, provider health/repair, independent Stripe
+number quantities, payment grace/suspension, staged release, reconciliation,
+and super-admin fleet telemetry. Inbound authority still resolves from the
+signed exact provider mapping; MSP routes, central identity/billing, tenant
+roles, concurrent lanes, and the append-only usage ledger remain separate.
+
+Fresh source/local evidence passes 162/162 CallCommand API tests across 21
+files, 6/6 commercial web contracts, 13/13 release/environment contracts, all
+workspace typechecks, release-v58 plan/apply/reapply, and the production build
+with 35/35 Next pages. Live Twilio purchase/callback, OpenAI SIP/media,
+canonical Stripe settlement, production database/deployment, authenticated
+browser, carrier, regulatory, and rollback acceptance were not performed.
+CallCommand remains source/local implemented and live-acceptance blocked; this
+overlay does not promote it to consolidation state 5.
+
+## CallCommand commercial runtime overlay (2026-08-31)
+
+The general commercial CallCommand path now has source-integrated signed Twilio
+ingress, exact destination and provider readiness, an atomic tenant lane gate,
+fixed TLS SIP to OpenAI Realtime, signed incoming-call acceptance, isolated
+sideband tool control, append-only usage/cost evidence, tenant telephony
+subaccounts/secrets, replay-safe number lifecycle, durable BYO connection
+plans, structured agents/knowledge, managed channel-scoped alerts, verified
+transfer targets, and central Stripe additional-lane settlement. OperatorOS
+remains the only identity, tenant, role, entitlement, billing, provider-secret,
+module, and audit authority; the existing MSP Phase 37 assurance boundary is
+preserved.
+
+The customer surface provides the guided number -> agent -> workflow -> alerts
+and transfer -> simulation -> exact-readiness -> go-live sequence. Server
+capabilities fail closed for explicit module viewers, general/MSP resources
+cannot be cross-assigned, alert configuration survives disabled state and saves
+independently, provider facts are exact-line rather than aggregate, and
+cost-bearing number/lane operations require explicit confirmation and
+idempotency.
+
+Final source/local evidence is 149/149 CallCommand API tests across 20 files,
+commercial web contract 6/6, production-environment contract 11/11, all four
+workspace typechecks, the production build with 35/35 generated Next pages,
+and release-v57 57-step plan plus clean disposable apply/reapply. The live
+readiness profile fails closed on intentionally absent production/provider
+inputs and leaks no secret values. Live Twilio/OpenAI/Stripe, exact-host
+authenticated browser, production backup/migration/restore, DNS, monitoring,
+rollback, and commercial usage-meter decisions remain open. Broader caller
+verification, complete transfer fallback orchestration, SMS, richer workflow
+and knowledge tooling, and aggregate operator diagnostics remain backlog.
+CallCommand therefore remains source/local implemented and release blocked; no
+consolidation-state or production promotion is made.
+
+
 ## Canonical customer-facing module-name overlay (2026-08-30)
 
 The SDK catalog, release-v56 module seeding, authenticated module/launchpad

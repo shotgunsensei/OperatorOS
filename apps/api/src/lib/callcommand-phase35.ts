@@ -248,7 +248,10 @@ export function executeFlowGraph(graphValue: unknown, context: Row, aiDecision?:
     if (node.type === 'action') {
       const actionType = String(node.config.actionType ?? '');
       if (!CALLCOMMAND_ACTION_TYPES.includes(actionType as any)) throw new CallCommandPhase35Error(`Unsupported flow action ${actionType}`);
-      actions.push({ actionType, config: node.config });
+      // Action configuration is part of the action itself.  Nesting it under
+      // `config` made endpointId, templates, assignment, and enabled toggles
+      // invisible to the dispatcher even though the flow validated.
+      actions.push({ ...node.config, actionType, enabled: node.config.enabled !== false });
     }
     const next: string | null | undefined = branch === 'yes' ? node.yes : branch === 'no' ? node.no : node.next;
     traces.push({ sequence, nodeKey: node.key, nodeType: node.type, outcome: branch, safeInput: { intent: context.intent ?? null, priority: context.priority ?? null }, safeOutput: { next: next ?? null } });
@@ -362,7 +365,11 @@ export async function transcribeCallAudio(content: Buffer, fileName = 'recording
 export function buildIncomingTwiml(input: { greeting: string; consentRequired: boolean; consentAction: string; gatherAction: string; behavior: string; forwardPhone?: string | null; recordingCallback?: string | null }): string {
   const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<Response>', `<Say voice="Polly.Joanna">${xml(input.greeting)}</Say>`];
   if (input.consentRequired) {
-    lines.push(`<Gather input="dtmf" numDigits="1" timeout="6" action="${xml(input.consentAction)}" method="POST"><Say voice="Polly.Joanna">Press 1 to consent to recording and automated intake. Press 2 to continue without recording.</Say></Gather>`, `<Redirect method="POST">${xml(input.consentAction)}?timeout=1</Redirect>`);
+    const timeoutAction = `${input.consentAction}${input.consentAction.includes('?') ? '&' : '?'}timeout=1`;
+    lines.push(
+      `<Gather input="dtmf" numDigits="1" timeout="6" action="${xml(input.consentAction)}" method="POST"><Say voice="Polly.Joanna">Press 1 to consent to automated intake and, when enabled, recording. Press 2 to decline and end the call.</Say></Gather>`,
+      `<Redirect method="POST">${xml(timeoutAction)}</Redirect>`,
+    );
   } else if (input.behavior === 'forward_only' && input.forwardPhone) {
     lines.push(`<Dial>${xml(input.forwardPhone)}</Dial>`);
   } else if (input.behavior === 'voicemail_only') {

@@ -17,7 +17,7 @@ test('Phase 35 declares complete persisted telephony, intelligence, automation, 
     '/switchboard/sessions/:id/transfer','/simulate','/twilio/voice/incoming','/twilio/voice/consent',
     '/twilio/voice/gather','/twilio/voice/recording','/twilio/voice/status',
   ]) assert.match(route, new RegExp(contract.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  assert.match(route, /verifyTwilioSignature/);
+  assert.match(route, /verifyCallCommandTwilioSignature/);
   assert.match(route, /recordIngestion/);
   assert.match(route, /providerActionConfirmed: result\.ok/);
   assert.match(route, /startTwilioCallRecording/);

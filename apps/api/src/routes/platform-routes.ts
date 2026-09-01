@@ -163,9 +163,14 @@ async function deleteTenantOwnedData(executor: any, tenantId: string): Promise<v
   if (callCommandTables.has('callcommand_calls')) await executor.execute(sql`DELETE FROM callcommand_calls WHERE tenant_id = ${tenantId}`);
   if (callCommandTables.has('callcommand_suppressions')) await executor.execute(sql`DELETE FROM callcommand_suppressions WHERE tenant_id = ${tenantId}`);
   if (callCommandTables.has('callcommand_consents')) await executor.execute(sql`DELETE FROM callcommand_consents WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_number_reconciliation_issues')) await executor.execute(sql`DELETE FROM callcommand_number_reconciliation_issues WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_number_orders')) await executor.execute(sql`DELETE FROM callcommand_number_orders WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_number_billing_entitlements')) await executor.execute(sql`DELETE FROM callcommand_number_billing_entitlements WHERE tenant_id = ${tenantId}`);
   if (callCommandTables.has('callcommand_transfer_targets')) await executor.execute(sql`DELETE FROM callcommand_transfer_targets WHERE tenant_id = ${tenantId}`);
-  if (callCommandTables.has('callcommand_profiles')) await executor.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id = ${tenantId}`);
   if (callCommandTables.has('callcommand_channels')) await executor.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_telephony_accounts')) await executor.execute(sql`DELETE FROM callcommand_telephony_accounts WHERE tenant_id = ${tenantId}`);
+  if (callCommandTables.has('callcommand_profiles')) await executor.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id = ${tenantId}`);
+  await executor.execute(sql`DELETE FROM shared_secret_references WHERE tenant_id = ${tenantId}`);
   const ninjamationTables = await existingNinjamationTables(executor);
   if (ninjamationTables.has('ninjamation_generations')) await executor.execute(sql`DELETE FROM ninjamation_generations WHERE tenant_id = ${tenantId}`);
   if (ninjamationTables.has('ninjamation_downloads')) await executor.execute(sql`DELETE FROM ninjamation_downloads WHERE tenant_id = ${tenantId}`);
@@ -366,13 +371,37 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   // counts only — keeps the operator console snappy.
   app.get('/v1/platform/stats', { preHandler: [requireSuperAdmin] }, async (request) => {
     const [
-      tenantsAll, modulesAll, addonsAll, eventsAll, usersAll,
+      tenantsAll, modulesAll, addonsAll, eventsAll, usersAll, callCommandInfrastructure,
     ] = await Promise.all([
       db.select().from(tenants),
       db.select().from(modules),
       db.select().from(addonSubscriptions),
       db.select().from(billingEvents),
       db.select({ id: users.id, email: users.email, status: users.status, platformRole: users.platformRole }).from(users),
+      db.execute(sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM callcommand_telephony_accounts WHERE archived_at IS NULL) AS provider_accounts,
+          (SELECT COUNT(*)::int FROM callcommand_telephony_accounts WHERE archived_at IS NULL AND health_status='healthy') AS healthy_provider_accounts,
+          (SELECT COUNT(*)::int FROM callcommand_channels WHERE acquisition_mode='platform_provisioned' AND deleted_at IS NULL) AS managed_numbers,
+          (SELECT COUNT(*)::int FROM callcommand_channels WHERE acquisition_mode='platform_provisioned' AND lifecycle_state='ACTIVE' AND deleted_at IS NULL) AS active_numbers,
+          (SELECT COUNT(*)::int FROM callcommand_channels WHERE acquisition_mode='platform_provisioned' AND number_type='local' AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL) AS local_numbers,
+          (SELECT COUNT(*)::int FROM callcommand_channels WHERE acquisition_mode='platform_provisioned' AND number_type='toll_free' AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL) AS toll_free_numbers,
+          (SELECT COUNT(*)::int FROM callcommand_calls WHERE status IN ('queued','ringing','in_progress')) AS active_calls,
+          (SELECT COUNT(*)::int FROM callcommand_channels WHERE acquisition_mode='platform_provisioned' AND lifecycle_state='RELEASE_PENDING' AND deleted_at IS NULL) AS release_pending,
+          (SELECT COUNT(*)::int FROM callcommand_channels WHERE acquisition_mode='platform_provisioned' AND lifecycle_state IN ('ACTION_REQUIRED','PROVISION_FAILED','ROUTING_FAILED','BILLING_FAILED','SUSPENDED','RECONCILIATION_REQUIRED') AND deleted_at IS NULL) AS action_required,
+          (SELECT COUNT(*)::int FROM callcommand_number_orders WHERE provisioning_state IN ('PROVISION_FAILED','ROUTING_FAILED','BILLING_FAILED','RECONCILIATION_REQUIRED')) AS failed_provider_operations,
+          (SELECT COUNT(*)::int FROM callcommand_number_orders WHERE provisioning_state NOT IN ('ACTIVE','RELEASED','PROVISION_FAILED','ACTION_REQUIRED') AND updated_at<NOW()-INTERVAL '15 minutes') AS stale_operations,
+          (SELECT COUNT(*)::int FROM callcommand_number_reconciliation_issues WHERE status IN ('open','repairing','manual_review','failed')) AS open_reconciliation_issues,
+          (SELECT COUNT(*)::int FROM callcommand_number_reconciliation_issues WHERE issue_type IN ('provider_orphan_number','provider_number_missing_local_channel') AND status IN ('open','repairing','manual_review','failed')) AS orphan_numbers,
+          (SELECT COUNT(*)::int FROM callcommand_number_reconciliation_issues WHERE issue_type='routing_drift' AND status IN ('open','repairing','manual_review','failed')) AS routing_drift,
+          (SELECT COUNT(*)::int FROM callcommand_number_reconciliation_issues WHERE issue_type IN ('billing_quantity_drift','number_billing_grace_expired') AND status IN ('open','repairing','manual_review','failed')) AS stripe_mismatches,
+          (SELECT COUNT(*)::int FROM callcommand_telephony_accounts WHERE archived_at IS NULL AND compliance_status IN ('action_required','restricted','suspended')) AS compliance_warnings,
+          (SELECT COALESCE(SUM(licensed_billable_local_quantity),0)::int FROM callcommand_number_billing_entitlements WHERE billing_status IN ('active','grace_period')) AS licensed_billable_local_numbers,
+          (SELECT COALESCE(SUM(licensed_billable_toll_free_quantity),0)::int FROM callcommand_number_billing_entitlements WHERE billing_status IN ('active','grace_period')) AS licensed_billable_toll_free_numbers,
+          (SELECT COALESCE(SUM(total_cost_minor),0)::bigint FROM callcommand_calls) AS recorded_usage_cost_minor,
+          (SELECT COUNT(*)::int FROM callcommand_number_billing_entitlements WHERE billing_status='active') AS active_number_billing_tenants,
+          (SELECT COUNT(*)::int FROM callcommand_number_billing_entitlements WHERE billing_status IN ('past_due','grace_period','suspended','failed')) AS number_billing_attention_tenants
+      `),
     ]);
     const byStatus = (rows: any[], k = 'status') => rows.reduce((acc: Record<string, number>, r) => {
       const v = r[k] ?? 'unknown';
@@ -382,6 +411,13 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     const billingTotal = eventsAll.length;
     const billingFailed = eventsAll.filter(e => e.errorMessage !== null).length;
     const billingProcessed = eventsAll.filter(e => e.processedAt !== null).length;
+    const callCommand = (callCommandInfrastructure.rows[0] ?? {}) as Record<string, unknown>;
+    const localNumberPriceCents = /^\d{2,6}$/.test(process.env.CALLCOMMAND_LOCAL_NUMBER_PRICE_CENTS ?? '')
+      ? Number(process.env.CALLCOMMAND_LOCAL_NUMBER_PRICE_CENTS)
+      : 500;
+    const tollFreeNumberPriceCents = /^\d{2,6}$/.test(process.env.CALLCOMMAND_TOLL_FREE_NUMBER_PRICE_CENTS ?? '')
+      ? Number(process.env.CALLCOMMAND_TOLL_FREE_NUMBER_PRICE_CENTS)
+      : 800;
 
     // Silent-zero guard: if a column rename or refactor causes the
     // processed/failed counters to silently read 0 even though the
@@ -421,6 +457,31 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         total: usersAll.length,
         superAdmins: usersAll.filter(u => hasPlatformAdminAuthority(u)).length,
         active: usersAll.filter(u => u.status === 'active').length,
+      },
+      callCommandInfrastructure: {
+        providerAccounts: Number(callCommand.provider_accounts ?? 0),
+        healthyProviderAccounts: Number(callCommand.healthy_provider_accounts ?? 0),
+        managedNumbers: Number(callCommand.managed_numbers ?? 0),
+        activeNumbers: Number(callCommand.active_numbers ?? 0),
+        localNumbers: Number(callCommand.local_numbers ?? 0),
+        tollFreeNumbers: Number(callCommand.toll_free_numbers ?? 0),
+        activeCalls: Number(callCommand.active_calls ?? 0),
+        releasePending: Number(callCommand.release_pending ?? 0),
+        actionRequired: Number(callCommand.action_required ?? 0),
+        failedProviderOperations: Number(callCommand.failed_provider_operations ?? 0),
+        staleOperations: Number(callCommand.stale_operations ?? 0),
+        openReconciliationIssues: Number(callCommand.open_reconciliation_issues ?? 0),
+        orphanNumbers: Number(callCommand.orphan_numbers ?? 0),
+        routingDrift: Number(callCommand.routing_drift ?? 0),
+        stripeMismatches: Number(callCommand.stripe_mismatches ?? 0),
+        complianceWarnings: Number(callCommand.compliance_warnings ?? 0),
+        recordedUsageCostMinor: Number(callCommand.recorded_usage_cost_minor ?? 0),
+        estimatedNumberRecurringRevenueCents:
+          Number(callCommand.licensed_billable_local_numbers ?? 0) * localNumberPriceCents
+          + Number(callCommand.licensed_billable_toll_free_numbers ?? 0) * tollFreeNumberPriceCents,
+        providerRecurringCostEstimateAvailable: false,
+        activeBillingTenants: Number(callCommand.active_number_billing_tenants ?? 0),
+        billingAttentionTenants: Number(callCommand.number_billing_attention_tenants ?? 0),
       },
       warnings,
     };
@@ -604,7 +665,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const activeAddonStatuses: string[] = ['active', 'trialing'];
       const activeSubscriptionStatuses: ('active' | 'trialing')[] = ['active', 'trialing'];
 
-      const [activeAddons, launchableModulesRows, memberRows, activeSubsRows] = await Promise.all([
+      const [activeAddons, launchableModulesRows, memberRows, activeSubsRows, managedNumberRows] = await Promise.all([
         db.select().from(addonSubscriptions).where(and(
           eq(addonSubscriptions.tenantId, id),
           inArray(addonSubscriptions.status, activeAddonStatuses),
@@ -620,6 +681,11 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           eq(subscriptions.tenantId, id),
           inArray(subscriptions.status, activeSubscriptionStatuses),
         )),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS count FROM callcommand_channels
+          WHERE tenant_id=${id} AND acquisition_mode='platform_provisioned'
+            AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL
+        `),
       ]);
 
       const nonAdminMembers = memberRows.filter(m => !hasPlatformAdminAuthority(m));
@@ -628,11 +694,19 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         launchableModules: launchableModulesRows.length,
         nonAdminMembers: nonAdminMembers.length,
         activeSubscriptions: activeSubsRows.length,
+        managedProviderNumbers: Number(managedNumberRows.rows[0]?.count ?? 0),
       };
       if (dependents.activeAddons > 0 || dependents.activeSubscriptions > 0) {
         return reply.code(409).send({
           error: 'Cancel and reconcile active tenant billing before permanent deletion.',
           code: 'TENANT_HAS_ACTIVE_BILLING',
+          dependents,
+        });
+      }
+      if (dependents.managedProviderNumbers > 0) {
+        return reply.code(409).send({
+          error: 'Release and reconcile all CallCommand-managed provider numbers before permanent tenant deletion.',
+          code: 'TENANT_HAS_ACTIVE_PROVIDER_RESOURCES',
           dependents,
         });
       }

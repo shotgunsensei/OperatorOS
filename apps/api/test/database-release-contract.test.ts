@@ -11,13 +11,23 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 56);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 58);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 56);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 56);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 58);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 58);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'auth_mfa_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'callcommand_managed_number_provisioning');
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_managed_number_provisioning')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_commercial_runtime'),
+    'CallCommand managed-number provisioning must be additive after the commercial runtime release',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_commercial_runtime')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'auth_mfa_tables'),
+    'CallCommand commercial runtime persistence must be an additive release step after v56',
+  );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'auth_mfa_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tenant_invitation_consent'),

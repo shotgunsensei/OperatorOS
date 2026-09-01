@@ -2513,6 +2513,33 @@ export const moduleShellApi = {
   callcommand: {
     workspace: () => apiFetch('/modules/callcommand-ai/workspace'),
     productWorkspace: () => apiFetch('/modules/callcommand-ai/product/workspace'),
+    commercialWorkspace: () => apiFetch('/modules/callcommand-ai/product/commercial/workspace'),
+    commercialSearchNumbers: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/commercial/numbers/search', { method: 'POST', body: JSON.stringify(input) }),
+    commercialProvisionNumber: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/commercial/numbers/provision', { method: 'POST', body: JSON.stringify(input) }),
+    commercialConnectNumber: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/commercial/numbers/connect', { method: 'POST', body: JSON.stringify(input) }),
+    commercialNumberHealth: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/commercial/numbers/${encodeURIComponent(id)}/health`, { method: 'POST', body: JSON.stringify({}) }),
+    commercialRepairNumber: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/commercial/numbers/${encodeURIComponent(id)}/repair`, { method: 'POST', body: JSON.stringify({}) }),
+    commercialReconcileNumbers: (input: Record<string, unknown> = {}) =>
+      apiFetch('/modules/callcommand-ai/product/commercial/numbers/reconcile', { method: 'POST', body: JSON.stringify(input) }),
+    commercialNumberBilling: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/commercial/numbers/billing', { method: 'POST', body: JSON.stringify(input) }),
+    commercialReleaseNumber: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/commercial/numbers/${encodeURIComponent(id)}/release`, { method: 'POST', body: JSON.stringify(input) }),
+    commercialCancelNumberRelease: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/commercial/numbers/${encodeURIComponent(id)}/release/cancel`, { method: 'POST', body: JSON.stringify({ confirmCancel: true }) }),
+    commercialExecuteNumberRelease: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/commercial/numbers/${encodeURIComponent(id)}/release/execute`, { method: 'POST', body: JSON.stringify({ confirmExecute: true }) }),
+    commercialUpdateRuntime: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/commercial/runtime-settings', { method: 'PATCH', body: JSON.stringify(input) }),
+    commercialUpsertAlertRule: (channelId: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/commercial/channels/${encodeURIComponent(channelId)}/alert-rule`, { method: 'PUT', body: JSON.stringify(input) }),
+    commercialLaneCheckout: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/commercial/lane-checkout', { method: 'POST', body: JSON.stringify(input) }),
     mspWorkspace: () => apiFetch('/modules/callcommand-ai/product/msp/workspace'),
     mspUpdateSettings: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/msp/settings', { method: 'PATCH', body: JSON.stringify(input) }),
@@ -2547,8 +2574,14 @@ export const moduleShellApi = {
       apiFetch(`/modules/callcommand-ai/product/channels/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
     productCreateProfile: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/profiles', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateProfile: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/profiles/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
     productCreateTarget: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/transfer-targets', { method: 'POST', body: JSON.stringify(input) }),
+    productStartTargetVerification: (id: string, input: Record<string, unknown> = {}) =>
+      apiFetch(`/modules/callcommand-ai/product/transfer-targets/${encodeURIComponent(id)}/verification/start`, { method: 'POST', body: JSON.stringify(input) }),
+    productCheckTargetVerification: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/transfer-targets/${encodeURIComponent(id)}/verification/check`, { method: 'POST', body: JSON.stringify(input) }),
     productCreateFlow: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/flows', { method: 'POST', body: JSON.stringify(input) }),
     productUpdateFlow: (id: string, input: Record<string, unknown>) =>
@@ -2557,6 +2590,8 @@ export const moduleShellApi = {
       apiFetch(`/modules/callcommand-ai/product/flows/${encodeURIComponent(id)}/publish`, { method: 'POST', body: JSON.stringify({}) }),
     productCreateRule: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/automation-rules', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateRule: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/automation-rules/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
     productProcessCall: (id: string, input: Record<string, unknown>) =>
       apiFetch(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}/process`, { method: 'POST', body: JSON.stringify(input) }),
     productReport: (id: string) =>

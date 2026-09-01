@@ -37,6 +37,11 @@ import {
   getCanonicalModuleDisplayName,
 } from '@operatoros/sdk';
 import { changeFreeCompanionModule } from '../lib/product-entitlements.js';
+import { processCallCommandLaneWebhookEvent } from '../lib/callcommand-lane-billing.js';
+import {
+  CALLCOMMAND_NUMBER_FEATURE_KEY,
+  processCallCommandNumberWebhookEvent,
+} from '../lib/callcommand-number-billing.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
   registerTorqueTokenWebhookHandler();
@@ -494,15 +499,20 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       const { claimedRowId, isDuplicate } = await claimStripeEvent(event, classification);
 
       if (isDuplicate) {
-        console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): duplicate event, no-op`);
-        return { received: true, kind: classification.isAddon ? 'addon' : 'plan', handled: true, action: 'duplicate_ignored' };
+        const kind = classification.isFeatureAddon ? 'feature_addon' : classification.isAddon ? 'addon' : 'plan';
+        console.log(`[billing webhook] ${event.type} (${kind}): duplicate event, no-op`);
+        return { received: true, kind, handled: true, action: 'duplicate_ignored' };
       }
 
       let result: { handled: boolean; action?: string; error?: string };
       try {
-        result = classification.isAddon
-          ? await processAddonWebhookEvent(event)
-          : await processWebhookEvent(event);
+        result = classification.isFeatureAddon
+          ? classification.featureKey === CALLCOMMAND_NUMBER_FEATURE_KEY
+            ? await processCallCommandNumberWebhookEvent(event)
+            : await processCallCommandLaneWebhookEvent(event)
+          : classification.isAddon
+            ? await processAddonWebhookEvent(event)
+            : await processWebhookEvent(event);
       } catch (err: any) {
         if (claimedRowId) await markStripeEventFailed(claimedRowId, err.message ?? String(err));
         throw err;
@@ -516,8 +526,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         }
       }
 
-      console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): handled=${result.handled} action=${result.action || 'none'} matched=${classification.matchedAt}`);
-      return { received: true, kind: classification.isAddon ? 'addon' : 'plan', ...result };
+      const kind = classification.isFeatureAddon ? 'feature_addon' : classification.isAddon ? 'addon' : 'plan';
+      console.log(`[billing webhook] ${event.type} (${kind}): handled=${result.handled} action=${result.action || 'none'} matched=${classification.matchedAt}`);
+      return { received: true, kind, ...result };
     } catch (err: any) {
       console.error('[billing webhook] Verification or processing failed', {
         code: typeof err?.code === 'string' ? err.code : 'WEBHOOK_REJECTED',

@@ -127,6 +127,22 @@ export function getStripeCatalogClient(): Pick<StripeClient, 'accounts' | 'produ
   return getStripe();
 }
 
+/**
+ * Narrow server-only Stripe surface used by feature-capacity billing.
+ *
+ * CallCommand concurrent-call lanes are a quantity on a licensed recurring
+ * Price.  Keeping access here makes the existing Stripe singleton, runtime
+ * mode gate, and test override the only way feature billing can reach Stripe.
+ * It deliberately does not expose webhook verification or arbitrary catalog
+ * mutation to module routes.
+ */
+export function getStripeFeatureBillingClient(): Pick<StripeClient, 'checkout' | 'customers' | 'subscriptions'> {
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe is not configured'), { code: 'STRIPE_NOT_CONFIGURED' });
+  }
+  return getStripe();
+}
+
 // Task #66: monthly + annual price resolution. STRIPE_PRICE_<PLAN>_<INTERVAL>
 // is the canonical form; the bare STRIPE_PRICE_<PLAN> is honored only for the
 // monthly fallback so existing prod env stays valid through the cutover.
@@ -781,6 +797,11 @@ export async function retrieveTorqueStripeReconciliationSnapshot(paymentIntentId
 // resolved (when present) so the caller doesn't have to re-parse.
 export interface WebhookClassification {
   isAddon: boolean;
+  /** Quantity-based feature add-ons share the canonical Stripe receipt and
+   *  webhook endpoint, but are settled by their feature-specific handler
+   *  rather than by the module add-on subscription table. */
+  isFeatureAddon: boolean;
+  featureKey: string | null;
   userId: string | null;
   moduleSlug: string | null;
   /** Gate 2: tenant scope from checkout metadata. Falls back to user's
@@ -809,10 +830,13 @@ export function classifyWebhookEvent(event: { type: string; data: { object: any 
     }
   }
   for (const { md, at } of candidates) {
-    const isAddon = md.type === 'addon' || md.kind === 'addon';
+    const isFeatureAddon = md.type === 'feature_addon' || md.kind === 'feature_addon';
+    const isAddon = isFeatureAddon || md.type === 'addon' || md.kind === 'addon';
     if (isAddon) {
       return {
         isAddon: true,
+        isFeatureAddon,
+        featureKey: isFeatureAddon ? String(md.feature ?? md.entitlement ?? '') || null : null,
         userId: md.user_id ?? md.userId ?? null,
         moduleSlug: md.module_slug ?? md.moduleSlug ?? null,
         tenantId: md.tenant_id ?? md.tenantId ?? null,
@@ -827,6 +851,8 @@ export function classifyWebhookEvent(event: { type: string; data: { object: any 
   const planMd = candidates[0]?.md ?? {};
   return {
     isAddon: false,
+    isFeatureAddon: false,
+    featureKey: null,
     userId: planMd.user_id ?? planMd.userId ?? null,
     moduleSlug: null,
     tenantId: null,

@@ -34,11 +34,24 @@ import {
   getTelephonyInfo,
   redirectTwilioCall,
   startTwilioCallRecording,
-  verifyTwilioSignature,
 } from '../lib/telephony.js';
+import { verifyCallCommandTwilioSignature } from '../lib/callcommand-tenant-telephony.js';
+import { buildOpenAiSipDialTwiml } from '../lib/callcommand-number-provider.js';
+import {
+  createCallCommandSipRouteToken,
+  inspectCallCommandRealtimeReadiness,
+} from '../lib/callcommand-realtime.js';
+import { closeCallCommandRealtimeSideband } from '../lib/callcommand-realtime-session-registry.js';
+import {
+  acquireCallCommandLane,
+  compileCallCommandInstructions,
+  reconcileCallCommandTerminalUsage,
+  releaseCallCommandLane,
+} from '../lib/callcommand-capacity.js';
 import { createAttachment } from '../lib/shared-attachments.js';
 import { getOutboundProviderAdapter, getSharedProviderStatuses } from '../lib/shared-provider-adapters.js';
 import { enqueueOutboundWebhook, listOutboundWebhookEndpoints } from '../lib/shared-outbound-webhooks.js';
+import { validateCallCommandAutomationActions } from '../lib/callcommand-automation-policy.js';
 import { appendActivityEvent, recordUsageEvent, summarizeUsage } from '../lib/shared-usage-activity.js';
 import { publishConfiguredCallWorkflows } from '../lib/cross-module-data-fabric.js';
 import { safeFailureCode } from '../lib/shared-service-safety.js';
@@ -48,6 +61,9 @@ const base = '/v1/modules/callcommand-ai/product';
 const reads = [requireTenantModuleAccess(MODULE_SLUG)];
 const writes = [...reads, requireTenantModuleWriteAccess];
 const admins = [...writes, requireTenantAdmin];
+const CALLCOMMAND_PROFILE_MODES = new Set(['receptionist', 'intake', 'dispatcher']);
+const CALLCOMMAND_PROFILE_VOICES = new Set(['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar']);
+const CALLCOMMAND_PROFILE_FALLBACKS = new Set(['voicemail', 'transfer', 'callback', 'end_call']);
 type Row = Record<string, any>;
 type Executor = Pick<typeof db, 'execute'>;
 
@@ -114,7 +130,13 @@ function formBody(request: FastifyRequest): Record<string, string> {
 async function signedTwilio(request: FastifyRequest): Promise<Record<string, string>> {
   const value = formBody(request);
   const signature = request.headers['x-twilio-signature'] as string | undefined;
-  if (!(await verifyTwilioSignature(canonicalWebhookUrl(request), value, signature))) {
+  const callId = String((request.query as Row | undefined)?.call_id ?? '') || null;
+  if (!(await verifyCallCommandTwilioSignature({
+    url: canonicalWebhookUrl(request),
+    params: value,
+    signature,
+    callId,
+  }))) {
     throw new CallCommandPhase35Error('Twilio signature verification failed', 'CALLCOMMAND_SIGNATURE_INVALID', 403);
   }
   return value;
@@ -141,48 +163,353 @@ async function recordIngestion(input: { tenantId: string; source: string; eventI
     VALUES (${input.tenantId},${input.source},${input.eventId.slice(0, 200)},${input.payloadHash},${input.callId ?? null},${input.status ?? 'processed'},NOW())
     ON CONFLICT (tenant_id,source,provider_event_id) DO NOTHING RETURNING *
   `);
-  return { duplicate: !created.rows[0], event: created.rows[0] as Row | undefined };
+  if (created.rows[0]) return { duplicate: false, event: created.rows[0] as Row };
+  const existing = await executor.execute(sql`
+    SELECT * FROM callcommand_ingestion_events
+    WHERE tenant_id=${input.tenantId} AND source=${input.source} AND provider_event_id=${input.eventId.slice(0, 200)}
+    LIMIT 1
+  `);
+  const event = existing.rows[0] as Row | undefined;
+  if (!event || String(event.payload_sha256) !== input.payloadHash
+    || (input.callId && event.call_id && String(event.call_id) !== input.callId)) {
+    throw new CallCommandPhase35Error(
+      'Webhook replay payload conflicts with the original signed event',
+      'CALLCOMMAND_INGESTION_PAYLOAD_CONFLICT',
+      409,
+    );
+  }
+  return { duplicate: true, event };
 }
 
-async function insertGeneratedObject(executor: Executor, table: 'ticket' | 'lead' | 'task', input: { tenantId: string; call: Row; title?: string; description?: string | null; assignedUserId?: string | null; priority?: string }) {
+function providerPayloadHash(value: Record<string, string>): string {
+  return hashValue(JSON.stringify(Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)))));
+}
+
+async function compiledCallInstructions(tenantId: string, profileId: string): Promise<string> {
+  const [profileResult, knowledgeResult] = await Promise.all([
+    db.execute(sql`SELECT * FROM callcommand_profiles WHERE tenant_id=${tenantId} AND id=${profileId} AND deleted_at IS NULL LIMIT 1`),
+    db.execute(sql`
+      SELECT knowledge_type,title,content,enabled,priority
+      FROM callcommand_agent_knowledge
+      WHERE tenant_id=${tenantId} AND profile_id=${profileId} AND enabled=TRUE AND deleted_at IS NULL
+      ORDER BY priority,id LIMIT 50
+    `),
+  ]);
+  const profile = profileResult.rows[0] as Row | undefined;
+  if (!profile) throw new CallCommandPhase35Error('Receptionist profile was not found', 'CALLCOMMAND_PROFILE_NOT_FOUND', 404);
+  return compileCallCommandInstructions({
+    name: profile.name,
+    businessName: profile.business_name,
+    departmentName: profile.department_name,
+    personality: profile.personality,
+    agentPurpose: profile.agent_purpose,
+    businessDescription: profile.business_description,
+    greeting: profile.greeting,
+    script: profile.script,
+    primaryLanguage: profile.primary_language,
+    additionalLanguages: profile.additional_languages,
+    businessHours: profile.business_hours_config,
+    holidaySchedule: profile.holiday_schedule,
+    fallbackBehavior: profile.fallback_behavior,
+    voicemailGreeting: profile.voicemail_greeting,
+    afterHoursInstructions: profile.after_hours_instructions,
+    dataPermissions: profile.data_permissions,
+    recordingPolicy: profile.recording_policy,
+    transcriptionPolicy: profile.transcription_policy,
+    advancedPrompt: profile.advanced_prompt,
+  }, knowledgeResult.rows.map(item => ({
+    knowledgeType: (item as Row).knowledge_type,
+    title: (item as Row).title,
+    content: (item as Row).content,
+    enabled: Boolean((item as Row).enabled),
+    priority: Number((item as Row).priority),
+  })), 3_000);
+}
+
+async function buildCapacityOverflowTwiml(tenantId: string, policy: string): Promise<{ policy: string; twiml: string }> {
+  if (policy === 'voicemail') {
+    return {
+      policy,
+      twiml: '<?xml version="1.0" encoding="UTF-8"?><Response><Say>All live assistants are busy. Please leave a brief message after the tone.</Say><Record maxLength="120" playBeep="true" transcribe="false"/><Hangup/></Response>',
+    };
+  }
+  if (policy === 'forward') {
+    const target = await db.execute(sql`
+      SELECT t.phone_e164
+      FROM callcommand_tenant_runtime_settings s
+      JOIN callcommand_transfer_targets t
+        ON t.tenant_id=s.tenant_id AND t.id=s.overflow_forward_target_id
+      WHERE s.tenant_id=${tenantId} AND s.overflow_policy='forward'
+        AND t.kind='external' AND t.status='active' AND t.verified_at IS NOT NULL
+        AND t.phone_e164 IS NOT NULL AND t.deleted_at IS NULL
+      LIMIT 1
+    `);
+    const phone = String((target.rows[0] as Row | undefined)?.phone_e164 ?? '');
+    if (phone) {
+      return {
+        policy,
+        twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Say>All live assistants are busy. Please hold while your call is forwarded.</Say><Dial answerOnBridge="true">${xml(phone)}</Dial><Hangup/></Response>`,
+      };
+    }
+  }
+  if (policy === 'queue') {
+    const queueName = `callcommand-${createHash('sha256').update(tenantId).digest('hex').slice(0, 16)}`;
+    return {
+      policy,
+      twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Say>All live assistants are busy. Your call will be placed in the overflow queue.</Say><Enqueue>${queueName}</Enqueue><Say>No assistant became available. Please try again later.</Say><Hangup/></Response>`,
+    };
+  }
+  return {
+    policy: 'refuse',
+    twiml: '<?xml version="1.0" encoding="UTF-8"?><Response><Say>All live assistants are busy. Please try again later.</Say><Hangup/></Response>',
+  };
+}
+
+function providerSequence(value: unknown, current: number): number {
+  if (value === undefined || value === null || value === '') return current + 1;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new CallCommandPhase35Error('Provider sequence is invalid', 'CALLCOMMAND_PROVIDER_SEQUENCE_INVALID', 400);
+  }
+  return parsed;
+}
+
+function providerEndedAt(value: unknown, minimum: Date): Date {
+  const parsed = value ? new Date(String(value)) : new Date();
+  return Number.isNaN(parsed.getTime()) || parsed < minimum ? new Date() : parsed;
+}
+
+function providerBillableSeconds(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 31_536_000 ? parsed : null;
+}
+
+function providerCostMinor(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.round(Math.abs(parsed) * 100)) : null;
+}
+
+export function isRealtimeCallEligible(configuration: Row, now = new Date()): boolean {
+  if (configuration.realtime_enabled !== true || !configuration.active_flow_id
+    || configuration.profile_status !== 'active'
+    || configuration.product_mode === 'msp' || configuration.routing_mode === 'msp') return false;
+  const open = isWithinBusinessHours(configuration.business_hours, now, String(configuration.timezone));
+  return open
+    ? ['ai_receptionist', 'ai_screen_then_transfer'].includes(String(configuration.live_behavior))
+    : String(configuration.after_hours_behavior) === 'ai_intake';
+}
+
+function isProviderManagedCommercialLine(configuration: Row): boolean {
+  return ['platform_provisioned', 'byon'].includes(String(configuration.acquisition_mode ?? 'manual'));
+}
+
+export function realtimeConsentRequired(configuration: Row): boolean {
+  const recordingWillRun = configuration.recording_enabled === true && configuration.recording_policy !== 'disabled';
+  return (recordingWillRun && (configuration.require_recording_consent === true
+      || configuration.recording_policy === 'consent_required'))
+    || configuration.transcription_policy === 'consent_required';
+}
+
+export function realtimeRecordingEnabled(configuration: Row): boolean {
+  return configuration.recording_enabled === true && configuration.recording_policy !== 'disabled';
+}
+
+async function buildRealtimeSipForCall(configuration: Row, call: Row, providerCallSid: string): Promise<string> {
+  const realtimeReadiness = inspectCallCommandRealtimeReadiness();
+  const configuredOrigin = String(process.env.TWILIO_PUBLIC_BASE_URL || process.env.APP_URL || '').trim();
+  let publicOrigin: URL | null = null;
+  try { publicOrigin = new URL(configuredOrigin); } catch { publicOrigin = null; }
+  if (!realtimeReadiness.ready || !publicOrigin || publicOrigin.protocol !== 'https:'
+    || publicOrigin.username || publicOrigin.password || publicOrigin.search || publicOrigin.hash) {
+    throw new CallCommandPhase35Error(
+      'OpenAI Realtime configuration is unavailable',
+      'CALLCOMMAND_REALTIME_NOT_CONFIGURED',
+      503,
+    );
+  }
+  const routeToken = createCallCommandSipRouteToken({
+    internalCallId:String(call.id),providerCallSid,routeSecret:String(process.env.CALLCOMMAND_SIP_ROUTE_SECRET),
+  });
+  const statusCallbackUrl = new URL(
+    `/v1/modules/callcommand-ai/twilio/voice/status?call_id=${encodeURIComponent(String(call.id))}`,
+    publicOrigin.origin,
+  ).toString();
+  return buildOpenAiSipDialTwiml({
+    openAiProjectId:String(process.env.OPENAI_PROJECT_ID),callId:String(call.id),routeToken,
+    timeoutSeconds:30,statusCallbackUrl,allowedWebhookOrigins:[publicOrigin.origin],
+  });
+}
+
+async function markRealtimeSipPending(configuration: Row, call: Row): Promise<void> {
+  await db.execute(sql`
+    UPDATE callcommand_calls SET realtime_status='pending',realtime_error_code=NULL,updated_at=NOW()
+    WHERE tenant_id=${configuration.tenant_id} AND id=${call.id}
+  `);
+  await db.execute(sql`
+    UPDATE callcommand_live_sessions SET state='ringing',sequence=sequence+1,updated_at=NOW()
+    WHERE tenant_id=${configuration.tenant_id} AND call_id=${call.id} AND ended_at IS NULL
+  `);
+}
+
+async function failRealtimeSipSetup(configuration: Row, call: Row, code: string): Promise<void> {
+  const safeCode = safeFailureCode(code, 'CALLCOMMAND_REALTIME_SETUP_FAILED').slice(0, 80);
+  await db.execute(sql`
+    UPDATE callcommand_calls SET status='failed',realtime_status='failed',
+      realtime_error_code=${safeCode},error_code=${safeCode},completed_at=NOW(),ended_at=NOW(),updated_at=NOW()
+    WHERE tenant_id=${configuration.tenant_id} AND id=${call.id}
+  `);
+  await db.execute(sql`
+    UPDATE callcommand_live_sessions SET state='failed',ended_at=NOW(),updated_at=NOW()
+    WHERE tenant_id=${configuration.tenant_id} AND call_id=${call.id} AND ended_at IS NULL
+  `);
+  await db.execute(sql`
+    UPDATE callcommand_tenant_runtime_settings SET realtime_health_status='unavailable',
+      realtime_last_error_code=${safeCode},updated_at=NOW()
+    WHERE tenant_id=${configuration.tenant_id}
+  `);
+  await releaseCallCommandLane({
+    tenantId:String(configuration.tenant_id),callId:String(call.id),reason:'realtime_setup_failed',
+  });
+}
+
+async function insertGeneratedObject(executor: Executor, table: 'ticket' | 'lead' | 'task', input: { tenantId: string; call: Row; actionRunId: string; title?: string; description?: string | null; assignedUserId?: string | null; priority?: string }) {
   if (table === 'ticket') return executor.execute(sql`
-    INSERT INTO callcommand_tickets(tenant_id,call_id,title,description,priority,assigned_user_id)
-    VALUES (${input.tenantId},${input.call.id},${input.title ?? input.call.summary ?? 'Call follow-up'},${input.description ?? input.call.intent ?? null},${input.priority ?? input.call.priority ?? 'medium'},${input.assignedUserId ?? null}) RETURNING *
+    INSERT INTO callcommand_tickets(tenant_id,call_id,title,description,priority,assigned_user_id,action_run_id)
+    VALUES (${input.tenantId},${input.call.id},${input.title ?? input.call.summary ?? 'Call follow-up'},${input.description ?? input.call.intent ?? null},${input.priority ?? input.call.priority ?? 'medium'},${input.assignedUserId ?? null},${input.actionRunId})
+    ON CONFLICT (tenant_id,action_run_id) WHERE action_run_id IS NOT NULL DO UPDATE SET updated_at=callcommand_tickets.updated_at RETURNING *
   `);
   if (table === 'lead') return executor.execute(sql`
-    INSERT INTO callcommand_leads(tenant_id,call_id,name,company,phone_masked,notes,assigned_user_id)
-    VALUES (${input.tenantId},${input.call.id},${input.call.customer_name ?? null},${input.call.company_name ?? null},${input.call.phone_masked ?? null},${input.description ?? input.call.summary ?? null},${input.assignedUserId ?? null}) RETURNING *
+    INSERT INTO callcommand_leads(tenant_id,call_id,name,company,phone_masked,notes,assigned_user_id,action_run_id)
+    VALUES (${input.tenantId},${input.call.id},${input.call.customer_name ?? null},${input.call.company_name ?? null},${input.call.phone_masked ?? null},${input.description ?? input.call.summary ?? null},${input.assignedUserId ?? null},${input.actionRunId})
+    ON CONFLICT (tenant_id,action_run_id) WHERE action_run_id IS NOT NULL DO UPDATE SET updated_at=callcommand_leads.updated_at RETURNING *
   `);
   return executor.execute(sql`
-    INSERT INTO callcommand_tasks(tenant_id,call_id,title,description,priority,assigned_user_id)
-    VALUES (${input.tenantId},${input.call.id},${input.title ?? input.call.action_items?.[0]?.title ?? 'Call follow-up'},${input.description ?? input.call.intent ?? null},${input.priority ?? input.call.priority ?? 'medium'},${input.assignedUserId ?? null}) RETURNING *
+    INSERT INTO callcommand_tasks(tenant_id,call_id,title,description,priority,assigned_user_id,action_run_id)
+    VALUES (${input.tenantId},${input.call.id},${input.title ?? input.call.action_items?.[0]?.title ?? 'Call follow-up'},${input.description ?? input.call.intent ?? null},${input.priority ?? input.call.priority ?? 'medium'},${input.assignedUserId ?? null},${input.actionRunId})
+    ON CONFLICT (tenant_id,action_run_id) WHERE action_run_id IS NOT NULL DO UPDATE SET updated_at=callcommand_tasks.updated_at RETURNING *
   `);
 }
 
-function ruleMatches(conditions: Row, call: Row): boolean {
+function normalizeProfileFallback(value: unknown): string {
+  const normalized = String(value ?? 'voicemail').trim().toLowerCase().replace(/[ -]+/g, '_');
+  if (CALLCOMMAND_PROFILE_FALLBACKS.has(normalized)) return normalized;
+  if (normalized.includes('transfer')) return 'transfer';
+  if (normalized.includes('callback') || normalized.includes('call_back')) return 'callback';
+  if (normalized.includes('end') || normalized.includes('hang')) return 'end_call';
+  return 'voicemail';
+}
+
+function boundedProfileStrings(value: unknown, field: string, maximum = 20): string[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > maximum) {
+    throw new CallCommandPhase35Error(`${field} is invalid`, 'CALLCOMMAND_PROFILE_CONFIGURATION_INVALID');
+  }
+  return value.map(item => cleanText(item, field, 80)!).filter(Boolean);
+}
+
+async function tenantCallCustodian(tenantId: string, preferredUserId?: string | null): Promise<string> {
+  const result = await db.execute(sql`
+    SELECT tu.user_id
+    FROM tenant_users tu
+    JOIN users u ON u.id=tu.user_id AND u.status='active'
+    WHERE tu.tenant_id=${tenantId}
+      AND (${preferredUserId ?? null}::text IS NULL OR tu.user_id=${preferredUserId ?? null})
+    ORDER BY CASE WHEN tu.role='owner' THEN 0 WHEN tu.role='admin' THEN 1 ELSE 2 END,tu.joined_at,tu.user_id
+    LIMIT 1
+  `);
+  if (!result.rows[0] && preferredUserId) return tenantCallCustodian(tenantId, null);
+  const userId = String((result.rows[0] as Row | undefined)?.user_id ?? '');
+  if (!userId) throw new CallCommandPhase35Error('Tenant has no active call custodian','CALLCOMMAND_CALL_CUSTODIAN_MISSING',409);
+  return userId;
+}
+
+export function callCommandAutomationRuleMatches(conditions: Row, call: Row): boolean {
   return Object.entries(conditions).every(([key, expected]) => {
     const actual = call[key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)] ?? call[key];
     return Array.isArray(expected) ? expected.map(String).includes(String(actual)) : String(actual ?? '') === String(expected ?? '');
   });
 }
 
-async function dispatchActions(input: { tenantId: string; userId: string; call: Row; actions: Row[]; ruleId?: string | null; correlationId?: string | null }) {
+async function tenantMemberUserId(tenantId: string, value: unknown, field: string): Promise<string | null> {
+  const candidate = optionalId(value, field);
+  if (!candidate) return null;
+  const membership = await db.execute(sql`
+    SELECT user_id FROM tenant_users
+    WHERE tenant_id=${tenantId} AND user_id=${candidate}
+    LIMIT 1
+  `);
+  if (!membership.rows[0]) {
+    // Do not reveal whether the global user exists.  CallCommand assignment
+    // authority is the active tenant membership, never a browser-supplied UUID.
+    throw new CallCommandPhase35Error('Assignment target was not found', 'CALLCOMMAND_ASSIGNMENT_TARGET_NOT_FOUND', 404);
+  }
+  return candidate;
+}
+
+export async function dispatchCallCommandActions(input: {
+  tenantId: string;
+  userId: string;
+  call: Row;
+  actions: Row[];
+  ruleId?: string | null;
+  correlationId?: string | null;
+  idempotencyNamespace?: string | null;
+}) {
   const modId = await moduleId();
   const results: Row[] = [];
   for (let index = 0; index < input.actions.length; index += 1) {
     const action = input.actions[index] ?? {};
+    if (action.enabled === false) continue;
     const actionType = String(action.actionType ?? action.type ?? '');
     if (!CALLCOMMAND_ACTION_TYPES.includes(actionType as any)) continue;
-    const key = `${input.call.id}:${input.ruleId ?? 'flow'}:${index}:${actionType}`;
-    const existing = await db.execute(sql`SELECT * FROM callcommand_action_runs WHERE tenant_id=${input.tenantId} AND idempotency_key=${key} LIMIT 1`);
-    if (existing.rows[0]) { results.push(camel(existing.rows[0] as Row)); continue; }
+    const namespace = input.idempotencyNamespace
+      ? `runtime:${hashValue(input.idempotencyNamespace).slice(0, 40)}`
+      : input.ruleId ?? 'flow';
+    const key = `${input.call.id}:${namespace}:${index}:${actionType}`;
+    const reserved = await db.execute(sql`
+      INSERT INTO callcommand_action_runs(
+        tenant_id,call_id,rule_id,action_type,status,idempotency_key,provider,
+        safe_result,attempts,reservation_status,reserved_at,lease_expires_at
+      ) VALUES (
+        ${input.tenantId},${input.call.id},${input.ruleId ?? null},${actionType},
+        'running',${key},'operatoros','{}'::jsonb,1,'claimed',NOW(),NOW()+INTERVAL '2 minutes'
+      )
+      ON CONFLICT (tenant_id,idempotency_key) DO NOTHING
+      RETURNING *
+    `);
+    if (!reserved.rows[0]) {
+      const existing = await db.execute(sql`
+        UPDATE callcommand_action_runs SET status='failed',reservation_status='failed',
+          safe_result='{"providerActionConfirmed":false,"outcomeUnknown":true}'::jsonb,
+          error_code='CALLCOMMAND_ACTION_OUTCOME_UNKNOWN',lease_expires_at=NULL,completed_at=NOW(),updated_at=NOW()
+        WHERE tenant_id=${input.tenantId} AND idempotency_key=${key}
+          AND status='running' AND lease_expires_at IS NOT NULL AND lease_expires_at<=NOW()
+        RETURNING *
+      `);
+      if (!existing.rows[0]) {
+        const loaded = await db.execute(sql`
+          SELECT * FROM callcommand_action_runs
+          WHERE tenant_id=${input.tenantId} AND idempotency_key=${key} LIMIT 1
+        `);
+        if (loaded.rows[0]) results.push(camel(loaded.rows[0] as Row));
+        continue;
+      }
+      if (existing.rows[0]) results.push(camel(existing.rows[0] as Row));
+      continue;
+    }
+    const actionRunId = String((reserved.rows[0] as Row).id);
     let status = 'completed'; let provider: string | null = 'operatoros'; let reference: string | null = null; let safeResult: Row = {}; let errorCode: string | null = null;
     try {
+      const assignedUserId = action.assignedUserId !== undefined
+        ? await tenantMemberUserId(input.tenantId, action.assignedUserId, 'assignedUserId')
+        : null;
       if (actionType === 'ticket' || actionType === 'lead' || actionType === 'task') {
-        const created = await insertGeneratedObject(db, actionType, { tenantId: input.tenantId, call: input.call, title: action.title, description: action.description, assignedUserId: optionalId(action.assignedUserId, 'assignedUserId'), priority: action.priority });
+        const created = await insertGeneratedObject(db, actionType, { tenantId: input.tenantId, call: input.call, actionRunId, title: action.title, description: action.description, assignedUserId, priority: action.priority });
         reference = String((created.rows[0] as Row).id); safeResult = { objectType: actionType, objectId: reference };
       } else if (actionType === 'assignment') {
-        const assigned = optionalId(action.userId, 'userId');
+        const assigned = await tenantMemberUserId(input.tenantId, action.userId, 'userId');
         await db.execute(sql`UPDATE callcommand_calls SET created_by_user_id=${assigned},updated_at=NOW() WHERE tenant_id=${input.tenantId} AND id=${input.call.id}`);
         safeResult = { assignedUserId: assigned };
       } else if (actionType === 'priority') {
@@ -203,8 +530,13 @@ async function dispatchActions(input: { tenantId: string; userId: string; call: 
       status = 'failed'; errorCode = String((error as any)?.code ?? 'CALLCOMMAND_ACTION_FAILED').slice(0, 80); safeResult = { providerActionConfirmed: false };
     }
     const saved = await db.execute(sql`
-      INSERT INTO callcommand_action_runs(tenant_id,call_id,rule_id,action_type,status,idempotency_key,provider,provider_reference,safe_result,error_code,completed_at)
-      VALUES (${input.tenantId},${input.call.id},${input.ruleId ?? null},${actionType},${status},${key},${provider},${reference},${JSON.stringify(safeResult)}::jsonb,${errorCode},NOW()) RETURNING *
+      UPDATE callcommand_action_runs SET
+        status=${status},provider=${provider},provider_reference=${reference},
+        safe_result=${JSON.stringify(safeResult)}::jsonb,error_code=${errorCode},
+        reservation_status=${status === 'failed' ? 'failed' : 'completed'},
+        lease_expires_at=NULL,completed_at=NOW(),updated_at=NOW()
+      WHERE tenant_id=${input.tenantId} AND id=${actionRunId}
+      RETURNING *
     `);
     results.push(camel(saved.rows[0] as Row));
   }
@@ -228,10 +560,10 @@ async function processCall(input: { tenantId: string; userId: string; callId: st
   });
   const rules = await db.execute(sql`SELECT * FROM callcommand_automation_rules WHERE tenant_id=${input.tenantId} AND enabled=TRUE AND deleted_at IS NULL ORDER BY priority,id`);
   const actionResults: Row[] = [];
-  for (const rule of rules.rows as Row[]) if (ruleMatches(rule.conditions_json as Row, updated)) actionResults.push(...await dispatchActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: rule.actions_json as Row[], ruleId: String(rule.id), correlationId: input.correlationId }));
+  for (const rule of rules.rows as Row[]) if (callCommandAutomationRuleMatches(rule.conditions_json as Row, updated)) actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: rule.actions_json as Row[], ruleId: String(rule.id), correlationId: input.correlationId }));
   if (!rules.rows.length) {
     const fallbackAction = analysis.callType === 'sales' ? 'lead' : analysis.actionItems.length ? 'task' : 'ticket';
-    actionResults.push(...await dispatchActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: [{ actionType: fallbackAction }], correlationId: input.correlationId }));
+    actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: [{ actionType: fallbackAction }], correlationId: input.correlationId }));
   }
   let flowResult: ReturnType<typeof executeFlowGraph> | null = null;
   const channel = await db.execute(sql`SELECT active_flow_id FROM callcommand_channels WHERE tenant_id=${input.tenantId} AND id=${original.channel_id} LIMIT 1`);
@@ -245,7 +577,7 @@ async function processCall(input: { tenantId: string; userId: string; callId: st
         VALUES (${input.tenantId},${input.callId},${row.id},${row.active_version},${trace.sequence},${trace.nodeKey},${trace.nodeType},${trace.outcome},${JSON.stringify(trace.safeInput)}::jsonb,${JSON.stringify(trace.safeOutput)}::jsonb)
         ON CONFLICT (tenant_id,call_id,flow_id,flow_version,sequence) DO NOTHING
       `);
-      actionResults.push(...await dispatchActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: flowResult.actions, correlationId: input.correlationId }));
+      actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: flowResult.actions, correlationId: input.correlationId }));
       await db.execute(sql`UPDATE callcommand_calls SET flow_id=${row.id},flow_version=${row.active_version} WHERE tenant_id=${input.tenantId} AND id=${input.callId}`);
     }
   }
@@ -329,11 +661,49 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
       if (!existing.rows[0]) throw new CallCommandPhase35Error('Channel was not found', 'CALLCOMMAND_CHANNEL_NOT_FOUND', 404);
       const row = existing.rows[0] as Row; const behavior = String(value.liveBehavior ?? row.live_behavior); const after = String(value.afterHoursBehavior ?? row.after_hours_behavior);
       if (!CALLCOMMAND_LIVE_BEHAVIORS.includes(behavior as any) || !CALLCOMMAND_AFTER_HOURS.includes(after as any)) throw new CallCommandPhase35Error('Channel behavior is invalid');
+      const profileId = value.profileId === null
+        ? null
+        : value.profileId === undefined
+          ? row.profile_id
+          : optionalId(value.profileId, 'profileId');
+      const activeFlowId = value.activeFlowId === null
+        ? null
+        : value.activeFlowId === undefined
+          ? row.active_flow_id
+          : optionalId(value.activeFlowId, 'activeFlowId');
+      if (value.profileId !== undefined && profileId) {
+        const compatibleProfile = await db.execute(sql`
+          SELECT id FROM callcommand_profiles
+          WHERE tenant_id=${tenant(request)} AND id=${profileId} AND product_mode=${String(row.product_mode)}
+            AND status='active' AND deleted_at IS NULL LIMIT 1
+        `);
+        if (!compatibleProfile.rows[0]) {
+          throw new CallCommandPhase35Error(
+            'The selected receptionist is not an active profile in this channel product mode',
+            'CALLCOMMAND_CHANNEL_PROFILE_MODE_MISMATCH',
+            409,
+          );
+        }
+      }
+      if (value.activeFlowId !== undefined && activeFlowId) {
+        const compatibleFlow = await db.execute(sql`
+          SELECT id FROM callcommand_flows
+          WHERE tenant_id=${tenant(request)} AND id=${activeFlowId} AND product_mode=${String(row.product_mode)}
+            AND status='active' AND deleted_at IS NULL LIMIT 1
+        `);
+        if (!compatibleFlow.rows[0]) {
+          throw new CallCommandPhase35Error(
+            'The selected workflow is not a published flow in this channel product mode',
+            'CALLCOMMAND_CHANNEL_FLOW_MODE_MISMATCH',
+            409,
+          );
+        }
+      }
       const updated = await db.execute(sql`
         UPDATE callcommand_channels SET name=${value.name ? cleanText(value.name,'name',120) : row.name},business_hours=${JSON.stringify(value.businessHours ?? row.business_hours)}::jsonb,
           live_behavior=${behavior},after_hours_behavior=${after},forward_phone_e164=${value.forwardPhone ? normalizeE164(value.forwardPhone,'forwardPhone') : row.forward_phone_e164},
           require_recording_consent=${value.requireRecordingConsent ?? row.require_recording_consent},recording_enabled=${value.recordingEnabled ?? row.recording_enabled},
-          profile_id=${value.profileId === null ? null : optionalId(value.profileId,'profileId') ?? row.profile_id},active_flow_id=${value.activeFlowId === null ? null : optionalId(value.activeFlowId,'activeFlowId') ?? row.active_flow_id},
+          profile_id=${profileId},active_flow_id=${activeFlowId},
           status=${['active','paused','archived'].includes(String(value.status)) ? String(value.status) : row.status},version=version+1,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${id(request)} RETURNING *
       `);
       await activity(request, 'callcommand.channel.updated', 'channel', id(request), 'Updated channel behavior and routing');
@@ -343,11 +713,60 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
 
   app.post(`${base}/profiles`, { preHandler: writes }, async (request, reply) => {
     try {
-      const value = body(request); const fields = normalizeIntakeSchema(value.intakeSchema ?? value.intakeFields ?? []); const mode = String(value.productMode ?? 'general');
-      if (!CALLCOMMAND_PRODUCT_MODES.includes(mode as any)) throw new CallCommandPhase35Error('productMode is invalid');
+      const value = body(request);
+      const fields = normalizeIntakeSchema(value.intakeSchema ?? value.intakeFields ?? []);
+      const productMode = String(value.productMode ?? 'general');
+      const profileMode = String(value.mode ?? 'receptionist');
+      const voice = String(value.voice ?? value.voiceId ?? 'alloy');
+      const faqs = value.faqs ?? [];
+      const holidaySchedule = value.holidaySchedule ?? [];
+      const languages = boundedProfileStrings(value.languages ?? value.additionalLanguages, 'languages');
+      const businessHours = value.businessHoursConfig !== undefined
+        ? safeJsonObject(value.businessHoursConfig, 'businessHoursConfig')
+        : value.businessHoursDescription !== undefined
+          ? { description: cleanText(value.businessHoursDescription, 'businessHoursDescription', 1000)! }
+          : { always: true };
+      const permissions = safeJsonObject(value.dataPermissions ?? {}, 'dataPermissions');
+      const recordingPolicy = String(value.recordingPolicy ?? 'consent_required');
+      const transcriptionPolicy = String(value.transcriptionPolicy ?? 'consent_required');
+      const retentionDays = Number(value.retentionDays ?? 30);
+      if (!CALLCOMMAND_PRODUCT_MODES.includes(productMode as any)) throw new CallCommandPhase35Error('productMode is invalid');
+      if (!CALLCOMMAND_PROFILE_MODES.has(profileMode)) throw new CallCommandPhase35Error('mode is invalid', 'CALLCOMMAND_PROFILE_MODE_INVALID');
+      if (!CALLCOMMAND_PROFILE_VOICES.has(voice)) throw new CallCommandPhase35Error('voice is invalid', 'CALLCOMMAND_PROFILE_VOICE_INVALID');
+      if (!Array.isArray(faqs) || faqs.length > 100 || !Array.isArray(holidaySchedule) || holidaySchedule.length > 100) {
+        throw new CallCommandPhase35Error('FAQ or holiday configuration is invalid', 'CALLCOMMAND_PROFILE_CONFIGURATION_INVALID');
+      }
+      if (!['disabled', 'consent_required', 'jurisdiction_policy'].includes(recordingPolicy)
+        || !['disabled', 'consent_required', 'recording_only'].includes(transcriptionPolicy)) {
+        throw new CallCommandPhase35Error('Recording or transcription policy is invalid', 'CALLCOMMAND_PROFILE_POLICY_INVALID');
+      }
+      if (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
+        throw new CallCommandPhase35Error('retentionDays must be 1-3650', 'CALLCOMMAND_PROFILE_RETENTION_INVALID');
+      }
       const created = await db.execute(sql`
-        INSERT INTO callcommand_profiles(tenant_id,created_by_user_id,name,mode,greeting,intake_fields,status,script,tone,escalation_rules,product_mode,is_default)
-        VALUES (${tenant(request)},${actor(request)},${cleanText(value.name,'name',120)},${String(value.mode ?? 'receptionist')},${cleanText(value.greeting ?? value.greetingScript,'greeting',1000)},${JSON.stringify(fields)}::jsonb,'active',${cleanText(value.script,'script',8000,true) ?? ''},${cleanText(value.tone ?? 'professional','tone',32)},${JSON.stringify(Array.isArray(value.escalationRules) ? value.escalationRules.slice(0,20) : [])}::jsonb,${mode},${value.isDefault === true}) RETURNING *
+        INSERT INTO callcommand_profiles(
+          tenant_id,created_by_user_id,name,mode,greeting,intake_fields,status,script,tone,
+          escalation_rules,product_mode,is_default,business_name,department_name,voice_id,
+          personality,agent_purpose,business_description,faqs,business_hours_config,
+          holiday_schedule,primary_language,additional_languages,fallback_behavior,
+          voicemail_greeting,after_hours_instructions,data_permissions,recording_policy,
+          transcription_policy,retention_days,advanced_prompt
+        ) VALUES (
+          ${tenant(request)},${actor(request)},${cleanText(value.name,'name',120)},${profileMode},
+          ${cleanText(value.greeting ?? value.greetingScript,'greeting',1000)},${JSON.stringify(fields)}::jsonb,
+          'active',${cleanText(value.script,'script',12000,true) ?? ''},${cleanText(value.tone ?? 'professional','tone',32)},
+          ${JSON.stringify(Array.isArray(value.escalationRules) ? value.escalationRules.slice(0,20) : [])}::jsonb,
+          ${productMode},${value.isDefault === true},${cleanText(value.businessName,'businessName',160,true) ?? ''},
+          ${cleanText(value.department ?? value.departmentName,'department',120,true)},${voice},
+          ${cleanText(value.personality ?? value.tone ?? 'professional','personality',80)},
+          ${cleanText(value.primaryPurpose ?? value.agentPurpose,'primaryPurpose',4000,true) ?? ''},
+          ${cleanText(value.businessDescription,'businessDescription',8000,true) ?? ''},${JSON.stringify(faqs)}::jsonb,
+          ${JSON.stringify(businessHours)}::jsonb,${JSON.stringify(holidaySchedule)}::jsonb,
+          ${cleanText(value.primaryLanguage ?? 'en-US','primaryLanguage',32)},${JSON.stringify(languages)}::jsonb,
+          ${normalizeProfileFallback(value.fallbackBehavior)},${cleanText(value.voicemailGreeting,'voicemailGreeting',2000,true) ?? ''},
+          ${cleanText(value.afterHoursInstructions,'afterHoursInstructions',4000,true) ?? ''},${JSON.stringify(permissions)}::jsonb,
+          ${recordingPolicy},${transcriptionPolicy},${retentionDays},${cleanText(value.advancedPrompt,'advancedPrompt',12000,true) ?? ''}
+        ) RETURNING *
       `);
       await activity(request, 'callcommand.profile.created', 'receptionist_profile', String((created.rows[0] as Row).id), 'Created a receptionist profile');
       return reply.code(201).send({ profile: camel(created.rows[0] as Row) });
@@ -357,12 +776,16 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
   app.post(`${base}/transfer-targets`, { preHandler: writes }, async (request, reply) => {
     try {
       const value = body(request); const kind = String(value.kind ?? 'external');
+      if ('verified' in value || 'verifiedAt' in value || 'verified_at' in value) {
+        throw new CallCommandPhase35Error('Transfer verification is server-controlled','CALLCOMMAND_TRANSFER_VERIFICATION_SERVER_OWNED',400);
+      }
       if (!['user','queue','external','voicemail'].includes(kind)) throw new CallCommandPhase35Error('Transfer target kind is invalid');
+      const targetUserId = kind === 'user' ? await tenantMemberUserId(tenant(request),value.userId,'userId') : null;
       const created = await db.execute(sql`
         INSERT INTO callcommand_transfer_targets(tenant_id,created_by_user_id,label,kind,phone_e164,target_user_id,queue_name,business_hours,priority,verified_at,status)
-        VALUES (${tenant(request)},${actor(request)},${cleanText(value.label,'label',120)},${kind},${kind === 'external' ? normalizeE164(value.phone,'phone') : null},${kind === 'user' ? optionalId(value.userId,'userId') : null},${kind === 'queue' ? cleanText(value.queueName,'queueName',120) : null},${JSON.stringify(value.businessHours ?? { always: true })}::jsonb,${Math.max(1,Math.min(1000,Number(value.priority ?? 100)))},${kind === 'external' && value.verified === true ? new Date() : null},'active') RETURNING *
+        VALUES (${tenant(request)},${actor(request)},${cleanText(value.label,'label',120)},${kind},${kind === 'external' ? normalizeE164(value.phone,'phone') : null},${targetUserId},${kind === 'queue' ? cleanText(value.queueName,'queueName',120) : null},${JSON.stringify(value.businessHours ?? { always: true })}::jsonb,${Math.max(1,Math.min(1000,Number(value.priority ?? 100)))},NULL,'active') RETURNING *
       `);
-      await activity(request, 'callcommand.transfer_target.created', 'transfer_target', String((created.rows[0] as Row).id), 'Created a transfer target');
+      await activity(request, 'callcommand.transfer_target.created', 'transfer_target', String((created.rows[0] as Row).id), kind === 'external' ? 'Created a transfer target pending server verification' : 'Created a transfer target');
       return reply.code(201).send({ target: camel(created.rows[0] as Row) });
     } catch (error) { return fail(reply, error); }
   });
@@ -408,8 +831,8 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
 
   app.post(`${base}/automation-rules`, { preHandler: writes }, async (request, reply) => {
     try {
-      const value = body(request); const conditions = safeJsonObject(value.conditions ?? {}, 'conditions'); const actions = Array.isArray(value.actions) ? value.actions.slice(0,20) : [];
-      if (!actions.length || actions.some((action: Row) => !CALLCOMMAND_ACTION_TYPES.includes(String(action.actionType ?? action.type) as any))) throw new CallCommandPhase35Error('At least one supported action is required');
+      const value = body(request); const conditions = safeJsonObject(value.conditions ?? {}, 'conditions');
+      const actions = await validateCallCommandAutomationActions({ tenantId: tenant(request), actions: value.actions });
       const created = await db.execute(sql`INSERT INTO callcommand_automation_rules(tenant_id,created_by_user_id,name,priority,enabled,conditions_json,actions_json) VALUES (${tenant(request)},${actor(request)},${cleanText(value.name,'name',160)},${Math.max(1,Math.min(1000,Number(value.priority ?? 100)))},${value.enabled !== false},${JSON.stringify(conditions)}::jsonb,${JSON.stringify(actions)}::jsonb) RETURNING *`);
       await activity(request, 'callcommand.rule.created', 'automation_rule', String((created.rows[0] as Row).id), 'Created an automation rule');
       return reply.code(201).send({ rule: camel(created.rows[0] as Row) });
@@ -523,12 +946,15 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
         const value = body(request);
         const status = cleanText(value.status,'status',24,true); const allowed = entity === 'leads' ? ['new','contacted','qualified','won','lost','archived'] : ['open','in_progress','completed','canceled'];
         if (status && !allowed.includes(status)) throw new CallCommandPhase35Error('status is invalid');
-        const assigned = optionalId(value.assignedUserId,'assignedUserId');
+        const assignmentProvided = Object.prototype.hasOwnProperty.call(value, 'assignedUserId');
+        const assigned = !assignmentProvided || value.assignedUserId === null || value.assignedUserId === ''
+          ? null
+          : await tenantMemberUserId(tenant(request), value.assignedUserId, 'assignedUserId');
         const result = entity === 'tickets'
-          ? await db.execute(sql`UPDATE callcommand_tickets SET status=COALESCE(${status},status),assigned_user_id=COALESCE(${assigned},assigned_user_id),updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${id(request)} RETURNING *`)
+          ? await db.execute(sql`UPDATE callcommand_tickets SET status=COALESCE(${status},status),assigned_user_id=CASE WHEN ${assignmentProvided} THEN ${assigned} ELSE assigned_user_id END,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${id(request)} RETURNING *`)
           : entity === 'leads'
-            ? await db.execute(sql`UPDATE callcommand_leads SET status=COALESCE(${status},status),assigned_user_id=COALESCE(${assigned},assigned_user_id),updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${id(request)} RETURNING *`)
-            : await db.execute(sql`UPDATE callcommand_tasks SET status=COALESCE(${status},status),assigned_user_id=COALESCE(${assigned},assigned_user_id),updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${id(request)} RETURNING *`);
+            ? await db.execute(sql`UPDATE callcommand_leads SET status=COALESCE(${status},status),assigned_user_id=CASE WHEN ${assignmentProvided} THEN ${assigned} ELSE assigned_user_id END,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${id(request)} RETURNING *`)
+            : await db.execute(sql`UPDATE callcommand_tasks SET status=COALESCE(${status},status),assigned_user_id=CASE WHEN ${assignmentProvided} THEN ${assigned} ELSE assigned_user_id END,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${id(request)} RETURNING *`);
         if (!result.rows[0]) throw new CallCommandPhase35Error(`${entity.slice(0,-1)} was not found`,'CALLCOMMAND_OBJECT_NOT_FOUND',404);
         await activity(request,`callcommand.${entity.slice(0,-1)}.updated`,entity.slice(0,-1),id(request),`Updated generated ${entity.slice(0,-1)}`);
         return { [entity.slice(0,-1)]: camel(result.rows[0] as Row) };
@@ -562,10 +988,14 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
 
   app.post(`${base}/switchboard/sessions/:id/end`, { preHandler: writes }, async (request, reply) => {
     try {
-      const result = await db.execute(sql`UPDATE callcommand_live_sessions SET state='completed',ended_at=NOW(),updated_at=NOW(),sequence=sequence+1 WHERE tenant_id=${tenant(request)} AND id=${id(request)} AND ended_at IS NULL RETURNING *`);
-      if (!result.rows[0]) throw new CallCommandPhase35Error('Live session was not found','CALLCOMMAND_SESSION_NOT_FOUND',404);
-      await activity(request,'callcommand.switchboard.ended','live_session',id(request),'Ended a live switchboard session');
-      return { session: camel(result.rows[0] as Row) };
+      const sessionId = id(request);
+      const result = await db.execute(sql`UPDATE callcommand_live_sessions SET state='completed',ended_at=NOW(),updated_at=NOW(),sequence=sequence+1 WHERE tenant_id=${tenant(request)} AND id=${sessionId} AND ended_at IS NULL RETURNING *`);
+      const existing = result.rows[0] ? result : await db.execute(sql`SELECT * FROM callcommand_live_sessions WHERE tenant_id=${tenant(request)} AND id=${sessionId} LIMIT 1`);
+      if (!existing.rows[0]) throw new CallCommandPhase35Error('Live session was not found','CALLCOMMAND_SESSION_NOT_FOUND',404);
+      const session = existing.rows[0] as Row;
+      await releaseCallCommandLane({ tenantId: tenant(request), callId: String(session.call_id), reason: 'operator_session_end' });
+      if (result.rows[0]) await activity(request,'callcommand.switchboard.ended','live_session',sessionId,'Ended a live switchboard session');
+      return { session: camel(session), duplicate: !result.rows[0] };
     } catch (error) { return fail(reply,error); }
   });
 
@@ -588,95 +1018,410 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
   app.post('/v1/modules/callcommand-ai/twilio/voice/incoming', async (request, reply) => {
     try {
       const value = await signedTwilio(request); const sid = parseTwilioCallSid(value.CallSid); const to = normalizeE164(value.To,'To'); const from = normalizeE164(value.From,'From');
-      const configured = await db.execute(sql`SELECT c.*,p.greeting,p.intake_fields,p.id resolved_profile_id FROM callcommand_channels c JOIN callcommand_profiles p ON p.tenant_id=c.tenant_id AND p.id=c.profile_id WHERE c.phone_e164=${to} AND c.status='active' AND c.deleted_at IS NULL LIMIT 1`);
+      const configured = await db.execute(sql`
+        SELECT c.*,p.greeting,p.intake_fields,p.id resolved_profile_id,
+          p.status AS profile_status,p.recording_policy,p.transcription_policy,
+          settings.realtime_enabled,
+          (
+            a.id IS NOT NULL AND a.status='active' AND a.health_status='healthy'
+            AND secret.id IS NOT NULL AND secret.revoked_at IS NULL
+            AND c.provider_number_sid IS NOT NULL AND c.provider_number_status='active'
+            AND c.provider_verified_at IS NOT NULL
+            AND c.health_status='healthy' AND c.health_checked_at IS NOT NULL
+            AND c.lifecycle_state='ACTIVE'
+            AND (
+              c.billing_status IN ('included','active')
+              OR (c.billing_status='grace_period' AND c.billing_grace_expires_at>NOW())
+            )
+          ) AS commercial_realtime_ready
+        FROM callcommand_channels c
+        JOIN callcommand_profiles p
+          ON p.tenant_id=c.tenant_id AND p.id=c.profile_id AND p.status='active' AND p.deleted_at IS NULL
+        LEFT JOIN callcommand_telephony_accounts a
+          ON a.tenant_id=c.tenant_id AND a.id=c.telephony_account_id AND a.archived_at IS NULL
+        LEFT JOIN shared_secret_references secret
+          ON secret.tenant_id=a.tenant_id AND secret.id=a.secret_reference_id
+        JOIN modules module ON module.slug=${MODULE_SLUG} AND module.status='live'
+        JOIN tenant_modules tenant_module
+          ON tenant_module.tenant_id=c.tenant_id AND tenant_module.module_id=module.id
+          AND tenant_module.status='enabled'
+        LEFT JOIN callcommand_tenant_runtime_settings settings ON settings.tenant_id=c.tenant_id
+        WHERE c.phone_e164=${to} AND c.status='active' AND c.deleted_at IS NULL
+          AND c.product_mode<>'msp' AND c.routing_mode<>'msp'
+        LIMIT 1
+      `);
       if (!configured.rows[0]) return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This line is unavailable.</Say><Hangup/></Response>');
-      const channel = configured.rows[0] as Row; const fingerprint = phoneFingerprint(from); const key = `twilio:${sid}`;
-      const inserted = await db.execute(sql`INSERT INTO callcommand_calls(tenant_id,channel_id,profile_id,phone_fingerprint,phone_masked,phone_e164,direction,purpose,provider,provider_call_sid,status,idempotency_key,recording_status) VALUES (${channel.tenant_id},${channel.id},${channel.resolved_profile_id},${fingerprint},${maskPhone(from)},${from},'inbound','support','twilio',${sid},'in_progress',${key},${channel.recording_enabled ? 'pending' : 'disabled'}) ON CONFLICT (tenant_id,idempotency_key) DO UPDATE SET updated_at=NOW() RETURNING *`);
-      const call = inserted.rows[0] as Row; await recordIngestion({ tenantId: String(channel.tenant_id), source:'twilio', eventId:`${sid}:incoming`, payloadHash:hashValue(JSON.stringify(value)), callId:String(call.id) });
-      await db.execute(sql`INSERT INTO callcommand_live_sessions(tenant_id,call_id,channel_id,provider_call_sid,state,caller_phone_masked) VALUES (${channel.tenant_id},${call.id},${channel.id},${sid},${channel.require_recording_consent && channel.recording_enabled ? 'consent' : 'intake'},${maskPhone(from)}) ON CONFLICT DO NOTHING`);
+      const channel = configured.rows[0] as Row;
+      if (isProviderManagedCommercialLine(channel) && channel.commercial_realtime_ready !== true) {
+        return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This line is unavailable.</Say><Hangup/></Response>');
+      }
+      const fingerprint = phoneFingerprint(from); const key = `twilio:${sid}`;
+      const realtimeEligible = channel.commercial_realtime_ready === true && isRealtimeCallEligible(channel);
+      const requiresConsent = realtimeEligible
+        ? realtimeConsentRequired(channel)
+        : Boolean(channel.recording_enabled && channel.require_recording_consent);
+      const recordingEnabledForCall = realtimeEligible
+        ? realtimeRecordingEnabled(channel)
+        : channel.recording_enabled === true;
+      const created = await db.transaction(async tx => {
+        const inserted = await tx.execute(sql`
+          INSERT INTO callcommand_calls(
+            tenant_id,channel_id,profile_id,phone_fingerprint,phone_masked,phone_e164,direction,purpose,
+            provider,provider_call_sid,status,idempotency_key,recording_status
+          ) VALUES (
+            ${channel.tenant_id},${channel.id},${channel.resolved_profile_id},${fingerprint},${maskPhone(from)},${from},
+            'inbound','support','twilio',${sid},'in_progress',${key},${recordingEnabledForCall ? 'pending' : 'disabled'}
+          ) ON CONFLICT DO NOTHING RETURNING *
+        `);
+        const loaded = inserted.rows[0] ? inserted : await tx.execute(sql`
+          SELECT * FROM callcommand_calls
+          WHERE tenant_id=${channel.tenant_id} AND provider='twilio' AND provider_call_sid=${sid} AND idempotency_key=${key}
+          FOR UPDATE
+        `);
+        const call = loaded.rows[0] as Row | undefined;
+        if (!call || String(call.channel_id) !== String(channel.id)) {
+          throw new CallCommandPhase35Error('Provider call conflicts with an existing tenant call', 'CALLCOMMAND_PROVIDER_CALL_CONFLICT', 409);
+        }
+        const replay = await recordIngestion({
+          tenantId: String(channel.tenant_id), source:'twilio', eventId:`${sid}:incoming`,
+          payloadHash:providerPayloadHash(value), callId:String(call.id),
+        }, tx);
+        const existingSession = await tx.execute(sql`
+          SELECT * FROM callcommand_live_sessions WHERE tenant_id=${channel.tenant_id} AND call_id=${call.id}
+          ORDER BY started_at,id LIMIT 1
+        `);
+        if (!existingSession.rows[0]) await tx.execute(sql`
+          INSERT INTO callcommand_live_sessions(tenant_id,call_id,channel_id,provider_call_sid,state,caller_phone_masked)
+          VALUES (${channel.tenant_id},${call.id},${channel.id},${sid},${requiresConsent ? 'consent' : 'intake'},${maskPhone(from)})
+        `);
+        return { call, duplicate: replay.duplicate };
+      });
+      const call = created.call;
+      if (created.duplicate && call.status === 'blocked' && String(call.error_code ?? '').startsWith('CAPACITY_')) {
+        const settings = await db.execute(sql`SELECT overflow_policy FROM callcommand_tenant_runtime_settings WHERE tenant_id=${channel.tenant_id}`);
+        const overflow = await buildCapacityOverflowTwiml(String(channel.tenant_id), String((settings.rows[0] as Row | undefined)?.overflow_policy ?? 'refuse'));
+        return sendTwiml(reply, overflow.twiml);
+      }
+      const admission = await acquireCallCommandLane({
+        tenantId: String(channel.tenant_id), callId: String(call.id), idempotencyKey: `lane:${sid}`, providerCallSid: sid,
+      });
+      if (!admission.admitted) {
+        const overflow = await buildCapacityOverflowTwiml(String(channel.tenant_id), String(admission.overflowPolicy ?? 'refuse'));
+        const sessionState = overflow.policy === 'voicemail' ? 'voicemail' : overflow.policy === 'forward' ? 'transferring' : overflow.policy === 'queue' ? 'holding' : 'failed';
+        await db.execute(sql`
+          UPDATE callcommand_calls SET status='blocked',error_code=${`CAPACITY_${admission.code ?? 'REFUSED'}`},updated_at=NOW()
+          WHERE tenant_id=${channel.tenant_id} AND id=${call.id}
+        `);
+        await db.execute(sql`
+          UPDATE callcommand_live_sessions SET state=${sessionState},updated_at=NOW(),ended_at=${overflow.policy === 'refuse' ? new Date() : null}
+          WHERE tenant_id=${channel.tenant_id} AND call_id=${call.id} AND ended_at IS NULL
+        `);
+        return sendTwiml(reply, overflow.twiml);
+      }
       const consent = `/v1/modules/callcommand-ai/twilio/voice/consent?call_id=${encodeURIComponent(String(call.id))}`; const gather = `/v1/modules/callcommand-ai/twilio/voice/gather?call_id=${encodeURIComponent(String(call.id))}`; const recording = `/v1/modules/callcommand-ai/twilio/voice/recording?call_id=${encodeURIComponent(String(call.id))}`;
+      if (realtimeEligible) {
+        if (requiresConsent && !call.consent_id) {
+          return sendTwiml(reply,buildIncomingTwiml({
+            greeting:String(channel.greeting),consentRequired:true,consentAction:consent,gatherAction:gather,
+            behavior:String(channel.live_behavior),forwardPhone:channel.forward_phone_e164,recordingCallback:recording,
+          }));
+        }
+        if (!created.duplicate && recordingEnabledForCall) {
+          const started = await startTwilioCallRecording({ callSid:sid,recordingStatusCallbackUrl:recording });
+          await db.execute(sql`
+            UPDATE callcommand_calls SET recording_status=${started.ok ? 'pending' : 'failed'},
+              recording_sid=${started.recordingSid ?? null},error_code=${started.ok ? null : 'RECORDING_PROVIDER_UNAVAILABLE'},updated_at=NOW()
+            WHERE tenant_id=${channel.tenant_id} AND id=${call.id}
+          `);
+          if (!started.ok) {
+            await failRealtimeSipSetup(channel,call,'CALLCOMMAND_REALTIME_RECORDING_UNAVAILABLE');
+            return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This call cannot continue safely right now. Please try again later.</Say><Hangup/></Response>');
+          }
+        }
+        try {
+          const sipTwiml = await buildRealtimeSipForCall(channel,call,sid);
+          await markRealtimeSipPending(channel,call);
+          return sendTwiml(reply,sipTwiml);
+        } catch (error) {
+          await failRealtimeSipSetup(channel,call,safeFailureCode(error,'CALLCOMMAND_REALTIME_NOT_CONFIGURED'));
+          return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This line is temporarily unavailable.</Say><Hangup/></Response>');
+        }
+      }
       let recordingUnavailable = false;
-      if (channel.recording_enabled && !channel.require_recording_consent) {
+      if (!created.duplicate && channel.recording_enabled && !channel.require_recording_consent) {
         const started = await startTwilioCallRecording({ callSid: sid, recordingStatusCallbackUrl: recording });
         await db.execute(sql`UPDATE callcommand_calls SET recording_status=${started.ok ? 'pending' : 'failed'},recording_sid=${started.recordingSid ?? null},error_code=${started.ok ? null : 'RECORDING_PROVIDER_UNAVAILABLE'},updated_at=NOW() WHERE tenant_id=${channel.tenant_id} AND id=${call.id}`);
         recordingUnavailable = !started.ok;
+        if (!started.ok) await releaseCallCommandLane({ tenantId:String(channel.tenant_id), callId:String(call.id), reason:'recording_start_failed' });
+      }
+      if (recordingUnavailable) {
+        await db.execute(sql`UPDATE callcommand_calls SET status='failed',completed_at=NOW(),ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${channel.tenant_id} AND id=${call.id}`);
+        await db.execute(sql`UPDATE callcommand_live_sessions SET state='failed',ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${channel.tenant_id} AND call_id=${call.id} AND ended_at IS NULL`);
+        return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This call cannot continue safely right now. Please try again later.</Say><Hangup/></Response>');
       }
       const open = isWithinBusinessHours(channel.business_hours,new Date(),String(channel.timezone));
       const twiml = open
         ? buildIncomingTwiml({ greeting:`${channel.greeting}${recordingUnavailable ? ' Recording is currently unavailable; this call will continue without recording.' : ''}`,consentRequired:Boolean(channel.recording_enabled&&channel.require_recording_consent),consentAction:consent,gatherAction:gather,behavior:String(channel.live_behavior),forwardPhone:channel.forward_phone_e164,recordingCallback:recording })
         : buildAfterHoursTwiml({ behavior:String(channel.after_hours_behavior),greeting:`${channel.greeting} We are currently closed.`,forwardPhone:channel.forward_phone_e164,gatherAction:gather,recordingCallback:recording });
       return sendTwiml(reply,twiml);
-    } catch (error) { if ((error as any)?.statusCode === 403) return reply.code(403).send({ error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID' }); return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This line is temporarily unavailable.</Say><Hangup/></Response>'); }
+    } catch (error) {
+      if ((error as any)?.statusCode === 403) return reply.code(403).send({ error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID' });
+      if ((error as any)?.code === 'CALLCOMMAND_INGESTION_PAYLOAD_CONFLICT') return reply.code(409).send({ error:'Webhook replay conflicts with the original event',code:'CALLCOMMAND_INGESTION_PAYLOAD_CONFLICT' });
+      return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This line is temporarily unavailable.</Say><Hangup/></Response>');
+    }
   });
 
   app.post('/v1/modules/callcommand-ai/twilio/voice/consent', async (request, reply) => {
     try {
       const value = await signedTwilio(request); const sid = parseTwilioCallSid(value.CallSid); const call = await loadProviderCall(sid,String((request.query as Row)?.call_id ?? '')); if (!call) throw new CallCommandPhase35Error('Call not found','CALLCOMMAND_CALL_NOT_FOUND',404);
-      const eventId = `${sid}:consent:${value.Digits || (String((request.query as Row)?.timeout)==='1' ? 'timeout' : 'none')}`; const replay = await recordIngestion({ tenantId:String(call.tenant_id),source:'twilio',eventId,payloadHash:hashValue(JSON.stringify(value)),callId:String(call.id) });
+      const configured = await db.execute(sql`
+        SELECT c.*,p.status AS profile_status,p.recording_policy,p.transcription_policy,
+          settings.realtime_enabled,
+          (
+            a.id IS NOT NULL AND a.status='active' AND a.health_status='healthy'
+            AND secret.id IS NOT NULL AND secret.revoked_at IS NULL
+            AND c.provider_number_sid IS NOT NULL AND c.provider_number_status='active'
+            AND c.provider_verified_at IS NOT NULL
+            AND c.health_status='healthy' AND c.health_checked_at IS NOT NULL
+            AND c.lifecycle_state='ACTIVE'
+            AND (
+              c.billing_status IN ('included','active')
+              OR (c.billing_status='grace_period' AND c.billing_grace_expires_at>NOW())
+            )
+          ) AS commercial_realtime_ready
+        FROM callcommand_channels c
+        JOIN callcommand_profiles p
+          ON p.tenant_id=c.tenant_id AND p.id=c.profile_id AND p.deleted_at IS NULL
+        LEFT JOIN callcommand_telephony_accounts a
+          ON a.tenant_id=c.tenant_id AND a.id=c.telephony_account_id AND a.archived_at IS NULL
+        LEFT JOIN shared_secret_references secret
+          ON secret.tenant_id=a.tenant_id AND secret.id=a.secret_reference_id
+        LEFT JOIN callcommand_tenant_runtime_settings settings ON settings.tenant_id=c.tenant_id
+        WHERE c.tenant_id=${call.tenant_id} AND c.id=${call.channel_id}
+        LIMIT 1
+      `);
+      const channel = configured.rows[0] as Row | undefined;
+      if (!channel) throw new CallCommandPhase35Error('Call configuration is unavailable','CALLCOMMAND_CONFIGURATION_UNAVAILABLE',409);
+      if (isProviderManagedCommercialLine(channel) && channel.commercial_realtime_ready !== true) {
+        await db.transaction(async tx => {
+          await tx.execute(sql`
+            UPDATE callcommand_calls SET status='failed',realtime_status='failed',
+              error_code='CALLCOMMAND_COMMERCIAL_LINE_NOT_READY',realtime_error_code='CALLCOMMAND_COMMERCIAL_LINE_NOT_READY',
+              completed_at=COALESCE(completed_at,NOW()),ended_at=COALESCE(ended_at,NOW()),updated_at=NOW()
+            WHERE tenant_id=${call.tenant_id} AND id=${call.id}
+          `);
+          await tx.execute(sql`
+            UPDATE callcommand_live_sessions SET state='failed',ended_at=COALESCE(ended_at,NOW()),
+              sequence=sequence+1,updated_at=NOW()
+            WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL
+          `);
+        });
+        await releaseCallCommandLane({
+          tenantId:String(call.tenant_id),callId:String(call.id),reason:'commercial_line_not_ready',
+        });
+        return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This line is unavailable.</Say><Hangup/></Response>');
+      }
+      const activeLease = await db.execute(sql`SELECT id FROM callcommand_lane_leases WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND status='active' AND expires_at>NOW() LIMIT 1`);
+      if (!activeLease.rows[0]) throw new CallCommandPhase35Error('Call capacity is no longer active','CALLCOMMAND_LANE_NOT_ACTIVE',409);
+      const eventId = `${sid}:consent:${value.Digits || (String((request.query as Row)?.timeout)==='1' ? 'timeout' : 'none')}`; const replay = await recordIngestion({ tenantId:String(call.tenant_id),source:'twilio',eventId,payloadHash:providerPayloadHash(value),callId:String(call.id) });
       const gather = `/v1/modules/callcommand-ai/twilio/voice/gather?call_id=${encodeURIComponent(String(call.id))}`; const recording = `/v1/modules/callcommand-ai/twilio/voice/recording?call_id=${encodeURIComponent(String(call.id))}`;
       if (value.Digits === '1') {
-        if (replay.duplicate) return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" speechTimeout="auto" timeout="6" action="${xml(gather)}" method="POST"><Say>Thank you. How may I help you today?</Say></Gather><Hangup/></Response>`);
-        const started = await startTwilioCallRecording({ callSid: sid, recordingStatusCallbackUrl: recording });
-        await db.execute(sql`UPDATE callcommand_calls SET recording_status=${started.ok ? 'pending' : 'failed'},recording_sid=${started.recordingSid ?? null},error_code=${started.ok ? null : 'RECORDING_PROVIDER_UNAVAILABLE'},updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
-        await db.execute(sql`UPDATE callcommand_ingestion_events SET status=${started.ok ? 'provider_confirmed' : started.status},processed_at=NOW() WHERE tenant_id=${call.tenant_id} AND source='twilio' AND provider_event_id=${eventId}`);
-        await db.execute(sql`UPDATE callcommand_live_sessions SET state='intake',sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL`);
-        return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" speechTimeout="auto" timeout="6" action="${xml(gather)}" method="POST"><Say>${started.ok ? 'Thank you. How may I help you today?' : 'Recording could not be started. This call will continue without recording. How may I help you today?'}</Say></Gather><Hangup/></Response>`);
+        if (!replay.duplicate) {
+          await db.transaction(async tx => {
+            const consent = await tx.execute(sql`
+              INSERT INTO callcommand_consents(
+                tenant_id,phone_fingerprint,phone_masked,phone_e164,purpose,source,evidence
+              ) VALUES (
+                ${call.tenant_id},${call.phone_fingerprint},${call.phone_masked},${call.phone_e164},
+                'support','twilio_dtmf_intake',${`Caller pressed 1 during signed Twilio call ${sid} to consent to automated intake and enabled recording.`}
+              ) RETURNING id
+            `);
+            await tx.execute(sql`
+              UPDATE callcommand_calls SET consent_id=${(consent.rows[0] as Row).id},updated_at=NOW()
+              WHERE tenant_id=${call.tenant_id} AND id=${call.id}
+            `);
+          });
+        }
+        const recordingEnabled = realtimeRecordingEnabled(channel);
+        let recordingReady = !recordingEnabled || ['pending','ready'].includes(String(call.recording_status));
+        if (!replay.duplicate && recordingEnabled) {
+          const started = await startTwilioCallRecording({ callSid:sid,recordingStatusCallbackUrl:recording });
+          recordingReady = started.ok;
+          await db.execute(sql`
+            UPDATE callcommand_calls SET recording_status=${started.ok ? 'pending' : 'failed'},
+              recording_sid=${started.recordingSid ?? null},error_code=${started.ok ? null : 'RECORDING_PROVIDER_UNAVAILABLE'},updated_at=NOW()
+            WHERE tenant_id=${call.tenant_id} AND id=${call.id}
+          `);
+        } else if (!recordingEnabled) {
+          await db.execute(sql`
+            UPDATE callcommand_calls SET recording_status='disabled',error_code=NULL,updated_at=NOW()
+            WHERE tenant_id=${call.tenant_id} AND id=${call.id}
+          `);
+        }
+        await db.execute(sql`
+          UPDATE callcommand_ingestion_events SET status=${recordingReady ? 'provider_confirmed' : 'failed'},processed_at=NOW()
+          WHERE tenant_id=${call.tenant_id} AND source='twilio' AND provider_event_id=${eventId}
+        `);
+        await db.execute(sql`
+          UPDATE callcommand_live_sessions SET state=${recordingReady ? 'intake' : 'failed'},
+            ended_at=${recordingReady ? null : new Date()},sequence=sequence+1,updated_at=NOW()
+          WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL
+        `);
+        if (!recordingReady) {
+          await db.execute(sql`
+            UPDATE callcommand_calls SET status='failed',completed_at=NOW(),ended_at=NOW(),updated_at=NOW()
+            WHERE tenant_id=${call.tenant_id} AND id=${call.id}
+          `);
+          await releaseCallCommandLane({ tenantId:String(call.tenant_id),callId:String(call.id),reason:'consent_recording_failed' });
+          return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>Recording could not be started, so this call will end safely. Please try again later.</Say><Hangup/></Response>');
+        }
+        if (channel.commercial_realtime_ready === true && isRealtimeCallEligible(channel)) {
+          try {
+            const sipTwiml = await buildRealtimeSipForCall(channel,call,sid);
+            await markRealtimeSipPending(channel,call);
+            return sendTwiml(reply,sipTwiml);
+          } catch (error) {
+            await failRealtimeSipSetup(channel,call,safeFailureCode(error,'CALLCOMMAND_REALTIME_NOT_CONFIGURED'));
+            return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This line is temporarily unavailable.</Say><Hangup/></Response>');
+          }
+        }
+        return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" speechTimeout="auto" timeout="6" action="${xml(gather)}" method="POST"><Say>Thank you. How may I help you today?</Say></Gather><Hangup/></Response>`);
       }
       if (value.Digits === '2') {
-        await db.execute(sql`UPDATE callcommand_calls SET recording_status='disabled',updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
-        return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" speechTimeout="auto" timeout="6" action="${xml(gather)}" method="POST"><Say>Recording is off. How may I help you today?</Say></Gather><Hangup/></Response>`);
+        await db.execute(sql`UPDATE callcommand_calls SET recording_status='disabled',status='canceled',error_code='CONSENT_DECLINED',completed_at=NOW(),ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
+        await db.execute(sql`UPDATE callcommand_live_sessions SET state='failed',ended_at=NOW(),sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL`);
+        await releaseCallCommandLane({ tenantId:String(call.tenant_id), callId:String(call.id), reason:'consent_declined' });
+        return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>Consent was declined. This call will end now.</Say><Hangup/></Response>');
       }
-      await db.execute(sql`UPDATE callcommand_calls SET status='blocked',error_code='CONSENT_NO_RESPONSE',completed_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
+      await db.execute(sql`UPDATE callcommand_calls SET status='blocked',error_code='CONSENT_NO_RESPONSE',completed_at=NOW(),ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
+      await db.execute(sql`UPDATE callcommand_live_sessions SET state='failed',ended_at=NOW(),sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL`);
+      await releaseCallCommandLane({ tenantId:String(call.tenant_id), callId:String(call.id), reason:'consent_no_response' });
       return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>Consent was not received. This call will end now.</Say><Hangup/></Response>');
     } catch (error) { return (error as any)?.statusCode === 403 ? reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}) : sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This request is unavailable.</Say><Hangup/></Response>'); }
   });
 
   app.post('/v1/modules/callcommand-ai/twilio/voice/gather', async (request, reply) => {
+    let callForFailure: Row | null = null;
     try {
       const value = await signedTwilio(request); const sid = parseTwilioCallSid(value.CallSid); const call = await loadProviderCall(sid,String((request.query as Row)?.call_id ?? '')); if (!call) throw new CallCommandPhase35Error('Call not found','CALLCOMMAND_CALL_NOT_FOUND',404);
-      const loaded = await db.execute(sql`SELECT s.*,p.intake_fields,p.product_mode FROM callcommand_live_sessions s JOIN callcommand_profiles p ON p.tenant_id=s.tenant_id AND p.id=${call.profile_id} WHERE s.tenant_id=${call.tenant_id} AND s.call_id=${call.id} AND s.ended_at IS NULL LIMIT 1`);
+      callForFailure = call;
+      const loaded = await db.execute(sql`
+        SELECT s.*,p.intake_fields,p.product_mode
+        FROM callcommand_live_sessions s
+        JOIN callcommand_profiles p ON p.tenant_id=s.tenant_id AND p.id=${call.profile_id}
+        JOIN callcommand_lane_leases l ON l.tenant_id=s.tenant_id AND l.call_id=s.call_id AND l.status='active' AND l.expires_at>NOW()
+        WHERE s.tenant_id=${call.tenant_id} AND s.call_id=${call.id} AND s.ended_at IS NULL LIMIT 1
+      `);
       if (!loaded.rows[0]) throw new CallCommandPhase35Error('Live session not found','CALLCOMMAND_SESSION_NOT_FOUND',404);
-      const session = loaded.rows[0] as Row; const speech = cleanText(value.SpeechResult,'SpeechResult',500,true); if (!speech) { await db.execute(sql`UPDATE callcommand_live_sessions SET state='failed',ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${session.id}`); return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>We did not receive a response. Goodbye.</Say><Hangup/></Response>'); }
+      const session = loaded.rows[0] as Row; const speech = cleanText(value.SpeechResult,'SpeechResult',500,true); if (!speech) {
+        await db.execute(sql`UPDATE callcommand_live_sessions SET state='failed',ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${session.id}`);
+        await db.execute(sql`UPDATE callcommand_calls SET status='failed',error_code='GATHER_NO_RESPONSE',completed_at=NOW(),ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
+        await releaseCallCommandLane({ tenantId:String(call.tenant_id), callId:String(call.id), reason:'gather_no_response' });
+        callForFailure = null;
+        return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>We did not receive a response. Goodbye.</Say><Hangup/></Response>');
+      }
       const schema = normalizeIntakeSchema(session.intake_fields ?? []); const collected = { ...(session.collected_data ?? {}) }; const current = collected._lastQuestionKey ? schema.find(field=>field.key===collected._lastQuestionKey) : nextIntakeQuestion(schema,collected);
       const transcript = `${session.transcript_tail || ''}\nCaller: ${speech}`.trim().slice(-12000);
       delete collected._lastQuestionKey;
-      const decision=await decideReceptionistTurn({productMode:String(session.product_mode ?? 'general'),schema,collected,currentField:current ?? null,speech,transcript});
+      const instructions = await compiledCallInstructions(String(call.tenant_id), String(call.profile_id));
+      const decisionContext = `${transcript.slice(-900)}\n\nSERVER-COMPILED BUSINESS INSTRUCTIONS:\n${instructions}`;
+      const decision=await decideReceptionistTurn({productMode:String(session.product_mode ?? 'general'),schema,collected,currentField:current ?? null,speech,transcript:decisionContext});
       Object.assign(collected,decision.collected); const next=decision.next;
       if (next) {
         collected._lastQuestionKey=next.key; await db.execute(sql`UPDATE callcommand_live_sessions SET collected_data=${JSON.stringify(collected)}::jsonb,transcript_tail=${transcript},state='intake',sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${session.id}`);
+        callForFailure = null;
         const action = `/v1/modules/callcommand-ai/twilio/voice/gather?call_id=${encodeURIComponent(String(call.id))}`; return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" speechTimeout="auto" timeout="6" action="${xml(action)}" method="POST"><Say>${xml(decision.publicResponse)}</Say></Gather><Hangup/></Response>`);
       }
       await db.execute(sql`UPDATE callcommand_live_sessions SET collected_data=${JSON.stringify(collected)}::jsonb,transcript_tail=${transcript},state='completed',ended_at=NOW(),sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${session.id}`);
-      await processCall({ tenantId:String(call.tenant_id),userId:String(call.created_by_user_id ?? (await db.execute(sql`SELECT user_id FROM tenant_memberships WHERE tenant_id=${call.tenant_id} AND status='active' ORDER BY created_at LIMIT 1`)).rows[0]?.user_id),callId:String(call.id),transcript,mode:'auto',correlationId:request.id });
+      await processCall({ tenantId:String(call.tenant_id),userId:await tenantCallCustodian(String(call.tenant_id),call.created_by_user_id ? String(call.created_by_user_id) : null),callId:String(call.id),transcript,mode:'auto',correlationId:request.id });
+      await releaseCallCommandLane({ tenantId:String(call.tenant_id), callId:String(call.id), reason:'gather_completed' });
+      callForFailure = null;
       return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>Thank you. Your request has been recorded and routed. Goodbye.</Say><Hangup/></Response>');
-    } catch (error) { return (error as any)?.statusCode === 403 ? reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}) : sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This request is temporarily unavailable.</Say><Hangup/></Response>'); }
+    } catch (error) {
+      if (callForFailure) {
+        await db.execute(sql`UPDATE callcommand_live_sessions SET state='failed',ended_at=COALESCE(ended_at,NOW()),updated_at=NOW() WHERE tenant_id=${callForFailure.tenant_id} AND call_id=${callForFailure.id} AND ended_at IS NULL`);
+        await releaseCallCommandLane({ tenantId:String(callForFailure.tenant_id), callId:String(callForFailure.id), reason:'gather_failed' });
+      }
+      request.log.error({ err:error, code:(error as any)?.code, callId:callForFailure?.id ?? null }, 'CallCommand live gather failed');
+      return (error as any)?.statusCode === 403 ? reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}) : sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This request is temporarily unavailable.</Say><Hangup/></Response>');
+    }
   });
 
   app.post('/v1/modules/callcommand-ai/twilio/voice/recording', async (request, reply) => {
+    let callForFailure: Row | null = null;
     try {
       const value = await signedTwilio(request); const sid = parseTwilioCallSid(value.CallSid); const call = await loadProviderCall(sid,String((request.query as Row)?.call_id ?? '')); if (!call) throw new CallCommandPhase35Error('Call not found','CALLCOMMAND_CALL_NOT_FOUND',404);
+      callForFailure = call;
       if (call.recording_status === 'disabled') throw new CallCommandPhase35Error('Recording was not consented','CALLCOMMAND_RECORDING_NOT_CONSENTED',409);
       const recordingSid = String(value.RecordingSid ?? ''); if (!/^RE[A-Za-z0-9]{20,62}$/.test(recordingSid)) throw new CallCommandPhase35Error('Recording identifier is invalid');
-      const replay = await recordIngestion({ tenantId:String(call.tenant_id),source:'twilio',eventId:`${sid}:recording:${recordingSid}`,payloadHash:hashValue(JSON.stringify(value)),callId:String(call.id) }); if (replay.duplicate) return { ok:true,duplicate:true };
+      const replay = await recordIngestion({ tenantId:String(call.tenant_id),source:'twilio',eventId:`${sid}:recording:${recordingSid}`,payloadHash:providerPayloadHash(value),callId:String(call.id) }); if (replay.duplicate) { callForFailure = null; return { ok:true,duplicate:true }; }
+      const activeLease = await db.execute(sql`SELECT id FROM callcommand_lane_leases WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND status='active' AND expires_at>NOW() LIMIT 1`);
+      if (!activeLease.rows[0]) throw new CallCommandPhase35Error('Call capacity is no longer active','CALLCOMMAND_LANE_NOT_ACTIVE',409);
       const content = await fetchTwilioRecording(recordingSid); if (!content) throw Object.assign(new Error('Twilio recording download was unavailable'),{code:'CALLCOMMAND_RECORDING_PROVIDER_UNAVAILABLE'});
-      const creator = String(call.created_by_user_id ?? (await db.execute(sql`SELECT user_id FROM tenant_memberships WHERE tenant_id=${call.tenant_id} AND status='active' ORDER BY created_at LIMIT 1`)).rows[0]?.user_id ?? '');
-      if (!creator) throw new CallCommandPhase35Error('Tenant has no active recording custodian','CALLCOMMAND_RECORDING_CUSTODIAN_MISSING',409);
+      const creator = await tenantCallCustodian(String(call.tenant_id),call.created_by_user_id ? String(call.created_by_user_id) : null);
       const attachment = await createAttachment({ tenantId:String(call.tenant_id),moduleId:await moduleId(),objectType:'call_recording',objectId:String(call.id),originalName:`twilio-${recordingSid}.mp3`,declaredMimeType:'audio/mpeg',content,createdByUserId:creator,correlationId:request.id });
       let transcript = await fetchTwilioTranscription(recordingSid); let transcriptionProvider = 'twilio';
       if (!transcript) { const result = await transcribeCallAudio(content,`twilio-${recordingSid}.mp3`); transcript=result.transcript; transcriptionProvider=result.provider; }
       await db.execute(sql`UPDATE callcommand_calls SET recording_sid=${recordingSid},recording_attachment_id=${String((attachment as Row).id)},recording_status='pending',transcript=${transcript},updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
       await processCall({ tenantId:String(call.tenant_id),userId:creator,callId:String(call.id),transcript,mode:'auto',correlationId:request.id });
+      await releaseCallCommandLane({ tenantId:String(call.tenant_id), callId:String(call.id), reason:'recording_processed' });
+      callForFailure = null;
       return reply.code(202).send({ ok:true,duplicate:false,recording:{ attachmentId:String((attachment as Row).id),scanStatus:(attachment as Row).scan_status ?? 'pending' },transcription:{ provider:transcriptionProvider,status:'completed' } });
-    } catch (error) { if ((error as any)?.statusCode === 403) return reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}); const code=String((error as any)?.code ?? 'CALLCOMMAND_RECORDING_FAILED'); return reply.code(code.includes('UNAVAILABLE') ? 503 : 400).send({error:(error as Error).message,code,providerActionConfirmed:false}); }
+    } catch (error) {
+      if (callForFailure) await releaseCallCommandLane({ tenantId:String(callForFailure.tenant_id), callId:String(callForFailure.id), reason:'recording_failed' });
+      if ((error as any)?.statusCode === 403) return reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}); const code=String((error as any)?.code ?? 'CALLCOMMAND_RECORDING_FAILED'); return reply.code(code.includes('UNAVAILABLE') ? 503 : 400).send({error:(error as Error).message,code,providerActionConfirmed:false});
+    }
   });
 
   app.post('/v1/modules/callcommand-ai/twilio/voice/status', async (request, reply) => {
     try {
       const value = await signedTwilio(request); const sid=parseTwilioCallSid(value.CallSid); const call=await loadProviderCall(sid,String((request.query as Row)?.call_id ?? '')); if(!call) throw new CallCommandPhase35Error('Call not found','CALLCOMMAND_CALL_NOT_FOUND',404);
-      const terminal=['completed','failed','busy','no-answer','canceled'].includes(String(value.CallStatus)); const state=terminal ? (value.CallStatus==='completed'?'completed':'failed') : value.CallStatus==='in-progress'?'connected':'ringing';
-      await recordIngestion({tenantId:String(call.tenant_id),source:'twilio',eventId:`${sid}:status:${value.SequenceNumber || hashValue(JSON.stringify(value)).slice(0,16)}`,payloadHash:hashValue(JSON.stringify(value)),callId:String(call.id)});
-      await db.execute(sql`UPDATE callcommand_live_sessions SET state=${state},sequence=sequence+1,updated_at=NOW(),ended_at=${terminal?new Date():null} WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL`);
-      return {ok:true};
-    } catch(error){ return (error as any)?.statusCode===403?reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}):reply.code(400).send({error:(error as Error).message,code:(error as any)?.code??'CALLCOMMAND_STATUS_FAILED'}); }
+      const rawStatus=String(value.CallStatus ?? '');
+      const terminal=['completed','failed','busy','no-answer','canceled'].includes(rawStatus);
+      const state=terminal ? (rawStatus==='completed'?'completed':'failed') : rawStatus==='in-progress'?'connected':'ringing';
+      const sequence=providerSequence(value.SequenceNumber,Number(call.provider_sequence ?? 0));
+      const eventId=`${sid}:status:${value.SequenceNumber || providerPayloadHash(value).slice(0,16)}`;
+      const replay=await recordIngestion({tenantId:String(call.tenant_id),source:'twilio',eventId,payloadHash:providerPayloadHash(value),callId:String(call.id)});
+      if(replay.duplicate)return {ok:true,duplicate:true};
+      if(sequence<Number(call.provider_sequence ?? 0))throw new CallCommandPhase35Error('Provider event sequence is stale','CALLCOMMAND_PROVIDER_EVENT_STALE',409);
+      if(terminal){
+        closeCallCommandRealtimeSideband(String(call.id));
+        const startedAt=new Date(call.started_at ?? call.created_at);
+        const endedAt=providerEndedAt(value.Timestamp,startedAt);
+        const billableSeconds=providerBillableSeconds(value.CallDuration);
+        const storedAnswered=call.answered_at ? new Date(call.answered_at) : null;
+        const inferredAnswered=billableSeconds == null ? startedAt : new Date(Math.max(startedAt.getTime(),endedAt.getTime()-billableSeconds*1_000));
+        const outcome=rawStatus==='no-answer'?'no_answer':rawStatus as 'completed'|'failed'|'busy'|'canceled';
+        const realtimeUsage = call.realtime_usage_json && typeof call.realtime_usage_json === 'object'
+          ? call.realtime_usage_json as Row : {};
+        const realtimeModel = String(realtimeUsage.model ?? 'gpt-realtime-2.1-mini');
+        const realtimeRates = realtimeModel === 'gpt-realtime-2.1'
+          ? { input: 3_200, output: 6_400 }
+          : { input: 1_000, output: 2_000 };
+        const reconciled=await reconcileCallCommandTerminalUsage({
+          tenantId:String(call.tenant_id),callId:String(call.id),terminalEventId:eventId,providerSequence:sequence,
+          providerOutcome:outcome,currency:String(value.PriceUnit ?? 'USD').toUpperCase(),
+          usage:{
+            startedAt,answeredAt:storedAnswered ?? inferredAnswered,endedAt,
+            providerBillableSeconds:billableSeconds,providerCostMinor:providerCostMinor(value.Price),
+            aiInputTokens:Number(call.ai_input_tokens ?? 0),aiOutputTokens:Number(call.ai_output_tokens ?? 0),
+            aiInputMinorPerMillion:realtimeRates.input,aiOutputMinorPerMillion:realtimeRates.output,
+          },
+        });
+        await db.execute(sql`UPDATE callcommand_live_sessions SET state=${state},sequence=sequence+1,updated_at=${endedAt},ended_at=COALESCE(ended_at,${endedAt}) WHERE tenant_id=${call.tenant_id} AND call_id=${call.id}`);
+        return {ok:true,duplicate:reconciled.duplicate,reconciled:true};
+      }
+      const updated=await db.execute(sql`
+        UPDATE callcommand_calls SET
+          provider_sequence=${sequence},status=${rawStatus==='in-progress'?'in_progress':'ringing'},
+          answered_at=CASE WHEN ${rawStatus}='in-progress' THEN COALESCE(answered_at,NOW()) ELSE answered_at END,
+          updated_at=NOW()
+        WHERE tenant_id=${call.tenant_id} AND id=${call.id} AND provider_sequence<=${sequence}
+        RETURNING id
+      `);
+      if(!updated.rows[0])throw new CallCommandPhase35Error('Provider event sequence is stale','CALLCOMMAND_PROVIDER_EVENT_STALE',409);
+      await db.execute(sql`UPDATE callcommand_live_sessions SET state=${state},sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL`);
+      return {ok:true,duplicate:false,reconciled:false};
+    } catch(error){ return (error as any)?.statusCode===403?reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}):reply.code(Number((error as any)?.statusCode) || 400).send({error:(error as Error).message,code:(error as any)?.code??'CALLCOMMAND_STATUS_FAILED'}); }
   });
 }
