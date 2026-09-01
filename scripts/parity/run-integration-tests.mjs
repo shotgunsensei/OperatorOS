@@ -37,7 +37,9 @@ if (code === 0) {
   const result = await runCaptured(PNPM, [
     '--dir', 'apps/api', 'exec', 'tsx', '--test', '--test-concurrency=1',
     'test/database-release-contract.test.ts',
+    'test/database-release-lock.integration.test.ts',
     'test/module-session-boundary.test.ts',
+    'test/tradeflowkit-constraint-reconciliation.integration.test.ts',
     'test/tenant-isolation.test.ts',
     'test/shared-platform.test.ts',
     'test/shared-platform-routes.test.ts',

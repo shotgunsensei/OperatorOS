@@ -1,5 +1,30 @@
 # OperatorOS implementation status
 
+## Replit publish recovery overlay - SOURCE/LOCAL IMPLEMENTED / REPUBLISH PENDING (2026-09-01)
+
+- Release v59 reconciles the declarative Drizzle schema with the existing
+  TradeFlowKit tenant-composite keys and foreign keys. This prevents Replit's
+  schema comparison from proposing the destructive drop of
+  `uq_tfk_workflows_tenant_id`, which production correctly retains because
+  `tfk_workflow_stages_workflow_fk` depends on it. The v59 repair only creates
+  missing indexes and constraints and is idempotent.
+- The database release now holds a dedicated PostgreSQL session advisory lock
+  across the full ordered release, so replacement/startup processes wait
+  instead of applying the same release concurrently. The unified runtime keeps
+  its fail-closed bootstrap gateway and allows a bounded five-minute cold start
+  before declaring Fastify unavailable. Safe API boot-stage events make the
+  registration/verification/service/listen boundary observable.
+- Source/local verification passed the 59-step non-destructive plan; clean
+  disposable PostgreSQL apply and reapply; 32/32 required integration tests,
+  including exact constraint restoration and lock serialization; all four
+  workspace typechecks; deployment-scope verification; FaultlineLab 4/4; and
+  the production build with 35/35 Next routes.
+- No production or Replit database was mutated from this worktree, and no
+  branch was pushed, merged, published, or deployed. Apply v59 to Replit's
+  development database after source promotion, review the regenerated publish
+  diff, take a production backup, and then republish. Do not copy development
+  data into production as a substitute for schema convergence.
+
 ## CallCommand managed-number provisioning overlay - SOURCE/LOCAL IMPLEMENTED / LIVE ACCEPTANCE BLOCKED (2026-08-31)
 
 - Additive release v58 completes the managed-number vertical over the existing

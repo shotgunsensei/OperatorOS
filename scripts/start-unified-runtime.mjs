@@ -7,7 +7,10 @@ import { evaluateProductionEnvironment } from './production-env-preflight.mjs';
 const DEFAULT_API_PORT = 5001;
 const DEFAULT_PUBLIC_PORT = 5000;
 const DEFAULT_NEXT_PORT = 5002;
-const DEFAULT_STARTUP_TIMEOUT_MS = 120_000;
+// Replit production databases can cold-start while the API registers the full
+// module graph. Keep the public gateway closed, but allow one bounded five-
+// minute window so a healthy cold start is not converted into a restart loop.
+const DEFAULT_STARTUP_TIMEOUT_MS = 300_000;
 const POLL_INTERVAL_MS = 500;
 const SHUTDOWN_GRACE_MS = 10_000;
 export const INTERNAL_SERVICE_HOST = '127.0.0.1';

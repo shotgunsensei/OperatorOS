@@ -57,6 +57,8 @@ import { ensureAuthMfaTables } from './auth-mfa-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
+import { reconcileTradeFlowKitTenantConstraints } from './tradeflowkit-constraint-reconciliation.js';
+import { withDatabaseReleaseLock } from './database-release-lock.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -126,6 +128,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   auth_mfa_tables: ensureAuthMfaTables,
   callcommand_commercial_runtime: ensureCallCommandCommercialTables,
   callcommand_managed_number_provisioning: ensureCallCommandManagedNumberTables,
+  tradeflowkit_constraint_reconciliation: reconcileTradeFlowKitTenantConstraints,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -360,6 +363,31 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
         WHERE table_schema='public' AND table_name='callcommand_number_orders' AND column_name='provisioning_state'
       )
       AS callcommand_managed_number_provisioning
+      ,to_regclass('public.uq_tfk_customers_tenant_id') IS NOT NULL
+      AND to_regclass('public.uq_tfk_jobs_tenant_id') IS NOT NULL
+      AND to_regclass('public.uq_tfk_quotes_tenant_id') IS NOT NULL
+      AND to_regclass('public.uq_tfk_invoices_tenant_id') IS NOT NULL
+      AND (
+        SELECT COUNT(DISTINCT conname) = 13
+        FROM pg_constraint
+        WHERE connamespace = 'public'::regnamespace
+          AND conname IN (
+            'uq_tfk_workflows_tenant_id',
+            'uq_tfk_workflow_stages_tenant_id',
+            'tfk_workflow_stages_workflow_fk',
+            'uq_tfk_tasks_tenant_id',
+            'tfk_tasks_job_tenant_fk',
+            'tfk_tasks_workflow_stage_tenant_fk',
+            'tfk_task_dependencies_task_fk',
+            'tfk_task_dependencies_parent_fk',
+            'tfk_quote_items_quote_fk',
+            'tfk_invoice_items_invoice_fk',
+            'tfk_payments_invoice_fk',
+            'uq_tfk_tags_tenant_id',
+            'tfk_tag_assignments_tag_fk'
+          )
+      )
+      AS tradeflowkit_tenant_constraints
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})
@@ -371,10 +399,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
 }
 
 export async function applyOperatorOSDatabaseRelease(report: StepReporter = () => {}): Promise<void> {
-  for (const step of DATABASE_RELEASE_STEPS) {
-    report({ phase: 'start', step });
-    await OPERATIONS[step.id]();
-    report({ phase: 'complete', step });
-  }
-  await verifyOperatorOSDatabaseRelease();
+  await withDatabaseReleaseLock(async () => {
+    for (const step of DATABASE_RELEASE_STEPS) {
+      report({ phase: 'start', step });
+      await OPERATIONS[step.id]();
+      report({ phase: 'complete', step });
+    }
+    await verifyOperatorOSDatabaseRelease();
+  });
 }

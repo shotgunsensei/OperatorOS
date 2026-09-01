@@ -41,7 +41,7 @@ test('unified Replit launcher validates production authority and port separation
     apiPort: 5001,
     publicPort: 5000,
     nextPort: 5002,
-    startupTimeoutMs: 120000,
+    startupTimeoutMs: 300000,
     apiReadyUrl: 'http://127.0.0.1:5001/readyz',
     nextReadyUrl: 'http://localhost:5002/healthz',
     internalApiUrl: 'http://localhost:5001',
@@ -114,6 +114,8 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(replit, /\[\[ports\]\]\r?\nlocalPort = 5000\r?\nexternalPort = 80/);
   assert.match(source, /bootstrap gateway listening on public port/);
   assert.match(source, /runtimeReady = true/);
+  assert.match(source, /DEFAULT_STARTUP_TIMEOUT_MS = 300_000/);
+  assert.match(apiSource, /operatoros_api_boot_stage/);
 });
 
 test('public gateway responds during bootstrap and proxies only after readiness', async () => {

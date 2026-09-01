@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 56 ordered step identifiers without secrets
+`db:plan` is read-only and prints 59 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -39,6 +39,31 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+Release v59 appends `tradeflowkit_constraint_reconciliation` after the v58
+CallCommand managed-number step. It creates only missing TradeFlowKit
+tenant-composite indexes and constraints and aligns those same relationships
+in the declarative Drizzle schema. This specifically preserves
+`uq_tfk_workflows_tenant_id` and its dependent
+`tfk_workflow_stages_workflow_fk`; do not approve a publish diff that drops
+either boundary. The complete release holds a PostgreSQL advisory lock so
+overlapping startup processes serialize. Before republish, take the normal
+production backup and first apply v59 to the Replit development database so
+the provider compares converged schemas. Do not copy development data to
+production. Application rollback may retain these constraints; database
+rollback remains restore into a new database, validate, and switch traffic
+only after authorization.
+
+### Release v59 disposable rehearsal (2026-09-01)
+
+On an isolated PostgreSQL 16 Docker database, the supported root release path
+clean-applied and verified all 59 ordered operations in 17,682 ms, then
+immediately reapplied in 1,635 ms. The required integration aggregate passed
+32/32 with no skips. It explicitly removed the workflow dependency and
+tenant-composite unique constraint in the disposable database, proved v59
+restored both definitions, and proved concurrent release callers enter the
+critical section in serialized order. No Replit or production database was
+contacted or modified.
 
 Release v56 appends `auth_mfa_tables` after the v55 invitation-consent step. It
 adds encrypted TOTP enrollment state, one-way recovery-code hashes with

@@ -160,6 +160,8 @@ const app = Fastify({
   },
 });
 
+app.log.info({ phase: 'register_routes' }, 'operatoros_api_boot_stage');
+
 app.addHook('onRequest', async (request, reply) => {
   reply.header('X-Request-Id', request.id);
   reply.header('X-Content-Type-Options', 'nosniff');
@@ -302,11 +304,14 @@ await registerCrossModuleDataFabricRoutes(app);
 await registerOperatorOsMessagingComplianceRoutes(app);
 await registerTenantMessengerRoutes(app);
 
+app.log.info({ phase: 'verify_database_release' }, 'operatoros_api_boot_stage');
+
 if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
   await verifyOperatorOSDatabaseRelease();
 } else {
   await applyOperatorOSDatabaseRelease();
 }
+app.log.info({ phase: 'start_background_services' }, 'operatoros_api_boot_stage');
 startSsoTokenCleanup();
 startSharedServiceWorker();
 startTorqueAssistReservationReaper();
@@ -1644,6 +1649,7 @@ try {
 }
 
 try {
+  app.log.info({ phase: 'listen', host, port }, 'operatoros_api_boot_stage');
   await app.listen({ port, host });
   console.info(`OperatorOS API listening on http://${host}:${port} [runner=${getRunnerMode()}]`);
 } catch (error) {

@@ -1,4 +1,16 @@
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  varchar,
+  timestamp,
+  integer,
+  boolean,
+  jsonb,
+  index,
+  uniqueIndex,
+  unique,
+  foreignKey,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const workspaces = pgTable('workspaces', {
@@ -2560,6 +2572,7 @@ export const tradeflowkitCustomers = pgTable('tradeflowkit_customers', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
 }, (t) => [
+  uniqueIndex('uq_tfk_customers_tenant_id').on(t.tenantId, t.id),
   index('idx_tfk_customers_tenant_created').on(t.tenantId, t.createdAt),
   index('idx_tfk_customers_tenant_org').on(t.tenantId, t.organizationId),
   uniqueIndex('uq_tfk_customers_tenant_source').on(t.tenantId, t.sourceId)
@@ -2581,6 +2594,7 @@ export const tradeflowkitWorkflows = pgTable('tradeflowkit_workflows', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   archivedAt: timestamp('archived_at'),
 }, (t) => [
+  unique('uq_tfk_workflows_tenant_id').on(t.tenantId, t.id),
   uniqueIndex('uq_tfk_workflows_active_name').on(t.tenantId, t.entityType, t.normalizedName)
     .where(sql`${t.archivedAt} IS NULL`),
   uniqueIndex('uq_tfk_workflows_default').on(t.tenantId, t.entityType)
@@ -2604,6 +2618,12 @@ export const tradeflowkitWorkflowStages = pgTable('tradeflowkit_workflow_stages'
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   archivedAt: timestamp('archived_at'),
 }, (t) => [
+  unique('uq_tfk_workflow_stages_tenant_id').on(t.tenantId, t.id),
+  foreignKey({
+    name: 'tfk_workflow_stages_workflow_fk',
+    columns: [t.tenantId, t.workflowId],
+    foreignColumns: [tradeflowkitWorkflows.tenantId, tradeflowkitWorkflows.id],
+  }).onDelete('cascade'),
   uniqueIndex('uq_tfk_workflow_stages_active_name').on(t.tenantId, t.workflowId, t.normalizedName)
     .where(sql`${t.archivedAt} IS NULL`),
   uniqueIndex('uq_tfk_workflow_stages_active_position').on(t.tenantId, t.workflowId, t.position)
@@ -2634,6 +2654,22 @@ export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
 }, (t) => [
+  uniqueIndex('uq_tfk_jobs_tenant_id').on(t.tenantId, t.id),
+  foreignKey({
+    name: 'tfk_jobs_customer_tenant_fk',
+    columns: [t.tenantId, t.customerId],
+    foreignColumns: [tradeflowkitCustomers.tenantId, tradeflowkitCustomers.id],
+  }),
+  foreignKey({
+    name: 'tfk_jobs_site_tenant_fk',
+    columns: [t.tenantId, t.siteId],
+    foreignColumns: [directorySites.tenantId, directorySites.id],
+  }),
+  foreignKey({
+    name: 'tfk_jobs_workflow_stage_tenant_fk',
+    columns: [t.tenantId, t.workflowStageId],
+    foreignColumns: [tradeflowkitWorkflowStages.tenantId, tradeflowkitWorkflowStages.id],
+  }),
   index('idx_tfk_jobs_tenant_status').on(t.tenantId, t.status),
   index('idx_tfk_jobs_tenant_customer').on(t.tenantId, t.customerId),
   index('idx_tfk_jobs_tenant_assignee').on(t.tenantId, t.assignedToUserId),
@@ -2664,6 +2700,17 @@ export const tradeflowkitTasks = pgTable('tradeflowkit_tasks', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
 }, (t) => [
+  unique('uq_tfk_tasks_tenant_id').on(t.tenantId, t.id),
+  foreignKey({
+    name: 'tfk_tasks_job_tenant_fk',
+    columns: [t.tenantId, t.jobId],
+    foreignColumns: [tradeflowkitJobs.tenantId, tradeflowkitJobs.id],
+  }).onDelete('cascade'),
+  foreignKey({
+    name: 'tfk_tasks_workflow_stage_tenant_fk',
+    columns: [t.tenantId, t.workflowStageId],
+    foreignColumns: [tradeflowkitWorkflowStages.tenantId, tradeflowkitWorkflowStages.id],
+  }),
   index('idx_tfk_tasks_tenant_job').on(t.tenantId, t.jobId, t.sortOrder),
   index('idx_tfk_tasks_tenant_assignee').on(t.tenantId, t.assignedToUserId, t.status),
   index('idx_tfk_tasks_tenant_due').on(t.tenantId, t.dueAt),
@@ -2680,6 +2727,16 @@ export const tradeflowkitTaskDependencies = pgTable('tradeflowkit_task_dependenc
   createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
+  foreignKey({
+    name: 'tfk_task_dependencies_task_fk',
+    columns: [t.tenantId, t.taskId],
+    foreignColumns: [tradeflowkitTasks.tenantId, tradeflowkitTasks.id],
+  }).onDelete('cascade'),
+  foreignKey({
+    name: 'tfk_task_dependencies_parent_fk',
+    columns: [t.tenantId, t.dependsOnTaskId],
+    foreignColumns: [tradeflowkitTasks.tenantId, tradeflowkitTasks.id],
+  }).onDelete('cascade'),
   uniqueIndex('uq_tfk_task_dependency').on(t.tenantId, t.taskId, t.dependsOnTaskId),
   index('idx_tfk_task_dependency_parent').on(t.tenantId, t.dependsOnTaskId),
 ]);
@@ -2711,6 +2768,17 @@ export const tradeflowkitQuotes = pgTable('tradeflowkit_quotes', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
 }, (t) => [
+  uniqueIndex('uq_tfk_quotes_tenant_id').on(t.tenantId, t.id),
+  foreignKey({
+    name: 'tfk_quotes_customer_tenant_fk',
+    columns: [t.tenantId, t.customerId],
+    foreignColumns: [tradeflowkitCustomers.tenantId, tradeflowkitCustomers.id],
+  }),
+  foreignKey({
+    name: 'tfk_quotes_job_tenant_fk',
+    columns: [t.tenantId, t.jobId],
+    foreignColumns: [tradeflowkitJobs.tenantId, tradeflowkitJobs.id],
+  }),
   index('idx_tfk_quotes_tenant_status').on(t.tenantId, t.status),
   index('idx_tfk_quotes_tenant_customer').on(t.tenantId, t.customerId),
   uniqueIndex('uq_tfk_quotes_tenant_number').on(t.tenantId, t.number)
@@ -2732,6 +2800,11 @@ export const tradeflowkitQuoteItems = pgTable('tradeflowkit_quote_items', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
+  foreignKey({
+    name: 'tfk_quote_items_quote_fk',
+    columns: [t.tenantId, t.quoteId],
+    foreignColumns: [tradeflowkitQuotes.tenantId, tradeflowkitQuotes.id],
+  }).onDelete('cascade'),
   uniqueIndex('uq_tfk_quote_item_line').on(t.tenantId, t.quoteId, t.lineNumber),
   index('idx_tfk_quote_items_quote').on(t.tenantId, t.quoteId),
 ]);
@@ -2767,6 +2840,22 @@ export const tradeflowkitInvoices = pgTable('tradeflowkit_invoices', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
 }, (t) => [
+  uniqueIndex('uq_tfk_invoices_tenant_id').on(t.tenantId, t.id),
+  foreignKey({
+    name: 'tfk_invoices_customer_tenant_fk',
+    columns: [t.tenantId, t.customerId],
+    foreignColumns: [tradeflowkitCustomers.tenantId, tradeflowkitCustomers.id],
+  }),
+  foreignKey({
+    name: 'tfk_invoices_job_tenant_fk',
+    columns: [t.tenantId, t.jobId],
+    foreignColumns: [tradeflowkitJobs.tenantId, tradeflowkitJobs.id],
+  }),
+  foreignKey({
+    name: 'tfk_invoices_quote_tenant_fk',
+    columns: [t.tenantId, t.sourceQuoteId],
+    foreignColumns: [tradeflowkitQuotes.tenantId, tradeflowkitQuotes.id],
+  }),
   index('idx_tfk_invoices_tenant_status').on(t.tenantId, t.status),
   index('idx_tfk_invoices_tenant_customer').on(t.tenantId, t.customerId),
   uniqueIndex('uq_tfk_invoices_tenant_number').on(t.tenantId, t.number)
@@ -2790,6 +2879,11 @@ export const tradeflowkitInvoiceItems = pgTable('tradeflowkit_invoice_items', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
+  foreignKey({
+    name: 'tfk_invoice_items_invoice_fk',
+    columns: [t.tenantId, t.invoiceId],
+    foreignColumns: [tradeflowkitInvoices.tenantId, tradeflowkitInvoices.id],
+  }).onDelete('cascade'),
   uniqueIndex('uq_tfk_invoice_item_line').on(t.tenantId, t.invoiceId, t.lineNumber),
   index('idx_tfk_invoice_items_invoice').on(t.tenantId, t.invoiceId),
 ]);
@@ -2816,6 +2910,11 @@ export const tradeflowkitPayments = pgTable('tradeflowkit_payments', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
+  foreignKey({
+    name: 'tfk_payments_invoice_fk',
+    columns: [t.tenantId, t.invoiceId],
+    foreignColumns: [tradeflowkitInvoices.tenantId, tradeflowkitInvoices.id],
+  }).onDelete('restrict'),
   index('idx_tfk_payments_tenant_invoice').on(t.tenantId, t.invoiceId, t.paidAt),
   uniqueIndex('uq_tfk_payments_idempotency').on(t.tenantId, t.idempotencyKey),
   uniqueIndex('uq_tfk_payments_provider_ref').on(t.tenantId, t.provider, t.providerReference)
@@ -2879,8 +2978,11 @@ export const tradeflowkitTags = pgTable('tradeflowkit_tags', {
   createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   archivedAt: timestamp('archived_at'),
-}, (t) => [uniqueIndex('uq_tfk_tags_active_name').on(t.tenantId, t.normalizedName)
-  .where(sql`${t.archivedAt} IS NULL`)]);
+}, (t) => [
+  unique('uq_tfk_tags_tenant_id').on(t.tenantId, t.id),
+  uniqueIndex('uq_tfk_tags_active_name').on(t.tenantId, t.normalizedName)
+    .where(sql`${t.archivedAt} IS NULL`),
+]);
 
 export const tradeflowkitTagAssignments = pgTable('tradeflowkit_tag_assignments', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
@@ -2891,6 +2993,11 @@ export const tradeflowkitTagAssignments = pgTable('tradeflowkit_tag_assignments'
   createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
+  foreignKey({
+    name: 'tfk_tag_assignments_tag_fk',
+    columns: [t.tenantId, t.tagId],
+    foreignColumns: [tradeflowkitTags.tenantId, tradeflowkitTags.id],
+  }).onDelete('cascade'),
   uniqueIndex('uq_tfk_tag_assignment').on(t.tenantId, t.tagId, t.entityType, t.entityId),
   index('idx_tfk_tag_assignments_entity').on(t.tenantId, t.entityType, t.entityId),
 ]);

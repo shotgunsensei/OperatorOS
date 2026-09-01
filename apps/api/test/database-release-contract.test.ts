@@ -11,13 +11,18 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 58);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 59);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 58);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 58);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 59);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 59);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'callcommand_managed_number_provisioning');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'tradeflowkit_constraint_reconciliation');
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_constraint_reconciliation')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_managed_number_provisioning'),
+    'TradeFlowKit tenant-constraint reconciliation must be an additive repair after release v58',
+  );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_managed_number_provisioning')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_commercial_runtime'),
@@ -255,6 +260,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_public_intake_rate_limits'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_payment_provider_accounts'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_payment_oauth_states'\)/);
+  assert.match(releaseSource, /tradeflowkit_tenant_constraints/);
+  assert.match(releaseSource, /withDatabaseReleaseLock/);
   assert.match(releaseSource, /to_regclass\('public\.techdeck_documents'\)/);
   assert.match(releaseSource, /to_regclass\('public\.techdeck_configuration_relationships'\)/);
   assert.match(releaseSource, /to_regclass\('public\.techdeck_portal_assignments'\)/);
@@ -310,6 +317,37 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /conname = 'tenant_invites_single_decision_check'/);
   assert.match(releaseSource, /to_regclass\('public\.idx_tenant_invites_pending'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
+});
+
+test('TradeFlowKit schema and additive repair preserve tenant-composite dependencies', () => {
+  const schema = read('apps/api/src/schema.ts');
+  const reconciliation = read('apps/api/src/lib/tradeflowkit-constraint-reconciliation.ts');
+  const releaseLock = read('apps/api/src/lib/database-release-lock.ts');
+
+  for (const name of [
+    'uq_tfk_workflows_tenant_id',
+    'uq_tfk_workflow_stages_tenant_id',
+    'tfk_workflow_stages_workflow_fk',
+    'uq_tfk_tasks_tenant_id',
+    'tfk_tasks_job_tenant_fk',
+    'tfk_tasks_workflow_stage_tenant_fk',
+    'tfk_task_dependencies_task_fk',
+    'tfk_task_dependencies_parent_fk',
+    'tfk_quote_items_quote_fk',
+    'tfk_invoice_items_invoice_fk',
+    'tfk_payments_invoice_fk',
+    'uq_tfk_tags_tenant_id',
+    'tfk_tag_assignments_tag_fk',
+  ]) {
+    assert.match(schema, new RegExp(name));
+    assert.match(reconciliation, new RegExp(name));
+  }
+
+  assert.doesNotMatch(reconciliation, /DROP\s+(?:CONSTRAINT|INDEX)/i);
+  assert.match(reconciliation, /IF NOT EXISTS/);
+  assert.match(releaseLock, /pg_advisory_lock/);
+  assert.match(releaseLock, /pg_advisory_unlock/);
+  assert.match(releaseLock, /operatoros:database-release:v1/);
 });
 
 test('database release CLI exposes plan and apply modes without accepting arbitrary commands', () => {

@@ -1,5 +1,40 @@
 # OperatorOS current release gate
 
+## Replit schema and supervised-start repair - SOURCE/LOCAL PASS, REPUBLISH PENDING (2026-09-01)
+
+The failed Replit publish attempted to drop
+`uq_tfk_workflows_tenant_id` even though the production
+`tfk_workflow_stages_workflow_fk` depends on that tenant-composite unique
+constraint. The ordered database release had the correct production
+constraints, but the declarative Drizzle schema did not describe the same
+tenant boundary. Release v59 now makes that contract explicit in both places
+and appends a create-only, idempotent TradeFlowKit constraint reconciliation.
+It does not drop a constraint, index, table, column, or customer row.
+
+The same candidate serializes the entire database release with one
+PostgreSQL advisory lock, preventing overlapping Replit startup processes from
+running the release concurrently. The public bootstrap gateway still returns
+closed readiness until the private services are ready. Its bounded cold-start
+window is now five minutes, and the API emits safe boot-stage checkpoints for
+route registration, release verification, background services, and listen so
+a future stall is attributable without logging secrets.
+
+Fresh source/local evidence passes release-v59 plan, a clean disposable
+PostgreSQL apply and immediate reapply, 32/32 required integration tests, the
+exact missing-constraint repair, concurrent release serialization, all four
+workspace typechecks, deployment-scope verification, FaultlineLab 4/4, and the
+production build with 35/35 generated Next routes. The initial test-harness
+attempt failed closed because `SESSION_SECRET` was absent; the accepted run
+used an explicit disposable test secret.
+
+Status is **SOURCE/LOCAL PASS; REPUBLISH PENDING**. No production database was
+read or changed, no development data was copied to production, and this branch
+has not been pushed, merged, or published. The Replit development database
+must first apply the supported v59 release so its schema converges with source;
+then a fresh publish can recompute the development-to-production diff. Backup,
+reviewed promotion, exact deployed commit/build identity, readiness, and
+authenticated live acceptance remain required.
+
 ## Customer-facing module identity repair - SOURCE/LOCAL PASS, LIVE RELEASE PENDING (2026-08-30)
 
 The current source candidate closes the stale catalog-name path that allowed

@@ -1,5 +1,23 @@
 # OperatorOS module parity index
 
+## Replit schema parity and startup overlay (2026-09-01)
+
+Release v59 brings the declarative TradeFlowKit schema into parity with the
+existing ordered-release tenant boundaries. The workflow, stage, task,
+dependency, quote-item, invoice-item, payment, and tag relations now describe
+their composite tenant keys and foreign keys to the schema-diff engine, while
+an additive reconciliation restores any missing development constraints. No
+module capability, entitlement, role, route, billing binding, or consolidation
+state changes.
+
+The release is also serialized by a database advisory lock, and the supervised
+runtime has a five-minute bounded cold-start window plus safe API boot-stage
+events. Source/local evidence passes v59 clean apply/reapply, 32/32 required
+integration tests, all workspace typechecks, deployment-scope verification,
+and the production build with 35/35 Next routes. Replit development-schema
+apply, production backup/publish, and authenticated exact-host acceptance are
+still open, so no module is promoted to consolidation state 5.
+
 ## CallCommand managed-number provisioning overlay (2026-08-31)
 
 Release v58 now supplies the OperatorOS-native number lifecycle missing from
