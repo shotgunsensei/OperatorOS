@@ -2,6 +2,22 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current Core Suite workday automation overlay — 2026-09-01
+
+The three Main Modules now place an authenticated, tenant-scoped workday brief
+above their existing advanced surfaces. TradeFlowKit prioritizes revenue and
+delivery leakage, TechDeck prioritizes service risk linked to configuration and
+proof, and PulseDesk prioritizes PHI-minimized operational pressure. This is an
+additive presentation and deterministic decision layer; it creates no second
+identity, tenant, role, entitlement, billing, audit, provider, data, or
+execution authority.
+
+Focused contracts pass 8/8, workspace typechecks and the production build pass,
+and missing production inputs still fail closed. No database, provider,
+deployment, merge, push, or publish action occurred. Exact-host authenticated
+browser and deployed acceptance remain open. No module consolidation state
+changes.
+
 ## Current Core Suite evaluation overlay — 2026-09-01
 
 Release v59 adds an OperatorOS-owned evaluation access source for exactly

@@ -1,5 +1,32 @@
 # OperatorOS current release gate
 
+## Core Suite workday automation - SOURCE/LOCAL PASS, PRODUCTION HOLD (2026-09-01)
+
+TradeFlowKit Revenue Rescue, TechDeck Risk-to-Proof Brief, and PulseDesk
+Operational Pulse add one ranked, tenant-scoped decision layer above the
+existing Main Module workflows. Empty tenants get a three-step path to first
+value; active tenants get one primary action, compact operational measures, up
+to six direct record actions, and existing safe-automation links. The layer is
+read-only: it does not send provider messages, assign personnel, execute remote
+commands, create invoices, charge customers, or perform clinical work.
+
+Source/local evidence passes 8/8 focused contracts, all four workspace
+typechecks, the existing TradeFlowKit Phase 16, TechDeck Phase 26, PulseDesk
+Phase 27, and shared product-truth ledgers, deployment-scope verification, the
+4/4 existing FaultlineLab catalog contract, and the production build with 35/35
+generated Next pages. The standard `tsx` launcher hit a host Node/Windows
+`uv_os_get_passwd ENOMEM` failure, so the same focused TypeScript files were
+executed with Node's native type-stripping test runner. Core preflight fails
+closed on missing production-only inputs and prints no secret values.
+
+Status remains **SOURCE/LOCAL PASS; PRODUCTION HOLD**. The workflow review does
+not change release v59's schema or data plan and requires no database apply.
+Before release, prove exact-host authenticated desktop/mobile and accessibility
+behavior, module role/tenant isolation, real data volumes and pagination,
+production release identity, monitoring, backup, and rollback. No production
+database, provider, billing, DNS, deployment, merge, push, or publish action was
+performed.
+
 ## Release v59 Core Suite evaluation - SOURCE/LOCAL PASS, PRODUCTION HOLD (2026-09-01)
 
 Release v59 adds one no-card, once-per-verified-email, 168-hour personal-workspace

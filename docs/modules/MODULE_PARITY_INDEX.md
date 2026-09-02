@@ -1,5 +1,22 @@
 # OperatorOS module parity index
 
+## Core Suite workday automation overlay (2026-09-01)
+
+TradeFlowKit, TechDeck, and PulseDesk now share a customer-facing workday
+decision pattern without sharing or duplicating product authority. Revenue
+Rescue, Risk-to-Proof Brief, and Operational Pulse deterministically rank facts
+already returned by each module's tenant-scoped APIs and link to the existing
+authorized record. Empty states use three bounded setup steps; advanced feature
+surfaces remain intact.
+
+Focused logic/static contracts pass 8/8, all workspace typechecks and the
+production build pass, and core preflight fails closed without production
+inputs. No API authority, schema, release manifest, data ledger, entitlement,
+billing, provider, or remote-execution capability changed. Deployed
+authenticated browser, mobile, accessibility, production release identity,
+backup/rollback, and monitoring evidence remain open, so all three modules
+retain their prior parity and consolidation states.
+
 ## Core Suite verified-email evaluation overlay (2026-09-01)
 
 Release v59 changes shared OperatorOS access policy, not product capability or

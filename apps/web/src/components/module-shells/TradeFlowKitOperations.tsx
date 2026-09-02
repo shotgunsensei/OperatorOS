@@ -6,16 +6,20 @@ import {
   moduleShellApi,
   type TradeFlowKitJob,
   type TradeFlowKitOperationsResponse,
+  type TradeFlowKitRevenueResponse,
   type TradeFlowKitSavedView,
   type TradeFlowKitSettings,
   type TradeFlowKitTask,
 } from '@/lib/auth';
+import { buildTradeFlowKitWorkday } from '@/lib/core-suite-workday';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 
 const empty: TradeFlowKitOperationsResponse = {
   jobs: [], tasks: [], payments: [], settings: null,
   metrics: { leads: 0, jobs: 0, tasks: 0, completed_tasks: 0, invoiced_cents: '0', collected_cents: '0', outstanding_cents: '0' },
   pagination: { limit: 50, offset: 0, returned: 0 },
 };
+const emptyRevenue: TradeFlowKitRevenueResponse = { customers: [], jobs: [], quotes: [], invoices: [] };
 const money = (value: string | number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value) / 100);
 
 function message(error: unknown): string {
@@ -40,6 +44,7 @@ export default function TradeFlowKitOperations({
   routePrefix?: string;
 }) {
   const [data, setData] = useState(empty);
+  const [revenue, setRevenue] = useState(emptyRevenue);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +65,12 @@ export default function TradeFlowKitOperations({
   const load = useCallback(async () => {
     setLoading(true); setError(null); setConflict(false);
     try {
-      const next = await moduleShellApi.tradeflowkit.operations({ search: search || undefined, status: status || undefined });
+      const [next, nextRevenue] = await Promise.all([
+        moduleShellApi.tradeflowkit.operations({ search: search || undefined, status: status || undefined }),
+        view === 'dashboard' ? moduleShellApi.tradeflowkit.revenue() : Promise.resolve(null),
+      ]);
       setData(next);
+      if (nextRevenue) setRevenue(nextRevenue);
       setSelectedJobIds(new Set());
       const nestedJobId = recordId || (typeof window === 'undefined' ? '' : window.location.pathname.match(/\/jobs\/([a-z0-9-]+)$/i)?.[1] || '');
       const nestedTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
@@ -75,7 +84,7 @@ export default function TradeFlowKitOperations({
       } else setSettings(next.settings);
     } catch (requestError) { setError(message(requestError)); }
     finally { setLoading(false); }
-  }, [canManage, recordId, search, status]);
+  }, [canManage, recordId, search, status, view]);
 
   useEffect(() => { void load(); }, [load, tenantKey]);
 
@@ -92,6 +101,7 @@ export default function TradeFlowKitOperations({
 
   const selectedJob = data.jobs.find(job => job.id === selectedJobId) ?? null;
   const tasks = useMemo(() => data.tasks.filter(task => task.jobId === selectedJobId), [data.tasks, selectedJobId]);
+  const workday = useMemo(() => buildTradeFlowKitWorkday(data, revenue), [data, revenue]);
   const deepTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
 
   async function run(operation: () => Promise<unknown>) {
@@ -185,6 +195,15 @@ export default function TradeFlowKitOperations({
         <div><span>{view === 'dashboard' ? 'Live operations' : 'Field operations'}</span><h2>{view === 'dashboard' ? 'Operations at a glance' : 'Jobs, tasks, assignments, and cash position'}</h2><p>{view === 'dashboard' ? 'These totals are calculated from this organization’s persisted service and revenue records.' : 'Keep current work, team ownership, delivery status, and cash position visible in one place.'}</p></div>
         <div className="tfk-ops-actions"><a href="/api/modules/tradeflowkit/exports/customers.csv">Customers CSV</a><a href="/api/modules/tradeflowkit/exports/invoices.csv">Invoices CSV</a><a href="/api/modules/tradeflowkit/exports/payments.csv">Payments CSV</a><button type="button" onClick={() => void load()} disabled={loading || pending}><RefreshCw size={15} /> Refresh</button></div>
       </header>
+
+      {view === 'dashboard' && !loading && (
+        <CoreSuiteWorkdayBrief
+          moduleId="tradeflowkit"
+          eyebrow="Today · lead to cash"
+          brief={workday}
+          hrefFor={href => `${routePrefix}${href}`}
+        />
+      )}
 
       <div className="tfk-ops-metrics" aria-label="Operational analytics">
         <Metric label="Open leads" value={String(data.metrics.leads)} />

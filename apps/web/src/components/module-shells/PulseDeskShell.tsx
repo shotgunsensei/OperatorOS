@@ -166,6 +166,7 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
                 canManageModule={canManageModule}
                 view={activeServiceView}
                 requestHref={id => hrefFor(`/requests/${id}`)}
+                routeHref={hrefFor}
               />
             </section>
           )}
