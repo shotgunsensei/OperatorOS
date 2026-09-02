@@ -272,6 +272,7 @@ export default function NinjaLaunchKitRouteShell({
           routePath={routePath || `/${current}`}
           embedded
           view={current}
+          hrefFor={hrefFor}
         />
       )}
     </ModuleApplicationShell>

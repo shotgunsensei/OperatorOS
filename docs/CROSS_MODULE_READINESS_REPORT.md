@@ -1,5 +1,24 @@
 # Cross-module readiness report
 
+## Companion workflow automation overlay (2026-09-02)
+
+BrandForgeOS, SnapProofOS, StudyForge AI, Deploy Ops, CallCommand AI, and
+Script Ops now convert already-authorized dashboard responses into bounded
+setup steps, ranked next actions, three explanatory metrics, one primary
+action, and safe automation links. The pattern reduces cross-module learning
+cost while keeping each product's workflow, terminology, route map, and tenant
+authority distinct.
+
+The logic is deterministic and read-only. Publishing, paid spend, provider
+purchase/repair/release, evidence/report/share approval, deployment, go-live,
+and script execution are not performed by the brief. Focused companion/Core
+Suite contracts pass 22/22, all workspace typechecks pass, and the production
+build passes. This overlay changes no readiness or consolidation state.
+Exact-host authenticated browser/mobile/accessibility, production
+release-identity, live-provider, realistic data-volume, monitoring,
+backup/restore, and rollback acceptance remain open. See
+`docs/modules/COMPANION_WORKFLOW_AUTOMATION_REVIEW.md`.
+
 ## Core Suite workday automation overlay (2026-09-01)
 
 TradeFlowKit, TechDeck, and PulseDesk now share a small customer-facing

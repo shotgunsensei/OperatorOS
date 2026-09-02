@@ -24,11 +24,13 @@ export default function NinjaLaunchKitProductShell({
   routePath,
   embedded = false,
   view,
+  hrefFor = path => path,
 }: {
   baseUrl?: string;
   routePath?: string;
   embedded?: boolean;
   view?: string;
+  hrefFor?: (path: string) => string;
 }) {
   const [mode, setMode] = useState<ProductMode>(() =>
     view === 'review' ? 'execution' : initialMode(routePath),
@@ -80,6 +82,7 @@ export default function NinjaLaunchKitProductShell({
           routePath={routePath}
           embedded={embedded}
           view={view}
+          hrefFor={hrefFor}
         />
       ) : (
         <NinjaLaunchKitShell baseUrl={baseUrl} />

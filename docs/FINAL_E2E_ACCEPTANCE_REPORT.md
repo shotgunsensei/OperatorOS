@@ -1,5 +1,20 @@
 # OperatorOS ecosystem final E2E acceptance report
 
+## Companion workflow automation overlay — 2026-09-02
+
+Verdict: **SOURCE/LOCAL VERIFIED — DEPLOYED E2E ACCEPTANCE OPEN**.
+
+Focused deterministic and static tests pass 22/22 across the six companion
+briefs, their dashboard mounts, and the existing Core Suite brief regression.
+The complete four-target typecheck and production build pass, including 35
+Next pages. The new decision layer only ranks already-authorized response facts
+and emits canonical links; it performs no mutation or provider/high-impact
+action. No production target was deployed or exercised. Exact-host
+authenticated desktop/mobile/accessibility behavior, realistic data volume,
+release identity, providers, monitoring, backup/restore, and rollback therefore
+remain open and no state-5 claim is made. See
+`docs/modules/COMPANION_WORKFLOW_AUTOMATION_REVIEW.md`.
+
 ## Replit v55 publish attempt overlay — 2026-08-21
 
 Verdict: **PUBLISH FAILED BEFORE BUILD — PRIOR V54 RELEASE STILL LIVE**.

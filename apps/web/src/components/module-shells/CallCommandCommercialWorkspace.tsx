@@ -10,6 +10,8 @@ import {
 import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import type { CallCommandRouteArea } from './CallCommandRoute.contract';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import { buildCallCommandWorkflowFocus } from '@/lib/companion-workflow';
 
 type Row = Record<string, any>;
 type ProductWorkspace = {
@@ -554,6 +556,14 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
     </section>}
 
     {view === 'overview' && <>
+      {commercialProduct && <div style={{ marginBottom: space.lg }}>
+        <CoreSuiteWorkdayBrief
+          moduleId="callcommand-ai"
+          eyebrow="Next best receptionist actions"
+          brief={buildCallCommandWorkflowFocus(commercialProduct, readiness, reconciliationIssues, goLiveReady, canAdmin)}
+          hrefFor={hrefFor}
+        />
+      </div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: space.md, marginBottom: space.lg }}>
         {[
           ['Calls today', generalCalls.filter(item => String(item.createdAt ?? '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length, PhoneCall], ['Active calls', commercialProduct?.sessions.filter(item => !item.endedAt).length ?? 0, Radio],

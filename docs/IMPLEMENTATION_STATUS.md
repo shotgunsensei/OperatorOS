@@ -1,5 +1,32 @@
 # OperatorOS implementation status
 
+## Companion workflow automation overlay - SOURCE/LOCAL VERIFIED / DEPLOYMENT ACCEPTANCE OPEN (2026-09-02)
+
+- BrandForgeOS, SnapProofOS, StudyForge AI, Deploy Ops, CallCommand AI, and
+  Script Ops now turn their existing tenant-scoped dashboard facts into a
+  three-step first-value path, three workload metrics, up to six ranked next
+  actions, one primary action, and direct links to existing safe automation
+  surfaces. The six briefs are product-specific and preserve the full advanced
+  workflows underneath them.
+- Ranking is pure read-only presentation logic. It creates no identity, tenant,
+  role, entitlement, billing, provider, audit, workflow, or data authority and
+  triggers no mutation. Provider purchases, publishing, ad spend, report/share
+  approval, deployment, CallCommand go-live, and script execution remain
+  explicit authorized actions.
+- Focused companion/Core Suite logic and static coverage passes 22/22. The
+  combined Phase 50/51/shared route-contract run passes 34/34. Root typecheck
+  passes API, runner gateway, web, and TorqueShed native.
+  `INTERNAL_API_URL=http://localhost:5001` production build passes deployment
+  scope, FaultlineLab 4/4, repeated typecheck, API/runner/SDK builds, and 35-page
+  optimized Next output. `git diff --check` reports no whitespace error.
+- This is source/local evidence only. No schema/release, production database,
+  provider, customer data, billing, entitlement, deployment, traffic, commit,
+  push, or publish changed. Exact-host authenticated browser/mobile/
+  accessibility, realistic data-volume, production release identity,
+  monitoring, backup/restore, and rollback evidence remain open. No module
+  parity or consolidation state changes. See
+  `docs/modules/COMPANION_WORKFLOW_AUTOMATION_REVIEW.md`.
+
 ## Replit v59 production release - DEPLOYED AND READY / DEEP ACCEPTANCE PARTIAL (2026-09-02)
 
 - Owner-authorized commit

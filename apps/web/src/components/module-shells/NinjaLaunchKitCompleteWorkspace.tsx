@@ -23,6 +23,8 @@ import type { LucideIcon } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import NinjaLaunchKitShell from './NinjaLaunchKitShell';
 import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import { buildDeployOpsWorkflowFocus, type DeployOpsExecutionSummary } from '@/lib/companion-workflow';
 
 type Row = Record<string, any>;
 type Overview = {
@@ -141,13 +143,16 @@ export default function NinjaLaunchKitCompleteWorkspace({
   routePath,
   embedded = false,
   view = 'overview',
+  hrefFor = path => path,
 }: {
   baseUrl?: string;
   routePath?: string;
   embedded?: boolean;
   view?: string;
+  hrefFor?: (path: string) => string;
 }) {
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [executionSummary, setExecutionSummary] = useState<DeployOpsExecutionSummary | null>(null);
   const [templates, setTemplates] = useState<Row[]>([]);
   const [selected, setSelected] = useState<Row | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
@@ -174,12 +179,16 @@ export default function NinjaLaunchKitCompleteWorkspace({
     async (preferredId?: string | null) => {
       setError(null);
       try {
-        const [root, catalog] = await Promise.all([
+        const [root, catalog, execution] = await Promise.all([
           moduleShellApi.launchkit.productOverview() as Promise<Overview>,
           moduleShellApi.launchkit.productTemplates() as Promise<Row>,
+          view === 'overview'
+            ? moduleShellApi.launchkit.workspace().catch(() => null) as Promise<Row | null>
+            : Promise.resolve(null),
         ]);
         setOverview(root);
         setTemplates(catalog.templates ?? []);
+        setExecutionSummary(execution?.summary ?? null);
         const id = preferredId ?? selected?.id ?? root.kits?.[0]?.id;
         if (id) {
           const next = (await moduleShellApi.launchkit.productKit(id)) as Row;
@@ -530,6 +539,16 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 : `${plan.toUpperCase()} · entitlement from ${overview?.access.source.replaceAll('_', ' ')}`}
             </span>
           </div>
+          {overview && (
+            <div style={{ marginBottom: 18 }}>
+              <CoreSuiteWorkdayBrief
+                moduleId="ninja-launch-kit"
+                eyebrow="Next best release actions"
+                brief={buildDeployOpsWorkflowFocus(overview, executionSummary)}
+                hrefFor={hrefFor}
+              />
+            </div>
+          )}
           <div
             className="nlk-grid"
             style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', gap: 12 }}

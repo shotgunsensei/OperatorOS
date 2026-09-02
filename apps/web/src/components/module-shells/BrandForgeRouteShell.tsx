@@ -84,6 +84,6 @@ export default function BrandForgeRouteShell({ routePath }: { baseUrl?: string; 
     organization={{ label:'Organization', value:activeTenant?.name ?? tenantId ?? 'No organization selected' }} accessContext={{label:'Access',value:user?.platformRole==='super_admin'?'Platform administrator':activeRole ?? 'member'}}
     utilityActions={[{label:'My Apps',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,icon:Grid2X2},{label:'Profile',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl,icon:UserRound},{label:'Help',href:buildOperatorOSHelpUrl({module:'brandforgeos',page:currentArea==='dashboard'?'/':`/${currentArea}`}),icon:LifeBuoy}]}
     page={{...page}} state={authLoading||tenantLoading?'loading':!tenantId?'empty':'ready'} stateMessage={!tenantId?'Choose an organization before opening BrandForgeOS.':undefined} mobileNavigation="drawer" testId="brandforgeos-module-shell" pageHeaderTestId="brandforgeos-module-header">
-    {tenantId && <BrandForgeWorkspace key={`${tenantId}-${currentArea}`} routePath={currentArea === 'dashboard' ? '/' : `/${currentArea}`} embedded />}
+    {tenantId && <BrandForgeWorkspace key={`${tenantId}-${currentArea}`} routePath={currentArea === 'dashboard' ? '/' : `/${currentArea}`} embedded hrefFor={hrefFor} />}
   </ModuleApplicationShell>;
 }
