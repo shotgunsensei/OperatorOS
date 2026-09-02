@@ -22,6 +22,8 @@ import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-token
 import { EmptyState, LoadingState } from '@/components/ExperiencePrimitives';
 import SnapProofFieldWorkspace, { type SnapProofFieldTab } from './SnapProofFieldWorkspace';
 import type { SnapProofRouteArea } from './SnapProofRoute.contract';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import { buildSnapProofWorkflowFocus } from '@/lib/companion-workflow';
 
 type Tab = 'dashboard' | 'customers' | 'projects' | 'jobs' | 'capture' | 'work' | 'costs' | 'templates' | 'team' | 'activity' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'share' | 'exports' | 'custody' | 'retention' | 'branding' | 'settings';
 const fieldTabs = new Set<Tab>(['customers', 'projects', 'jobs', 'capture', 'work', 'costs', 'templates', 'team', 'activity', 'reports', 'share', 'exports', 'branding']);
@@ -209,7 +211,7 @@ export default function SnapProofWorkspace({ view, recordId, hrefFor = path => p
       {error && <div role="alert" style={{ ...cardStyle, background: '#1f0a12', borderColor: '#be123c', color: '#fda4af', marginBottom: space.lg }}>{error}</div>}
       {loading ? <div style={{ ...cardStyle, background: '#0f172a', color: '#94a3b8' }}>Loading your evidence workspace…</div> : (
         <>
-          {tab === 'dashboard' && <Dashboard counts={dashboard.counts || {}} cases={cases} onOpen={selectCase} navigate={navigate} />}
+          {tab === 'dashboard' && <Dashboard counts={dashboard.counts || {}} cases={cases} evidence={evidence} reports={reports} onOpen={selectCase} navigate={navigate} hrefFor={hrefFor} />}
           {fieldTab && <SnapProofFieldWorkspace tab={fieldTab} selectedJobId={selectedCaseId} onSelectJob={chooseCase} onOpenJob={selectCase} />}
           {tab === 'cases' && <CasesPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelect={selectEvidenceCase} mutate={mutate} />}
           {tab === 'evidence' && <EvidencePanel cases={cases} evidence={evidence} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
@@ -229,8 +231,12 @@ function Panel({ id, title, description, children }: { id: string; title: string
   return <section id={id} tabIndex={-1}><h2 style={{ marginBottom: 4 }}>{title}</h2><p style={{ color: '#94a3b8', marginTop: 0 }}>{description}</p>{children}</section>;
 }
 
-function Dashboard({ counts, cases, onOpen, navigate }: { counts: Record<string, number>; cases: SnapProofCase[]; onOpen: (id: string) => void; navigate: (tab: Tab) => void }) {
+function Dashboard({ counts, cases, evidence, reports, onOpen, navigate, hrefFor }: { counts: Record<string, number>; cases: SnapProofCase[]; evidence: SnapProofEvidence[]; reports: SnapProofReport[]; onOpen: (id: string) => void; navigate: (tab: Tab) => void; hrefFor: (path: string) => string }) {
+  const brief = buildSnapProofWorkflowFocus(counts, cases, evidence, reports);
   return <Panel id="snapproofos-dashboard" title="Field operations command dashboard" description="See customers, active and overdue jobs, captured proof, approval state, financial totals, and recent activity.">
+    <div style={{ marginBottom: space.lg }}>
+      <CoreSuiteWorkdayBrief moduleId="snapproofos" eyebrow="Next best proof actions" brief={brief} hrefFor={hrefFor} />
+    </div>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: space.md }}>
       {[
         ['Cases', counts.cases ?? 0],

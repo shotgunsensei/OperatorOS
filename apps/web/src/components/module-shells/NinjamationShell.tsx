@@ -35,6 +35,8 @@ import { moduleShellApi } from '@/lib/auth';
 import { useModuleDeepLinkTarget } from '@/app/apps/[slug]/ModuleDeepLinkTarget';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ExperiencePrimitives';
 import { ShellLiveBadge } from './ShellChrome';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import { buildScriptOpsWorkflowFocus } from '@/lib/companion-workflow';
 
 type Row = Record<string, any>;
 type Section = 'dashboard' | 'library' | 'generate' | 'sync' | 'account' | 'admin';
@@ -638,6 +640,14 @@ export default function NinjamationShell({
                 data-testid="section-ninjamation-dashboard"
                 style={{ display: 'grid', gap: 16 }}
               >
+                {workspace && (
+                  <CoreSuiteWorkdayBrief
+                    moduleId="ninjamation"
+                    eyebrow="Next best script actions"
+                    brief={buildScriptOpsWorkflowFocus(workspace)}
+                    hrefFor={routeHref}
+                  />
+                )}
                 <div
                   style={{
                     display: 'grid',

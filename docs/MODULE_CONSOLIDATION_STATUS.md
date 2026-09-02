@@ -2,6 +2,23 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current companion workflow automation overlay — 2026-09-02
+
+The six paid Companion Applications now place a tenant-scoped next-best-action
+brief above their existing advanced surfaces. BrandForgeOS, SnapProofOS,
+StudyForge AI, Deploy Ops, CallCommand AI, and Script Ops retain distinct
+first-value paths and operating language while sharing one accessible,
+responsive presentation contract. Every action is derived from an existing
+authorized response and resolves through an existing canonical route.
+
+Focused contracts pass 22/22 with the existing Core Suite coverage; four-target
+typecheck and the 35-page production build pass. No database, provider,
+identity, tenant, role, entitlement, billing, SSO, import, deployment, traffic,
+commit, push, or publication changed. High-impact actions remain explicit and
+exact-host authenticated browser/mobile/accessibility acceptance remains open.
+No module consolidation state changes. See
+`docs/modules/COMPANION_WORKFLOW_AUTOMATION_REVIEW.md`.
+
 ## Current Core Suite workday automation overlay — 2026-09-01
 
 The three Main Modules now place an authenticated, tenant-scoped workday brief

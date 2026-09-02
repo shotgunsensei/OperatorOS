@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, radius, semantic, space } from '@/lib/design-tokens';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import { buildStudyForgeWorkflowFocus } from '@/lib/companion-workflow';
 
 type Item = Record<string, any>;
 type CompleteWorkspace = {
@@ -55,7 +57,7 @@ function Panel({ id, eyebrow, title, description, children }: { id: string; eyeb
   </section>;
 }
 
-export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'overview' }: { routePath?: string; view?: string }) {
+export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'overview', hrefFor = path => path }: { routePath?: string; view?: string; hrefFor?: (path: string) => string }) {
   const [workspace, setWorkspace] = useState<CompleteWorkspace | null>(null);
   const [selected, setSelected] = useState<Item | null>(null);
   const [busy, setBusy] = useState(false);
@@ -99,7 +101,7 @@ export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'ov
     {error && <div role="alert" style={{ ...shellCard, borderColor: 'rgba(248,113,113,.7)', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
     {!workspace ? <div style={shellCard}>Loading complete StudyForge learning records…</div> : <>
       {view === 'settings' && !workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} />}
-      {view === 'overview' && <CompleteDashboard workspace={workspace} />}
+      {view === 'overview' && <CompleteDashboard workspace={workspace} hrefFor={hrefFor} />}
       {view === 'sets' && <Organizer workspace={workspace} busy={busy} act={act} open={open} />}
       {view === 'sets' && <SetCreator workspace={workspace} busy={busy} act={act} />}
       {view === 'sets' && selected && <SetWorkspace key={selected.id} set={selected} plan={workspace.plan} busy={busy} act={act} close={() => setSelected(null)} />}
@@ -125,7 +127,8 @@ function Onboarding({ busy, act }: { busy: boolean; act: (action: () => Promise<
   </Panel>;
 }
 
-function CompleteDashboard({ workspace }: { workspace: CompleteWorkspace }) {
+function CompleteDashboard({ workspace, hrefFor }: { workspace: CompleteWorkspace; hrefFor: (path: string) => string }) {
+  const brief = buildStudyForgeWorkflowFocus(workspace);
   const metrics = [
     ['Active sets', workspace.metrics.activeSets, Layers3],
     ['Study minutes', workspace.metrics.totalStudyMinutes, Gauge],
@@ -135,6 +138,9 @@ function CompleteDashboard({ workspace }: { workspace: CompleteWorkspace }) {
     ['Longest streak', `${workspace.metrics.longestStreak} days`, Sparkles],
   ] as const;
   return <Panel id="studyforge-dashboard" eyebrow="Live learning data" title="Your study command center" description="Actual persisted sets, sessions, quiz results, countdowns, and streak activity—never demo metrics.">
+    <div style={{ marginBottom: 16 }}>
+      <CoreSuiteWorkdayBrief moduleId="studyforge-ai" eyebrow="Next best learning actions" brief={brief} hrefFor={hrefFor} />
+    </div>
     <div style={grid}>{metrics.map(([label, value, Icon]) => <article key={label} style={{ ...shellCard, position: 'relative', overflow: 'hidden' }}>
       <Icon size={18} color="#a78bfa" /><div style={{ color: semantic.textMuted, fontSize: 13, marginTop: 12 }}>{label}</div><strong style={{ fontSize: 26, display: 'block', marginTop: 4 }}>{value}</strong>
     </article>)}</div>

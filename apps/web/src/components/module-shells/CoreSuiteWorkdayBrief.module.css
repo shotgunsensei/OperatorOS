@@ -45,6 +45,66 @@
   --workday-muted: #9bb0c6;
 }
 
+.brief[data-module='brandforgeos'] {
+  --workday-accent: #f0abfc;
+  --workday-accent-strong: #a21caf;
+  --workday-surface: #120a18;
+  --workday-surface-raised: #1d1026;
+  --workday-border: #5b2b67;
+  --workday-text: #fff7ff;
+  --workday-muted: #d8b4df;
+}
+
+.brief[data-module='snapproofos'] {
+  --workday-accent: #5eead4;
+  --workday-accent-strong: #b91c1c;
+  --workday-surface: #091522;
+  --workday-surface-raised: #0f172a;
+  --workday-border: #1e3a4f;
+  --workday-text: #e2e8f0;
+  --workday-muted: #94a3b8;
+}
+
+.brief[data-module='studyforge-ai'] {
+  --workday-accent: #c4b5fd;
+  --workday-accent-strong: #7c3aed;
+  --workday-surface: #0c0b1b;
+  --workday-surface-raised: #141126;
+  --workday-border: #493b72;
+  --workday-text: #f8f7ff;
+  --workday-muted: #aaa4c2;
+}
+
+.brief[data-module='ninja-launch-kit'] {
+  --workday-accent: #67e8f9;
+  --workday-accent-strong: #0369a1;
+  --workday-surface: #03101f;
+  --workday-surface-raised: #07182b;
+  --workday-border: #164e63;
+  --workday-text: #fafafa;
+  --workday-muted: #a1a1aa;
+}
+
+.brief[data-module='callcommand-ai'] {
+  --workday-accent: #5eead4;
+  --workday-accent-strong: #047857;
+  --workday-surface: #07121b;
+  --workday-surface-raised: #092022;
+  --workday-border: #24594f;
+  --workday-text: #ecfdf5;
+  --workday-muted: #99b9b4;
+}
+
+.brief[data-module='ninjamation'] {
+  --workday-accent: #7dd3fc;
+  --workday-accent-strong: #137ee8;
+  --workday-surface: #020711;
+  --workday-surface-raised: #08182e;
+  --workday-border: #1e4666;
+  --workday-text: #e8f4ff;
+  --workday-muted: #8ba3bf;
+}
+
 .header {
   display: flex;
   align-items: flex-start;

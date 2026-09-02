@@ -7,6 +7,8 @@ import { moduleShellApi, type BrandForgeBrand, type BrandForgeCalendarItem, type
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { ShellLiveBadge } from './ShellChrome';
 import { BrandForgeCompletePanel, type BrandForgeCompleteTab } from './BrandForgeCompletePanels';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import { buildBrandForgeWorkflowFocus } from '@/lib/companion-workflow';
 
 type Tab = 'dashboard' | 'brands' | 'personas' | 'offers' | 'campaigns' | 'copy-studio' | 'calendar' | 'analytics' | 'ai-workflows' | 'strategy' | 'templates' | 'integrations' | 'reports' | 'activity' | 'admin' | 'settings';
 const tabs: Array<{ id: Tab; label: string; Icon: typeof LayoutDashboard }> = [
@@ -68,7 +70,7 @@ function tabFromRoute(routePath?: string): Tab {
   return aliases[root] ?? (tabs.some(item => item.id === root) ? root as Tab : 'dashboard');
 }
 
-export default function BrandForgeWorkspace({ routePath, embedded = false }: { routePath?: string; embedded?: boolean }) {
+export default function BrandForgeWorkspace({ routePath, embedded = false, hrefFor = path => path }: { routePath?: string; embedded?: boolean; hrefFor?: (path: string) => string }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(() => tabFromRoute(routePath));
   const [dashboard, setDashboard] = useState<any>(null);
@@ -176,9 +178,7 @@ export default function BrandForgeWorkspace({ routePath, embedded = false }: { r
 
   const navigate = (next: Tab) => {
     setTab(next);
-    const hostRouted = window.location.hostname === 'brandforgeos.operatoros.net';
-    const nextPath = hostRouted ? `/${next}` : `/modules/brandforgeos/${next}`;
-    router.push(nextPath);
+    router.push(hrefFor(next === 'dashboard' ? '/' : `/${next}`));
   };
 
   async function mutate(task: () => Promise<unknown>) {
@@ -273,7 +273,7 @@ export default function BrandForgeWorkspace({ routePath, embedded = false }: { r
         <div style={{ ...cardStyle, color: semantic.textMuted }}>Loading your creative workspace…</div>
       ) : (
         <>
-          {tab === 'dashboard' && <DashboardPanel dashboard={dashboard} campaigns={campaigns} calendar={calendar} navigate={navigate} />}
+          {tab === 'dashboard' && <DashboardPanel dashboard={dashboard} campaigns={campaigns} calendar={calendar} navigate={navigate} hrefFor={hrefFor} />}
           {tab === 'brands' && <BrandsPanel brands={brands} saving={saving} mutate={mutate} />}
           {tab === 'personas' && <PersonasPanel personas={personas} saving={saving} mutate={mutate} />}
           {tab === 'campaigns' && <CampaignsPanel campaigns={campaigns} brands={brands} personas={personas} saving={saving} mutate={mutate} />}
@@ -299,10 +299,14 @@ function Panel({ id, title, description, children }: { id: string; title: string
   );
 }
 
-function DashboardPanel({ dashboard, campaigns, calendar, navigate }: { dashboard: any; campaigns: BrandForgeCampaign[]; calendar: BrandForgeCalendarItem[]; navigate: (tab: Tab) => void }) {
+function DashboardPanel({ dashboard, campaigns, calendar, navigate, hrefFor }: { dashboard: any; campaigns: BrandForgeCampaign[]; calendar: BrandForgeCalendarItem[]; navigate: (tab: Tab) => void; hrefFor: (path: string) => string }) {
   const counts = dashboard?.counts ?? {};
+  const brief = buildBrandForgeWorkflowFocus(counts, campaigns, calendar);
   return (
     <Panel id="brandforgeos-dashboard" title="Creative command dashboard" description="See the brands, campaigns, content, and launches your team is actively building.">
+      <div style={{ marginBottom: space.lg }}>
+        <CoreSuiteWorkdayBrief moduleId="brandforgeos" eyebrow="Next best campaign actions" brief={brief} hrefFor={hrefFor} />
+      </div>
       <div
         style={{
           display: 'grid',

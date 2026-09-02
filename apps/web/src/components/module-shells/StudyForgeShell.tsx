@@ -55,7 +55,7 @@ function key(prefix: string) {
   return `${prefix}:${Date.now()}:${crypto.randomUUID()}`;
 }
 
-export default function StudyForgeShell({ routePath = '', embedded = false, view = 'overview' }: { baseUrl?: string; routePath?: string; embedded?: boolean; view?: string }) {
+export default function StudyForgeShell({ routePath = '', embedded = false, view = 'overview', hrefFor = path => path }: { baseUrl?: string; routePath?: string; embedded?: boolean; view?: string; hrefFor?: (path: string) => string }) {
   const [data, setData] = useState<Workspace | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -126,7 +126,7 @@ export default function StudyForgeShell({ routePath = '', embedded = false, view
       </nav>}
 
       {error && <div role="alert" data-testid="studyforge-error" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
-      {(!legacyView || view === 'sessions') && <StudyForgeCompleteWorkspace routePath={routePath} view={view} />}
+      {(!legacyView || view === 'sessions') && <StudyForgeCompleteWorkspace routePath={routePath} view={view} hrefFor={hrefFor} />}
       {legacyView && (!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading your courses and study progress…</p></Panel> : (
         <>
           {view === 'sources' && <Subjects data={data} mutate={mutate} busy={busy} />}

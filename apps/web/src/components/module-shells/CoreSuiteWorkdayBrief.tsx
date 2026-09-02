@@ -11,7 +11,16 @@ export default function CoreSuiteWorkdayBrief({
   brief,
   hrefFor,
 }: {
-  moduleId: 'tradeflowkit' | 'techdeck' | 'pulsedesk';
+  moduleId:
+    | 'tradeflowkit'
+    | 'techdeck'
+    | 'pulsedesk'
+    | 'brandforgeos'
+    | 'snapproofos'
+    | 'studyforge-ai'
+    | 'ninja-launch-kit'
+    | 'callcommand-ai'
+    | 'ninjamation';
   eyebrow: string;
   brief: WorkdayBrief;
   hrefFor: (href: string) => string;

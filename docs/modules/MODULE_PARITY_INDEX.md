@@ -1,5 +1,24 @@
 # OperatorOS module parity index
 
+## Companion workflow automation overlay (2026-09-02)
+
+The six paid companions now share the small customer-facing decision pattern
+already proven by the three Main Modules, without sharing product or server
+authority. BrandForgeOS ranks campaign production handoffs; SnapProofOS ranks
+field proof and review; StudyForge AI ranks study priorities; Deploy Ops joins
+package creation to readiness evidence; CallCommand AI ranks go-live/provider
+facts and caller follow-up; and Script Ops ranks provenance, analysis, review,
+and controlled delivery. Empty workspaces use three bounded setup steps.
+
+Focused logic/static contracts pass 22/22 together with the prior Core Suite
+coverage, all four workspace typechecks pass, and the production build passes
+with 35 Next pages. No API, schema, release manifest, data ledger, entitlement,
+billing, provider, import, SSO/session, or remote-execution capability changed.
+Deployed exact-host browser/mobile/accessibility, data-volume, provider,
+reconciliation, backup/rollback, and production release-identity evidence
+remain open. All six companions retain their prior parity and consolidation
+states. See `docs/modules/COMPANION_WORKFLOW_AUTOMATION_REVIEW.md`.
+
 ## Core Suite workday automation overlay (2026-09-01)
 
 TradeFlowKit, TechDeck, and PulseDesk now share a customer-facing workday
