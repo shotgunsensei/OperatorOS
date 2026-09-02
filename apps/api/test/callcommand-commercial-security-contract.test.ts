@@ -3,14 +3,18 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { calculateCallCommandCapacity } from '../src/lib/callcommand-capacity.js';
 
-const commercialRoutes = readFileSync(new URL('../src/routes/callcommand-commercial-routes.ts', import.meta.url), 'utf8');
-const billingRoutes = readFileSync(new URL('../src/routes/billing-routes.ts', import.meta.url), 'utf8');
-const laneBilling = readFileSync(new URL('../src/lib/callcommand-lane-billing.ts', import.meta.url), 'utf8');
-const phase35Routes = readFileSync(new URL('../src/routes/callcommand-phase35-routes.ts', import.meta.url), 'utf8');
-const commercialSchema = readFileSync(new URL('../src/lib/callcommand-commercial-db-init.ts', import.meta.url), 'utf8');
-const automationPolicy = readFileSync(new URL('../src/lib/callcommand-automation-policy.ts', import.meta.url), 'utf8');
-const managedNumberSchema = readFileSync(new URL('../src/lib/callcommand-managed-number-db-init.ts', import.meta.url), 'utf8');
-const numberBilling = readFileSync(new URL('../src/lib/callcommand-number-billing.ts', import.meta.url), 'utf8');
+function readSource(path: string): string {
+  return readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r\n?/g, '\n');
+}
+
+const commercialRoutes = readSource('../src/routes/callcommand-commercial-routes.ts');
+const billingRoutes = readSource('../src/routes/billing-routes.ts');
+const laneBilling = readSource('../src/lib/callcommand-lane-billing.ts');
+const phase35Routes = readSource('../src/routes/callcommand-phase35-routes.ts');
+const commercialSchema = readSource('../src/lib/callcommand-commercial-db-init.ts');
+const automationPolicy = readSource('../src/lib/callcommand-automation-policy.ts');
+const managedNumberSchema = readSource('../src/lib/callcommand-managed-number-db-init.ts');
+const numberBilling = readSource('../src/lib/callcommand-number-billing.ts');
 
 function between(source: string, start: string, end: string): string {
   const from = source.indexOf(start);

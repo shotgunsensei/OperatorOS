@@ -1,5 +1,38 @@
 # OperatorOS implementation status
 
+## Replit v59 publish reconciliation - LOCAL/DEVELOPMENT VERIFIED / PRODUCTION HOLD (2026-09-02)
+
+- Commit `54ebb2f07a70b21ee07455cd8fd3b2822e785c83` aligns all nine
+  publish-sensitive unique constraints with production's `(id, tenant_id)`
+  order and includes a regression contract. The reviewed Replit development
+  transaction retained all affected row counts, restored the nine dependent
+  foreign keys exactly, left the read-only production fingerprint unchanged,
+  and removed the 18 repaired constraint names from the Publish preview.
+- Replit's remaining 195-statement preview has no structural data-loss flag,
+  removals, or truncations. It reports 12 table creations, 84 other table
+  alterations, 62 constraints, 18 indexes, and 19 unique indexes. Production
+  is v56 and the source contract is cumulative v59; source inspection accounts
+  for the 12 intended v57-v59 tables and 18 ordinary index declarations. The
+  preview remains possibly non-backwards-compatible and has not been executed.
+- Fresh independent verification passes 23/23 focused release/constraint/trial/
+  CallCommand contracts, four-workspace typecheck, deployment scope,
+  FaultlineLab 4/4, production build, 35/35 generated Next pages, and a
+  non-destructive 59-step plan. Disposable PostgreSQL 16 clean apply/reapply
+  passes in 19,365 ms and 1,887 ms; catalog checks find 12/12 v57-v59 tables,
+  `users.email_verified_at`, 9/9 id-first unique constraints, and 9/9 validated
+  dependent foreign keys. The disposable container was removed.
+- The three earlier CallCommand failures were CRLF-sensitive source slicing,
+  not runtime defects. The contract harness now normalizes source line endings
+  before applying the existing assertions; the complete focused set passes on
+  Windows without weakening any billing, provider, tenant, or signature check.
+- Live `/readyz` remains healthy at commit `51683f2858a1c80a5f7fb5c5c4703432755cc4ed`,
+  build `fcc94a55c65d438775ed7526`, and database release v56/56 ending in
+  `auth_mfa_tables`. Replit shows seven-day production point-in-time recovery
+  enabled and scheduled backups off. No production mutation or Publish was
+  performed. Fresh backup/recovery evidence, explicit owner approval, v59
+  Publish/readiness reconciliation, and deployed authenticated acceptance are
+  still required.
+
 ## Core Suite workday automation - SOURCE/LOCAL IMPLEMENTED / LIVE ACCEPTANCE BLOCKED (2026-09-01)
 
 - TradeFlowKit, TechDeck, and PulseDesk now open with one shared, accessible

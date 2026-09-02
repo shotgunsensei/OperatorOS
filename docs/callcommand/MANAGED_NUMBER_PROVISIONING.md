@@ -1,7 +1,9 @@
 # CallCommand Managed Number Provisioning
 
-**Release contract:** v58 `callcommand_managed_number_provisioning`  
-**Evidence status:** source/local implemented; live provider and deployed acceptance blocked  
+**Release contract:** v58 `callcommand_managed_number_provisioning`
+
+**Evidence status:** source/local implemented; live provider and deployed acceptance blocked
+
 **Customer promise:** a tenant obtains and manages an OperatorOS-owned CallCommand business number without receiving Twilio credentials or configuring Twilio.
 
 ## Runtime path

@@ -1,7 +1,9 @@
 # Core Suite workday automation review
 
-Assessment date: 2026-09-01  
-Source branch: `codex/core-suite-workday-automation`  
+Assessment date: 2026-09-01
+
+Source branch: `codex/core-suite-workday-automation`
+
 Scope: TradeFlowKit, TechDeck, and PulseDesk inside the canonical OperatorOS runtime.
 
 ## Outcome

@@ -1,5 +1,47 @@
 # OperatorOS current release gate
 
+## Replit v59 publish reconciliation - LOCAL/DEVELOPMENT PASS, PRODUCTION HOLD (2026-09-02)
+
+The publish-blocking composite-unique drift is repaired in source commit
+`54ebb2f07a70b21ee07455cd8fd3b2822e785c83`: all nine publish-sensitive
+constraints use the production-compatible `(id, tenant_id)` order, and a
+regression contract prevents the tenant-first order from returning. The
+reviewed Replit development repair reports unchanged affected-table row counts,
+all nine dependent foreign keys restored with their original behavior, and an
+unchanged read-only production constraint fingerprint. The repaired constraint
+and foreign-key names no longer appear in Replit's Publish preview.
+
+The remaining preview is not an empty-diff target. Production is still on
+release v56, while the reviewed source contract is the cumulative additive v59
+candidate. Replit reports 195 remaining statements with no structural data
+loss, table/column/schema removal, materialized-view removal, or truncation:
+12 table creations, 84 other table alterations, 62 added constraints, 18
+indexes, and 19 unique indexes. Source inspection accounts for all 12 intended
+v57-v59 tables and all 18 ordinary index declarations. Replit still classifies
+the preview as possibly non-backwards-compatible, so the production gate stays
+closed until the final Publish confirmation is reviewed in the controlled
+window; the 195 statements must not be erased merely to force an empty diff.
+
+Fresh independent local verification on Windows passes 23/23 focused release,
+constraint, trial, CallCommand security, and managed-number contracts; all four
+workspace typechecks; deployment-scope verification; FaultlineLab catalog
+4/4; the production build with 35/35 generated Next pages; and the read-only
+59-step non-destructive release plan. A clean disposable PostgreSQL 16 database
+applied all 59 steps in 19,365 ms and immediately reapplied them in 1,887 ms.
+Catalog verification found all 12 v57-v59 tables, `users.email_verified_at`,
+all nine `(id, tenant_id)` unique constraints, and all nine validated dependent
+foreign keys. The disposable container was removed after verification.
+
+Public `/readyz` on both `operatoros.net` and `api.operatoros.net` remains
+healthy at commit `51683f2858a1c80a5f7fb5c5c4703432755cc4ed`, build
+`fcc94a55c65d438775ed7526`, and database release v56/56 ending in
+`auth_mfa_tables`. Replit's production database shows seven-day point-in-time
+recovery enabled; scheduled backups are off. No production database, provider,
+billing, DNS, traffic, or deployment mutation was performed. A fresh reviewed
+production recovery point/logical backup, explicit owner approval, Publish,
+v59 readiness identity, reconciliation, and authenticated deployed acceptance
+remain required.
+
 ## Core Suite workday automation - SOURCE/LOCAL PASS, PRODUCTION HOLD (2026-09-01)
 
 TradeFlowKit Revenue Rescue, TechDeck Risk-to-Proof Brief, and PulseDesk
