@@ -1,46 +1,66 @@
 # OperatorOS current release gate
 
-## Replit v59 publish reconciliation - LOCAL/DEVELOPMENT PASS, PRODUCTION HOLD (2026-09-02)
+## Replit v59 production release - LIVE READY / AUTHENTICATED AND PROVIDER ACCEPTANCE OPEN (2026-09-02)
 
-The publish-blocking composite-unique drift is repaired in source commit
-`54ebb2f07a70b21ee07455cd8fd3b2822e785c83`: all nine publish-sensitive
-constraints use the production-compatible `(id, tenant_id)` order, and a
-regression contract prevents the tenant-first order from returning. The
-reviewed Replit development repair reports unchanged affected-table row counts,
-all nine dependent foreign keys restored with their original behavior, and an
-unchanged read-only production constraint fingerprint. The repaired constraint
-and foreign-key names no longer appear in Replit's Publish preview.
+Owner-authorized source commit
+`101453ad6710626ccfb5d904b42f7423544e6133` was pushed to `main` and published
+through Replit. It retains the earlier nine-constraint `(id, tenant_id)` drift
+repair from `54ebb2f07a70b21ee07455cd8fd3b2822e785c83` and closes the final
+CallCommand ordering defect: clean databases create
+`uq_callcommand_action_tenant_id` with `callcommand_action_runs`, while existing
+databases promote or add the named tenant key before the three ticket, lead,
+and task foreign keys. The regression contract now enforces both ordering
+properties.
 
-The remaining preview is not an empty-diff target. Production is still on
-release v56, while the reviewed source contract is the cumulative additive v59
-candidate. Replit reports 195 remaining statements with no structural data
-loss, table/column/schema removal, materialized-view removal, or truncation:
-12 table creations, 84 other table alterations, 62 added constraints, 18
-indexes, and 19 unique indexes. Source inspection accounts for all 12 intended
-v57-v59 tables and all 18 ordinary index declarations. Replit still classifies
-the preview as possibly non-backwards-compatible, so the production gate stays
-closed until the final Publish confirmation is reviewed in the controlled
-window; the 195 statements must not be erased merely to force an empty diff.
+The reviewed 195-statement preview was the intended cumulative additive v57-v59
+promotion, not residue that should be erased to force an empty diff. It had no
+structural-data-loss flag, table/column/schema/materialized-view removal, or
+truncation. Replit completed the production publish and the supported release
+runner applied and verified all 59 ordered steps. The first process spent about
+96 seconds completing the cold database promotion, then missed the supervisor's
+120-second Fastify readiness deadline and exited. Replit restarted it; the
+idempotent warm run verified the already-complete release and became ready.
+This was a controlled post-apply startup restart, not a partial database apply
+or rollback failure.
 
-Fresh independent local verification on Windows passes 23/23 focused release,
-constraint, trial, CallCommand security, and managed-number contracts; all four
-workspace typechecks; deployment-scope verification; FaultlineLab catalog
-4/4; the production build with 35/35 generated Next pages; and the read-only
-59-step non-destructive release plan. A clean disposable PostgreSQL 16 database
-applied all 59 steps in 19,365 ms and immediately reapplied them in 1,887 ms.
-Catalog verification found all 12 v57-v59 tables, `users.email_verified_at`,
-all nine `(id, tenant_id)` unique constraints, and all nine validated dependent
-foreign keys. The disposable container was removed after verification.
+Fresh public `/readyz` from both `operatoros.net` and
+`api.operatoros.net` reports `ready: true` with:
 
-Public `/readyz` on both `operatoros.net` and `api.operatoros.net` remains
-healthy at commit `51683f2858a1c80a5f7fb5c5c4703432755cc4ed`, build
-`fcc94a55c65d438775ed7526`, and database release v56/56 ending in
-`auth_mfa_tables`. Replit's production database shows seven-day point-in-time
-recovery enabled; scheduled backups are off. No production database, provider,
-billing, DNS, traffic, or deployment mutation was performed. A fresh reviewed
-production recovery point/logical backup, explicit owner approval, Publish,
-v59 readiness identity, reconciliation, and authenticated deployed acceptance
-remain required.
+- commit `101453ad6710626ccfb5d904b42f7423544e6133`;
+- build `14c7cf63092a2d77d97aabf8`, built
+  `2026-09-02T19:36:54.077Z` and deployed
+  `2026-09-02T19:49:10.413Z`;
+- database release v59/59 ending in `core_suite_trial_tables`;
+- healthy database, configured auth/SSO encryption/module registry/release
+  identity, ready shared worker and queues, and live shared-secret encryption;
+- zero consecutive worker failures in the sampled live snapshot.
+
+All 19 public ecosystem hosts returned HTTP 200, directly or through their
+expected exact-host SSO/compatibility redirect. Bare `/healthz` is currently
+intercepted by the Replit/Google frontend and returns its HTML 404 on both the
+apex and API custom hosts even though the application defines that route.
+`/readyz` is the canonical release/readiness authority; `/api/health` returns
+200 on both hosts and `api.operatoros.net/health` also returns 200. The edge
+`/healthz` mapping remains an infrastructure follow-up and is not represented
+as an application-source fix.
+
+The temporary development-only diff shaping was fully reversed after Publish.
+A fresh Replit shell session verified the local `heliumdb/postgres` identity,
+unchanged zero row counts for the affected CallCommand tables, the validated
+`UNIQUE (tenant_id, id)` action-run key, all three exact validated dependent
+foreign keys, and the managed-number consistency check restored in its intended
+`NOT VALID` state. The earlier nine production-order constraints remain aligned,
+and no additional production DDL was used for this development restoration.
+
+Production retained its existing seven-day point-in-time recovery. Scheduled
+backups remain off and no paid backup setting was enabled. No Replit Agent,
+Stripe, Twilio, OpenAI, email, telephony, purchasing, settlement, DNS, or billing
+side effect was invoked. Readiness reports the external integrations as
+configured but the shared provider control plane as `not_configured`; therefore
+provider success is not inferred. The v59 artifact and database release are
+live, while authenticated desktop/mobile/accessibility journeys, controlled
+real-provider acceptance, reconciliation, monitoring, and restore-to-new-
+database traffic-switch proof remain separate release-acceptance gates.
 
 ## Core Suite workday automation - SOURCE/LOCAL PASS, PRODUCTION HOLD (2026-09-01)
 
