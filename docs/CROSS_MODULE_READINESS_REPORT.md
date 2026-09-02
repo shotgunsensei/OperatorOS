@@ -1,5 +1,22 @@
 # Cross-module readiness report
 
+## Core Suite workday automation overlay (2026-09-01)
+
+TradeFlowKit, TechDeck, and PulseDesk now share a small customer-facing
+decision pattern while retaining distinct workflows and server authority.
+Revenue Rescue surfaces lead-to-cash leakage, Risk-to-Proof links service
+urgency to configuration/documentation/evidence, and Operational Pulse ranks
+PHI-minimized non-clinical pressure. All actions resolve through existing
+module routes and tenant-scoped APIs; no provider or high-impact action is
+auto-executed.
+
+Focused contracts pass 8/8, all workspace typechecks and the production build
+pass, and the core environment preflight continues to fail closed without
+production-only inputs. This overlay changes no module readiness or
+consolidation state. Exact-host authenticated browser/mobile/accessibility,
+data-volume, production release-identity, monitoring, backup, and rollback
+acceptance remain open under `docs/CURRENT_RELEASE_GATE.md`.
+
 ## Release v59 Core Suite evaluation overlay (2026-09-01)
 
 OperatorOS now owns a distinct, durable evaluation access source for exactly

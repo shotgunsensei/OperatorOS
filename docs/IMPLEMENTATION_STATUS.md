@@ -1,5 +1,35 @@
 # OperatorOS implementation status
 
+## Core Suite workday automation - SOURCE/LOCAL IMPLEMENTED / LIVE ACCEPTANCE BLOCKED (2026-09-01)
+
+- TradeFlowKit, TechDeck, and PulseDesk now open with one shared, accessible
+  decision pattern over their existing tenant-scoped APIs. TradeFlowKit's
+  **Revenue Rescue** ranks cash and delivery leakage; TechDeck's
+  **Risk-to-Proof Brief** connects SLA/dispatch/asset risk to the real ticket,
+  configuration, or procedure; PulseDesk's **Operational Pulse** ranks
+  PHI-minimized SLA, ownership, supply, and facility pressure.
+- Empty workspaces receive a three-step first-value path. Active workspaces get
+  one primary action, three compact measures, up to six deterministic actions,
+  and links to existing bounded recurring, evidence, intake, or SLA tooling.
+  No record mutation, provider delivery, customer charge, technician
+  assignment, remote command, or clinical action is performed by the brief.
+- Fresh source/local evidence passes 8/8 focused logic/static contracts, all
+  four workspace typechecks, the existing TradeFlowKit Phase 16, TechDeck Phase
+  26, PulseDesk Phase 27, and shared product-truth ledgers, deployment-scope
+  verification, the existing 4/4 FaultlineLab catalog contract, and the
+  production build with 35/35 generated Next pages. `git diff --check` passes apart from
+  line-ending conversion warnings.
+  The ordinary `tsx` launcher was unavailable because Node `os.userInfo()`
+  returned `uv_os_get_passwd ENOMEM`; the focused TypeScript files passed under
+  Node's native type-stripping test runner instead.
+- Core production preflight fails closed on the intentionally absent production
+  database, secret, environment, exact-host, release-mode, proxy, and module URL
+  inputs and prints no secret values. No schema/release-manifest change,
+  production database/provider/billing/DNS action, deployment, merge, push, or
+  publish occurred. Exact-host authenticated browser/mobile/accessibility and
+  deployed release acceptance remain open; no parity or consolidation state is
+  promoted. See `docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md`.
+
 ## Core Suite verified-email evaluation trial - SOURCE/LOCAL IMPLEMENTED / LIVE ACCEPTANCE BLOCKED (2026-09-01)
 
 - Additive release v59 implements one no-card 168-hour evaluation of exactly

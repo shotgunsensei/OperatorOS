@@ -50,6 +50,7 @@ function RouteLoading() {
 const TechDeckTicketQueue = dynamic(() => import('./TechDeckTicketQueue'), { loading: RouteLoading });
 const TechDeckOperations = dynamic(() => import('./TechDeckOperations'), { loading: RouteLoading });
 const TechDeckLiteralConsole = dynamic(() => import('./TechDeckLiteralConsole'), { loading: RouteLoading });
+const TechDeckWorkdayBrief = dynamic(() => import('./TechDeckWorkdayBrief'), { loading: RouteLoading });
 const BusinessDirectory = dynamic(() => import('./BusinessDirectory'), { loading: RouteLoading });
 
 const overviewRoutes: Array<{ area: TechDeckRouteArea; label: string; summary: string; path: string; Icon: LucideIcon }> = [
@@ -151,6 +152,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
         <>
           {route.area === 'overview' && (
             <section className="techdeck-overview" id="techdeck-overview" data-testid="techdeck-overview-route">
+              <TechDeckWorkdayBrief tenantKey={adapter.tenantId} hrefFor={hrefFor} />
               <div className="techdeck-readiness" aria-label="TechDeck readiness">
                 <Metric label="Sign-in" value="Protected" Icon={ShieldCheck} />
                 <Metric label="Client records" value="Organization-only" Icon={Building2} />
@@ -245,6 +247,10 @@ const techDeckRouteCss = `
   .techdeck-route-card strong { font-size:14px; }
   .techdeck-route-card span { color:#8fa3bd; font-size:12px; line-height:1.5; }
   .techdeck-route-state { min-height:160px; display:flex; align-items:center; justify-content:center; gap:9px; color:#8fa3bd; border:1px solid #263348; background:#0d1320; border-radius:8px; }
+  .techdeck-workday-state { min-height:220px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:18px; border:1px solid #263348; background:#080d16; border-radius:12px; }
+  .techdeck-workday-state span { min-height:90px; border:1px solid #263348; border-radius:8px; background:#0d1320; }
+  .techdeck-workday-error { display:flex; align-items:center; gap:9px; padding:13px; border:1px solid rgba(251,113,133,.45); border-radius:8px; background:#0d1320; color:#fecdd3; }
+  .techdeck-workday-error a { margin-left:auto; color:#7dd3fc; }
   .techdeck-settings { padding:20px; display:grid; gap:12px; }
   .techdeck-settings h2 { display:flex; align-items:center; gap:9px; margin:0; font-size:18px; }
   .techdeck-settings h2 svg { color:#38bdf8; }
@@ -254,5 +260,5 @@ const techDeckRouteCss = `
   .techdeck-settings-row span { color:#8fa3bd; font-size:12px; line-height:1.5; }
   .techdeck-panel { border:1px solid #263348; background:#0d1320; border-radius:8px; }
   @media(max-width:900px){.techdeck-readiness{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media(max-width:640px){.techdeck-readiness,.techdeck-route-grid{grid-template-columns:1fr}.techdeck-action{width:100%;justify-content:center}}
+  @media(max-width:640px){.techdeck-readiness,.techdeck-route-grid,.techdeck-workday-state{grid-template-columns:1fr}.techdeck-action{width:100%;justify-content:center}.techdeck-workday-error{align-items:flex-start;flex-direction:column}.techdeck-workday-error a{margin-left:0}}
 `;

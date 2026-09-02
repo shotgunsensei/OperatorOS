@@ -18,6 +18,8 @@ import {
   type PulseDeskServiceTicket,
   type PulseDeskServiceTicketDetail,
 } from '@/lib/auth';
+import { buildPulseDeskWorkday } from '@/lib/core-suite-workday';
+import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 
 const PHI_WARNING = 'Operational information only. Do not enter patient names, MRNs, dates of birth, diagnoses, insurance details, treatment information, or clinical notes.';
 export type PulseDeskServiceView = 'dashboard' | 'tickets' | 'operations' | 'knowledge' | 'admin';
@@ -53,7 +55,7 @@ async function base64File(file: File): Promise<string> {
   return btoa(binary);
 }
 
-export default function PulseDeskServiceDeskWorkspace({ tenantKey, canManageModule, view, requestHref }: { tenantKey: string; canManageModule: boolean; view: PulseDeskServiceView; requestHref: (id: string) => string }) {
+export default function PulseDeskServiceDeskWorkspace({ tenantKey, canManageModule, view, requestHref, routeHref }: { tenantKey: string; canManageModule: boolean; view: PulseDeskServiceView; requestHref: (id: string) => string; routeHref: (path: string) => string }) {
   const [dashboard, setDashboard] = useState<PulseDeskServiceDashboard | null>(null);
   const [configuration, setConfiguration] = useState<PulseDeskServiceConfiguration | null>(null);
   const [tickets, setTickets] = useState<PulseDeskServiceTicket[]>([]);
@@ -278,7 +280,7 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canManageModu
       {error && <div className="pds-error" role="alert" data-testid="pulsedesk-service-error"><AlertTriangle size={16} />{error}</div>}
       {notice && <div className="pds-success" role="status"><CheckCircle2 size={16} />{notice}</div>}
 
-      {view === 'dashboard' && dashboard && <Dashboard dashboard={dashboard} tickets={tickets} requestHref={requestHref} />}
+      {view === 'dashboard' && dashboard && <Dashboard dashboard={dashboard} tickets={tickets} requestHref={requestHref} routeHref={routeHref} canManage={canManageModule} />}
 
       {view === 'tickets' && <div className="pds-ticket-layout">
         <div className="pds-stack">
@@ -337,9 +339,11 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canManageModu
 
 function Heading({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle: string }) { return <header className="pds-heading"><Icon size={18} /><div><h3>{title}</h3><p>{subtitle}</p></div></header>; }
 function Empty({ text }: { text: string }) { return <div className="pds-empty">{text}</div>; }
-function Dashboard({ dashboard, tickets, requestHref }: { dashboard: PulseDeskServiceDashboard; tickets: PulseDeskServiceTicket[]; requestHref: (id: string) => string }) {
+function Dashboard({ dashboard, tickets, requestHref, routeHref, canManage }: { dashboard: PulseDeskServiceDashboard; tickets: PulseDeskServiceTicket[]; requestHref: (id: string) => string; routeHref: (path: string) => string; canManage: boolean }) {
+  const workday = buildPulseDeskWorkday(dashboard, tickets, canManage);
   const metrics = [['Open tickets', dashboard.metrics.openTickets], ['At risk', dashboard.metrics.atRisk], ['Overdue', dashboard.metrics.overdue], ['Operational equipment', dashboard.metrics.operationalAssets], ['Pending supplies', dashboard.metrics.pendingSupplyRequests], ['Facility requests', dashboard.metrics.openFacilityRequests], ['Time logged', `${dashboard.metrics.timeMinutes} min`]];
-  return <div className="pds-stack"><div className="pds-metrics">{metrics.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><section className="pds-card"><Heading icon={Activity} title="Current operational work" subtitle={`Updated ${formatDate(dashboard.generatedAt)}.`} />{tickets.slice(0, 8).map(ticket => <a className="pds-row-button" key={ticket.id} href={requestHref(ticket.id)}><span><strong>{ticket.humanId}</strong> {ticket.summary}</span><small>{ticket.status} · {ticket.priority} · SLA {ticket.sla.state}</small></a>)}</section></div>;
+  const hrefFor = (href: string) => href.startsWith('/requests/') ? requestHref(href.slice('/requests/'.length)) : routeHref(href);
+  return <div className="pds-stack"><CoreSuiteWorkdayBrief moduleId="pulsedesk" eyebrow="Today · operational pressure" brief={workday} hrefFor={hrefFor} /><div className="pds-metrics">{metrics.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><section className="pds-card"><Heading icon={Activity} title="Current operational work" subtitle={`Updated ${formatDate(dashboard.generatedAt)}.`} />{tickets.slice(0, 8).map(ticket => <a className="pds-row-button" key={ticket.id} href={requestHref(ticket.id)}><span><strong>{ticket.humanId}</strong> {ticket.summary}</span><small>{ticket.status} · {ticket.priority} · SLA {ticket.sla.state}</small></a>)}</section></div>;
 }
 
 function TicketDetail({ detail, busy, attachments, configuration, assignees, vendors, onUpdate, onReply, onTime, onAssign, onTransition, onEvaluate, onUpload, onVendor }: {
