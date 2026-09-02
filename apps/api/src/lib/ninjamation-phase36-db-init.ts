@@ -129,7 +129,7 @@ export async function ensureNinjamationPhase36Tables(): Promise<void> {
       completed_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CONSTRAINT uq_ninjamation_sync_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_ninjamation_sync_tenant_id UNIQUE (id,tenant_id),
       CONSTRAINT uq_ninjamation_sync_idempotency UNIQUE (tenant_id,idempotency_key),
       CONSTRAINT ninjamation_sync_mode_check CHECK (mode IN ('initial','incremental','retry')),
       CONSTRAINT ninjamation_sync_policy_check CHECK (deletion_policy='deprecate'),

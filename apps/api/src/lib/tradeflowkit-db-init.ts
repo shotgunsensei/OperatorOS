@@ -52,7 +52,7 @@ export async function ensureTradeFlowKitTables(): Promise<void> {
       created_at TIMESTAMP DEFAULT NOW() NOT NULL,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
       archived_at TIMESTAMP,
-      CONSTRAINT uq_tfk_workflows_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_tfk_workflows_tenant_id UNIQUE (id, tenant_id),
       CONSTRAINT tfk_workflows_entity_type_check CHECK (entity_type IN ('job','task')),
       CONSTRAINT tfk_workflows_name_check CHECK (char_length(name) BETWEEN 1 AND 120),
       CONSTRAINT tfk_workflows_version_check CHECK (version >= 1)
@@ -81,7 +81,7 @@ export async function ensureTradeFlowKitTables(): Promise<void> {
       created_at TIMESTAMP DEFAULT NOW() NOT NULL,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
       archived_at TIMESTAMP,
-      CONSTRAINT uq_tfk_workflow_stages_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_tfk_workflow_stages_tenant_id UNIQUE (id, tenant_id),
       CONSTRAINT tfk_workflow_stages_workflow_fk FOREIGN KEY (tenant_id, workflow_id)
         REFERENCES tradeflowkit_workflows(tenant_id, id) ON DELETE CASCADE,
       CONSTRAINT tfk_workflow_stages_name_check CHECK (char_length(name) BETWEEN 1 AND 80),

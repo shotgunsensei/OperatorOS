@@ -23,7 +23,7 @@ export async function ensureSnapProofOsPhase32Tables(): Promise<void> {
       archived_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CONSTRAINT uq_snapproof_customer_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_snapproof_customer_tenant_id UNIQUE (id,tenant_id),
       CONSTRAINT snapproof_customer_name_check CHECK (char_length(btrim(name)) BETWEEN 1 AND 200),
       CONSTRAINT snapproof_customer_version_check CHECK (version >= 1)
     );
@@ -131,7 +131,7 @@ export async function ensureSnapProofOsPhase32Tables(): Promise<void> {
       deleted_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CONSTRAINT uq_snapproof_part_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_snapproof_part_tenant_id UNIQUE (id,tenant_id),
       CONSTRAINT snapproof_part_case_fk FOREIGN KEY (tenant_id,case_id) REFERENCES snapproof_cases(tenant_id,id),
       CONSTRAINT snapproof_part_values_check CHECK (quantity > 0 AND unit_cost_cents >= 0 AND unit_price_cents >= 0)
     );
@@ -151,7 +151,7 @@ export async function ensureSnapProofOsPhase32Tables(): Promise<void> {
       deleted_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CONSTRAINT uq_snapproof_labor_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_snapproof_labor_tenant_id UNIQUE (id,tenant_id),
       CONSTRAINT snapproof_labor_case_fk FOREIGN KEY (tenant_id,case_id) REFERENCES snapproof_cases(tenant_id,id),
       CONSTRAINT snapproof_labor_values_check CHECK (hours > 0 AND hours <= 10000 AND rate_cents >= 0)
     );
@@ -184,7 +184,7 @@ export async function ensureSnapProofOsPhase32Tables(): Promise<void> {
       access_count INTEGER NOT NULL DEFAULT 0,
       last_accessed_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CONSTRAINT uq_snapproof_share_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_snapproof_share_tenant_id UNIQUE (id,tenant_id),
       CONSTRAINT snapproof_share_report_fk FOREIGN KEY (tenant_id,report_id) REFERENCES snapproof_reports(tenant_id,id),
       CONSTRAINT snapproof_share_hash_check CHECK (token_hash ~ '^[0-9a-f]{64}$'),
       CONSTRAINT snapproof_share_expiry_check CHECK (expires_at > created_at)

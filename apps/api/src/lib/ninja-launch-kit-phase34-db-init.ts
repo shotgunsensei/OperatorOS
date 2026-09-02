@@ -22,7 +22,7 @@ export async function ensureNinjaLaunchKitPhase34Tables(): Promise<void> {
       deleted_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CONSTRAINT uq_launchkit_brand_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_launchkit_brand_tenant_id UNIQUE (id,tenant_id),
       CONSTRAINT launchkit_brand_name_check CHECK (char_length(btrim(name)) BETWEEN 1 AND 160),
       CONSTRAINT launchkit_brand_colors_check CHECK (primary_color ~ '^#[0-9A-Fa-f]{6}$' AND accent_color ~ '^#[0-9A-Fa-f]{6}$'),
       CONSTRAINT launchkit_brand_contact_check CHECK (jsonb_typeof(contact_json)='object')
@@ -56,7 +56,7 @@ export async function ensureNinjaLaunchKitPhase34Tables(): Promise<void> {
       deleted_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CONSTRAINT uq_launchkit_product_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_launchkit_product_tenant_id UNIQUE (id,tenant_id),
       CONSTRAINT uq_launchkit_product_key UNIQUE (tenant_id,user_id,idempotency_key),
       CONSTRAINT launchkit_product_brand_fk FOREIGN KEY (tenant_id,brand_profile_id) REFERENCES launchkit_brand_profiles(tenant_id,id),
       CONSTRAINT launchkit_product_source_fk FOREIGN KEY (tenant_id,source_kit_id) REFERENCES launchkit_product_kits(tenant_id,id),
