@@ -485,7 +485,26 @@ export async function ensureCallCommandCommercialTables(): Promise<void> {
     ALTER TABLE callcommand_action_runs DROP CONSTRAINT IF EXISTS callcommand_action_lease_hash_check;
     ALTER TABLE callcommand_action_runs ADD CONSTRAINT callcommand_action_lease_hash_check
       CHECK (lease_token_hash IS NULL OR lease_token_hash ~ '^[0-9a-f]{64}$');
-    CREATE UNIQUE INDEX IF NOT EXISTS uq_callcommand_action_tenant_id ON callcommand_action_runs(tenant_id,id);
+    DO $callcommand_action_tenant_key$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname='uq_callcommand_action_tenant_id'
+          AND conrelid='public.callcommand_action_runs'::regclass
+          AND contype='u'
+      ) THEN
+        IF to_regclass('public.uq_callcommand_action_tenant_id') IS NOT NULL THEN
+          ALTER TABLE public.callcommand_action_runs
+            ADD CONSTRAINT uq_callcommand_action_tenant_id
+            UNIQUE USING INDEX uq_callcommand_action_tenant_id;
+        ELSE
+          ALTER TABLE public.callcommand_action_runs
+            ADD CONSTRAINT uq_callcommand_action_tenant_id UNIQUE (tenant_id,id);
+        END IF;
+      END IF;
+    END
+    $callcommand_action_tenant_key$;
     CREATE INDEX IF NOT EXISTS idx_callcommand_action_claim
       ON callcommand_action_runs(tenant_id,reservation_status,next_attempt_at,created_at)
       WHERE reservation_status IN ('unclaimed','failed');

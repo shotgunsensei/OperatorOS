@@ -249,6 +249,7 @@ export async function ensureCallCommandPhase35Tables(): Promise<void> {
       idempotency_key VARCHAR(200) NOT NULL, provider VARCHAR(80), provider_reference VARCHAR(200),
       safe_result JSONB NOT NULL DEFAULT '{}'::jsonb, error_code VARCHAR(80), attempts INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(), completed_at TIMESTAMP,
+      CONSTRAINT uq_callcommand_action_tenant_id UNIQUE (tenant_id,id),
       CONSTRAINT callcommand_action_call_fk FOREIGN KEY (tenant_id,call_id) REFERENCES callcommand_calls(tenant_id,id) ON DELETE CASCADE,
       CONSTRAINT callcommand_action_rule_fk FOREIGN KEY (tenant_id,rule_id) REFERENCES callcommand_automation_rules(tenant_id,id),
       CONSTRAINT uq_callcommand_action_key UNIQUE (tenant_id,idempotency_key)
