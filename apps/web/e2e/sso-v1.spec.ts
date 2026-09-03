@@ -2465,22 +2465,20 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await reportTitleInput.fill(reportTitle);
     await expect(reportTitleInput).toHaveValue(reportTitle);
     await modulePage.getByRole('button', { name: 'Create report snapshot' }).click();
-    const reportCard = workspace
-      .getByRole('heading', { name: reportTitle, exact: true })
-      .locator('xpath=ancestor::article[1]');
-    await expect(reportCard).toBeVisible();
-    await reportCard.getByRole('button', { name: 'Submit report' }).click();
+    const submitReport = modulePage.getByRole('button', { name: 'Submit report', exact: true });
+    await expect(submitReport).toHaveCount(1);
+    await submitReport.click();
     await modulePage.getByRole('link', { name: 'Review', exact: true }).click();
-    await workspace
-      .getByRole('heading', { name: reportTitle, exact: true })
-      .locator('xpath=ancestor::article[1]')
-      .getByRole('button', { name: 'Approve report' })
-      .click();
+    const approveReport = modulePage.getByRole('button', { name: 'Approve report', exact: true });
+    await expect(approveReport).toHaveCount(1);
+    await approveReport.click();
     await modulePage.getByRole('link', { name: 'Reports', exact: true }).click();
-    await expect(reportCard.getByRole('button', { name: 'JSON' })).toBeVisible();
+    const jsonExport = modulePage.getByRole('button', { name: 'JSON', exact: true });
+    await expect(jsonExport).toHaveCount(1);
+    await expect(jsonExport).toBeVisible();
     await Promise.all([
       modulePage.waitForEvent('download'),
-      reportCard.getByRole('button', { name: 'JSON' }).click(),
+      jsonExport.click(),
     ]);
 
     await modulePage.getByRole('link', { name: 'Custody', exact: true }).click();

@@ -27,10 +27,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-linux.png",
-      "sha256": "39be082e9425c0ad83ba0749d01ef15e59c32a96a2a979d8b0433a4de583b0e3",
+      "sha256": "7787eec64cb0095576f674d5ba081d7e63a9c8c099f555d457bc1b25d29c5e94",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -47,10 +47,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-linux.png",
-      "sha256": "1f6b2f0f70db45b71e9f07be5bdbb08392ef0808183c913cad4177399ebaf766",
+      "sha256": "bb39cecfc5ece825745232f91277d9e77b3f9f8723544b24e70ecf45fd27e801",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -67,10 +67,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-linux.png",
-      "sha256": "bbee3038e102733f65b3faad2047a3fb1e73a022c0fe1e2d2fe0ae92adda4f71",
+      "sha256": "39369ea6990f6ff24ad79d3c929978a93fd8c1d7933e7966930f272616810efe",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
@@ -87,10 +87,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-linux.png",
-      "sha256": "da2cd455643b7a3c5b0c4bba1da53e41f5a604f8eb05ec0f423f24685c97dcba",
+      "sha256": "2461ee53973e305d673a4ffc906d1a085dc83b43296a0eedcf78ca794649333e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
@@ -107,10 +107,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-linux.png",
-      "sha256": "e2678df8bf2f549bd4ffe1dce7b8c8f3cabd4aa45d1df76b5b0eed7b143e9050",
+      "sha256": "0c0c65c04ea44d28eaf2d6e6b36ebc263b1be6e8d6690c7ea8e1eb2419686d42",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
@@ -187,10 +187,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-linux.png",
-      "sha256": "7f8b2b1632f975972be7800ce3eda9e15f35bf9a68a5d2767cdfda97621e67cd",
+      "sha256": "264d57c310c78c6b59d150653fe914feabe517815af115c160f1d5dd2a2a98e3",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -207,10 +207,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-linux.png",
-      "sha256": "100181e38672b3724bae91a30589a55fb2503a3dfbcaf7be98e57624680f7349",
+      "sha256": "8c1e618bbfaf1a86ca0bf326b1a62dbf4b945e328752967bcd092025a3ae3a0a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -227,10 +227,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-linux.png",
-      "sha256": "68d4e0c7c3e34620293741302d2d8d915b7b05b36b2fa89f7a31ff246f2e2584",
+      "sha256": "595795d6ed635ba07d10b51d3de80cb209d08125961a72abe81db9a3e4fbd81d",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -307,10 +307,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-linux.png",
-      "sha256": "ecd8b2871e29def638fe12a9c5c4940974eab9e40f13af37587d7a2c327bc008",
+      "sha256": "b52e887c7a1e45c6d07e1ca7aa7c219d1db389c5dbd4b54b9f0fdfbffbd1a5ac",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "ninjamation",
@@ -327,10 +327,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-linux.png",
-      "sha256": "e8860306d7c38795fdebbbd2774518a0e5df29600a311be1aaedf5f01678090c",
+      "sha256": "a61e7a6e1b320421fca22985a8861490a1ae4d8098b278e87a5272bf5078f21d",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "ninjamation",
@@ -347,10 +347,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-linux.png",
-      "sha256": "fb2e8923c4f6227dc27c0ecb16327ff3ec6c20585f8f568e1c084f39d838166b",
+      "sha256": "f3598546345d57537f1bb7dd1f5fec3104d9144cf67cb9a062dab784310bb6ee",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "ninjamation",
@@ -427,10 +427,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-linux.png",
-      "sha256": "388de3de4949a309c27d75b5e1e8f6a6e59eae68e700e0520aa3396f60ad29c9",
+      "sha256": "3e72d199ddef7596dd6be78a11d331741ccb9b2f8fa25996ed924db92bfd8b0a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -447,10 +447,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-linux.png",
-      "sha256": "790a4724faebfa76d29afcbd0340a3eba421be466e5f6ced13c4797ff0902f32",
+      "sha256": "a66829be1f78c4dba0af7bf93f1c091122c93c4b8cc67baf922be4ed3c10a020",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -467,10 +467,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-linux.png",
-      "sha256": "f61442fa9a294047b05cf218e5e9c2a55e64f2b3a46059a3b6156cd7283d6f44",
+      "sha256": "59a2aea598071d55abfb166988648e487d592036a288576c238469c21212f70d",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -487,10 +487,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-linux.png",
-      "sha256": "94e4dc1549aae6fe9d3dffee45d917e56b03fa735c5d4f693832c7ff862ff1f9",
+      "sha256": "22b6d60de6a18cf82e651d3c9c817237ce6b42670e7ffc2804555d28cadf622b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "snapproofos",
@@ -507,10 +507,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-linux.png",
-      "sha256": "93b7584ee9062b06a8e55a9ab98954be0f8182ff0ab94ddc0af09564b9f6231c",
+      "sha256": "329293a6d58beae7cda2d6848d92462421e0a37c156351d3eba92c90204efaa1",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "snapproofos",
@@ -527,10 +527,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-linux.png",
-      "sha256": "b7c72bc3df7c0603cfa9c0987b824c33295b76bb75bd8528d9fb9925171a4e1f",
+      "sha256": "0132aa6a9ed65d0d9281c8c8e1a261e8d4203bce93f3b48175094ee0f48ca3bb",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "snapproofos",
@@ -547,10 +547,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-linux.png",
-      "sha256": "a4af064532df6d997cb19bbcc1fd178cfdb145a83251ae0b1228fed9631a20d8",
+      "sha256": "ba4d5d182e0598777d1d6fb2a29383ce338de1cd75cc4110bb519360b319dced",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -567,10 +567,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-linux.png",
-      "sha256": "e4408a54a681fffded66a865dddc831f3eb447e3ea12f14efa61ca8a1aaf2e90",
+      "sha256": "dd3d85f722053e4d8494e8e367ced8f151a0d146d1553669341f72e0d50f7116",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -587,10 +587,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-linux.png",
-      "sha256": "530362385ce0ac1bbb2299d2f0b05d044ea1ca438cb4dd3840cea28973b2ad83",
+      "sha256": "35e74b3675951776ad654b4def0fb1187e01d2b523fee358bc6569acc0f8da37",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -607,10 +607,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-linux.png",
-      "sha256": "891c80332203c08f8fdb6a6764a8af4f88533f0f77edda271e8bd628bbc98fbb",
+      "sha256": "f8861e428634e4e81a29cdb7e8e0bd06f8c0510a6417f73fb07258592f04d242",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "techdeck",
@@ -627,10 +627,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-linux.png",
-      "sha256": "83ab77f11108ad83b1939a572c6ac932c31b2871928e6eee0813fb1a0f3a21db",
+      "sha256": "1a6e74390e754a7c793427f9c15e5bdb780c2c1a32eaff9aef37d78582a99172",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "techdeck",
@@ -647,10 +647,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-linux.png",
-      "sha256": "4ad1c2ad064412ba20cfb509b5c93431201f487856b5a643b30419cc8213948b",
+      "sha256": "9b9bb28fdec248e17bfb2b319b466a1f0dee0a6cec01949f953c5ebc20898ab7",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "techdeck",
@@ -747,10 +747,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-linux.png",
-      "sha256": "37c7f8814947d86ee741eed744d30ab2e6c6d00dbb92c871efa9e47b6f573249",
+      "sha256": "dea3d4c05ebf95893448b4a03c43cc832860b11700619b957d6daa6b0e781175",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
@@ -767,10 +767,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-linux.png",
-      "sha256": "2f8e2dcde9d4dcdaae8af4dc2b1f798e2ec67af01d6c593b41f9301a622c802b",
+      "sha256": "54b40274cad6cabe71e6d592555af991a384bfd2bb51085bf43338c3d60dccd8",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:44:31.817Z",
+      "reason": "Linux exact-host Chromium baseline regenerated after the first-value dashboard and responsive-layout changes; each changed desktop, tablet, or mobile capture was hash-compared, manually reviewed, and the 4-test visual update suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
