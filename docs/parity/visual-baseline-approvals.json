@@ -7,10 +7,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-linux.png",
-      "sha256": "e4e06847b269b2b629e21d8a4afbe4335bf6de1a333005270d233f88e32ff2ac",
+      "sha256": "e525accbcdfaacccf9951c6fc2e6ff3fe0c9b59251ffcb5e60ca33457109eb48",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:02:52.8960392Z",
+      "reason": "Exact-SHA GitHub CI received the intended BrandForgeOS first-value dashboard on Linux; the actual, expected, and diff artifacts were visually reviewed and the focused 4-test visual suite passed locally."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -727,10 +727,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-linux.png",
-      "sha256": "5154cdcafdb26c6da90a3cba4f2007179f5bf85969e7de4ba9da4b67248918d5",
+      "sha256": "dc9730832902dc8192967b27fa3f86e32c4c938400313598b60ae034c0839bf9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-09-03T04:58:14.4104762Z",
-      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
+      "approvedAt": "2026-09-03T06:02:52.8960392Z",
+      "reason": "Exact-SHA GitHub CI received the intended TradeFlowKit first-value dashboard on Linux; the actual, expected, and diff artifacts were visually reviewed and the focused 4-test visual suite passed locally."
     },
     {
       "moduleSlug": "tradeflowkit",
