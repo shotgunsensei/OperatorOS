@@ -1,6 +1,6 @@
 # OperatorOS implementation status
 
-## Autoscale startup/readiness repair - RELEASE CANDIDATE ACCEPTED / PUBLISH PENDING (2026-09-03)
+## Autoscale startup/readiness repair - LIVE ACCEPTED (2026-09-03)
 
 - The serving runtime no longer runs all 59 idempotent release operations on
   every Autoscale wake. `.replit` and the production environment contract keep
@@ -41,11 +41,34 @@
   started Next in 538 ms, and changed public `/readyz` to 200 after 4,909 ms.
   A TradeFlowKit invoice deep link then reached the expected exact-host SSO
   redirect. No production database or deployed Replit environment was changed.
-- Status is **release candidate accepted; publish pending**. The owner authorized
-  direct delivery to `main` and Replit. The publish must still confirm the exact
-  committed release identity, cold and warm Autoscale behavior, exact-path
-  browser return, public `/readyz`, and rollback availability. Detailed
-  operating procedure: `docs/AUTOSCALE_STARTUP_READINESS.md`.
+- GitHub release-gate run `33725414920` passed 14/14 for the exact reviewed
+  source. Replit deployment `0a1f03b4` promoted application commit
+  `2b385f56a3ff04e319b8448e41d995fd52feb10d` as build
+  `9c6511f9dc457a180839112f`, built `2026-09-03T12:22:01.303Z` and deployed
+  `2026-09-03T12:30:56.883Z`.
+- Replit production settings kept development-database copy off and Stripe
+  sandbox-to-live synchronization off. The code-only publish did not apply DDL;
+  root/API readiness and health reported the existing v59/59 release ending in
+  `core_suite_trial_tables`.
+- Actual Autoscale startup began at 08:30:51 EDT. The public gateway failed
+  closed during bootstrap, database verification and Next readiness ran in
+  parallel, and Fastify/Next/public traffic were ready at 08:30:58. Replit then
+  terminated the replaced process; the old API completed graceful shutdown and
+  exited 0.
+- The production verifier no longer hard-codes retired database v56 or treats
+  intentional public Deploy Ops and Script Ops landing pages as private. It
+  derives version/step/last-step from the authoritative release manifest and
+  probes registered private `launchPath` values. Focused verifier and
+  release-identity coverage passes 12/12; the live production matrix passes
+  47/47 across release identity, readiness, 17 host diagnostics, exact-host
+  PKCE/host-only cookies, callbacks, and the OutCall activation lock.
+- Fresh readiness reported healthy database, ready shared worker/queues, zero
+  consecutive worker failures, configured Stripe/email/Twilio/OpenAI env
+  contracts, and live shared-secret encryption. The shared provider control
+  plane remains `not_configured`, so provider delivery is not inferred. Prior
+  release `99c60ac8bdee3832bac98db39d23223083514841` remains the immediate code
+  rollback reference. Status is **live accepted**. Detailed operating
+  procedure: `docs/AUTOSCALE_STARTUP_READINESS.md`.
 
 ## Companion workflow automation overlay - SOURCE/LOCAL VERIFIED / DEPLOYMENT ACCEPTANCE OPEN (2026-09-02)
 

@@ -1,6 +1,6 @@
 # OperatorOS current release gate
 
-## Autoscale startup/readiness repair - RELEASE CANDIDATE PASS, PUBLISH IN PROGRESS (2026-09-03)
+## Autoscale startup/readiness repair - LIVE ACCEPTED (2026-09-03)
 
 The Replit serving runtime no longer owns database-apply authority. A reviewed
 database release is now a separate backup-gated operator action; every routine
@@ -27,11 +27,34 @@ dependency advisories and zero findings across 1,279 dependencies.
 The production-mode local supervisor separately captured a bootstrap 503 and
 became publicly ready in 4,909 ms against a current disposable v59 database;
 the read-only database verification itself logged 889 ms. The owner authorized
-direct delivery to `main` and Replit. Status is **RELEASE CANDIDATE PASS;
-PUBLISH IN PROGRESS**. Production acceptance still requires the exact committed
-release identity, cold/warm Autoscale observation, public `/readyz`, exact-path
-browser recovery, and retained rollback evidence. The already-live database is
-v59/59, so this code-only publish must verify rather than apply schema. See
+direct delivery to `main` and Replit, and GitHub release-gate run `33725414920`
+passed the exact reviewed source at 14/14 stages.
+
+Replit deployment `0a1f03b4` promoted application commit
+`2b385f56a3ff04e319b8448e41d995fd52feb10d`; immutable build
+`9c6511f9dc457a180839112f` was built at `2026-09-03T12:22:01.303Z` and deployed
+at `2026-09-03T12:30:56.883Z`. Development-database copy and Stripe
+sandbox-to-live synchronization were disabled. The production database stayed
+at v59/59 ending in `core_suite_trial_tables`; no production schema apply ran.
+
+The publish captured a real Autoscale replacement. Replit started the user
+application at 08:30:51 EDT; the gateway failed closed while database
+verification and Next readiness ran in parallel; Fastify, Next, and the public
+gateway accepted application traffic at 08:30:58. Replit then sent SIGTERM to
+the replaced process, whose API shutdown completed cleanly and exited 0. Fresh
+root and API `/readyz` plus root `/api/health` returned HTTP 200 with one release
+identity, healthy database, ready worker and queues, zero consecutive worker
+failures, and live shared-secret encryption.
+
+The supported live verifier now derives expected database identity directly
+from `apps/api/src/lib/database-release-contract.ts` and probes each module's
+declared private `launchPath`, preserving intentional public module landing
+pages. Focused contracts pass 12/12 and the production matrix passes 47/47:
+root/app/auth/API and 13 module diagnostics, exact-host PKCE redirects,
+host-only secure transaction cookies, callbacks, release identity, and the
+OutCall activation lock. The pre-publish release
+`99c60ac8bdee3832bac98db39d23223083514841` remains the immediate code rollback
+reference. Status is **LIVE ACCEPTED**. See
 `docs/AUTOSCALE_STARTUP_READINESS.md`.
 
 ## Replit v59 production release - LIVE READY / AUTHENTICATED AND PROVIDER ACCEPTANCE OPEN (2026-09-02)

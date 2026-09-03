@@ -83,9 +83,9 @@ test('release identity validator requires the intended commit, database release,
     lockfileSha256: 'c'.repeat(64),
     databaseRelease: {
       contractVersion: 1,
-      releaseVersion: 56,
-      stepCount: 56,
-      lastStep: 'auth_mfa_tables',
+      releaseVersion: 59,
+      stepCount: 59,
+      lastStep: 'core_suite_trial_tables',
     },
   };
   assert.deepEqual(verifier.validateReleaseIdentity(valid, commit), []);
@@ -115,5 +115,27 @@ test('public verifier follows canonical root health and authorization entries', 
   const source = await import('node:fs/promises').then(({ readFile }) =>
     readFile(resolve(__dirname, '../../../scripts/verify-production-runtime.mjs'), 'utf8'));
   assert.match(source, /entry\.slug === 'operatoros'[\s\S]*https:\/\/operatoros\.net\/login/);
+  assert.match(source, /entry\.slug === 'operatoros-app'[\s\S]*entry\.productionBaseUrl/);
+  assert.match(source, /entry\.launchPath/);
   assert.doesNotMatch(source, /\['os_sso_state', 'os_sso_nonce', 'os_sso_verifier'\]/);
+});
+
+test('production verifier derives database identity from the authoritative release manifest', () => {
+  const source = `
+    export const DATABASE_RELEASE_CONTRACT = { contractVersion: 1, releaseVersion: 2 };
+    export const DATABASE_RELEASE_STEPS = [
+      { id: 'base_tables', kind: 'ddl' },
+      { id: 'current_tables', kind: 'ddl' },
+    ];
+  `;
+  assert.deepEqual(verifier.parseDatabaseReleaseContract(source), {
+    contractVersion: 1,
+    releaseVersion: 2,
+    stepCount: 2,
+    lastStep: 'current_tables',
+  });
+  assert.throws(
+    () => verifier.parseDatabaseReleaseContract(source.replace('releaseVersion: 2', 'releaseVersion: 3')),
+    /internally inconsistent/,
+  );
 });

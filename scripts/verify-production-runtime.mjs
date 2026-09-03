@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REGISTRY_PATH = resolve(SCRIPT_DIR, '../config/operatoros-module-registry.json');
+const DATABASE_RELEASE_CONTRACT_PATH = resolve(
+  SCRIPT_DIR,
+  '../apps/api/src/lib/database-release-contract.ts',
+);
 const AUTH_ORIGIN = 'https://auth.operatoros.net';
 const TRANSACTION_COOKIE_NAMES = [
   'operatoros_sso_state',
@@ -22,6 +26,31 @@ const FORBIDDEN_QUERY_KEYS = new Set([
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const BUILD_ID_PATTERN = /^[0-9a-f]{24}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+
+export function parseDatabaseReleaseContract(source) {
+  const contractVersion = Number(source.match(/contractVersion:\s*(\d+)/u)?.[1]);
+  const releaseVersion = Number(source.match(/releaseVersion:\s*(\d+)/u)?.[1]);
+  const steps = [...source.matchAll(/\{\s*id:\s*'([^']+)',\s*kind:\s*'[^']+'\s*\}/gu)]
+    .map((match) => match[1]);
+  if (
+    !Number.isInteger(contractVersion)
+    || !Number.isInteger(releaseVersion)
+    || steps.length === 0
+    || releaseVersion !== steps.length
+  ) {
+    throw new Error('authoritative database release contract is malformed or internally inconsistent');
+  }
+  return Object.freeze({
+    contractVersion,
+    releaseVersion,
+    stepCount: steps.length,
+    lastStep: steps.at(-1),
+  });
+}
+
+const EXPECTED_DATABASE_RELEASE = parseDatabaseReleaseContract(
+  await readFile(DATABASE_RELEASE_CONTRACT_PATH, 'utf8'),
+);
 
 function failure(name, message) {
   return { name, ok: false, message };
@@ -135,12 +164,14 @@ export function validateReleaseIdentity(payload, expectedCommit) {
     issues.push(`release commit ${payload?.commit ?? '<missing>'} does not match expected ${expectedCommit}`);
   }
   if (
-    payload?.databaseRelease?.contractVersion !== 1
-    || payload?.databaseRelease?.releaseVersion !== 56
-    || payload?.databaseRelease?.stepCount !== 56
-    || payload?.databaseRelease?.lastStep !== 'auth_mfa_tables'
+    payload?.databaseRelease?.contractVersion !== EXPECTED_DATABASE_RELEASE.contractVersion
+    || payload?.databaseRelease?.releaseVersion !== EXPECTED_DATABASE_RELEASE.releaseVersion
+    || payload?.databaseRelease?.stepCount !== EXPECTED_DATABASE_RELEASE.stepCount
+    || payload?.databaseRelease?.lastStep !== EXPECTED_DATABASE_RELEASE.lastStep
   ) {
-    issues.push('database release identity does not match version 56');
+    issues.push(
+      `database release identity does not match authoritative version ${EXPECTED_DATABASE_RELEASE.releaseVersion}`,
+    );
   }
   return issues;
 }
@@ -264,7 +295,9 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry, exp
   for (const entry of launchRegistrations) {
     const launchUrl = entry.slug === 'operatoros'
       ? 'https://operatoros.net/login'
-      : entry.productionBaseUrl;
+      : entry.slug === 'operatoros-app'
+        ? entry.productionBaseUrl
+        : new URL(entry.launchPath || '/', `${entry.productionBaseUrl}/`).href;
     await runCheck(results, `${entry.slug} anonymous authorization`, async () => {
       const response = await request(fetchImpl, launchUrl);
       requireStatus(response, [302, 303, 307, 308], `${entry.slug} anonymous authorization`);
