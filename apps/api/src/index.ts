@@ -304,10 +304,13 @@ await registerOperatorOsMessagingComplianceRoutes(app);
 await registerTenantMessengerRoutes(app);
 await registerCoreSuiteTrialRoutes(app);
 
-if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
-  await verifyOperatorOSDatabaseRelease();
-} else {
-  await applyOperatorOSDatabaseRelease();
+const databaseReleaseVerifiedBySupervisor = process.env.OPERATOROS_DATABASE_RELEASE_VERIFIED === '1';
+if (!databaseReleaseVerifiedBySupervisor) {
+  if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1' || isProductionEnv()) {
+    await verifyOperatorOSDatabaseRelease();
+  } else {
+    await applyOperatorOSDatabaseRelease();
+  }
 }
 startSsoTokenCleanup();
 startSharedServiceWorker();

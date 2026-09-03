@@ -15,8 +15,17 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   const failedRequests: string[] = [];
-  page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+  const failedResponses: string[] = [];
+  page.on('console', message => {
+    if (message.type() === 'error') {
+      const location = message.location();
+      consoleErrors.push(`${message.text()}${location.url ? ` (${location.url}:${location.lineNumber})` : ''}`);
+    }
+  });
   page.on('pageerror', error => pageErrors.push(error.message));
+  page.on('response', response => {
+    if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.request().method()} ${response.url()}`);
+  });
   page.on('requestfailed', request => {
     const detail = request.failure()?.errorText ?? '';
     if (!detail.includes('ERR_ABORTED')) failedRequests.push(`${request.method()} ${request.url()} ${detail}`);
@@ -100,5 +109,6 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
   }
   expect(consoleErrors, 'browser console errors').toEqual([]);
   expect(pageErrors, 'browser page errors').toEqual([]);
+  expect(failedResponses, 'failed browser responses').toEqual([]);
   expect(failedRequests, 'failed browser network requests').toEqual([]);
 });

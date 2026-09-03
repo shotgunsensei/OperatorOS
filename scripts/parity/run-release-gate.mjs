@@ -14,7 +14,6 @@ const productionEnv = {
   APP_ENV: 'production',
   NODE_ENV: 'production',
   INTERNAL_API_URL: 'http://localhost:5001',
-  OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
 };
 const steps = [
   { id: 'faultlinelab-source-catalog', command: PNPM, args: ['verify:faultlinelab:catalog'], env: process.env },

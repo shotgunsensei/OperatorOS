@@ -14,7 +14,7 @@ import {
   processCallCommandLaneWebhookEvent,
 } from '../src/lib/callcommand-lane-billing.js';
 import { __setStripeTestOverrides } from '../src/lib/billing-service.js';
-import { cleanupUser, createTestUser, ensureSchemaReady } from './_setup.js';
+import { cleanupModule, cleanupUser, createTestModule, createTestUser, ensureSchemaReady } from './_setup.js';
 
 type User = Awaited<ReturnType<typeof createTestUser>>;
 type CapacityRow = {
@@ -35,6 +35,7 @@ type BillingCapacityRow = {
 
 const PRICE_ID = 'price_callcommand_lane_settlement_test';
 let owner: User;
+let moduleId: string;
 
 function metadata(additionalLanes: number) {
   return {
@@ -105,6 +106,7 @@ async function setCapacity(input: {
 
 before(async () => {
   await ensureSchemaReady();
+  moduleId = (await createTestModule('callcommand-ai')).id;
   owner = await createTestUser();
   await db.execute(sql`
     INSERT INTO callcommand_capacity_entitlements(
@@ -122,6 +124,7 @@ after(async () => {
   if (!owner) return;
   await db.execute(sql`DELETE FROM callcommand_capacity_entitlements WHERE tenant_id=${owner.currentTenantId}`);
   await cleanupUser(owner.id);
+  if (moduleId) await cleanupModule(moduleId);
 });
 
 test('only a paid lane event settles pending quantity and stale events cannot overwrite it', async () => {

@@ -17,7 +17,6 @@ const runtimeEnv = {
   APP_ENV: 'production',
   NODE_ENV: 'production',
   INTERNAL_API_URL: 'http://localhost:5001',
-  OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
   OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
   // This harness runs behind its own exact-host reverse proxy. Trusting that
   // bounded proxy keeps production IP-based abuse controls active while each

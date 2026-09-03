@@ -1,5 +1,27 @@
 # OperatorOS module parity index
 
+## Autoscale startup/readiness overlay (2026-09-03)
+
+This is a shared deployment-boundary repair, not a module capability change.
+Routine Replit wakes verify the current database release without applying it;
+the public gateway remains HTTP 503 until database, Next, and Fastify readiness
+all pass; and the browser startup page retries and restores the complete
+original deep link. The TradeFlowKit invoice route was included in the local
+deep-link probe and reached its expected exact-host SSO boundary after runtime
+readiness.
+
+The decisive release gate passes 14/14: parity compiles 7,396 capabilities over
+all 13 modules with zero failures; route-control integrity covers 1,304 active
+capabilities with zero failures; static visual contracts report zero failures;
+and 1,322 API, 31 integration, 21 exact-host production-browser, and four
+visual-suite tests all pass. The production-mode supervisor transitions from
+503 to ready in 4,909 ms locally.
+
+No module schema, workflow, tenant/RBAC, entitlement, billing, provider, data,
+or consolidation state changed. Deployed Replit release identity and live
+cold/warm Autoscale acceptance remain open, so every module retains its prior
+parity state.
+
 ## Companion workflow automation overlay (2026-09-02)
 
 The six paid companions now share the small customer-facing decision pattern

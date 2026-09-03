@@ -27,8 +27,9 @@ meaning in code (e.g. `STRIPE_MODE=live`).
 | `OPERATOROS_APPS_URL`                    | yes (prod)      | Must equal `https://app.operatoros.net/`; modules use this external launcher rather than a relative `/app`.                                        |
 | `APP_ENV` / `NODE_ENV`                   | yes (prod)      | Both must equal `production` for the published release.                                                                                           |
 | `TRUST_PROXY`                            | yes (Replit)    | Set to `true` only behind Replit's managed deployment proxy.                                                                                      |
-| `OPERATOROS_DATABASE_RELEASE_MODE`       | yes (prod)      | Must equal `apply`; authorizes the reviewed idempotent database release before API startup.                                                        |
-| `OPERATOROS_DATABASE_RELEASE_APPLIED`    | never external  | Supervisor-owned child-process marker. Do not configure it in Replit or a secret manager.                                                         |
+| `OPERATOROS_DATABASE_RELEASE_MODE`       | one-shot only   | Must equal `apply` only for a reviewed, backup-gated `db:apply`; keep it unset in every serving environment.                                      |
+| `OPERATOROS_DATABASE_RELEASE_APPLIED`    | never external  | Internal direct-launch compatibility marker. Do not configure it in Replit or a secret manager.                                                   |
+| `OPERATOROS_DATABASE_RELEASE_VERIFIED`   | never external  | Supervisor-owned marker after the read-only current-release check. Do not configure it in Replit or a secret manager.                            |
 | `ALLOW_LEGACY_SSO_ROLLBACK`              | no              | Must be absent or `false` for the production SSO v1 release.                                                                                      |
 | `MODULE_SSO_SECRET`                      | legacy only     | Not used by SSO v1; remove unless an explicitly approved rollback still requires it.                                                              |
 | `CORS_ALLOWED_ORIGINS`                   | optional        | Comma-separated exact HTTPS origins only; no wildcard, credentials, path, HTTP, or loopback production values.                                    |

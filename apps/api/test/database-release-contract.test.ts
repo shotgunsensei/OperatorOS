@@ -235,9 +235,14 @@ test('database release plan is explicit, ordered, additive, and reusable by star
 
   const api = read('apps/api/src/index.ts');
   const releaseSource = read('apps/api/src/lib/database-release.ts');
+  const releaseLockSource = read('apps/api/src/lib/database-release-lock.ts');
   assert.match(api, /applyOperatorOSDatabaseRelease/);
   assert.match(api, /OPERATOROS_DATABASE_RELEASE_APPLIED/);
+  assert.match(api, /OPERATOROS_DATABASE_RELEASE_VERIFIED/);
+  assert.match(api, /OPERATOROS_DATABASE_RELEASE_APPLIED === '1' \|\| isProductionEnv\(\)/);
   assert.doesNotMatch(api, /await ensureBaseTables\(\)/);
+  assert.match(releaseSource, /withDatabaseReleaseLock/);
+  assert.match(releaseLockSource, /pg_advisory_lock/);
   assert.match(releaseSource, /to_regclass\('public\.sso_handoff_tokens'\)/);
   assert.match(releaseSource, /to_regclass\('public\.directory_organizations'\)/);
   assert.match(releaseSource, /to_regclass\('public\.shared_outbox_messages'\)/);
@@ -322,11 +327,30 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
 
-test('database release CLI exposes plan and apply modes without accepting arbitrary commands', () => {
+test('database release CLI separates read-only verification from explicit apply authority', () => {
   const cli = read('apps/api/src/scripts/database-release.ts');
   assert.match(cli, /--plan/);
+  assert.match(cli, /--verify-current/);
   assert.match(cli, /--apply/);
   assert.match(cli, /OPERATOROS_DATABASE_RELEASE_MODE/);
   assert.match(cli, /Unknown database release option/);
   assert.doesNotMatch(cli, /process\.env\[[^\]]+\]\s*=\s*process\.argv/);
+});
+
+test('Autoscale runtime verifies the current release without holding apply authority', () => {
+  const launcher = read('scripts/start-unified-runtime.mjs');
+  const releaseGate = read('scripts/parity/run-release-gate.mjs');
+  const browserGate = read('scripts/parity/run-browser-tests.mjs');
+  const workflow = read('.github/workflows/release-gate.yml');
+  const replit = read('.replit');
+  const environmentContract = read('config/production-environment.contract.json');
+  assert.match(launcher, /\['--verify-current'\]/);
+  assert.doesNotMatch(launcher, /\['--apply'\]/);
+  assert.match(launcher, /OPERATOROS_DATABASE_RELEASE_VERIFIED: '1'/);
+  assert.doesNotMatch(releaseGate, /OPERATOROS_DATABASE_RELEASE_MODE:\s*'apply'/);
+  assert.doesNotMatch(browserGate, /OPERATOROS_DATABASE_RELEASE_MODE:\s*'apply'/);
+  assert.doesNotMatch(workflow, /^\s*OPERATOROS_DATABASE_RELEASE_MODE:\s*apply\s*$/m);
+  assert.doesNotMatch(replit, /^OPERATOROS_DATABASE_RELEASE_MODE\s*=/m);
+  assert.match(environmentContract, /"unset"[\s\S]*"OPERATOROS_DATABASE_RELEASE_MODE"/);
+  assert.match(environmentContract, /"internalOnly"[\s\S]*"OPERATOROS_DATABASE_RELEASE_VERIFIED"/);
 });

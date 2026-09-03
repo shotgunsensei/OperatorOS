@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import http from 'node:http';
 import { resolve } from 'node:path';
@@ -41,7 +42,7 @@ export function resolveRuntimeConfig(env = process.env) {
     nextPort,
     startupTimeoutMs,
     apiReadyUrl: `http://127.0.0.1:${apiPort}/readyz`,
-    nextReadyUrl: `http://${NEXT_INTERNAL_HOST}:${nextPort}/healthz`,
+    nextReadyUrl: `http://${NEXT_INTERNAL_HOST}:${nextPort}/`,
     internalApiUrl: `http://localhost:${apiPort}`,
   };
 }
@@ -141,18 +142,20 @@ function upgradeResponse(socket, response, upstreamSocket, clientHead, upstreamH
 
 function writeBootstrapResponse(request, response) {
   const method = request.method?.toUpperCase() || 'GET';
-  const pathname = new URL(request.url || '/', 'http://operatoros.invalid').pathname;
-  const homepageProbe = (method === 'GET' || method === 'HEAD') && pathname === '/';
-  const statusCode = homepageProbe ? 200 : 503;
-  const body = homepageProbe
-    ? '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OperatorOS is starting</title></head><body><main><h1>OperatorOS is starting</h1><p>The secure workspace is completing its readiness checks. Retry in a few seconds.</p></main></body></html>'
+  const acceptsHtml = String(request.headers.accept ?? '').toLowerCase().includes('text/html');
+  const browserNavigation = (method === 'GET' || method === 'HEAD') && acceptsHtml;
+  const nonce = randomBytes(18).toString('base64');
+  const body = browserNavigation
+    ? `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OperatorOS is starting</title><style nonce="${nonce}">:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#05070b;color:#f6f7fb}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 50% 25%,#32121a 0,#0c111a 42%,#05070b 76%)}main{width:min(92vw,620px);padding:42px;border:1px solid #51212d;border-radius:24px;background:rgba(10,14,22,.94);box-shadow:0 24px 80px rgba(0,0,0,.55)}.eyebrow{margin:0 0 12px;color:#ff657d;font-size:.76rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase}h1{margin:0;font-size:clamp(2rem,7vw,3.6rem);line-height:1.02}p{max-width:50ch;color:#b8c0cf;line-height:1.65}.status{display:flex;align-items:center;gap:12px;margin-top:28px;color:#eef2f8;font-weight:700}.pulse{width:12px;height:12px;border-radius:50%;background:#ff3858;box-shadow:0 0 0 0 rgba(255,56,88,.7);animation:pulse 1.5s infinite}@keyframes pulse{70%{box-shadow:0 0 0 13px rgba(255,56,88,0)}100%{box-shadow:0 0 0 0 rgba(255,56,88,0)}}small{display:block;margin-top:26px;color:#7f899a}</style><script nonce="${nonce}">(()=>{const originalUrl=window.location.href;let delay=1000;const retry=async()=>{const status=document.getElementById('startup-status');if(status)status.textContent='Checking secure services…';try{const response=await fetch('/readyz',{cache:'no-store',credentials:'same-origin',headers:{accept:'application/json'}});if(response.ok){window.location.replace(originalUrl);return}}catch{}delay=Math.min(Math.round(delay*1.6),5000);if(status)status.textContent='Still starting. Retrying automatically…';window.setTimeout(retry,delay)};window.setTimeout(retry,delay)})();</script><noscript><meta http-equiv="refresh" content="3"></noscript></head><body><main><p class="eyebrow">Shotgun Ninjas Productions</p><h1>OperatorOS is starting</h1><p>The secure workspace is completing its database and service-readiness checks. Keep this tab open—you will return to this exact page automatically.</p><div class="status" aria-live="polite"><span class="pulse" aria-hidden="true"></span><span id="startup-status">Checking secure services…</span></div><small>No action is required. Your path and query string are preserved.</small></main></body></html>`
     : JSON.stringify({ status: 'starting', ready: false, code: 'RUNTIME_STARTING' });
-  response.writeHead(statusCode, {
+  response.writeHead(503, {
     'cache-control': 'no-store, max-age=0',
     'content-length': Buffer.byteLength(body),
-    'content-security-policy': "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-    'content-type': homepageProbe ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8',
-    'retry-after': '3',
+    'content-security-policy': browserNavigation
+      ? `default-src 'none'; connect-src 'self'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`
+      : "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    'content-type': browserNavigation ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8',
+    'retry-after': '2',
     'x-content-type-options': 'nosniff',
     'x-operatoros-runtime-state': 'starting',
     'x-robots-tag': 'noindex, nofollow',
@@ -274,52 +277,16 @@ export async function startUnifiedRuntime(env = process.env) {
     return;
   }
 
-  const databaseRelease = spawnNode(
+  const databaseVerification = spawnNode(
     entrypoints.databaseReleaseEntry,
-    ['--apply'],
+    ['--verify-current'],
     runtimeEnv,
     process.cwd(),
     ['--conditions=production'],
   );
-  children.add(databaseRelease);
-  try {
-    console.info('[runtime] applying the idempotent OperatorOS database release');
-    await waitForSuccessfulExit(databaseRelease, 'Database release');
-    children.delete(databaseRelease);
-  } catch (error) {
-    children.delete(databaseRelease);
-    shutdown(1, error instanceof Error ? error.message : 'Database release failed');
-    return;
-  }
+  children.add(databaseVerification);
 
-  const api = spawnNode(
-    entrypoints.apiEntry,
-    [],
-    {
-      ...runtimeEnv,
-      PORT: String(config.apiPort),
-      OPERATOROS_DATABASE_RELEASE_APPLIED: '1',
-    },
-    process.cwd(),
-    ['--conditions=production'],
-  );
-  children.add(api);
-  api.once('error', (error) => shutdown(1, `Fastify spawn failed: ${error.message}`));
-  api.once('exit', (code, signal) => {
-    children.delete(api);
-    if (!shuttingDown) shutdown(code ?? 1, `Fastify exited (${signal ?? code ?? 'unknown'})`);
-  });
-
-  try {
-    console.info(`[runtime] waiting for Fastify readiness on ${config.apiReadyUrl}`);
-    await waitForApiReady(api, config.apiReadyUrl, config.startupTimeoutMs);
-  } catch (error) {
-    shutdown(1, error instanceof Error ? error.message : 'Fastify readiness failed');
-    return;
-  }
-
-  if (shuttingDown) return;
-  console.info(`[runtime] Fastify ready; starting Next on private port ${config.nextPort}`);
+  console.info(`[runtime] starting Next on private port ${config.nextPort} while database readiness is verified`);
   const web = spawnNode(
     entrypoints.nextCli,
     ['start', '-p', String(config.nextPort), '-H', NEXT_INTERNAL_HOST],
@@ -334,11 +301,45 @@ export async function startUnifiedRuntime(env = process.env) {
   });
 
   try {
-    await waitForHttpReady(web, config.nextReadyUrl, config.startupTimeoutMs);
-    runtimeReady = true;
-    console.info(`[runtime] Next ready; public HTTP/WebSocket gateway on port ${config.publicPort} is accepting application traffic`);
+    console.info('[runtime] verifying the approved database release and Next readiness in parallel');
+    await Promise.all([
+      waitForSuccessfulExit(databaseVerification, 'Database release verification'),
+      waitForHttpReady(web, config.nextReadyUrl, config.startupTimeoutMs),
+    ]);
+    children.delete(databaseVerification);
   } catch (error) {
-    shutdown(1, error instanceof Error ? error.message : 'Public gateway startup failed');
+    if (databaseVerification.exitCode !== null) children.delete(databaseVerification);
+    shutdown(1, error instanceof Error ? error.message : 'Database release verification failed');
+    return;
+  }
+  if (shuttingDown) return;
+
+  const api = spawnNode(
+    entrypoints.apiEntry,
+    [],
+    {
+      ...runtimeEnv,
+      PORT: String(config.apiPort),
+      OPERATOROS_DATABASE_RELEASE_VERIFIED: '1',
+    },
+    process.cwd(),
+    ['--conditions=production'],
+  );
+  children.add(api);
+  api.once('error', (error) => shutdown(1, `Fastify spawn failed: ${error.message}`));
+  api.once('exit', (code, signal) => {
+    children.delete(api);
+    if (!shuttingDown) shutdown(code ?? 1, `Fastify exited (${signal ?? code ?? 'unknown'})`);
+  });
+
+  try {
+    console.info('[runtime] waiting for Fastify readiness before accepting public traffic');
+    await waitForApiReady(api, config.apiReadyUrl, config.startupTimeoutMs);
+    if (shuttingDown) return;
+    runtimeReady = true;
+    console.info(`[runtime] Fastify and Next ready; public HTTP/WebSocket gateway on port ${config.publicPort} is accepting application traffic`);
+  } catch (error) {
+    shutdown(1, error instanceof Error ? error.message : 'Private service readiness failed');
   }
 }
 

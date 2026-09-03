@@ -1,5 +1,5 @@
 {
-  "contractVersion": 1,
+  "contractVersion": 2,
   "deploymentTarget": "replit-autoscale",
   "core": {
     "required": [
@@ -19,16 +19,17 @@
       "OPERATOROS_BASE_URL": "https://operatoros.net",
       "OPERATOROS_APPS_URL": "https://app.operatoros.net/",
       "INTERNAL_API_URL": "http://localhost:5001",
-      "OPERATOROS_DATABASE_RELEASE_MODE": "apply",
       "RUNNER_MODE": "disabled"
     },
     "unset": [
       "APP_URL",
       "COOKIE_DOMAIN",
-      "NEXT_PUBLIC_API_URL"
+      "NEXT_PUBLIC_API_URL",
+      "OPERATOROS_DATABASE_RELEASE_MODE"
     ],
     "internalOnly": [
-      "OPERATOROS_DATABASE_RELEASE_APPLIED"
+      "OPERATOROS_DATABASE_RELEASE_APPLIED",
+      "OPERATOROS_DATABASE_RELEASE_VERIFIED"
     ],
     "falseOrUnset": [
       "ALLOW_LEGACY_SSO_ROLLBACK",

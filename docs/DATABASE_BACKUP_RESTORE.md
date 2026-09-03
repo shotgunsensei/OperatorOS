@@ -28,12 +28,17 @@ OperatorOS exposes one root release contract:
 corepack pnpm db:plan
 $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
+Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
+corepack pnpm db:verify
 ```
 
 `db:plan` is read-only and prints 59 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
-release mode. The production supervisor executes the compiled apply before
-Fastify starts and then verifies the required authority tables.
+release mode and holds a dedicated PostgreSQL advisory lock through final
+verification. Run it only as a reviewed one-shot release operation after the
+backup gate. `db:verify` is read-only. The production Autoscale supervisor runs
+the compiled verification path on every wake and never owns apply authority;
+its serving environment must leave `OPERATOROS_DATABASE_RELEASE_MODE` unset.
 
 The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
@@ -214,13 +219,17 @@ authorized traffic decision.
    checksum before deployment.
 4. Validate the production core environment with
    `corepack pnpm preflight:production -- --core`.
-5. Build with `corepack pnpm build:production`.
-6. Start through `node scripts/start-unified-runtime.mjs`. The supervisor must
-   complete the database release and private `/readyz` before Next starts.
-7. Require public root `/api/health`, `/readyz`, the 48-check read-only
+5. In a trusted one-shot release environment, set apply mode, run
+   `corepack pnpm db:apply`, unset apply mode, and run
+   `corepack pnpm db:verify`. Do not put apply mode in Replit serving secrets.
+6. Build with `corepack pnpm build:production`.
+7. Start through `node scripts/start-unified-runtime.mjs`. The supervisor runs
+   read-only release verification while starting private Next, then starts
+   private Fastify and keeps public traffic at 503 until `/readyz` passes.
+8. Require public root `/api/health`, `/readyz`, the 48-check read-only
    verifier, and
    authenticated browser acceptance before accepting traffic.
-8. If any identity, tenant, entitlement, audit, persistence, SSO, or readiness
+9. If any identity, tenant, entitlement, audit, persistence, SSO, or readiness
    gate fails, restore/switch according to the recovery procedure below.
 
 ## Logical backup

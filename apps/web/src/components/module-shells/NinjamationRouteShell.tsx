@@ -300,6 +300,7 @@ export default function NinjamationRouteShell({
           routePath={routePath || `/${current}`}
           embedded
           view={current}
+          hrefFor={hrefFor}
         />
       )}
     </ModuleApplicationShell>

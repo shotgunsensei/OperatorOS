@@ -10,6 +10,10 @@
   --workday-attention: #fbbf24;
   display: grid;
   gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 18px;
   border: 1px solid var(--workday-border);
   border-radius: 12px;
@@ -18,16 +22,17 @@
 }
 
 .brief[data-module='tradeflowkit'] {
-  --workday-accent: #34d399;
+  --workday-accent: #047857;
   --workday-accent-strong: #047857;
-  --workday-surface: var(--tfk-panel, #0f1b17);
-  --workday-surface-raised: var(--tfk-panel-raised, #14231d);
+  --workday-surface: var(--tfk-panel, #ffffff);
+  --workday-surface-raised: var(--tfk-panel-soft, #f1f5f9);
   --workday-border: var(--tfk-border, #315044);
-  --workday-text: var(--tfk-ink, #ecfdf5);
-  --workday-muted: var(--tfk-muted, #a7c4b8);
+  --workday-text: var(--tfk-foreground, #10231d);
+  --workday-muted: var(--tfk-muted-foreground, #52645e);
 }
 
 .brief[data-module='techdeck'] {
+  --workday-accent-strong: #0369a1;
   --workday-surface: #080d16;
   --workday-surface-raised: #0d1320;
   --workday-border: #263348;
@@ -97,7 +102,7 @@
 
 .brief[data-module='ninjamation'] {
   --workday-accent: #7dd3fc;
-  --workday-accent-strong: #137ee8;
+  --workday-accent-strong: #075fa9;
   --workday-surface: #020711;
   --workday-surface-raised: #08182e;
   --workday-border: #1e4666;
@@ -116,6 +121,7 @@
   display: grid;
   gap: 5px;
   max-width: 760px;
+  min-width: 0;
 }
 
 .eyebrow,
@@ -144,6 +150,7 @@
   color: var(--workday-muted);
   line-height: 1.5;
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 
 .heading p {
@@ -168,6 +175,7 @@
   color: #fff;
   font-size: 13px;
   font-weight: 800;
+  text-align: center;
 }
 
 .primaryAction:focus-visible,
@@ -238,6 +246,7 @@
   border-radius: 8px;
   background: var(--workday-surface-raised);
   color: var(--workday-text);
+  min-width: 0;
 }
 
 .action {
@@ -273,6 +282,7 @@
   font-size: 13px;
   line-height: 1.35;
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 
 .action p,
@@ -314,6 +324,7 @@
 .automation strong {
   color: var(--workday-text);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .setupStep p,
@@ -348,6 +359,7 @@
 .automation div {
   display: grid;
   gap: 3px;
+  min-width: 0;
 }
 
 .emptyActions {

@@ -1,5 +1,39 @@
 # OperatorOS current release gate
 
+## Autoscale startup/readiness repair - RELEASE CANDIDATE PASS, PUBLISH IN PROGRESS (2026-09-03)
+
+The Replit serving runtime no longer owns database-apply authority. A reviewed
+database release is now a separate backup-gated operator action; every routine
+Autoscale wake performs only current-release verification. Next starts in
+parallel with that read-only check, Fastify starts after both pass, and the sole
+public gateway returns HTTP 503 until Fastify `/readyz` reports ready. The
+production environment contract rejects `OPERATOROS_DATABASE_RELEASE_MODE` in
+the serving environment.
+
+Browser bootstrap responses now retry `/readyz` automatically and replace the
+startup document with the complete original URL, preserving path, query, and
+fragment. API/mutation callers receive structured 503 JSON, WebSockets fail
+closed, and no application request is proxied before readiness.
+
+The decisive release gate passed 14/14 stages with zero failures. Evidence
+includes 46/46 unit tests, 1,322/1,322 API tests with zero skips, 31/31
+disposable-database integration tests, clean/idempotent release v59 apply,
+typecheck, repository lint, the 35-route production build, 1,304 route-control
+capabilities with zero failures, all 13 static visual contracts, 21/21
+exact-host SSO/deep-link/persistence/accessibility browser tests, 4/4 visual
+suites, and production preflight. The security gate reports zero unresolved
+dependency advisories and zero findings across 1,279 dependencies.
+
+The production-mode local supervisor separately captured a bootstrap 503 and
+became publicly ready in 4,909 ms against a current disposable v59 database;
+the read-only database verification itself logged 889 ms. The owner authorized
+direct delivery to `main` and Replit. Status is **RELEASE CANDIDATE PASS;
+PUBLISH IN PROGRESS**. Production acceptance still requires the exact committed
+release identity, cold/warm Autoscale observation, public `/readyz`, exact-path
+browser recovery, and retained rollback evidence. The already-live database is
+v59/59, so this code-only publish must verify rather than apply schema. See
+`docs/AUTOSCALE_STARTUP_READINESS.md`.
+
 ## Replit v59 production release - LIVE READY / AUTHENTICATED AND PROVIDER ACCEPTANCE OPEN (2026-09-02)
 
 Owner-authorized source commit

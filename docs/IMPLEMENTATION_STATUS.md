@@ -1,5 +1,52 @@
 # OperatorOS implementation status
 
+## Autoscale startup/readiness repair - RELEASE CANDIDATE ACCEPTED / PUBLISH PENDING (2026-09-03)
+
+- The serving runtime no longer runs all 59 idempotent release operations on
+  every Autoscale wake. `.replit` and the production environment contract keep
+  `OPERATOROS_DATABASE_RELEASE_MODE` unset; the supervisor uses the compiled
+  read-only `--verify-current` path. `db:apply` remains an explicit one-shot,
+  backup-gated release action and now serializes complete applies with a
+  PostgreSQL advisory lock.
+- The public gateway binds immediately but returns HTTP 503 for root, deep
+  links, JSON callers, mutations, and WebSocket upgrades until the database,
+  private Next, and private Fastify readiness gates pass. Next and database
+  verification start in parallel. The API trusts only a supervisor-owned
+  internal verification marker and does not repeat the check.
+- The nonce-protected startup page captures the browser's exact URL, polls
+  same-origin `/readyz` with bounded 1-5 second backoff, and calls
+  `location.replace` only after readiness. The executable test runs the inline
+  retry logic through an unavailable-then-ready transition and verifies that
+  path, query, and fragment are restored exactly.
+- The decisive release gate passed all 14/14 stages with zero failures:
+  dependency/security hardening reported zero unresolved advisories and zero
+  findings across 1,279 dependencies; parity compiled 7,396 capabilities across
+  13 modules with zero failures; typecheck, the repository lint gate, and 46/46
+  unit tests passed; the API suite passed 1,322/1,322 with zero skips; disposable
+  PostgreSQL apply/reapply integration passed 31/31; and the production build
+  generated all 35 Next routes.
+- Browser and presentation acceptance passed in the optimized production
+  artifact: 21/21 exact-host SSO, deep-link, persistence, accessibility, and
+  module journeys plus 4/4 visual suites. Static control integrity covered
+  1,304 active route capabilities with zero failures, and the visual contract
+  covered all 13 modules with zero failures. All 27 refreshed Windows
+  desktop/tablet/mobile images were manually reviewed before approval.
+- The final disposable PostgreSQL 16 rehearsal applied all releases through
+  v59 in 19,728 ms and independently verified current v59/59 in 1,044 ms. The
+  release-gate apply/reapply step then passed in 58,944 ms. No production schema
+  apply is required because the currently deployed database already reports
+  v59/59; publish remains code-only with read-only current-release verification.
+- The actual production-mode supervisor against the isolated current v59
+  database returned bootstrap 503, logged an 889 ms read-only verification,
+  started Next in 538 ms, and changed public `/readyz` to 200 after 4,909 ms.
+  A TradeFlowKit invoice deep link then reached the expected exact-host SSO
+  redirect. No production database or deployed Replit environment was changed.
+- Status is **release candidate accepted; publish pending**. The owner authorized
+  direct delivery to `main` and Replit. The publish must still confirm the exact
+  committed release identity, cold and warm Autoscale behavior, exact-path
+  browser return, public `/readyz`, and rollback availability. Detailed
+  operating procedure: `docs/AUTOSCALE_STARTUP_READINESS.md`.
+
 ## Companion workflow automation overlay - SOURCE/LOCAL VERIFIED / DEPLOYMENT ACCEPTANCE OPEN (2026-09-02)
 
 - BrandForgeOS, SnapProofOS, StudyForge AI, Deploy Ops, CallCommand AI, and

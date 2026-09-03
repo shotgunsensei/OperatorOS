@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '../../..');
@@ -23,7 +24,6 @@ test('unified Replit launcher validates production authority and port separation
     OPERATOROS_BASE_URL: 'https://operatoros.net',
     OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
     INTERNAL_API_URL: 'http://localhost:5001',
-    OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
     TRUST_PROXY: 'true',
     RUNNER_MODE: 'disabled',
     SHARED_SECRET_ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -43,7 +43,7 @@ test('unified Replit launcher validates production authority and port separation
     nextPort: 5002,
     startupTimeoutMs: 120000,
     apiReadyUrl: 'http://127.0.0.1:5001/readyz',
-    nextReadyUrl: 'http://localhost:5002/healthz',
+    nextReadyUrl: 'http://localhost:5002/',
     internalApiUrl: 'http://localhost:5001',
   });
   assert.deepEqual(launcher.resolveRuntimeEntrypoints('C:\\workspace'), {
@@ -81,7 +81,11 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /SIGTERM/);
   assert.match(source, /shell: false/);
   assert.match(source, /database-release\.js/);
-  assert.match(source, /--apply/);
+  assert.match(source, /--verify-current/);
+  assert.doesNotMatch(source, /\['--apply'\]/);
+  assert.match(source, /OPERATOROS_DATABASE_RELEASE_VERIFIED: '1'/);
+  assert.match(apiSource, /databaseReleaseVerifiedBySupervisor/);
+  assert.match(apiSource, /OPERATOROS_DATABASE_RELEASE_APPLIED === '1' \|\| isProductionEnv\(\)/);
   assert.match(source, /--conditions=production/);
   assert.match(source, /apps\/api\/dist\/apps\/api\/src\/index\.js/);
   assert.match(source, /apps\/web\/node_modules\/next\/dist\/bin\/next/);
@@ -104,7 +108,7 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(replit, /TWILIO_PUBLIC_BASE_URL = "https:\/\/callcommand-ai\.operatoros\.net"/);
   assert.match(replit, /OPERATOROS_APPS_URL = "https:\/\/app\.operatoros\.net\/"/);
   assert.match(replit, /INTERNAL_API_URL = "http:\/\/localhost:5001"/);
-  assert.match(replit, /OPERATOROS_DATABASE_RELEASE_MODE = "apply"/);
+  assert.doesNotMatch(replit, /^OPERATOROS_DATABASE_RELEASE_MODE\s*=/m);
   for (const [name, expected] of Object.entries(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact)) {
     const escaped = String(expected).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     assert.match(productionEnvironment, new RegExp(`^${name} = "${escaped}"$`, 'm'));
@@ -142,14 +146,54 @@ test('public gateway responds during bootstrap and proxies only after readiness'
   const baseUrl = `http://127.0.0.1:${gatewayAddress.port}`;
 
   try {
-    const homepage = await fetch(`${baseUrl}/`);
-    assert.equal(homepage.status, 200);
+    const homepage = await fetch(`${baseUrl}/`, { headers: { accept: 'text/html' } });
+    assert.equal(homepage.status, 503);
     assert.equal(homepage.headers.get('cache-control'), 'no-store, max-age=0');
-    assert.equal(homepage.headers.get('retry-after'), '3');
+    assert.equal(homepage.headers.get('retry-after'), '2');
     assert.equal(homepage.headers.get('x-operatoros-runtime-state'), 'starting');
-    assert.match(await homepage.text(), /OperatorOS is starting/);
+    const contentSecurityPolicy = homepage.headers.get('content-security-policy') ?? '';
+    const nonce = /script-src 'nonce-([^']+)'/.exec(contentSecurityPolicy)?.[1];
+    assert.ok(nonce);
+    assert.ok(contentSecurityPolicy.includes(`style-src 'nonce-${nonce}'`));
+    const homepageBody = await homepage.text();
+    assert.match(homepageBody, /OperatorOS is starting/);
+    assert.match(homepageBody, /const originalUrl=window\.location\.href/);
+    assert.match(homepageBody, /fetch\('\/readyz'/);
+    assert.match(homepageBody, /window\.location\.replace\(originalUrl\)/);
+    assert.ok(homepageBody.includes(`script nonce="${nonce}"`));
 
-    const readiness = await fetch(`${baseUrl}/readyz`);
+    const retryScript = /<script nonce="[^"]+">([^<]+)<\/script>/.exec(homepageBody)?.[1];
+    assert.ok(retryScript);
+    const scheduled: Array<() => Promise<void>> = [];
+    const exactBrowserUrl = `${baseUrl}/modules/tradeflowkit/invoices?view=open#overdue`;
+    let readinessAttempts = 0;
+    let restoredUrl: string | undefined;
+    runInNewContext(retryScript, {
+      document: { getElementById: () => ({ textContent: '' }) },
+      fetch: async () => ({ ok: ++readinessAttempts === 2 }),
+      window: {
+        location: {
+          href: exactBrowserUrl,
+          replace: (url: string) => { restoredUrl = url; },
+        },
+        setTimeout: (callback: () => Promise<void>) => { scheduled.push(callback); },
+      },
+    });
+    assert.equal(scheduled.length, 1);
+    await scheduled.shift()?.();
+    assert.equal(readinessAttempts, 1);
+    assert.equal(scheduled.length, 1);
+    await scheduled.shift()?.();
+    assert.equal(readinessAttempts, 2);
+    assert.equal(restoredUrl, exactBrowserUrl);
+
+    const deepLink = await fetch(`${baseUrl}/invoices/abc?view=open`, {
+      headers: { accept: 'text/html,application/xhtml+xml' },
+    });
+    assert.equal(deepLink.status, 503);
+    assert.match(await deepLink.text(), /return to this exact page automatically/);
+
+    const readiness = await fetch(`${baseUrl}/readyz`, { headers: { accept: 'application/json' } });
     assert.equal(readiness.status, 503);
     assert.deepEqual(await readiness.json(), {
       status: 'starting',

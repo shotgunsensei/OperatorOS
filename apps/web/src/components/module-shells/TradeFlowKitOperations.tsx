@@ -196,13 +196,17 @@ export default function TradeFlowKitOperations({
         <div className="tfk-ops-actions"><a href="/api/modules/tradeflowkit/exports/customers.csv">Customers CSV</a><a href="/api/modules/tradeflowkit/exports/invoices.csv">Invoices CSV</a><a href="/api/modules/tradeflowkit/exports/payments.csv">Payments CSV</a><button type="button" onClick={() => void load()} disabled={loading || pending}><RefreshCw size={15} /> Refresh</button></div>
       </header>
 
-      {view === 'dashboard' && !loading && (
-        <CoreSuiteWorkdayBrief
-          moduleId="tradeflowkit"
-          eyebrow="Today · lead to cash"
-          brief={workday}
-          hrefFor={href => `${routePrefix}${href}`}
-        />
+      {view === 'dashboard' && (
+        <div className="tfk-workday-slot" aria-busy={loading}>
+          {loading
+            ? <div className="tfk-workday-loading" role="status"><Loader2 className="spin" size={18} /> Preparing today’s lead-to-cash brief…</div>
+            : <CoreSuiteWorkdayBrief
+                moduleId="tradeflowkit"
+                eyebrow="Today · lead to cash"
+                brief={workday}
+                hrefFor={href => `${routePrefix}${href}`}
+              />}
+        </div>
       )}
 
       <div className="tfk-ops-metrics" aria-label="Operational analytics">
@@ -375,6 +379,8 @@ function TaskRow({ task, selected, pending, canManage, run, routePrefix }: {
 
 const css = `
   .tfk-ops { margin-top:18px; padding:18px; display:grid; gap:15px; }
+  .tfk-workday-slot { min-width:0; min-height:382px; }
+  .tfk-workday-loading { min-height:382px; display:flex; align-items:center; justify-content:center; gap:8px; color:var(--tfk-muted-foreground); }
   .tfk-ops-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
   .tfk-ops-head span { color:var(--tfk-primary-hover); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
   .tfk-ops-head h2 { margin:4px 0; font-size:20px; color:#10231d; }
@@ -430,5 +436,5 @@ const css = `
   .tfk-ops[data-view="settings"] { padding:18px; }
   .tfk-ops[data-view="dashboard"] .tfk-ops-actions a { display:none; }
   @media(max-width:960px){.tfk-ops-metrics{grid-template-columns:repeat(3,1fr)}.tfk-settings{grid-template-columns:repeat(2,1fr)}.tfk-settings>div{grid-column:1/-1}.tfk-settings button{grid-column:auto}}
-  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout,.tfk-bulk-bar{grid-template-columns:1fr}.tfk-saved-views form{grid-template-columns:auto minmax(0,1fr)}.tfk-saved-views form button{grid-column:1/-1}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-job-choice{min-width:220px}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout,.tfk-bulk-bar{grid-template-columns:1fr}.tfk-saved-views form{grid-template-columns:auto minmax(0,1fr)}.tfk-saved-views form button{grid-column:1/-1}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-job-choice{min-width:220px}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}.tfk-workday-slot,.tfk-workday-loading{min-height:820px}}
 `;

@@ -1,5 +1,26 @@
 # Cross-module readiness report
 
+## Autoscale startup/readiness overlay (2026-09-03)
+
+The shared Replit gateway now fails closed with HTTP 503 for every route and
+WebSocket until the current database release, Next, and Fastify are ready.
+Autoscale startup is read-only: database apply authority is absent from the
+serving environment, while the explicit release command is serialized by a
+PostgreSQL advisory lock. Browser startup responses poll `/readyz` and return
+to the exact original URL when it becomes ready.
+
+The complete release gate passes 14/14. It covers all 13 modules, 7,396 compiled
+capabilities, 1,304 active route capabilities, 1,322 API tests, 31 database
+integration tests, 21 exact-host production-browser journeys, four visual
+suites, all static visual contracts, the 35-route production build, and
+production preflight, with zero gate failures or skips in the API suite. The
+measured production-mode local transition was 503 to ready in 4,909 ms.
+
+This shared infrastructure change grants no module authority and changes no
+module readiness or consolidation state. Replit publish, live cold/warm
+Autoscale observation, exact committed release identity, and rollback remain
+pending under `docs/CURRENT_RELEASE_GATE.md`.
+
 ## Companion workflow automation overlay (2026-09-02)
 
 BrandForgeOS, SnapProofOS, StudyForge AI, Deploy Ops, CallCommand AI, and

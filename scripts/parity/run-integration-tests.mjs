@@ -33,10 +33,12 @@ const applyEnv = {
 };
 let code = run(PNPM, ['db:apply'], { env: applyEnv });
 if (code === 0) code = run(PNPM, ['db:apply'], { env: applyEnv });
+if (code === 0) code = run(PNPM, ['db:verify'], { env: applyEnv });
 if (code === 0) {
   const result = await runCaptured(PNPM, [
     '--dir', 'apps/api', 'exec', 'tsx', '--test', '--test-concurrency=1',
     'test/database-release-contract.test.ts',
+    'test/database-release-lock.integration.test.ts',
     'test/module-session-boundary.test.ts',
     'test/tenant-isolation.test.ts',
     'test/shared-platform.test.ts',

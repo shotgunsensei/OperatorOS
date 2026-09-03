@@ -5,6 +5,18 @@ Status: current execution plan
 Authority: `docs/IMPLEMENTATION_STATUS.md` records the latest evidence and
 `docs/modules/MODULE_PARITY_INDEX.md` records module state.
 
+## Autoscale startup/readiness status
+
+The accepted release candidate removes database apply authority from routine
+Replit Autoscale startup, keeps the public gateway at HTTP 503 until database,
+Next, and Fastify readiness pass, and automatically returns a waiting browser
+to its complete original URL. The decisive root release gate passes 14/14,
+including the full API, disposable database, production build, exact-host
+browser/accessibility, visual, security, and preflight gates. The owner has
+authorized direct `main` delivery and Replit publish. Exact deployed release
+identity, live cold/warm behavior, and rollback evidence remain the final
+acceptance gates; see `docs/AUTOSCALE_STARTUP_READINESS.md`.
+
 ## Release v59 evaluation status
 
 The verified-email Core Suite evaluation is source/local implemented behind a

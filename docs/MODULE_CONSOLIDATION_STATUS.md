@@ -2,6 +2,20 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current Autoscale startup/readiness overlay — 2026-09-02
+
+The single public OperatorOS runtime now keeps all module routes at HTTP 503
+until current-release verification and both private services are ready. It no
+longer performs the full ordered database apply on routine Replit wakes, and
+the browser startup document retries then restores its exact original deep
+link. This changes shared startup, routing, and release-operation boundaries
+only; it creates no second identity, tenant, role, entitlement, billing,
+provider, data, or module authority.
+
+Source/local focused, database integration, typecheck, build, and real
+supervisor probes pass. No production publish or authenticated exact-host
+acceptance occurred, and no module consolidation state changes.
+
 ## Current companion workflow automation overlay — 2026-09-02
 
 The six paid Companion Applications now place a tenant-scoped next-best-action

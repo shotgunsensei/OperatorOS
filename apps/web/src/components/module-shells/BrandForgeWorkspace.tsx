@@ -90,6 +90,7 @@ export default function BrandForgeWorkspace({ routePath, embedded = false, hrefF
     version: 0,
   });
   const [completeData, setCompleteData] = useState<Record<string, any>>({});
+  const [calendarMonth, setCalendarMonth] = useState(new Date().toISOString().slice(0, 7));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -278,7 +279,7 @@ export default function BrandForgeWorkspace({ routePath, embedded = false, hrefF
           {tab === 'personas' && <PersonasPanel personas={personas} saving={saving} mutate={mutate} />}
           {tab === 'campaigns' && <CampaignsPanel campaigns={campaigns} brands={brands} personas={personas} saving={saving} mutate={mutate} />}
           {tab === 'copy-studio' && <CopyPanel assets={copyAssets} brands={brands} campaigns={campaigns} generations={generations} saving={saving} mutate={mutate} />}
-          {tab === 'calendar' && <CalendarPanel items={calendar} brands={brands} campaigns={campaigns} assets={copyAssets} saving={saving} mutate={mutate} />}
+          {tab === 'calendar' && <CalendarPanel items={calendar} brands={brands} campaigns={campaigns} assets={copyAssets} month={calendarMonth} setMonth={setCalendarMonth} saving={saving} mutate={mutate} />}
           {tab === 'analytics' && <AnalyticsPanel dashboard={dashboard} campaigns={campaigns} saving={saving} mutate={mutate} />}
           {tab === 'ai-workflows' && <GenerationPanel generations={generations} brands={brands} campaigns={campaigns} provider={provider} contract={completeData.contract} saving={saving} mutate={mutate} />}
           {tab === 'settings' && <SettingsPanel workspace={workspace} saving={saving} mutate={mutate} />}
@@ -883,7 +884,7 @@ function CopyPanel({ assets, brands, campaigns, generations, saving, mutate }: {
   );
 }
 
-function CalendarPanel({ items, brands, campaigns, assets, saving, mutate }: { items: BrandForgeCalendarItem[]; brands: BrandForgeBrand[]; campaigns: BrandForgeCampaign[]; assets: BrandForgeCopyAsset[]; saving: boolean; mutate: (task: () => Promise<unknown>) => Promise<void> }) {
+function CalendarPanel({ items, brands, campaigns, assets, month, setMonth, saving, mutate }: { items: BrandForgeCalendarItem[]; brands: BrandForgeBrand[]; campaigns: BrandForgeCampaign[]; assets: BrandForgeCopyAsset[]; month: string; setMonth: (value: string) => void; saving: boolean; mutate: (task: () => Promise<unknown>) => Promise<void> }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [campaignId, setCampaignId] = useState('');
@@ -892,10 +893,10 @@ function CalendarPanel({ items, brands, campaigns, assets, saving, mutate }: { i
   const [view, setView] = useState<'month' | 'list'>('month');
   const [statusFilter, setStatusFilter] = useState('all');
   const [channelFilter, setChannelFilter] = useState('all');
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const submit = (event: FormEvent) => {
     event.preventDefault();
     void mutate(async () => {
+      const scheduledMonth = date.slice(0, 7);
       await moduleShellApi.brandforgeos.createCalendar({
         title,
         scheduledAt: new Date(date).toISOString(),
@@ -906,6 +907,7 @@ function CalendarPanel({ items, brands, campaigns, assets, saving, mutate }: { i
         brandId: brands[0]?.id || null,
         status: 'scheduled',
       });
+      setMonth(scheduledMonth);
       setTitle('');
       setDate('');
       setChannel('');

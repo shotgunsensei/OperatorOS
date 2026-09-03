@@ -179,11 +179,13 @@ export default function NinjamationShell({
   routePath,
   embedded = false,
   view,
+  hrefFor = path => path,
 }: {
   baseUrl?: string;
   routePath?: string;
   embedded?: boolean;
   view?: string;
+  hrefFor?: (path: string) => string;
 }) {
   const router = useRouter();
   const deepLink = useModuleDeepLinkTarget();
@@ -224,10 +226,7 @@ export default function NinjamationShell({
     riskTier: 'medium',
     content: '',
   });
-  const routeHref = (path: string) =>
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/modules/ninjamation')
-      ? `/modules/ninjamation${path}`
-      : path;
+  const routeHref = hrefFor;
   const navigateSection = (next: Section) => {
     if (!embedded) {
       setActive(next);

@@ -48,7 +48,7 @@ const button: React.CSSProperties = {
   color: '#fff', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7,
 };
 const quietButton: React.CSSProperties = { ...button, background: '#13232d', border: '1px solid rgba(94,234,212,.2)' };
-const commercialViews: CallCommandRouteArea[] = ['overview', 'setup', 'numbers', 'agents', 'workflows', 'calls', 'usage', 'health'];
+const commercialViews: CallCommandRouteArea[] = ['overview', 'setup', 'numbers', 'agents', 'workflows', 'calls', 'actions', 'usage', 'health'];
 
 function message(error: unknown, fallback: string) {
   return (error as any)?.error || (error as any)?.message || fallback;

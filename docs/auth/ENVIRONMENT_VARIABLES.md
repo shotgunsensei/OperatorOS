@@ -14,8 +14,9 @@ No values belong in Git.
 | `INTERNAL_API_URL` | Next server only | Routes same-origin browser `/api/*` requests to Fastify. The unified Replit runtime uses `http://localhost:5001`; never expose it as a public redirect. |
 | `APP_ENV` / `NODE_ENV` | OperatorOS | Runtime environment; SSO derives `prod`, `staging`, or `dev` from these existing settings. |
 | `TRUST_PROXY` | Hub | Enables Fastify and host/origin forwarded-header processing behind Replit only when the value is exactly `1` or `true`; defaults false. |
-| `OPERATOROS_DATABASE_RELEASE_MODE` | Production supervisor / release operator | Must equal `apply` to authorize the reviewed idempotent database release. |
-| `OPERATOROS_DATABASE_RELEASE_APPLIED` | Supervisor-owned, internal only | Prevents duplicate apply inside the API child after the supervisor succeeds. Never configure this in Replit or a secret manager. |
+| `OPERATOROS_DATABASE_RELEASE_MODE` | One-shot release operator only | Must equal `apply` to authorize the reviewed, backup-gated idempotent database release. Keep it unset in every serving environment; production preflight rejects it when present. |
+| `OPERATOROS_DATABASE_RELEASE_APPLIED` | Internal compatibility marker only | Allows an already-applied direct API launch to verify instead of reapply. Never configure this in Replit or a secret manager. |
+| `OPERATOROS_DATABASE_RELEASE_VERIFIED` | Supervisor-owned, internal only | Prevents the API child from repeating the supervisor's successful read-only current-release check. Never configure this externally. |
 | `CORS_ALLOWED_ORIGINS` | OperatorOS | Optional comma-separated exact HTTPS origins. Wildcards, credentials, paths, HTTP, and loopback hosts are rejected in production preflight. |
 
 `COOKIE_DOMAIN` is deprecated for SSO contract v1. Production sessions default

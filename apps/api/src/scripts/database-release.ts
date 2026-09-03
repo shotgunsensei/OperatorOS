@@ -3,11 +3,12 @@ import {
   DATABASE_RELEASE_STEPS,
 } from '../lib/database-release-contract.js';
 
-function parseMode(args: string[]): 'plan' | 'apply' {
-  if (args.length !== 1 || !['--plan', '--apply'].includes(args[0])) {
-    throw new Error(`Unknown database release option: ${args.join(' ') || '<missing>'}. Use --plan or --apply.`);
+function parseMode(args: string[]): 'plan' | 'apply' | 'verify-current' {
+  if (args.length !== 1 || !['--plan', '--apply', '--verify-current'].includes(args[0])) {
+    throw new Error(`Unknown database release option: ${args.join(' ') || '<missing>'}. Use --plan, --verify-current, or --apply.`);
   }
-  return args[0] === '--plan' ? 'plan' : 'apply';
+  if (args[0] === '--plan') return 'plan';
+  return args[0] === '--verify-current' ? 'verify-current' : 'apply';
 }
 
 export async function runDatabaseReleaseCli(
@@ -21,8 +22,19 @@ export async function runDatabaseReleaseCli(
   }
 
   if (!env.DATABASE_URL?.trim()) {
-    throw new Error('DATABASE_URL is required for --apply');
+    throw new Error(`DATABASE_URL is required for --${mode}`);
   }
+
+  if (mode === 'verify-current') {
+    const startedAt = Date.now();
+    const { verifyOperatorOSDatabaseRelease } = await import('../lib/database-release.js');
+    await verifyOperatorOSDatabaseRelease();
+    console.info(
+      `[database-release] current v${DATABASE_RELEASE_CONTRACT.releaseVersion}/${DATABASE_RELEASE_STEPS.length} verified in ${Date.now() - startedAt}ms`,
+    );
+    return 0;
+  }
+
   if (env.OPERATOROS_DATABASE_RELEASE_MODE !== 'apply') {
     throw new Error('OPERATOROS_DATABASE_RELEASE_MODE must equal apply for --apply');
   }

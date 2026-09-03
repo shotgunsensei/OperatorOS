@@ -27,18 +27,21 @@ One Replit autoscale workload owns the public runtime:
    workspace and run `pnpm build:production`.
 2. `scripts/start-unified-runtime.mjs` validates the production environment.
 3. A supervised public gateway binds `0.0.0.0:5000` immediately. During
-   bootstrap it serves only a no-store `GET`/`HEAD /` starting page; every
-   readiness/application request and WebSocket upgrade fails closed with 503.
-   `.replit` exposes only this listener as external port 80. Ports 5001 and
-   5002 are private process-to-process listeners.
-4. The supervisor runs the compiled 52-step database release and stops on any
-   failure.
-5. The compiled Fastify API starts privately on port 5001 and must report
-   `/readyz` before startup continues.
-6. The compiled Next server starts privately on port 5002 and must report
-   `/healthz`. The supervisor then marks the already-bound gateway ready. It
-   routes HTTP to Next and routes `/ws/*` upgrades directly to Fastify after
-   removing the internal `/ws` prefix. The server-only
+   bootstrap every HTTP request receives 503 and every WebSocket upgrade fails
+   closed. Browser navigations receive a no-store auto-retrying startup page;
+   non-browser callers receive structured JSON. `.replit` exposes only this
+   listener as external port 80. Ports 5001 and 5002 are private
+   process-to-process listeners.
+4. The supervisor runs the compiled read-only current-release verifier while
+   starting compiled Next privately on port 5002. Next must answer its private
+   root and the database must match the exact ordered release before startup
+   continues. Routine serving startup never applies DDL or seed operations.
+5. The compiled Fastify API starts privately on port 5001 with a
+   supervisor-owned verification marker and must report `/readyz` with
+   `ready: true`.
+6. The supervisor then marks the already-bound gateway ready. It routes HTTP
+   to Next and routes `/ws/*` upgrades directly to Fastify after removing the
+   internal `/ws` prefix. The server-only
    `INTERNAL_API_URL=http://localhost:5001` remains the HTTP API rewrite
    authority.
 7. Replit TLS and host attachment route the canonical hosts to the public
@@ -94,17 +97,18 @@ become unusable. Local logout clears and revokes only the current host session.
 
 `corepack pnpm db:plan` emits the ordered, secret-free release plan.
 `corepack pnpm db:apply` is the only supported root apply path and requires
-`OPERATOROS_DATABASE_RELEASE_MODE=apply`. The production supervisor executes
-the compiled equivalent before Fastify starts.
+`OPERATOROS_DATABASE_RELEASE_MODE=apply`. Apply is a separate, backup-gated
+release operation and holds a PostgreSQL advisory lock for the complete ordered
+release. `corepack pnpm db:verify` is the read-only current-release check used
+by routine serving startup. The production Autoscale environment must leave
+the apply-mode variable unset, and preflight rejects it when present.
 
-The release has 21 ordered, idempotent steps: base, extended, SaaS, tenant,
-shared-directory, module, TradeFlowKit, TechDeck, PulseDesk, TorqueShed,
-FaultlineLab, and shared-service DDL;
-plan/admin seed; pre-seed repair; platform component and module catalog seed;
-personal-tenant and super-admin backfills; demo tenant seed; post-seed repair;
-and free-account-app backfill. The contract is additive and declares no
-destructive step. Recovery is restore-to-new-database followed by traffic
-switching, never in-place destructive rollback.
+The current release has 59 ordered, idempotent steps ending in
+`core_suite_trial_tables`. The machine-readable release contract is the only
+step authority; historical counts in older evidence do not override it. The
+contract is additive and declares no destructive step. Recovery is
+restore-to-new-database followed by traffic switching, never in-place
+destructive rollback.
 
 The shared Business Directory is owned by OperatorOS and keeps tenant-scoped
 organizations, contacts, normalized addresses, sites, associations,
@@ -164,10 +168,11 @@ Child migrations and `drizzle-kit push` are not supported deployment paths.
 - `/readyz` fails closed unless the database, session signing, SSO code
   encryption, module registry, and shared service worker are ready. Optional
   providers report configured or disabled state explicitly without values.
-- Before those checks and the private Next health check pass, the public
+- Before those checks and the private Next root check pass, the public
   gateway identifies itself with `X-OperatorOS-Runtime-State: starting` and
-  never proxies application or WebSocket traffic. Its root-only 200 response
-  satisfies the platform startup probe without claiming application readiness.
+  never proxies application or WebSocket traffic. Every bootstrap response is
+  HTTP 503. Browser navigations poll `/readyz` and replace the startup document
+  with the exact original URL only after readiness.
 - Structured request completion logs include request ID and bounded
   user/tenant/module context. SSO decisions include correlation IDs without
   raw codes, cookies, passwords, secrets, or authorization headers.
@@ -178,16 +183,20 @@ Child migrations and `drizzle-kit push` are not supported deployment paths.
 ## Configuration and release order
 
 1. Review `corepack pnpm db:plan` and take a verified backup.
-2. Configure secrets and exact values from the machine-readable environment
+2. In a trusted one-shot release environment only, set
+   `OPERATOROS_DATABASE_RELEASE_MODE=apply`, run `corepack pnpm db:apply`, unset
+   the mode, and run `corepack pnpm db:verify`.
+3. Configure secrets and exact values from the machine-readable environment
    contract; keep `APP_URL`, `COOKIE_DOMAIN`, and `NEXT_PUBLIC_API_URL` unset.
-3. Run `corepack pnpm preflight:production -- --core` in the deployment
+   Keep `OPERATOROS_DATABASE_RELEASE_MODE` unset in the serving environment.
+4. Run `corepack pnpm preflight:production -- --core` in the deployment
    environment. Run provider-specific profiles only for features being enabled.
-4. Build with `corepack pnpm build:production`.
-5. Start only through `node scripts/start-unified-runtime.mjs`.
-6. Require public root `/api/health`, `/readyz`, the public 48-check verifier,
+5. Build with `corepack pnpm build:production`.
+6. Start only through `node scripts/start-unified-runtime.mjs`.
+7. Require public root `/api/health`, `/readyz`, the public 48-check verifier,
    and the
    production-host browser SSO gate before accepting the release.
-7. Roll traffic back if identity, tenant isolation, entitlement, SSO, audit,
+8. Roll traffic back if identity, tenant isolation, entitlement, SSO, audit,
    persistence, or readiness checks fail.
 
 The current source/local evidence is recorded in

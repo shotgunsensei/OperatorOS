@@ -17,16 +17,15 @@ const coreEnv = {
   OPERATOROS_BASE_URL: 'https://operatoros.net',
   OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
   INTERNAL_API_URL: 'http://localhost:5001',
-  OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
   RUNNER_MODE: 'disabled',
   TRUST_PROXY: 'true',
 };
 
 test('production environment contract is machine-readable and owns core deployment inputs', () => {
-  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.contractVersion, 1);
+  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.contractVersion, 2);
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.deploymentTarget, 'replit-autoscale');
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.INTERNAL_API_URL, 'http://localhost:5001');
-  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.OPERATOROS_DATABASE_RELEASE_MODE, 'apply');
+  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.OPERATOROS_DATABASE_RELEASE_MODE, undefined);
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.RUNNER_MODE, 'disabled');
   assert.equal(
     preflight.PRODUCTION_ENVIRONMENT_CONTRACT.callcommand.exact.TWILIO_PUBLIC_BASE_URL,
@@ -38,7 +37,7 @@ test('production environment contract is machine-readable and owns core deployme
   );
   assert.deepEqual(
     preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.unset,
-    ['APP_URL', 'COOKIE_DOMAIN', 'NEXT_PUBLIC_API_URL'],
+    ['APP_URL', 'COOKIE_DOMAIN', 'NEXT_PUBLIC_API_URL', 'OPERATOROS_DATABASE_RELEASE_MODE'],
   );
 });
 
@@ -68,7 +67,8 @@ test('production preflight defaults to core and rejects unsafe authority configu
     COOKIE_DOMAIN: '.operatoros.net',
     NEXT_PUBLIC_API_URL: 'http://localhost:5001',
     INTERNAL_API_URL: 'http://127.0.0.1:5001',
-    OPERATOROS_DATABASE_RELEASE_MODE: 'skip',
+    OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
+    OPERATOROS_DATABASE_RELEASE_VERIFIED: '1',
     RUNNER_MODE: 'local',
     ALLOW_LEGACY_SSO_ROLLBACK: 'true',
     ALLOW_UNSAFE_COMMANDS: 'true',
@@ -79,11 +79,12 @@ test('production preflight defaults to core and rejects unsafe authority configu
     [
       'SESSION_SECRET',
       'INTERNAL_API_URL',
-      'OPERATOROS_DATABASE_RELEASE_MODE',
       'RUNNER_MODE',
       'APP_URL',
       'COOKIE_DOMAIN',
       'NEXT_PUBLIC_API_URL',
+      'OPERATOROS_DATABASE_RELEASE_MODE',
+      'OPERATOROS_DATABASE_RELEASE_VERIFIED',
       'ALLOW_LEGACY_SSO_ROLLBACK',
       'ALLOW_UNSAFE_COMMANDS',
     ],

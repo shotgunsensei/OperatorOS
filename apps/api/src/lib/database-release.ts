@@ -62,6 +62,7 @@ import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
 } from './database-release-contract.js';
+import { withDatabaseReleaseLock } from './database-release-lock.js';
 
 export { DATABASE_RELEASE_CONTRACT, DATABASE_RELEASE_STEPS };
 
@@ -386,10 +387,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
 }
 
 export async function applyOperatorOSDatabaseRelease(report: StepReporter = () => {}): Promise<void> {
-  for (const step of DATABASE_RELEASE_STEPS) {
-    report({ phase: 'start', step });
-    await OPERATIONS[step.id]();
-    report({ phase: 'complete', step });
-  }
-  await verifyOperatorOSDatabaseRelease();
+  await withDatabaseReleaseLock(async () => {
+    for (const step of DATABASE_RELEASE_STEPS) {
+      report({ phase: 'start', step });
+      await OPERATIONS[step.id]();
+      report({ phase: 'complete', step });
+    }
+    await verifyOperatorOSDatabaseRelease();
+  });
 }

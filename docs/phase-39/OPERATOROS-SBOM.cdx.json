@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:074f9578-0779-4b3f-a853-e7411d8b9fb5",
+  "serialNumber": "urn:uuid:5e6776a1-5558-4d4f-ae18-d08172d9fde1",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-08-27T02:06:24.599Z",
+    "timestamp": "2026-09-03T05:03:31.154Z",
     "component": {
       "type": "application",
       "name": "OperatorOS",
@@ -13,7 +13,7 @@
     "properties": [
       {
         "name": "operatoros:pnpm-lock-sha256",
-        "value": "074f957807793b3f2853e7411d8b9fb5a2469fa70b3bc94192dabb746a8220a3"
+        "value": "5e6776a155583d4f4e18d08172d9fde19a4087a98c388dee951311debf2bc042"
       }
     ]
   },
@@ -4801,10 +4801,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/fast-uri@4.1.2",
+      "bom-ref": "pkg:npm/fast-uri@4.1.4",
       "name": "fast-uri",
-      "version": "4.1.2",
-      "purl": "pkg:npm/fast-uri@4.1.2"
+      "version": "4.1.4",
+      "purl": "pkg:npm/fast-uri@4.1.4"
     },
     {
       "type": "library",
@@ -4822,17 +4822,17 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/fastify@5.12.0",
+      "bom-ref": "pkg:npm/fastify@5.12.1",
       "name": "fastify",
-      "version": "5.12.0",
-      "purl": "pkg:npm/fastify@5.12.0"
+      "version": "5.12.1",
+      "purl": "pkg:npm/fastify@5.12.1"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/fastq@1.20.1",
+      "bom-ref": "pkg:npm/fastq@1.20.3",
       "name": "fastq",
-      "version": "1.20.1",
-      "purl": "pkg:npm/fastq@1.20.1"
+      "version": "1.20.3",
+      "purl": "pkg:npm/fastq@1.20.3"
     },
     {
       "type": "library",
@@ -4906,10 +4906,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/find-my-way@9.7.0",
+      "bom-ref": "pkg:npm/find-my-way@9.9.0",
       "name": "find-my-way",
-      "version": "9.7.0",
-      "purl": "pkg:npm/find-my-way@9.7.0"
+      "version": "9.9.0",
+      "purl": "pkg:npm/find-my-way@9.9.0"
     },
     {
       "type": "library",
@@ -8095,6 +8095,13 @@
       "name": "terser",
       "version": "5.50.0",
       "purl": "pkg:npm/terser@5.50.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/terser@5.51.2",
+      "name": "terser",
+      "version": "5.51.2",
+      "purl": "pkg:npm/terser@5.51.2"
     },
     {
       "type": "library",

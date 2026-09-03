@@ -2280,21 +2280,28 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Twilio voice provider');
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('link', { name: 'Automations', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'AI receptionists', exact: true }).click();
     await modulePage.getByTestId('button-callcommand-create-profile').click();
-    await expect(modulePage.locator('#callcommand-receptionists')).toContainText('Operations receptionist');
-    await modulePage.getByRole('button', { name: 'Create urgent rule' }).click();
+    await expect(modulePage.getByText('Business receptionist', { exact: true })).toBeVisible();
 
-    await modulePage.getByRole('link', { name: 'Numbers and channels', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Set up CallCommand', exact: true }).click();
+    await modulePage.getByRole('button', { name: /Forward Existing/ }).click();
     await modulePage.getByTestId('input-callcommand-channel-phone').fill(phone);
-    await modulePage.getByTestId('button-callcommand-create-channel').click();
-    await expect(modulePage.locator('#callcommand-configuration')).toContainText('Primary operations line');
+    await modulePage.getByTestId('button-callcommand-connect-number').click();
+    await expect(modulePage.getByText('Provider action required', { exact: true })).toBeVisible();
 
-    await modulePage.getByRole('link', { name: 'Calls', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Call workflows', exact: true }).click();
+    await modulePage.getByRole('button', { name: /Support desk/ }).click();
+    await modulePage.getByLabel('Phone number that should use it').selectOption({ index: 1 });
+    await modulePage.getByTestId('button-callcommand-activate-workflow').click();
+    await expect(modulePage.getByText('Support desk workflow', { exact: true })).toBeVisible();
+
+    await modulePage.getByRole('link', { name: 'Calls and history', exact: true }).click();
+    await modulePage.getByLabel('Simulated caller request').fill('This is an urgent service outage. Our customer cannot operate and needs immediate support.');
     await modulePage.getByTestId('button-callcommand-place-test-call').click();
     await expect(modulePage.locator('#callcommand-calls')).toContainText('urgent', { timeout: 20_000 });
-    await modulePage.getByRole('link', { name: 'Actions', exact: true }).click();
-    await expect(modulePage.locator('#callcommand-work')).toContainText('Urgent caller response');
+    await modulePage.getByRole('link', { name: 'Follow-up work', exact: true }).click();
+    await expect(modulePage.locator('#callcommand-work')).toContainText('Respond to support caller');
 
     const persisted = await pg.query<{
       id: string; calls: string; actions: string; tickets: string; recording_urls: string;

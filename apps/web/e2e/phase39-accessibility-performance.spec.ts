@@ -60,6 +60,7 @@ test('Phase 39 representative module surfaces meet WCAG 2.2 AA and browser budge
         .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
         .analyze();
       const layout = await page.evaluate((minimumTouchTargetPixels) => {
+        const viewportWidth = document.documentElement.clientWidth;
         const controls = Array.from(document.querySelectorAll<HTMLElement>('button,input,select,textarea,[role="button"],[role="menuitem"],[role="tab"]'));
         const undersized = controls.filter(control => {
           const style = getComputedStyle(control);
@@ -87,8 +88,27 @@ test('Phase 39 representative module surfaces meet WCAG 2.2 AA and browser budge
             (entry as PerformanceResourceTiming).transferSize || 0,
             (entry as PerformanceResourceTiming).encodedBodySize || 0,
           ), 0);
+        const overflowingElements = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+          .map(element => {
+            const rect = element.getBoundingClientRect();
+            return {
+              element: element.tagName.toLowerCase(),
+              id: element.id || null,
+              testId: element.dataset.testid || null,
+              className: typeof element.className === 'string' ? element.className : null,
+              text: element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 80) || null,
+              left: Math.round(rect.left * 10) / 10,
+              right: Math.round(rect.right * 10) / 10,
+              width: Math.round(rect.width * 10) / 10,
+              scrollWidth: element.scrollWidth,
+              clientWidth: element.clientWidth,
+            };
+          })
+          .filter(element => element.left < -1 || element.right > viewportWidth + 1)
+          .slice(0, 20);
         return {
-          horizontalOverflowPixels: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
+          horizontalOverflowPixels: Math.max(0, document.documentElement.scrollWidth - viewportWidth),
+          overflowingElements,
           undersized,
           lcpMs: metrics?.lcp ?? null,
           cls: metrics?.cls ?? null,
@@ -100,7 +120,7 @@ test('Phase 39 representative module surfaces meet WCAG 2.2 AA and browser budge
         failures.push(`${context}: axe ${axe.violations.map(violation => `${violation.id} (${violation.nodes.map(node => node.target.join(' ')).join(', ')})`).join('; ')}`);
       }
       if (layout.horizontalOverflowPixels > budgets.browser.horizontalOverflowPixels) {
-        failures.push(`${context}: horizontal overflow ${layout.horizontalOverflowPixels}px`);
+        failures.push(`${context}: horizontal overflow ${layout.horizontalOverflowPixels}px ${JSON.stringify(layout.overflowingElements)}`);
       }
       if (layout.undersized.length > 0) failures.push(`${context}: undersized targets ${JSON.stringify(layout.undersized)}`);
       if (typeof layout.lcpMs === 'number' && layout.lcpMs > 0) {

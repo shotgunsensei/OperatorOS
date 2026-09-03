@@ -680,7 +680,18 @@
   }
 
   .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     margin-bottom: 14px;
+  }
+
+  .topActions {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 3px;
   }
 
   .pageHeader {

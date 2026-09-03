@@ -1,5 +1,37 @@
 # OperatorOS ecosystem final E2E acceptance report
 
+## Autoscale startup/readiness overlay — 2026-09-03
+
+Verdict: **RELEASE CANDIDATE ACCEPTED — PUBLISH PENDING**.
+
+The complete release gate passed 14/14 stages with zero failures. It includes
+46/46 unit tests, 1,322/1,322 API tests with zero skips, 31/31 release and
+shared-platform integration tests, a clean and idempotent v59 database release,
+the 35-route production build, 1,304 active route-control capabilities with no
+failure, all 13 static module visual contracts, 21/21 optimized-production
+exact-host SSO/deep-link/persistence/accessibility journeys, 4/4 visual suites,
+and production preflight. The CallCommand journey that exposed a post-refresh
+navigation race passes both focused and full-suite verification. Twenty-seven
+refreshed Windows module baselines were manually inspected before approval.
+
+The actual production-mode supervisor was also run against a current disposable v59
+PostgreSQL database and compiled production artifacts. A concurrent probe
+captured HTTP 503 from a TradeFlowKit invoice deep link during bootstrap, then
+captured public `/readyz` HTTP 200 after 4,909 ms. The supervisor log recorded
+an 889 ms read-only database verification and 538 ms Next readiness; public
+proxying opened only after Fastify returned ready. After readiness, the
+unauthenticated invoice deep link reached the expected exact-host SSO redirect.
+The retry script was executed in the focused test with one unavailable response
+followed by ready and restored the exact path, query, and fragment.
+
+This accepts the code and local production artifact, not a yet-unpublished
+Replit release. The owner authorized commit, push, and publish. Deployed
+acceptance must still prove the exact committed release identity, cold and warm
+starts, browser auto-return on an exact host, public readiness, and rollback.
+No production database apply is planned because production already reports
+release v59/59; no provider, billing, purchasing, or DNS action is part of this
+publish.
+
 ## Companion workflow automation overlay — 2026-09-02
 
 Verdict: **SOURCE/LOCAL VERIFIED — DEPLOYED E2E ACCEPTANCE OPEN**.

@@ -9,18 +9,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-linux.png",
       "sha256": "e4e06847b269b2b629e21d8a4afbe4335bf6de1a333005270d233f88e32ff2ac",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-win32.png",
-      "sha256": "ef567bf5b29c3f10386862da63199a9e324f2d4be9fb65c9edf203f5ea1b5e0a",
+      "sha256": "4ac68e9a239abffdd93019749b781557298a029ae04b6759d86cbfa7fb52d833",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -29,18 +29,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-linux.png",
       "sha256": "39be082e9425c0ad83ba0749d01ef15e59c32a96a2a979d8b0433a4de583b0e3",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-win32.png",
-      "sha256": "4606ab8bc886617c22f920c3962c3d620f01c7f6106cdc7e6f75e07f695b6998",
+      "sha256": "dbace16255843977c4ded22c6eb60dab6285012ec93a84ea366142396e36f01b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -49,18 +49,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-linux.png",
       "sha256": "1f6b2f0f70db45b71e9f07be5bdbb08392ef0808183c913cad4177399ebaf766",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-win32.png",
-      "sha256": "24399e48c2a7ad2481583976c291cc8365fd4f9298664756b49947ffa577562b",
+      "sha256": "c11b1da67821bd4f7f3d0ddf5c9cabe18484cc7d72d485a372051aa694bfe8e9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
@@ -69,18 +69,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-linux.png",
       "sha256": "bbee3038e102733f65b3faad2047a3fb1e73a022c0fe1e2d2fe0ae92adda4f71",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-win32.png",
-      "sha256": "1b46182154d409d04292a571979e4eb6a61183d3f3ae3db3eafd79d429aa9b06",
+      "sha256": "de64f1d22df5ba58f35d259cc7b72a5147f0c68be21311cd13d55b5ca4f0625d",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
@@ -89,18 +89,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-linux.png",
       "sha256": "da2cd455643b7a3c5b0c4bba1da53e41f5a604f8eb05ec0f423f24685c97dcba",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-win32.png",
-      "sha256": "7ff0000f1c28164c6d70fa84c2b54b7336dcb190abb36b59533faccc5bb9b474",
+      "sha256": "aad80ded55d1f1a81987657009fefd092842e7b2910abff347205a75c4287733",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
@@ -109,18 +109,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-linux.png",
       "sha256": "e2678df8bf2f549bd4ffe1dce7b8c8f3cabd4aa45d1df76b5b0eed7b143e9050",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-win32.png",
-      "sha256": "e948f5f492215ab416f8a566698cb4f7548a919cb1c24e55fbac00281bb499e4",
+      "sha256": "983b7e6932aa8088bba8e9dca4751a5ff7a2953c16107d906770ef8961161782",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -129,8 +129,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-linux.png",
       "sha256": "5c096c5f1a12412305d9fb05df25471a9c27be798dfd824e8ffc90c340fcf0b3",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -139,8 +139,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-win32.png",
       "sha256": "f28af659a6623fae47edf263d9910a7ef7c78142ae682ac0df2fce5292c3c796",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -149,8 +149,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-linux.png",
       "sha256": "3d4e6cf74421df9f2838c2fc3d13c00f9c1c96269e6fa9f265dd58f2aed64669",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -159,8 +159,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-win32.png",
       "sha256": "b1c1b1e0b4217433145a2185d1e858df718a0656b945d7bf941b8fb685f3b767",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -169,8 +169,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-linux.png",
       "sha256": "b7822c28c9aa65606669e46a06d383c208fa6471cc326d2d3e2b2e092a17d54f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -179,8 +179,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-win32.png",
       "sha256": "25541650c980ce7dc5effd6002197a70ca83001354d5d0c8d5a8f8f9c9555bb2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -189,18 +189,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-linux.png",
       "sha256": "7f8b2b1632f975972be7800ce3eda9e15f35bf9a68a5d2767cdfda97621e67cd",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-win32.png",
-      "sha256": "e3c7bc8e23355228852d408eb1040d74d09d5e7aa0c659794e4f0f128c85c451",
+      "sha256": "56c9d6be811848579e4948b6febfb6c30f355173272941b5617be13edd0a2058",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -209,18 +209,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-linux.png",
       "sha256": "100181e38672b3724bae91a30589a55fb2503a3dfbcaf7be98e57624680f7349",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-win32.png",
-      "sha256": "05964ccbc8d0e653f68a25079719efdfe4eadb210101cb940b0fe8cebfe60b0e",
+      "sha256": "81c5de9d435134cf0c14e8767ee6df7fd0607b6f4dbf5620e8678ef775c5e9fa",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -229,18 +229,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-linux.png",
       "sha256": "68d4e0c7c3e34620293741302d2d8d915b7b05b36b2fa89f7a31ff246f2e2584",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-win32.png",
-      "sha256": "239e77b621fce7c24845a177f7a38cb930c7475aae98c383e5f50dc422fa7928",
+      "sha256": "1fb82c90ed59d059d1c24b7b73c43af31ee0c1b0b441016682b21719ba9e095e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -249,8 +249,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-linux.png",
       "sha256": "48cc05d8092ba168d8c53dcf4f8fb264320ad1e1dc480b84de43173152f05c0c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -259,8 +259,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-win32.png",
       "sha256": "7c53c11df8801007ab44a232e65f41368ddbb2d656ad0176b22c305fe8558529",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -269,8 +269,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-linux.png",
       "sha256": "ac213a89bfe14f1a49b6f0bb8ee670886456d00f7ff9235f79088b63adc35cb6",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -279,8 +279,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-win32.png",
       "sha256": "19dc439420201c7a49862603fb5906c60cd2b9e10813744474ee5fe9a0f2be0e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -289,8 +289,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-linux.png",
       "sha256": "eb58fb724ba1c9f913652c327915d6eefc8102d7cf9ec1c8dcd33d1d510ded5b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -299,8 +299,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-win32.png",
       "sha256": "2b89bdcc1fb5826f8e609791dbcd26ce13770098b209001338554b4ef90aade9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninjamation",
@@ -309,18 +309,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-linux.png",
       "sha256": "ecd8b2871e29def638fe12a9c5c4940974eab9e40f13af37587d7a2c327bc008",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-win32.png",
-      "sha256": "435b691a8c601f989b2868ca226b0f59ff184509712114b92e85af157c63d4f8",
+      "sha256": "346daac03aa55664efea964ea3556866d8820c491f3fd5161e018c9b4323f5b0",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninjamation",
@@ -329,18 +329,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-linux.png",
       "sha256": "e8860306d7c38795fdebbbd2774518a0e5df29600a311be1aaedf5f01678090c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-win32.png",
-      "sha256": "9e606fd9dd803ab9d44aa2b947a4178602e7da549b2de7702524af516dd52987",
+      "sha256": "70969ee65a3d41e6fee7c5cb6de9ddde1954ac1e9a915df9d37e8ca12214cb88",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninjamation",
@@ -349,18 +349,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-linux.png",
       "sha256": "fb2e8923c4f6227dc27c0ecb16327ff3ec6c20585f8f568e1c084f39d838166b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-win32.png",
-      "sha256": "5c2df8a35528e8c8931e852525817278e54b2611fce6e7f4ca256d55e0dcd7bd",
+      "sha256": "5bbb7b8fde4fac121df0682223e69d2d17290266f8d53bc7ed24ef79117c9d54",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "outcall",
@@ -369,8 +369,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-linux.png",
       "sha256": "a9fbb9cd79f08ff490cac765606fd150ae0b05898e1c2327a9050070f0cc05e0",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "outcall",
@@ -379,8 +379,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-win32.png",
       "sha256": "0b5a8a6b6ca8bf72686985dc93b80fefa3fafc48a2f90fc9902bbc32330d6ea2",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "outcall",
@@ -389,8 +389,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-linux.png",
       "sha256": "d6b8504ec41d029f52a3a697c6ade296e3a89c9616faf4d3d1df557939a02052",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "outcall",
@@ -399,8 +399,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-win32.png",
       "sha256": "155b24f72148c14b3fd63bb40d8551bb199c8e2228703a0ecc7584d6a6fdb89a",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "outcall",
@@ -409,8 +409,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-linux.png",
       "sha256": "9f5692572637ecd71d1ffde67ee0854664c6b37a97bd7e7762a63991ac0db2e9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "outcall",
@@ -419,8 +419,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-win32.png",
       "sha256": "da4015ee80640ace825ee4ad27166f2d514cf85c770d09c867b963dd7a2a9550",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -429,18 +429,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-linux.png",
       "sha256": "388de3de4949a309c27d75b5e1e8f6a6e59eae68e700e0520aa3396f60ad29c9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-win32.png",
-      "sha256": "5246c54ade47d0213d566d5a655d5ab6c9054fdd57ff625995c06e519dbad9b9",
+      "sha256": "c7ebbd415f325afce2c281dc17a8c7b3124464f533f4a2a720aa5f269d11a1b1",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -449,18 +449,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-linux.png",
       "sha256": "790a4724faebfa76d29afcbd0340a3eba421be466e5f6ced13c4797ff0902f32",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-win32.png",
-      "sha256": "5bdc2e11a2a8855b717c4bc4879a7637ed46415e4bfc706ad44448487ec0ea32",
+      "sha256": "270314178d34320ec28371c47cfe6e9868644f6a0dd1d7eee4630f1c4b47b654",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -469,18 +469,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-linux.png",
       "sha256": "f61442fa9a294047b05cf218e5e9c2a55e64f2b3a46059a3b6156cd7283d6f44",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-win32.png",
-      "sha256": "232cf1ea209a014f5113e68750de36c1cf34169af62f8f0d54993a6d73a627ed",
+      "sha256": "b840cf1c18e794fb8a1fdabff773d3cd62b220946a89fdac935ba905b83b50b9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "snapproofos",
@@ -489,18 +489,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-linux.png",
       "sha256": "94e4dc1549aae6fe9d3dffee45d917e56b03fa735c5d4f693832c7ff862ff1f9",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-win32.png",
-      "sha256": "1e690d3338cb6660b8ca12564a8e0933203ff307d32daeeeb6f36ce180a4304e",
+      "sha256": "c9a7f73e70d36c0e0c3dca404d87ae786aa571fa03734364ffd283b48ecfacd0",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "snapproofos",
@@ -509,18 +509,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-linux.png",
       "sha256": "93b7584ee9062b06a8e55a9ab98954be0f8182ff0ab94ddc0af09564b9f6231c",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-win32.png",
-      "sha256": "85899a85c0eba2758b36454f28b1e6e98b9dfe157f0c1269fed451320c579e55",
+      "sha256": "ad1b9f9cd2487698a7be6c07ab2f9cf28fad3638827bf2374403de5f3fe6764b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "snapproofos",
@@ -529,18 +529,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-linux.png",
       "sha256": "b7c72bc3df7c0603cfa9c0987b824c33295b76bb75bd8528d9fb9925171a4e1f",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-win32.png",
-      "sha256": "ab6539565460b6971f0dd4e721d693db722ae3deec40ce34d96067c9c277309f",
+      "sha256": "d72c6926fd398b444ef9e8300899dbf35c14df85a613d6ac5576e91662e96d12",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -549,18 +549,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-linux.png",
       "sha256": "a4af064532df6d997cb19bbcc1fd178cfdb145a83251ae0b1228fed9631a20d8",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-win32.png",
-      "sha256": "967973f9c8a28b757c825873ec8794fa12b1fc3f08afc0fdde82bb83d77bd882",
+      "sha256": "c5f34f0b20e0295c97fcfb2384eca975032e1355ae9776a26baa08bc388d487e",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -569,18 +569,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-linux.png",
       "sha256": "e4408a54a681fffded66a865dddc831f3eb447e3ea12f14efa61ca8a1aaf2e90",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-win32.png",
-      "sha256": "b89a7820082969b2e3fc09c2a8d1abb9b4523d6fb1350dbf16497735daa33534",
+      "sha256": "c0ef724f73bc48d2bf4290fbebbf83cc61dbad283f046eb7118f3b468a684e94",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -589,18 +589,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-linux.png",
       "sha256": "530362385ce0ac1bbb2299d2f0b05d044ea1ca438cb4dd3840cea28973b2ad83",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-win32.png",
-      "sha256": "13b3341bfbe55416942035fa2f5ad0b1b1246a21374709eecbdc54f2300eb6d3",
+      "sha256": "371f2e71c53736fe8ab74adc72a801fc2565a6de990865b0bd16f5632acc1f05",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "techdeck",
@@ -609,18 +609,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-linux.png",
       "sha256": "891c80332203c08f8fdb6a6764a8af4f88533f0f77edda271e8bd628bbc98fbb",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-win32.png",
-      "sha256": "4aac1d4500b8719b7c55858ec087733f90c73cf9fc3be358d564ab2fb0102ad4",
+      "sha256": "c7b154d4345d018e029018e993fb5bf68c4e8eef7f100b5448f649f09dd396cb",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "techdeck",
@@ -629,18 +629,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-linux.png",
       "sha256": "83ab77f11108ad83b1939a572c6ac932c31b2871928e6eee0813fb1a0f3a21db",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-win32.png",
-      "sha256": "1044a0b6b16154cf0b7449a50bdf09394c3363efda65e7aee16752ecdfa4a0cf",
+      "sha256": "24f48424931a2475460d56c94158cbcee115a23f84314a8008e0f3e1bd1e0719",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "techdeck",
@@ -649,18 +649,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-linux.png",
       "sha256": "4ad1c2ad064412ba20cfb509b5c93431201f487856b5a643b30419cc8213948b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-win32.png",
-      "sha256": "65b176dbacc10322c056fe278a2e42b965d70effb62c49a7811127c5959ee23f",
+      "sha256": "ca005e495dd26efb034916566b2b86cbfdd3e95360aa70a72de99d38b03fe7f0",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "torqueshed",
@@ -669,8 +669,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-linux.png",
       "sha256": "fd97f50c7da83bd9e63d055dfa3d5934fcffc57705ced29c8988cbf5fee9e70b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "torqueshed",
@@ -679,8 +679,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-win32.png",
       "sha256": "20a37395c58ad7aae9ab85fa99bdfe5f508fba344c43b85540e34086b4d01420",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "torqueshed",
@@ -689,8 +689,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-linux.png",
       "sha256": "61d6b614cab9218ee3a6e2df636d3c7d89f0a4aa2aec8e523bac339067828664",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "torqueshed",
@@ -699,8 +699,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-win32.png",
       "sha256": "ea5b0a73620ca4346959f149e3725f091f4c8edfb3497d365c96d6a1ecd1eed7",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "torqueshed",
@@ -709,8 +709,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-linux.png",
       "sha256": "4cee7abc0c8ec3ba9f7e8ba23875c0b15f177fb63beab5317cb8781d664fe204",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "torqueshed",
@@ -719,8 +719,8 @@
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-win32.png",
       "sha256": "59e416b49b93785145d6acdde56d7b9b1dfeaa1781582cc3a5fdc717d490d23b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
@@ -729,18 +729,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-linux.png",
       "sha256": "5154cdcafdb26c6da90a3cba4f2007179f5bf85969e7de4ba9da4b67248918d5",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-win32.png",
-      "sha256": "71de3d50bb9d96e1c8122225daba8690d71686f9dea60680043fe76377b7962c",
+      "sha256": "c1741cdb6405e08e9c9e90ddd96902cab11f28cdc0c1ed1cf46cd807be37ace7",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
@@ -749,18 +749,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-linux.png",
       "sha256": "37c7f8814947d86ee741eed744d30ab2e6c6d00dbb92c871efa9e47b6f573249",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-win32.png",
-      "sha256": "d67141ad42aa1b4c5ce0f44465c9826874bc7288be13869e44fe43d4667e703f",
+      "sha256": "62f64348d5bbd8f2dfc43acc23e365ac11849b75269e54ea8e8253224302a502",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
@@ -769,18 +769,18 @@
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-linux.png",
       "sha256": "2f8e2dcde9d4dcdaae8af4dc2b1f798e2ec67af01d6c593b41f9301a622c802b",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-win32.png",
-      "sha256": "af4408017e0156685fdd201e53d6750a3758de1eb34b37efd55ce0fc69913ee5",
+      "sha256": "f48fb4c22ee1f0bc4936d2811874f6e89ff6e8ff2271da2722b235eb02af2dd8",
       "approvedBy": "Codex acceptance review",
-      "approvedAt": "2026-08-28T02:00:50.225Z",
-      "reason": "Canonical OperatorOS emblem and signature replace the legacy shared ecosystem-header identity; text-free compact mark, Linux and Windows desktop, tablet, and mobile captures were regenerated through the exact-host production harness and visually reviewed."
+      "approvedAt": "2026-09-03T04:58:14.4104762Z",
+      "reason": "Exact-host Windows desktop, tablet, and mobile captures were regenerated after first-value workflow, responsive containment, and honest provider-state corrections; all changed captures were visually reviewed and the 4-test screenshot comparison suite passed."
     }
   ]
 }
