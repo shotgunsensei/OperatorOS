@@ -49,9 +49,11 @@ test('Ninja Launch Kit rejects client authority and validates launch money, chan
 
 test('Ninja Launch Kit lifecycle edits require optimistic versions and valid states', () => {
   assert.equal(parseLaunchPatch({ status: 'active', expectedVersion: 2 }).status, 'active');
+  assert.equal(parseLaunchPatch({ status: 'launched', expectedVersion: 2, externalLaunchConfirmed: true, externalLaunchEvidence: 'Provider receipt 1234' }).externalLaunchConfirmed, true);
   assert.equal(parseTaskPatch({ status: 'complete', expectedVersion: 1 }).status, 'complete');
   assert.equal(parseArtifactPatch({ status: 'review', expectedVersion: 1 }).status, 'review');
   assert.throws(() => parseLaunchPatch({ status: 'live', expectedVersion: 1 }), LaunchKitValidationError);
+  assert.throws(() => parseLaunchPatch({ status: 'launched', expectedVersion: 1, externalLaunchConfirmed: 'yes' }), LaunchKitValidationError);
   assert.throws(() => parseTaskPatch({ status: 'done', expectedVersion: 1 }), LaunchKitValidationError);
   assert.throws(() => parseArtifactPatch({ status: 'approved' }), LaunchKitValidationError);
 });

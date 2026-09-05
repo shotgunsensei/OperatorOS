@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { CalendarClock, FileArchive, KeyRound, RadioTower, RefreshCw, ShieldCheck, Webhook } from 'lucide-react';
+import { CalendarClock, Download, FileArchive, KeyRound, RadioTower, RefreshCw, ShieldCheck, Webhook } from 'lucide-react';
 import { moduleShellApi, type TechDeckLiteralWorkspaceResponse } from '@/lib/auth';
 
 export type TechDeckLiteralArea = 'calendar' | 'portal' | 'licenses' | 'status' | 'webhooks' | 'api-tokens' | 'compliance';
@@ -18,6 +18,24 @@ function errorMessage(error: unknown): string {
 
 function values(form: HTMLFormElement): Record<string, string> {
   return Object.fromEntries(Array.from(new FormData(form).entries()).map(([key, value]) => [key, String(value).trim()]));
+}
+
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function packageStatus(status: string, scanStatus: string | null): string {
+  if (status === 'completed' && (scanStatus === 'clean' || scanStatus === 'unavailable')) return 'Ready to download';
+  if (status === 'completed' && scanStatus === 'infected') return 'Unavailable after file safety check';
+  if (status === 'completed') return 'Finishing file safety check';
+  if (status === 'dead_letter' || status === 'cancelled') return 'Could not be created';
+  if (status === 'retry') return 'Trying again';
+  return 'Preparing package';
 }
 
 function RowList({ rows, empty, label }: { rows: Array<Record<string, any>>; empty: string; label: (row: Record<string, any>) => React.ReactNode }) {
@@ -43,12 +61,13 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
   useEffect(() => { void load(); }, [load, tenantKey]);
 
   const act = async (key: string, path: string, input: Record<string, unknown>, options?: ActionOptions) => {
+    if (!canWrite) return null;
     setBusy(key); setError(null); setNotice(null); setOneTimeSecret(null);
     try {
       const result = await moduleShellApi.techdeck.literalAction(path, input, options);
       const secret = result.publicPath ?? result.rawToken ?? result.rawKey;
       if (secret) setOneTimeSecret(String(secret));
-      setNotice('Saved. The tenant-scoped workspace is current.');
+      setNotice(key === 'packet' ? 'Compliance package started. Refresh in a moment to download it.' : 'Saved. This organization’s workspace is up to date.');
       await load();
       return result;
     } catch (err) { setError(errorMessage(err)); return null; }
@@ -63,16 +82,28 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
       void act(key, path, convert ? convert(input) : input, options).then(result => { if (result) form.reset(); });
     };
 
+  const downloadCompliancePacket = async (id: string) => {
+    const key = `packet-download-${id}`;
+    setBusy(key); setError(null); setNotice(null);
+    try {
+      saveBlob(await moduleShellApi.techdeck.downloadCompliancePacket(id), `techdeck-compliance-${id}.zip`);
+      setNotice('Compliance package downloaded.');
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setBusy(null); }
+  };
+
   return (
-    <section id="techdeck-literal-workspace" className="techdeck-panel tdl-console" data-testid="techdeck-literal-workspace" tabIndex={-1}>
+    <section id="techdeck-literal-workspace" className="techdeck-panel tdl-console" data-testid="techdeck-literal-workspace" data-can-write={canWrite ? 'true' : 'false'} data-can-manage={canManage ? 'true' : 'false'} tabIndex={-1}>
       <header className="tdl-heading">
-        <div><span>Literal product restoration</span><h2>Service automation and trust operations</h2><p>Calendar, portal, licensing, status, webhooks, scoped API access, secure intake, and deterministic compliance packets.</p></div>
+        <div><span>Client service controls</span><h2>Service automation and trust operations</h2><p>Calendar, client portal, licensing, service status, integrations, secure intake, and repeatable compliance packages.</p></div>
         <button type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? 'tdl-spin' : ''} />Refresh</button>
       </header>
+      {!canWrite && <div className="tdl-read-only" role="status" data-testid="techdeck-literal-read-only"><ShieldCheck size={16} /><span><strong>Read-only service controls.</strong> You can review schedules, client access, licenses, service status, integrations, intake, and compliance history. Ask an organization administrator for edit access before making changes.</span></div>}
+      {canWrite && !canManage && ['portal', 'licenses', 'status', 'webhooks', 'api-tokens'].includes(area) && <div className="tdl-manager-note" role="status"><ShieldCheck size={16} /><span><strong>Administrator-controlled area.</strong> You can review these settings; an organization administrator must change them.</span></div>}
       {error && <div className="tdl-error" role="alert">{error}</div>}
       {notice && <div className="tdl-notice" role="status">{notice}</div>}
       {oneTimeSecret && <div className="tdl-secret" role="status"><strong>Copy now — shown once:</strong><code>{oneTimeSecret}</code></div>}
-      {loading && !workspace ? <div className="tdl-loading" aria-busy="true">Loading restored workflows…</div> : <div className="tdl-grid">
+      {loading && !workspace ? <div className="tdl-loading" aria-busy="true">Loading service controls…</div> : <div className="tdl-grid">
         {area === 'calendar' && <article id="techdeck-calendar" className="tdl-card">
           <h3><CalendarClock size={17} />Calendar and recurrence</h3>
           <RowList rows={workspace?.appointments ?? []} empty="No appointments scheduled." label={row => <><strong>{row.title}</strong><span>{new Date(String(row.starts_at)).toLocaleString()}</span></>} />
@@ -87,9 +118,9 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
 
         {area === 'portal' && <article id="techdeck-portal" className="tdl-card">
           <h3><ShieldCheck size={17} />Scoped client portal</h3>
-          <RowList rows={workspace?.portalAssignments ?? []} empty="No portal assignments." label={row => <><strong>{row.organization_name}</strong><span>{row.site_name ?? 'All assigned sites'} · user {String(row.user_id).slice(0, 8)}</span></>} />
+          <RowList rows={workspace?.portalAssignments ?? []} empty="No portal assignments." label={row => <><strong>{row.organization_name}</strong><span>{row.site_name ?? 'All assigned sites'} · assigned member</span></>} />
           {canManage && <form onSubmit={submit('portal', 'portal-assignments', input => ({ userId: input.userId, directoryOrganizationId: input.organizationId, directorySiteId: input.siteId || undefined, canCreateTickets: true, canComment: true, canViewEvidence: true }))}>
-            <input name="userId" required aria-label="OperatorOS user ID" placeholder="OperatorOS user UUID" /><input name="organizationId" required aria-label="Directory client ID" placeholder="Directory client UUID" /><input name="siteId" aria-label="Optional site ID" placeholder="Optional site UUID" /><button disabled={busy === 'portal'}>Grant portal access</button>
+            <input name="userId" required aria-label="OperatorOS member ID" placeholder="Paste member ID from OperatorOS" /><input name="organizationId" required aria-label="Client ID" placeholder="Paste client ID" /><input name="siteId" aria-label="Optional site ID" placeholder="Paste site ID (optional)" /><button disabled={busy === 'portal'}>Grant portal access</button>
           </form>}
           <p className="tdl-note">Portal users see and comment only on tickets for their assigned Directory clients and sites.</p>
         </article>}
@@ -98,7 +129,7 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
           <h3><KeyRound size={17} />License server</h3>
           <RowList rows={workspace?.licenseProducts ?? []} empty="No licensed products." label={row => <><strong>{row.name}</strong><span>{row.key_count ?? 0} issued keys</span>{canManage && <button type="button" onClick={() => void act(`key-${row.id}`, `license/products/${row.id}/keys`, { label: 'Operator-issued key', maxActivations: 1 })}>Issue key</button>}</>} />
           {canManage && <form onSubmit={submit('license', 'license/products')}><input name="name" required aria-label="Licensed product name" placeholder="Product name" /><input name="slug" required aria-label="Licensed product slug" pattern="[a-z0-9-]+" placeholder="product-slug" /><input name="description" aria-label="License purpose" placeholder="License purpose" /><button disabled={busy === 'license'}>Add product</button></form>}
-          <p className="tdl-note">Raw keys appear once; validation stores only hashes and rate-limited activation history.</p>
+          <p className="tdl-note">New license keys appear once. TechDeck keeps a protected fingerprint and limits repeated activation attempts.</p>
         </article>}
 
         {area === 'status' && <article id="techdeck-status" className="tdl-card">
@@ -111,14 +142,14 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
           <h3><Webhook size={17} />Signed webhooks</h3>
           <RowList rows={workspace?.webhooks ?? []} empty="No webhook endpoints." label={row => <><strong>{row.name}</strong><span>{row.enabled ? 'Enabled' : 'Disabled'} · {row.endpoint_url}</span></>} />
           {canManage && <form onSubmit={submit('webhook', 'webhooks', input => ({ name: input.name, url: input.url, secret: input.secret, eventTypes: ['techdeck.status.incident_updated'] }))}><input name="name" required aria-label="Webhook endpoint name" placeholder="Endpoint name" /><input name="url" required type="url" aria-label="Webhook endpoint URL" placeholder="https://receiver.example/hook" /><input name="secret" required type="password" minLength={16} aria-label="Webhook signing secret" placeholder="Signing secret" /><button disabled={busy === 'webhook'}>Add endpoint</button></form>}
-          <p className="tdl-note">Delivery uses HMAC signatures, SSRF checks, bounded retries, delivery logs, and dead-letter state.</p>
+          <p className="tdl-note">Each delivery is signed, rejects unsafe destinations, retries temporary failures, and keeps a troubleshooting history.</p>
         </article>}
 
         {area === 'api-tokens' && <article id="techdeck-api-tokens" className="tdl-card">
-          <h3><KeyRound size={17} />Scoped API tokens</h3>
-          <RowList rows={workspace?.apiTokens ?? []} empty="No API-only identities." label={row => <><strong>{row.name}</strong><span>{row.identity_name} · {row.revoked_at ? 'Revoked' : 'Active'} · {row.token_prefix}</span></>} />
-          {canManage && <form onSubmit={submit('token', 'api-tokens', input => ({ identityName: input.identityName, tokenName: input.tokenName, description: 'TechDeck headless client', scopes: ['techdeck:read'] }))}><input name="identityName" required aria-label="Service identity" placeholder="Service identity" /><input name="tokenName" required aria-label="API token label" placeholder="Token label" /><button disabled={busy === 'token'}>Issue read token</button></form>}
-          <p className="tdl-note">Headless ticket and evidence requests validate module identity, scope, expiry, and revocation.</p>
+          <h3><KeyRound size={17} />Automation access keys</h3>
+          <RowList rows={workspace?.apiTokens ?? []} empty="No automation access keys." label={row => <><strong>{row.name}</strong><span>{row.identity_name} · {row.revoked_at ? 'Revoked' : 'Active'} · {row.token_prefix}</span></>} />
+          {canManage && <form onSubmit={submit('token', 'api-tokens', input => ({ identityName: input.identityName, tokenName: input.tokenName, description: 'TechDeck headless client', scopes: ['techdeck:read'] }))}><input name="identityName" required aria-label="Automation identity" placeholder="Automation name" /><input name="tokenName" required aria-label="Access key label" placeholder="Access key label" /><button disabled={busy === 'token'}>Issue read-only key</button></form>}
+          <p className="tdl-note">Automated ticket and evidence requests are checked for identity, allowed access, expiration, and revocation.</p>
         </article>}
 
         {area === 'compliance' && <article id="techdeck-secure-intake" className="tdl-card">
@@ -129,11 +160,11 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
         </article>}
 
         {area === 'compliance' && <article id="techdeck-compliance" className="tdl-card">
-          <h3><FileArchive size={17} />Compliance packets and IT Ops</h3>
-          <RowList rows={workspace?.exports ?? []} empty="No compliance packet exports." label={row => <><strong>{row.export_type}</strong><span>{row.status} · {row.completed_at ? 'integrity artifact ready' : 'queued'}</span></>} />
-          {canWrite && <button type="button" className="tdl-wide" disabled={busy === 'packet'} onClick={() => void act('packet', 'compliance-packets', { filters: {} }, { idempotencyKey: crypto.randomUUID() })}>Build deterministic ZIP packet</button>}
+          <h3><FileArchive size={17} />Compliance packages and IT guidance</h3>
+          <RowList rows={workspace?.exports ?? []} empty="No compliance packages have been created yet." label={row => <><strong>Compliance package</strong><span>{packageStatus(row.status, row.attachment_scan_status)} · requested {new Date(row.created_at).toLocaleString()}</span>{row.status === 'completed' && ['clean', 'unavailable'].includes(row.attachment_scan_status) && row.result_attachment_id && <button type="button" disabled={busy === `packet-download-${row.id}`} onClick={() => void downloadCompliancePacket(row.id)}><Download size={14} />Download package</button>}</>} />
+          {canWrite && <button type="button" className="tdl-wide" disabled={busy === 'packet'} onClick={() => void act('packet', 'compliance-packets', { filters: {} }, { idempotencyKey: crypto.randomUUID() })}>Build compliance package</button>}
           {canWrite && <form onSubmit={submit('itops', 'itops/query')}><textarea name="query" required aria-label="IT operations guidance request" placeholder="Ask for documentation-only diagnostic guidance. TechDeck never claims execution." /><button disabled={busy === 'itops'}>Generate reviewed guidance</button></form>}
-          <p className="tdl-note">Exports include a manifest, entry hashes, audit records, and deterministic ZIP bytes. AI output is guidance only—no scripts run in the API process.</p>
+          <p className="tdl-note">The package includes an index, recorded file checks, and activity history for review. AI output is guidance only—TechDeck does not run scripts automatically.</p>
         </article>}
       </div>}
       <style>{css}</style>
@@ -142,5 +173,5 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
 }
 
 const css = `
-  .tdl-console{padding:18px;display:grid;gap:14px}.tdl-heading{display:flex;gap:16px;justify-content:space-between;align-items:flex-start}.tdl-heading span{color:#38bdf8;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.tdl-heading h2{margin:4px 0;color:#e5eefc;font-size:20px}.tdl-heading p{margin:0;color:#8fa3bd;font-size:13px;line-height:1.5;max-width:760px}.tdl-heading button,.tdl-card button{border:1px solid rgba(56,189,248,.35);background:#0c4a6e;color:#e0f2fe;border-radius:6px;padding:8px 10px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.tdl-heading button:disabled,.tdl-card button:disabled{opacity:.5;cursor:not-allowed}.tdl-error,.tdl-notice,.tdl-secret{border-radius:6px;padding:10px 12px;font-size:13px}.tdl-error{border:1px solid rgba(239,68,68,.45);background:rgba(127,29,29,.2);color:#fecaca}.tdl-notice{border:1px solid rgba(34,197,94,.35);background:rgba(20,83,45,.18);color:#bbf7d0}.tdl-secret{display:grid;gap:6px;border:1px solid rgba(245,158,11,.45);background:#1c1408;color:#fde68a}.tdl-secret code{overflow-wrap:anywhere;user-select:all;color:#fff}.tdl-loading,.tdl-empty,.tdl-note{color:#8fa3bd;font-size:12px}.tdl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tdl-card{border:1px solid rgba(148,163,184,.2);background:#080d16;border-radius:8px;padding:14px;display:grid;gap:11px;align-content:start}.tdl-card h3{margin:0;color:#e5eefc;font-size:15px;display:flex;align-items:center;gap:8px}.tdl-card h3 svg{color:#38bdf8}.tdl-card form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tdl-card input,.tdl-card textarea{box-sizing:border-box;width:100%;border:1px solid rgba(148,163,184,.25);background:#101826;color:#e5eefc;border-radius:6px;padding:9px;font:inherit;font-size:12px;color-scheme:dark}.tdl-card textarea{grid-column:1/-1;min-height:72px;resize:vertical}.tdl-card form button{align-self:stretch}.tdl-card input:focus,.tdl-card textarea:focus,.tdl-card button:focus-visible{outline:2px solid rgba(56,189,248,.55);outline-offset:1px}.tdl-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}.tdl-list li{border-left:2px solid rgba(56,189,248,.4);padding:5px 8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;align-items:center}.tdl-list strong{color:#dce9f8;font-size:12px;overflow-wrap:anywhere}.tdl-list span{grid-column:1;color:#8fa3bd;font-size:11px;overflow-wrap:anywhere}.tdl-list button{grid-column:2;grid-row:1/3;padding:6px 8px}.tdl-wide{width:100%}.tdl-spin{animation:tdl-spin 1s linear infinite}@keyframes tdl-spin{to{transform:rotate(360deg)}}@media(max-width:900px){.tdl-grid{grid-template-columns:1fr}}@media(max-width:560px){.tdl-heading{display:grid}.tdl-card form{grid-template-columns:1fr}.tdl-card textarea{grid-column:auto}.tdl-list li{grid-template-columns:1fr}.tdl-list button{grid-column:1;grid-row:auto;justify-self:start}}
+  .tdl-console{padding:18px;display:grid;gap:14px}.tdl-heading{display:flex;gap:16px;justify-content:space-between;align-items:flex-start}.tdl-heading span{color:#38bdf8;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.tdl-heading h2{margin:4px 0;color:#e5eefc;font-size:20px}.tdl-heading p{margin:0;color:#8fa3bd;font-size:13px;line-height:1.5;max-width:760px}.tdl-heading button,.tdl-card button{border:1px solid rgba(56,189,248,.35);background:#0c4a6e;color:#e0f2fe;border-radius:6px;padding:8px 10px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.tdl-heading button:disabled,.tdl-card button:disabled{opacity:.5;cursor:not-allowed}.tdl-error,.tdl-notice,.tdl-secret,.tdl-read-only,.tdl-manager-note{border-radius:6px;padding:10px 12px;font-size:13px}.tdl-error{border:1px solid rgba(239,68,68,.45);background:rgba(127,29,29,.2);color:#fecaca}.tdl-notice{border:1px solid rgba(34,197,94,.35);background:rgba(20,83,45,.18);color:#bbf7d0}.tdl-read-only,.tdl-manager-note{display:flex;align-items:center;gap:8px;border:1px solid rgba(148,163,184,.32);background:#101826;color:#cbd5e1}.tdl-read-only svg,.tdl-manager-note svg{color:#7dd3fc;flex:none}.tdl-secret{display:grid;gap:6px;border:1px solid rgba(245,158,11,.45);background:#1c1408;color:#fde68a}.tdl-secret code{overflow-wrap:anywhere;user-select:all;color:#fff}.tdl-loading,.tdl-empty,.tdl-note{color:#8fa3bd;font-size:12px}.tdl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tdl-card{border:1px solid rgba(148,163,184,.2);background:#080d16;border-radius:8px;padding:14px;display:grid;gap:11px;align-content:start}.tdl-card h3{margin:0;color:#e5eefc;font-size:15px;display:flex;align-items:center;gap:8px}.tdl-card h3 svg{color:#38bdf8}.tdl-card form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tdl-card input,.tdl-card textarea{box-sizing:border-box;width:100%;border:1px solid rgba(148,163,184,.25);background:#101826;color:#e5eefc;border-radius:6px;padding:9px;font:inherit;font-size:12px;color-scheme:dark}.tdl-card textarea{grid-column:1/-1;min-height:72px;resize:vertical}.tdl-card form button{align-self:stretch}.tdl-card input:focus,.tdl-card textarea:focus,.tdl-card button:focus-visible{outline:2px solid rgba(56,189,248,.55);outline-offset:1px}.tdl-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}.tdl-list li{border-left:2px solid rgba(56,189,248,.4);padding:5px 8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;align-items:center}.tdl-list strong{color:#dce9f8;font-size:12px;overflow-wrap:anywhere}.tdl-list span{grid-column:1;color:#8fa3bd;font-size:11px;overflow-wrap:anywhere}.tdl-list button{grid-column:2;grid-row:1/3;padding:6px 8px}.tdl-wide{width:100%}.tdl-spin{animation:tdl-spin 1s linear infinite}@keyframes tdl-spin{to{transform:rotate(360deg)}}@media(max-width:900px){.tdl-grid{grid-template-columns:1fr}}@media(max-width:560px){.tdl-heading{display:grid}.tdl-card form{grid-template-columns:1fr}.tdl-card textarea{grid-column:auto}.tdl-list li{grid-template-columns:1fr}.tdl-list button{grid-column:1;grid-row:auto;justify-self:start}}
 `;

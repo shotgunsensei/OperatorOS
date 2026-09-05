@@ -10,31 +10,11 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-const plans = [
-  {
-    name: 'Free',
-    detail: '2 release packages per month, TXT export, watermark, and one unlocked evidence brief.',
-    features: [
-      'Reviewed template previews',
-      'Deterministic package generation',
-      'Readiness checklist',
-    ],
-  },
-  {
-    name: 'Pro',
-    detail:
-      'Unlimited packages, five configurations, all export formats, and complete evidence briefs.',
-    features: [
-      'Shared AI refinement + fallback',
-      'Release communications',
-      'Unwatermarked exports',
-    ],
-  },
-  {
-    name: 'Agency',
-    detail: 'Unlimited configurations, white-label delivery, and client-ready release workflows.',
-    features: ['White-label exports', 'Client workspace entitlement', 'All premium templates'],
-  },
+const applicationStackFeatures = [
+  'Complete campaign packages with built-in or AI-assisted creation',
+  'All business templates and nine visual-production directions',
+  'Unlimited brand profiles and unwatermarked team-ready exports',
+  'Human review, campaign readiness checks, and saved delivery history',
 ];
 
 const shell: React.CSSProperties = {
@@ -59,9 +39,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { page } = await params;
   const title =
-    page === 'pricing' ? 'Deploy Ops Plans | OperatorOS' : 'Deploy Ops | Release Readiness';
+    page === 'pricing' ? 'Deploy Ops Application Stack Access | OperatorOS' : 'Deploy Ops | Campaign Launch Packages';
   const description =
-    'Coordinate release readiness, approvals, promotion evidence, rollback planning, and audited exports under OperatorOS authority.';
+    'Turn one business brief into campaign copy, visual directions, launch tasks, approvals, and a team-ready export.';
   const path = page === 'home' ? '/' : `/${page}`;
   return {
     title,
@@ -121,7 +101,7 @@ function Chrome({ children }: { children: React.ReactNode }) {
           }}
         >
           <Link href="/pricing" style={{ color: '#cbd5e1' }}>
-            Pricing
+            Application Stack
           </Link>
           <Link href="/contact" style={{ color: '#cbd5e1' }}>
             Contact
@@ -170,23 +150,23 @@ function Home() {
   const capabilities = [
     [
       Layers3,
-      'Release packages',
-      'Persist readiness tasks, communications, artifacts, and tenant-scoped release context.',
+      'Complete campaign packages',
+      'Keep the brief, copy, visual directions, tasks, files, and approvals together from start to launch.',
     ],
     [
       ClipboardCheck,
-      'Promotion evidence',
-      'Review approvals, evidence, checksums, and release gates before a human promotes.',
+      'Launch review',
+      'Catch missing claims, links, prices, dates, files, and approvals before the campaign leaves your team.',
     ],
     [
       RotateCcw,
-      'Rollback planning',
-      'Keep rollback notes and decision context alongside the release evidence.',
+      'Team-ready exports',
+      'Download the approved package for your designer, client, ad platform, email tool, or publishing team.',
     ],
     [
       ShieldCheck,
-      'OperatorOS controlled',
-      'Central identity, tenant, entitlement, billing, audit, and provider authority.',
+      'Connected to OperatorOS',
+      'Use one sign-in, one team, one subscription, and a shared activity history across your business applications.',
     ],
   ] as const;
   return (
@@ -207,7 +187,7 @@ function Home() {
             <span
               style={{ color: '#67e8f9', letterSpacing: '.2em', fontWeight: 900, fontSize: 12 }}
             >
-              RELEASE WITH EVIDENCE
+              BRIEF. BUILD. REVIEW. LAUNCH.
             </span>
             <h1
               style={{
@@ -217,12 +197,13 @@ function Home() {
                 maxWidth: 850,
               }}
             >
-              Control every release gate. <span style={{ color: '#38bdf8' }}>Ship with proof.</span>
+              Turn one business brief into a{' '}
+              <span style={{ color: '#38bdf8' }}>campaign your team can launch.</span>
             </h1>
             <p style={{ color: '#cbd5e1', fontSize: 19, lineHeight: 1.65, maxWidth: 760 }}>
-              Bring readiness tasks, artifacts, approvals, promotion evidence, rollback notes, and
-              export history into one tenant-scoped release workspace. Deploy Ops records decisions;
-              it does not fake provider deployment success.
+              Build landing-page copy, ads, email and SMS, social posts, FAQs, calls to action,
+              flyer copy, a launch checklist, and visual-production directions—then review and
+              export the whole package without rebuilding the campaign in five different tools.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 28 }}>
               <Link
@@ -250,20 +231,20 @@ function Home() {
                   borderRadius: 11,
                 }}
               >
-                Compare plans
+                See Application Stack
               </Link>
             </div>
           </div>
           <aside style={{ ...card, transform: 'rotate(.6deg)' }}>
             <Rocket color="#67e8f9" />
-            <h2>One controlled release record</h2>
+            <h2>Everything the campaign team needs</h2>
             {[
-              'Readiness tasks and owners',
-              'Artifacts and checksum evidence',
-              'Human approvals and decision trail',
-              'Promotion notes by environment',
-              'Rollback plan and recovery context',
-              'Audited TXT / Markdown / JSON exports',
+              'Audience, offer, message, and desired action',
+              'Copy for landing pages, ads, email, SMS, and social',
+              'Nine visual-production directions',
+              'Owners, deadlines, files, and launch checks',
+              'Human review and approval history',
+              'TXT, Markdown, JSON, and CSV exports',
             ].map((item) => (
               <p key={item} style={{ display: 'flex', gap: 8, color: '#dbeafe' }}>
                 <Check size={17} color="#4ade80" />
@@ -301,14 +282,14 @@ function Pricing() {
     <Chrome>
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: '70px clamp(18px,4vw,44px)' }}>
         <span style={{ color: '#67e8f9', letterSpacing: '.2em', fontWeight: 900 }}>
-          OPERATOROS ENTITLEMENTS
+          DEPLOY OPS ACCESS
         </span>
         <h1 style={{ fontSize: 'clamp(40px,6vw,68px)', margin: '10px 0' }}>
-          Choose your release capability.
+          Complete Deploy Ops access through Application Stack.
         </h1>
         <p style={{ color: '#94a3b8', fontSize: 18 }}>
-          OperatorOS remains the billing source of truth. Checkout and plan changes happen in the
-          parent platform.
+          Choose Deploy Ops as the included companion in your organization’s Application Stack, or
+          add it as an additional companion for $29 per month. Either path unlocks the complete application.
         </p>
         <div
           style={{
@@ -318,17 +299,12 @@ function Pricing() {
             marginTop: 30,
           }}
         >
-          {plans.map((plan) => (
-            <article
-              key={plan.name}
-              style={{
-                ...card,
-                borderColor: plan.name === 'Pro' ? '#38bdf8' : 'rgba(103,232,249,.2)',
-              }}
-            >
-              <h2 style={{ fontSize: 30 }}>{plan.name}</h2>
-              <p style={{ color: '#cbd5e1', minHeight: 72 }}>{plan.detail}</p>
-              {plan.features.map((feature) => (
+          <article style={{ ...card, borderColor: '#38bdf8', maxWidth: 620 }}>
+              <h2 style={{ fontSize: 30 }}>Complete application access</h2>
+              <p style={{ color: '#cbd5e1', minHeight: 72 }}>
+                One eligible companion is included with Application Stack. Additional companions are $29 per month for the organization—not per user.
+              </p>
+              {applicationStackFeatures.map((feature) => (
                 <p key={feature} style={{ display: 'flex', gap: 8 }}>
                   <Check size={16} color="#4ade80" />
                   {feature}
@@ -348,10 +324,9 @@ function Pricing() {
                   marginTop: 20,
                 }}
               >
-                Continue in OperatorOS
+                Configure Application Stack
               </Link>
             </article>
-          ))}
         </div>
       </main>
     </Chrome>
@@ -367,43 +342,41 @@ function Legal({ privacy = false }: { privacy?: boolean }) {
         <div style={{ ...card, lineHeight: 1.75, color: '#cbd5e1' }}>
           {privacy ? (
             <>
-              <h2>Data and authority</h2>
+              <h2>What Deploy Ops stores</h2>
               <p>
-                Deploy Ops stores tenant-scoped release briefs, artifacts, approvals, revisions,
-                readiness evidence, rollback notes, and export history. OperatorOS controls
-                identity, membership, roles, entitlements, billing, provider configuration, and
-                security audit events.
+                Deploy Ops stores campaign briefs, draft materials, visual directions, tasks,
+                approvals, saved versions, launch checks, and export history for your organization.
+                OperatorOS manages your sign-in, team access, plan, and billing.
               </p>
-              <h2>Provider privacy</h2>
+              <h2>AI and connected services</h2>
               <p>
-                Generation prompts exclude platform secrets and should not contain regulated,
-                confidential, or unnecessary personal data. Provider use is recorded by provenance
-                without exposing secret values.
+                Campaign material is sent to an AI service only when your organization enables and
+                uses AI refinement. Do not include passwords, regulated data, confidential customer
+                records, or unnecessary personal information in a campaign brief.
               </p>
               <h2>Retention and access</h2>
               <p>
-                Soft-deleted product records remain recoverable according to OperatorOS retention
-                policy. Tenant and user boundaries apply to every authenticated record and download.
+                Deleted campaign items may remain recoverable for the stated retention period. Your
+                organization and role determine which records and downloads you can access.
               </p>
             </>
           ) : (
             <>
               <h2>Product use</h2>
               <p>
-                You are responsible for reviewing release material, claims, destination links,
-                approvals, configuration intent, rollback steps, licensing, and legal disclosures
-                before promotion. Stored readiness is evidence, not proof that an external provider
-                deployed successfully.
+                You are responsible for reviewing campaign claims, prices, dates, links, audiences,
+                approvals, licensing, and legal disclosures before publishing. Deploy Ops prepares
+                the package; it does not publish ads, send messages, buy media, or deploy a website.
               </p>
               <h2>Plans and billing</h2>
               <p>
-                Plan limits, upgrades, credits, and billing are governed by OperatorOS. Locked
-                content is unavailable until the required entitlement is active.
+                Application Stack access and billing are managed in OperatorOS. Legacy Deploy Ops
+                tiers are retained only for organizations with an existing grandfathered contract.
               </p>
               <h2>Acceptable use</h2>
               <p>
-                Do not use the service for deceptive claims, unauthorized system changes, unlawful
-                offers, or attempts to cross tenant boundaries.
+                Do not use the service for deceptive claims, unlawful offers, unauthorized account
+                access, or attempts to view another organization’s work.
               </p>
             </>
           )}
@@ -418,12 +391,12 @@ function Contact() {
     <Chrome>
       <main style={{ maxWidth: 850, margin: '0 auto', padding: '70px clamp(18px,4vw,44px)' }}>
         <span style={{ color: '#67e8f9', letterSpacing: '.2em', fontWeight: 900 }}>
-          RELEASE SUPPORT
+          CAMPAIGN SUPPORT
         </span>
         <h1 style={{ fontSize: 'clamp(40px,6vw,66px)' }}>Talk to the OperatorOS team.</h1>
         <div style={card}>
           <p style={{ color: '#cbd5e1', lineHeight: 1.7 }}>
-            For product, plan, account, or release-workflow help, contact Shotgun Ninjas
+            For product, plan, account, or campaign-workflow help, contact Shotgun Ninjas
             Productions. Do not send secrets, payment credentials, or sensitive customer data by
             email.
           </p>

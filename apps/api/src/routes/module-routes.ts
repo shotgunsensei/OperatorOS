@@ -4,9 +4,9 @@ import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, ssoHandoffTokens, activityFeed, adminAuditLogs,
-  tenantUsers, tenantModules, tenantUserModuleAccess, platformComponents,
+  tenantUsers,
 } from '../schema.js';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
 import { resolveTenantContext, requireTenantMember, requireSuperAdmin } from '../lib/tenant-auth.js';
 import { hasPlatformAdminAuthority } from '../lib/rbac.js';
@@ -211,11 +211,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   app.get('/v1/me/modules', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
 
-    // Gate 3: tenant-scoped resolution. We enumerate every tenant the user
-    // is a member of and union module access from those tenants' rows in
-    // `tenant_modules` + `tenant_user_module_access`. We never fall back
-    // to the legacy per-user entitlement path here — module visibility on
-    // the launchpad must reflect tenant boundaries.
+    // Gate 3: tenant-scoped resolution. Enumerate every membership, but let
+    // the canonical resolver decide access inside each tenant. This keeps
+    // the launchpad aligned with API guards, SSO snapshots, explicit denies,
+    // free-account grants, and Application Stack seat limits.
     const memberships = await db.select().from(tenantUsers)
       .where(eq(tenantUsers.userId, user.id));
 
@@ -223,74 +222,27 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return { modules: [] };
     }
 
-    const tenantIds = memberships.map(m => m.tenantId);
-
-    // Tenant-modules currently active (launchable) for any of those tenants.
-    const launchable: Array<'enabled' | 'trial' | 'purchased' | 'beta'> = ['enabled', 'trial', 'purchased', 'beta'];
-    const tms = await db.select().from(tenantModules)
-      .where(and(
-        inArray(tenantModules.tenantId, tenantIds),
-        inArray(tenantModules.status, launchable),
-      ));
-    if (tms.length === 0) return { modules: [] };
-
-    const moduleIds = Array.from(new Set(tms.map(t => t.moduleId)));
-    const accessRows = await db.select().from(tenantUserModuleAccess)
-      .where(and(
-        inArray(tenantUserModuleAccess.tenantId, tenantIds),
-        eq(tenantUserModuleAccess.userId, user.id),
-        inArray(tenantUserModuleAccess.moduleId, moduleIds),
-      ));
-    // key: `${tenantId}:${moduleId}` -> accessLevel ('none' | 'user' | 'manager')
-    const accMap = new Map<string, string>();
-    for (const a of accessRows) accMap.set(`${a.tenantId}:${a.moduleId}`, a.accessLevel);
-
-    // Decide visibility per (tenant, module). Explicit 'none' denies even when
-    // allowAllMembers is true; explicit 'user'/'manager' grants regardless.
-    const allowedModuleIds = new Set<string>();
-    for (const tm of tms) {
-      const key = `${tm.tenantId}:${tm.moduleId}`;
-      const acc = accMap.get(key);
-      if (acc === 'none') continue;
-      if (acc === 'user' || acc === 'manager') {
-        allowedModuleIds.add(tm.moduleId);
-        continue;
+    const tenantIds = [...new Set(memberships.map(membership => membership.tenantId))];
+    const summariesByTenant = await Promise.all(
+      tenantIds.map(tenantId => getUserModules(user.id, tenantId)),
+    );
+    const unlockedBySlug = new Map<string, typeof summariesByTenant[number][number]>();
+    for (const summary of summariesByTenant.flat()) {
+      if (summary.unlocked && !unlockedBySlug.has(summary.module.slug)) {
+        unlockedBySlug.set(summary.module.slug, summary);
       }
-      if (tm.allowAllMembers) allowedModuleIds.add(tm.moduleId);
     }
 
-    if (allowedModuleIds.size === 0) return { modules: [] };
-
-    const allowed = await db.select().from(modules)
-      .where(inArray(modules.id, Array.from(allowedModuleIds)));
-
-    // Task #115: denormalize each module's platform component (slug/name/ord)
-    // so the launchpad can group cards by component without hardcoding the
-    // slug→component map. Only fetch the components actually referenced.
-    const componentIds = Array.from(
-      new Set(allowed.map(m => m.componentId).filter((id): id is string => !!id)),
-    );
-    const componentRows = componentIds.length
-      ? await db.select().from(platformComponents)
-          .where(inArray(platformComponents.id, componentIds))
-      : [];
-    const componentById = new Map(
-      componentRows.map(c => [c.id, { slug: c.slug, name: c.name, ord: c.ord }]),
-    );
-
-    // Launchpad only surfaces actually-launchable modules: live OR beta
-    // status AND a baseUrl configured.
-    const unlocked = allowed
-      .filter(m => (m.status === 'live' || m.status === 'beta') && !!m.baseUrl)
-      .sort((a, b) => a.ord - b.ord)
-      .map(m => ({
-        slug: m.slug,
-        name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
-        description: m.description,
-        category: m.category,
-        iconUrl: m.iconUrl,
-        baseUrl: m.baseUrl,
-        component: m.componentId ? componentById.get(m.componentId) ?? null : null,
+    const unlocked = [...unlockedBySlug.values()]
+      .sort((a, b) => a.module.ord - b.module.ord)
+      .map(({ module }) => ({
+        slug: module.slug,
+        name: getCanonicalModuleDisplayName(module.slug) ?? module.name,
+        description: module.description,
+        category: module.category,
+        iconUrl: module.iconUrl,
+        baseUrl: module.baseUrl,
+        component: module.component,
       }));
     return { modules: unlocked };
   });
@@ -316,8 +268,9 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
   // GET /v1/modules/debug?user_id=… — aggregate access breakdown for self
   // or (admin only) another user. Spec-shaped response (snake_case keys).
-  app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request, reply) => {
+  app.get('/v1/modules/debug', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
+    const ctx = (request as any).tenantContext;
     const { user_id: queryUserId } = request.query as { user_id?: string };
     if (queryUserId && queryUserId !== user.id && !hasPlatformAdminAuthority(user)) {
       return reply.code(403).send({
@@ -326,7 +279,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
     }
     const targetUserId = queryUserId || user.id;
-    const breakdown = await getAccessBreakdown(targetUserId);
+    const breakdown = await getAccessBreakdown(targetUserId, ctx.tenantId);
     return {
       user_id: breakdown.userId,
       plan: breakdown.planSlug,
@@ -1142,7 +1095,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const subRows = await db
       .select({ userId: subscriptions.userId, planId: subscriptions.planId })
       .from(subscriptions)
-      .where(sql`${subscriptions.status} IN ('active','trialing')`);
+      .where(sql`${subscriptions.status} IN ('active','trialing') AND subscriptions.legacy_access_grandfathered_at IS NOT NULL`);
     const planByModule: Record<string, Set<string>> = {};
     for (const s of subRows) {
       for (const [moduleId, planIds] of Object.entries(planIdsByModule)) {

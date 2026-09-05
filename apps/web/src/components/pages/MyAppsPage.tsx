@@ -92,7 +92,7 @@ interface LaunchpadModule {
   statusTone: 'success' | 'info' | 'warning' | 'danger' | 'neutral';
   entitlementLabel: string;
   entitlementTone: 'success' | 'info' | 'warning' | 'danger' | 'neutral';
-  action: 'launch' | 'upgrade' | 'addon' | 'planned' | 'disabled' | 'unavailable' | 'tenant_required';
+  action: 'launch' | 'stack' | 'planned' | 'disabled' | 'unavailable' | 'tenant_required';
   unlocked: boolean;
   planned: boolean;
   disabled: boolean;
@@ -128,12 +128,6 @@ function titleCase(input: string): string {
   return input
     .replace(/[_-]/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function money(cents: number | null | undefined): string | null {
-  if (!cents || cents <= 0) return null;
-  const dollars = cents / 100;
-  return dollars % 1 === 0 ? `$${dollars}/mo` : `$${dollars.toFixed(2)}/mo`;
 }
 
 function buildLaunchpadModule(
@@ -211,7 +205,7 @@ function buildLaunchpadModule(
     const source = summary?.access_source ?? null;
     const sourceLabel =
       source === 'admin_role' ? 'Administrator access'
-      : source === 'addon' ? 'Add-on active'
+      : source === 'addon' ? 'Paid access active'
       : source === 'override' ? 'Access granted'
       : source === 'trial' ? '7-day evaluation access'
       : 'Included in your plan';
@@ -259,11 +253,11 @@ function buildLaunchpadModule(
       name: registry.name,
       description,
       category: summary.module.category ?? registry.category,
-      statusLabel: 'Available to add',
+      statusLabel: 'Application Stack option',
       statusTone: 'info',
-      entitlementLabel: money(summary.addon_price_cents) ?? 'Add-on required',
+      entitlementLabel: 'One included, then $29/month',
       entitlementTone: 'warning',
-      action: 'addon',
+      action: 'stack',
       unlocked: false,
       planned: false,
       disabled: false,
@@ -278,11 +272,11 @@ function buildLaunchpadModule(
       name: registry.name,
       description,
       category: summary.module.category ?? registry.category,
-      statusLabel: 'Another plan needed',
+      statusLabel: 'Flagship selection needed',
       statusTone: 'warning',
-      entitlementLabel: 'Compare plans',
+      entitlementLabel: 'Application Stack',
       entitlementTone: 'warning',
-      action: 'upgrade',
+      action: 'stack',
       unlocked: false,
       planned: false,
       disabled: false,
@@ -331,6 +325,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
 
   const userIsPlatformAdmin = isSuperAdmin((user as any)?.platformRole);
   const userIsTenantAdmin = hasTenantAdminRole(activeRole, (user as any)?.platformRole);
+  const userIsTenantOwner = activeRole === 'owner';
   const visibleTenants = userIsPlatformAdmin
     ? mergeTenantListsForSelector(tenants, allTenants)
     : tenants;
@@ -409,7 +404,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   const nextActivationAction = !activeTenant?.id
     ? { label: 'Finish organization setup', setup: true as const }
     : activeCards.length === 0
-      ? { label: 'Compare plans and tools', page: 'billing' }
+      ? { label: 'Review Application Stack', page: 'billing' }
       : recentCards.length === 0
         ? { label: 'Choose your first tool', page: 'apps' }
         : { label: 'Browse more tools', page: 'apps' };
@@ -451,7 +446,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       if (trial.state === 'eligible') {
         const response = await trialApi.start();
         setTrial(response.trial);
-        toast('Your seven-day Main Module trial is active.', 'success');
+        toast('Your seven-day flagship application trial is active.', 'success');
         if (response.trial.personalTenantId && activeTenant?.id !== response.trial.personalTenantId) {
           await switchTenant(response.trial.personalTenantId);
         } else {
@@ -591,7 +586,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       {trial && trial.state !== 'unavailable' && (
         <section
           data-testid="core-suite-trial-card"
-          aria-label="Main Module evaluation trial"
+          aria-label="Flagship application evaluation trial"
           style={{
             marginBottom: space.xl,
             padding: '18px 20px',
@@ -612,16 +607,16 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
               No card required
             </div>
             <h2 style={{ color: '#fff', fontSize: 20, margin: '8px 0 5px' }}>
-              {trial.state === 'active' ? 'Your Main Module trial is active' : trial.state === 'eligible' ? 'Try the Main Modules for seven days' : trial.state === 'verification_required' ? 'Verify your email to start the trial' : 'Your evaluation period has ended'}
+              {trial.state === 'active' ? 'Your flagship application trial is active' : trial.state === 'eligible' ? 'Try the flagship applications for seven days' : trial.state === 'verification_required' ? 'Verify your email to start the trial' : 'Your evaluation period has ended'}
             </h2>
             <p style={{ color: semantic.textMuted, fontSize: fontSize.body, lineHeight: 1.55, margin: 0 }}>
               TradeFlowKit, TechDeck, and PulseDesk {trial.state === 'active'
                 ? `are unlocked in your personal workspace${trial.endsAt ? ` until ${new Date(trial.endsAt).toLocaleString()}` : ''}.`
                 : trial.state === 'eligible'
-                  ? 'will unlock only in your personal workspace. Companion applications remain separately gated.'
+                  ? 'will unlock only in your personal workspace. Business add-ons follow their own plan or add-on access.'
                   : trial.state === 'verification_required'
                     ? 'A single-use email link proves the identity eligible for this one-time offer.'
-                    : 'Your records are preserved. A server-confirmed plan or add-on restores paid access.'}
+                  : 'Your records are preserved. The organization owner can restore paid access through Application Stack.'}
             </p>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -640,7 +635,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
                     ? 'Start my 7-day trial'
                     : trial.state === 'active'
                       ? 'Switch to trial workspace'
-                      : 'View plans'}
+                      : 'Review Application Stack'}
               </button>
             )}
           </div>
@@ -783,6 +778,8 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             onLaunch={recordLaunch}
             onNavigate={onNavigate}
             canManage={userIsTenantAdmin}
+            canStartCheckout={userIsTenantOwner}
+            canViewBilling={userIsTenantAdmin}
           />
 
           <ModuleSection
@@ -793,6 +790,8 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             onLaunch={recordLaunch}
             onNavigate={onNavigate}
             canManage={userIsTenantAdmin}
+            canStartCheckout={userIsTenantOwner}
+            canViewBilling={userIsTenantAdmin}
           />
 
         </>
@@ -878,6 +877,8 @@ function ModuleSection({
   onLaunch,
   onNavigate,
   canManage,
+  canStartCheckout,
+  canViewBilling,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -886,6 +887,8 @@ function ModuleSection({
   onLaunch: (card: LaunchpadModule) => void;
   onNavigate: (page: string) => void;
   canManage: boolean;
+  canStartCheckout: boolean;
+  canViewBilling: boolean;
 }) {
   return (
     <section style={{ marginBottom: space.xl }} data-testid={`command-center-section-${title.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -913,6 +916,8 @@ function ModuleSection({
               onLaunch={() => onLaunch(card)}
               onNavigate={onNavigate}
               canManage={canManage}
+              canStartCheckout={canStartCheckout}
+              canViewBilling={canViewBilling}
             />
           ))}
         </div>
@@ -926,14 +931,18 @@ function ModuleCard({
   onLaunch,
   onNavigate,
   canManage,
+  canStartCheckout,
+  canViewBilling,
 }: {
   card: LaunchpadModule;
   onLaunch: () => void;
   onNavigate: (page: string) => void;
   canManage: boolean;
+  canStartCheckout: boolean;
+  canViewBilling: boolean;
 }) {
   const image = marketingBySlug.get(card.registry.slug)?.imageSrc;
-  const actionButton = renderActionButton({ card, onLaunch, onNavigate });
+  const actionButton = renderActionButton({ card, onLaunch, onNavigate, canStartCheckout, canViewBilling });
 
   return (
     <article
@@ -1001,10 +1010,14 @@ function renderActionButton({
   card,
   onLaunch,
   onNavigate,
+  canStartCheckout,
+  canViewBilling,
 }: {
   card: LaunchpadModule;
   onLaunch: () => void;
   onNavigate: (page: string) => void;
+  canStartCheckout: boolean;
+  canViewBilling: boolean;
 }) {
   if (card.action === 'launch') {
     return (
@@ -1032,33 +1045,44 @@ function renderActionButton({
     );
   }
 
-  if (card.action === 'upgrade') {
+  if (card.action === 'stack') {
+    if (canStartCheckout) {
+      return (
+        <button
+          data-testid={`button-stack-${card.registry.slug}`}
+          onClick={() => { window.location.href = '/pricing#build-stack'; }}
+          style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
+        >
+          <Store size={13} /> Configure Application Stack
+        </button>
+      );
+    }
+    if (canViewBilling) {
+      return (
+        <button
+          data-testid={`button-view-billing-${card.registry.slug}`}
+          onClick={() => onNavigate('tenant-billing')}
+          style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
+        >
+          <Lock size={13} /> View billing state
+        </button>
+      );
+    }
     return (
       <button
-        data-testid={`button-upgrade-${card.registry.slug}`}
-        onClick={() => onNavigate('billing')}
-        style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
+        data-testid={`button-owner-required-${card.registry.slug}`}
+        disabled
+        title="Ask the organization owner to add this tool through Application Stack"
+        style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1, cursor: 'not-allowed' }}
       >
-        <Lock size={13} /> View plan options
-      </button>
-    );
-  }
-
-  if (card.action === 'addon') {
-    return (
-      <button
-        data-testid={`button-addon-${card.registry.slug}`}
-        onClick={() => onNavigate('apps')}
-        style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
-      >
-        <Store size={13} /> View add-on options
+        <Lock size={13} /> Ask owner for access
       </button>
     );
   }
 
   const disabledLabel =
     card.action === 'planned' ? 'Planned'
-    : card.action === 'tenant_required' ? 'Tenant required'
+    : card.action === 'tenant_required' ? 'Choose an organization'
     : 'Unavailable';
   const Icon =
     card.action === 'planned' ? Clock

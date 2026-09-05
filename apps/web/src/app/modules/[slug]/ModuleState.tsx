@@ -17,7 +17,7 @@ export default function ModuleState({
   title,
   body,
   actionHref = DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,
-  actionLabel = 'Return to Command Center',
+  actionLabel = 'Return to My Apps',
 }: ModuleStateProps) {
   return (
     <main

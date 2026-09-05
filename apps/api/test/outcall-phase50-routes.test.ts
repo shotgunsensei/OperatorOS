@@ -24,14 +24,14 @@ test('Phase 50 OutCall exposes a distinct safety-first route application shell',
 test('Phase 50 OutCall route copy preserves the single-destination and non-emergency boundary', () => {
   const contract = read('apps/web/src/components/module-shells/OutCallRoute.contract.ts');
   const workspace = read('apps/web/src/components/module-shells/OutCallWorkspace.tsx');
-  assert.match(contract, /without adding arbitrary recipients or a bulk contact list/);
-  assert.match(contract, /bulk campaigns are intentionally unsupported/);
-  assert.match(contract, /provider-confirmed/);
+  assert.match(contract, /does not maintain a bulk contact list/);
+  assert.match(contract, /does not send bulk campaigns/);
+  assert.match(contract, /confirmed by the calling service/);
   assert.match(workspace, /no arbitrary contact address book/);
   assert.match(workspace, /not a bulk outbound campaign/);
   assert.match(workspace, /does not replace 911/);
-  assert.match(workspace, /only go to your verified number/);
-  assert.match(workspace, /request is not presented as delivered until the provider confirms it/);
+  assert.match(workspace, /Calls can only go to your verified number/);
+  assert.match(workspace, /A call appears as completed only after the calling service confirms it/);
 });
 
 test('Phase 50 OutCall compatibility paths and durable call records converge safely', () => {

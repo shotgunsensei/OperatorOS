@@ -3,7 +3,8 @@ import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 import {
   users, subscriptions, subscriptionPlans, billingEvents, activityFeed,
-  modules, addonSubscriptions,
+  modules, addonSubscriptions, tenantApplicationSubscriptions, tenantEntitlements,
+  type TenantApplicationSubscriptionRow,
 } from '../schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 import { resolveAppBaseUrl } from './public-url.js';
@@ -14,16 +15,20 @@ import {
   COMPANION_MODULE_KEYS,
   COMPANION_MODULE_PRICE_CENTS,
   CORE_PRODUCTS_BY_KEY,
+  DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
   MODULE_CATALOG_BY_SLUG,
-  getAdditionalSeatPriceCents,
   normalizeStackSelection,
+  isEligibleCompanionModuleKey,
+  swapIncludedCompanion,
   type CompanionModuleKey,
+  type CoreProductKey,
   type StackSelection,
 } from '@operatoros/sdk';
 import {
   deactivateSubscriptionEntitlements,
   grantStackEntitlements,
   isCoreProductKey,
+  changeFreeCompanionModule,
 } from './product-entitlements.js';
 import { writeAudit } from './audit.js';
 
@@ -40,12 +45,19 @@ const esmRequire = createRequire(import.meta.url);
 // helpers below (checkout/create, subscriptions/update, webhooks/etc).
 type StripeClient = {
   checkout: { sessions: {
-    create: (args: unknown) => Promise<{ id: string; url: string | null }>;
+    create: (args: unknown, options?: { idempotencyKey?: string }) => Promise<{ id: string; url: string | null }>;
+    retrieve: (id: string, args?: unknown) => Promise<any>;
     list: (args: unknown) => Promise<{ data: any[] }>;
   } };
-  customers: { create: (args: unknown) => Promise<{ id: string }> };
-  subscriptions: { update: (id: string, args: unknown) => Promise<unknown> };
-  billingPortal: { sessions: { create: (args: unknown) => Promise<{ url: string }> } };
+  customers: { create: (args: unknown, options?: { idempotencyKey?: string }) => Promise<{ id: string }> };
+  subscriptions: {
+    update: (id: string, args: unknown) => Promise<any>;
+    retrieve: (id: string, args?: unknown) => Promise<any>;
+  };
+  billingPortal: {
+    sessions: { create: (args: unknown) => Promise<{ url: string }> };
+    configurations: { retrieve: (id: string) => Promise<any> };
+  };
   webhooks: { constructEvent: (payload: string | Buffer, sig: string, secret: string) => unknown };
   paymentIntents: { retrieve: (id: string) => Promise<any> };
   charges: { retrieve: (id: string) => Promise<any> };
@@ -59,6 +71,7 @@ type StripeClient = {
   prices: {
     list: (args: unknown) => Promise<{ data: any[] }>;
     create: (args: unknown) => Promise<any>;
+    retrieve: (id: string) => Promise<any>;
   };
 };
 let __stripeSingleton: StripeClient | null = null;
@@ -184,10 +197,273 @@ export interface CheckoutSessionResult {
 export interface StackCheckoutInput extends StackSelection {
   tenantId: string;
   userId: string;
+  interval?: string;
 }
 
 export interface PortalSessionResult {
   url: string;
+}
+
+export class CommercePolicyError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public httpStatus: number,
+  ) {
+    super(message);
+    this.name = 'CommercePolicyError';
+  }
+}
+
+export function legacyPlanSalesClosed(): never {
+  throw new CommercePolicyError(
+    'LEGACY_PLAN_SALES_CLOSED',
+    'Starter, Pro, and Elite are grandfathered plans and are no longer available for new sales. Choose an application stack.',
+    409,
+  );
+}
+
+export function legacyAddonSalesClosed(): never {
+  throw new CommercePolicyError(
+    'LEGACY_ADDON_SALES_CLOSED',
+    'Individual application purchases are grandfathered and closed to new sales. Choose a core application stack and companions.',
+    409,
+  );
+}
+
+const STRIPE_PORTAL_CONFIGURATION_ENV = 'STRIPE_BILLING_PORTAL_CONFIGURATION_ID';
+
+type StackPriceExpectation = {
+  role: 'core' | 'companion' | 'seat';
+  priceId: string;
+  quantity: number;
+  unitAmountCents: number;
+};
+
+export interface ApplicationStackProviderReadiness {
+  envConfigured: boolean;
+  providerValidated: boolean;
+  priceEnvConfigured: Record<'tradeflowkit' | 'pulsedesk' | 'techdeck' | 'companionModule' | 'additionalSeat', boolean>;
+  priceProviderValidated: Record<'tradeflowkit' | 'pulsedesk' | 'techdeck' | 'companionModule' | 'additionalSeat', boolean>;
+  portalConfigurationEnvConfigured: boolean;
+  portalConfigurationProviderValidated: boolean;
+  errors: string[];
+}
+
+function configuredStackPriceIds() {
+  return {
+    tradeflowkit: process.env.STRIPE_PRICE_TRADEFLOWKIT_MONTHLY || '',
+    pulsedesk: process.env.STRIPE_PRICE_PULSEDESK_MONTHLY || '',
+    techdeck: process.env.STRIPE_PRICE_TECHDECK_MONTHLY || '',
+    companionModule: process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || '',
+    additionalSeat: process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || '',
+  };
+}
+
+function expectedUnitAmountForPriceKey(
+  key: keyof ReturnType<typeof configuredStackPriceIds>,
+): number {
+  if (key === 'companionModule') return COMPANION_MODULE_PRICE_CENTS;
+  if (key === 'additionalSeat') return DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS;
+  return CORE_PRODUCTS_BY_KEY[key].monthlyPriceCents;
+}
+
+function validateRecurringUsdPrice(
+  price: any,
+  expectedId: string,
+  expectedUnitAmountCents: number,
+): string | null {
+  if (!price || price.id !== expectedId) return 'PRICE_ID_MISMATCH';
+  if (price.active !== true) return 'PRICE_INACTIVE';
+  if (String(price.currency ?? '').toLowerCase() !== 'usd') return 'PRICE_CURRENCY_MISMATCH';
+  if (price.billing_scheme !== 'per_unit' || price.transform_quantity != null) {
+    return 'PRICE_QUANTITY_MODEL_MISMATCH';
+  }
+  if (price.type !== 'recurring' || price.recurring?.interval !== 'month'
+      || price.recurring?.interval_count !== 1
+      || price.recurring?.usage_type !== 'licensed') return 'PRICE_RECURRENCE_MISMATCH';
+  if (price.unit_amount !== expectedUnitAmountCents) return 'PRICE_AMOUNT_MISMATCH';
+  return null;
+}
+
+async function validatePriceExpectations(expectations: readonly StackPriceExpectation[]): Promise<void> {
+  const priceIds = expectations.map(item => item.priceId);
+  if (priceIds.some(id => !id) || new Set(priceIds).size !== priceIds.length) {
+    throw new CommercePolicyError(
+      'STACK_PRICE_CONFIGURATION_INVALID',
+      'Application Stack billing prices are missing or reuse the same Stripe Price.',
+      409,
+    );
+  }
+  const stripe = getStripe();
+  for (const expectation of expectations) {
+    const price = await stripe.prices.retrieve(expectation.priceId);
+    const error = validateRecurringUsdPrice(price, expectation.priceId, expectation.unitAmountCents);
+    if (error) {
+      throw new CommercePolicyError(
+        'STACK_PRICE_PROVIDER_MISMATCH',
+        `Stripe ${expectation.role} Price failed server-side catalog validation (${error}).`,
+        409,
+      );
+    }
+  }
+}
+
+function selectionPriceExpectations(
+  coreProduct: CoreProductKey,
+  additionalModuleCount: number,
+  additionalSeats: number,
+  stored?: Pick<TenantApplicationSubscriptionRow, 'corePriceId' | 'companionPriceId' | 'additionalSeatPriceId'>,
+): StackPriceExpectation[] {
+  const configured = configuredStackPriceIds();
+  const configuredCore = configured[coreProduct];
+  const corePriceId = stored?.corePriceId ?? configuredCore;
+  const companionPriceId = stored?.companionPriceId ?? configured.companionModule;
+  const seatPriceId = stored?.additionalSeatPriceId ?? configured.additionalSeat;
+
+  if (corePriceId !== configuredCore
+      || (additionalModuleCount > 0 && companionPriceId !== configured.companionModule)
+      || (additionalSeats > 0 && seatPriceId !== configured.additionalSeat)) {
+    throw new CommercePolicyError(
+      'STACK_PRICE_CONFIGURATION_CHANGED',
+      'The pending checkout no longer matches the server-authoritative Stripe Price configuration.',
+      409,
+    );
+  }
+
+  const expectations: StackPriceExpectation[] = [{
+    role: 'core',
+    priceId: corePriceId,
+    quantity: 1,
+    unitAmountCents: CORE_PRODUCTS_BY_KEY[coreProduct].monthlyPriceCents,
+  }];
+  if (additionalModuleCount > 0) expectations.push({
+    role: 'companion',
+    priceId: companionPriceId || '',
+    quantity: additionalModuleCount,
+    unitAmountCents: COMPANION_MODULE_PRICE_CENTS,
+  });
+  if (additionalSeats > 0) expectations.push({
+    role: 'seat',
+    priceId: seatPriceId || '',
+    quantity: additionalSeats,
+    unitAmountCents: DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
+  });
+  return expectations;
+}
+
+async function validatedPortalConfigurationId(): Promise<string> {
+  const configurationId = process.env[STRIPE_PORTAL_CONFIGURATION_ENV]?.trim() || '';
+  if (!configurationId) {
+    throw new CommercePolicyError(
+      'STRIPE_PORTAL_CONFIGURATION_REQUIRED',
+      `Set ${STRIPE_PORTAL_CONFIGURATION_ENV} to a restrictive Stripe Billing Portal configuration.`,
+      409,
+    );
+  }
+  const configuration = await getStripe().billingPortal.configurations.retrieve(configurationId);
+  const features = configuration?.features ?? {};
+  if (configuration?.id !== configurationId
+      || configuration?.active !== true
+      || features.subscription_update?.enabled !== false
+      || features.subscription_pause?.enabled === true) {
+    throw new CommercePolicyError(
+      'STRIPE_PORTAL_CONFIGURATION_UNSAFE',
+      'The Stripe Billing Portal configuration must be active and must disable subscription item and pause changes.',
+      409,
+    );
+  }
+  return configurationId;
+}
+
+export async function getApplicationStackProviderReadiness(): Promise<ApplicationStackProviderReadiness> {
+  const configured = configuredStackPriceIds();
+  const priceKeys = Object.keys(configured) as Array<keyof typeof configured>;
+  const priceEnvConfigured = Object.fromEntries(
+    priceKeys.map(key => [key, !!configured[key]]),
+  ) as ApplicationStackProviderReadiness['priceEnvConfigured'];
+  const priceProviderValidated = Object.fromEntries(
+    priceKeys.map(key => [key, false]),
+  ) as ApplicationStackProviderReadiness['priceProviderValidated'];
+  const portalConfigurationEnvConfigured = !!process.env[STRIPE_PORTAL_CONFIGURATION_ENV]?.trim();
+  const errors: string[] = [];
+
+  if (isStripeEnabled()) {
+    const configuredIds = priceKeys.map(key => configured[key]).filter(Boolean);
+    if (configuredIds.length !== priceKeys.length || new Set(configuredIds).size !== configuredIds.length) {
+      errors.push('STACK_PRICE_CONFIGURATION_INVALID');
+    } else {
+      for (const key of priceKeys) {
+        try {
+          const price = await getStripe().prices.retrieve(configured[key]);
+          const error = validateRecurringUsdPrice(price, configured[key], expectedUnitAmountForPriceKey(key));
+          if (error) errors.push(`${key}:${error}`);
+          else priceProviderValidated[key] = true;
+        } catch {
+          errors.push(`${key}:PRICE_PROVIDER_UNAVAILABLE`);
+        }
+      }
+    }
+  } else {
+    errors.push('STRIPE_NOT_CONFIGURED');
+  }
+
+  let portalConfigurationProviderValidated = false;
+  if (isStripeEnabled() && portalConfigurationEnvConfigured) {
+    try {
+      await validatedPortalConfigurationId();
+      portalConfigurationProviderValidated = true;
+    } catch (error) {
+      errors.push(error instanceof CommercePolicyError ? error.code : 'PORTAL_PROVIDER_UNAVAILABLE');
+    }
+  } else if (!portalConfigurationEnvConfigured) {
+    errors.push('STRIPE_PORTAL_CONFIGURATION_REQUIRED');
+  }
+
+  const providerValidated = Object.values(priceProviderValidated).every(Boolean)
+    && portalConfigurationProviderValidated;
+  return {
+    envConfigured: Object.values(priceEnvConfigured).every(Boolean) && portalConfigurationEnvConfigured,
+    providerValidated,
+    priceEnvConfigured,
+    priceProviderValidated,
+    portalConfigurationEnvConfigured,
+    portalConfigurationProviderValidated,
+    errors,
+  };
+}
+
+async function findGrandfatheredLegacySubscription(userId: string, tenantId: string) {
+  const result = await db.execute(sql`
+    SELECT id FROM subscriptions
+    WHERE user_id=${userId}
+      AND tenant_id=${tenantId}
+      AND legacy_access_grandfathered_at IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+  const id = result.rows[0]?.id;
+  if (typeof id !== 'string') return null;
+  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1);
+  return row ?? null;
+}
+
+async function stripeCustomerHasForeignTenant(customerId: string, tenantId: string): Promise<boolean> {
+  const result = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT 1
+      FROM tenant_application_subscriptions
+      WHERE stripe_customer_id=${customerId}
+        AND (tenant_id IS NULL OR tenant_id<>${tenantId})
+      UNION ALL
+      SELECT 1
+      FROM subscriptions
+      WHERE stripe_customer_id=${customerId}
+        AND legacy_access_grandfathered_at IS NOT NULL
+        AND (tenant_id IS NULL OR tenant_id<>${tenantId})
+    ) AS foreign_tenant
+  `);
+  return result.rows[0]?.foreign_tenant === true;
 }
 
 export async function subscribeToPlan(
@@ -196,6 +472,7 @@ export async function subscribeToPlan(
   planSlug: string,
   interval: BillingInterval = 'month',
 ): Promise<SubscribeResult> {
+  legacyPlanSalesClosed();
   const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, planSlug)).limit(1);
   if (!plan) throw new Error('Plan not found');
 
@@ -274,9 +551,32 @@ async function applyPlanChangeLocally(
   };
 }
 
-export async function cancelSubscription(userId: string): Promise<{ ok: boolean; message: string }> {
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
-  if (!sub) return { ok: false, message: 'No active subscription' };
+export async function cancelSubscription(userId: string, tenantId: string): Promise<{ ok: boolean; message: string }> {
+  const [stack] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.tenantId, tenantId)).limit(1);
+  if (stack && ['active', 'trialing', 'past_due', 'canceling'].includes(stack.status)) {
+    if (!isStripeEnabled() || !stack.stripeSubscriptionId) {
+      throw new CommercePolicyError(
+        'STACK_PROVIDER_MANAGEMENT_REQUIRED',
+        'This paid application stack can only be changed after its Stripe subscription is available.',
+        409,
+      );
+    }
+    await getStripe().subscriptions.update(stack.stripeSubscriptionId, { cancel_at_period_end: true });
+    await db.update(tenantApplicationSubscriptions).set({
+      status: 'canceling', cancelAtPeriodEnd: true, updatedAt: new Date(),
+    }).where(eq(tenantApplicationSubscriptions.id, stack.id));
+    await db.insert(billingEvents).values({
+      userId, tenantId, eventType: 'application_stack_cancel_scheduled',
+      metadata: { stripeSubscriptionId: stack.stripeSubscriptionId },
+    });
+    return { ok: true, message: 'Application stack will cancel at end of billing period' };
+  }
+
+  const sub = await findGrandfatheredLegacySubscription(userId, tenantId);
+  if (!sub || !['active', 'trialing', 'past_due'].includes(sub.status)) {
+    return { ok: false, message: 'No active subscription' };
+  }
 
   if (isStripeEnabled() && sub.stripeSubscriptionId) {
     const stripe = getStripe();
@@ -297,19 +597,108 @@ export async function cancelSubscription(userId: string): Promise<{ ok: boolean;
   return { ok: true, message: 'Subscription will cancel at end of billing period' };
 }
 
-export async function reactivateSubscription(userId: string): Promise<{ ok: boolean }> {
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
-  if (!sub) return { ok: false };
+export async function reactivateSubscription(userId: string, tenantId: string): Promise<{ ok: boolean }> {
+  const [stack] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.tenantId, tenantId)).limit(1);
+  if (stack?.status === 'canceling') {
+    if (!isStripeEnabled() || !stack.stripeSubscriptionId) {
+      throw new CommercePolicyError(
+        'STACK_PROVIDER_MANAGEMENT_REQUIRED',
+        'This paid application stack can only be changed after its Stripe subscription is available.',
+        409,
+      );
+    }
+    await getStripe().subscriptions.update(stack.stripeSubscriptionId, { cancel_at_period_end: false });
+    const providerSubscription = await retrieveAuthoritativeSubscription(stack.stripeSubscriptionId);
+    const providerBinding = await validateAuthoritativeStackSubscription(providerSubscription, stack);
+    if (!providerBinding.valid) {
+      await quarantineStackSubscription(stack, stack.stripeSubscriptionId, providerBinding.error);
+      throw new CommercePolicyError(
+        'STACK_SUBSCRIPTION_PROVIDER_MISMATCH',
+        'The application stack no longer matches its server-authoritative Stripe catalog and was deactivated.',
+        409,
+      );
+    }
+    if (providerSubscription.cancel_at_period_end
+        || !['active', 'trialing', 'past_due'].includes(providerSubscription.status)) {
+      const providerStatus = mapStripeStatus(providerSubscription.status);
+      if (!['active', 'trialing', 'past_due'].includes(providerSubscription.status)) {
+        await deactivateSubscriptionEntitlements(stack.stripeSubscriptionId);
+      }
+      await db.update(tenantApplicationSubscriptions).set({
+        status: providerSubscription.cancel_at_period_end ? 'canceling' : providerStatus,
+        cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
+        currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stack.currentPeriodStart,
+        currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stack.currentPeriodEnd,
+        updatedAt: new Date(),
+      }).where(eq(tenantApplicationSubscriptions.id, stack.id));
+      throw new CommercePolicyError(
+        'STACK_REACTIVATION_NOT_CONFIRMED',
+        'Stripe did not confirm an uncancelled, access-bearing application stack.',
+        409,
+      );
+    }
+    await db.update(tenantApplicationSubscriptions).set({
+      status: providerSubscription.status,
+      cancelAtPeriodEnd: false,
+      currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stack.currentPeriodStart,
+      currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stack.currentPeriodEnd,
+      updatedAt: new Date(),
+    }).where(eq(tenantApplicationSubscriptions.id, stack.id));
+    await db.insert(billingEvents).values({
+      userId, tenantId, eventType: 'application_stack_reactivated',
+      metadata: { stripeSubscriptionId: stack.stripeSubscriptionId },
+    });
+    return { ok: true };
+  }
 
+  const sub = await findGrandfatheredLegacySubscription(userId, tenantId);
+  if (!sub || !['active', 'trialing'].includes(sub.status) || !sub.cancelAtPeriodEnd) {
+    return { ok: false };
+  }
+
+  const production = process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production';
+  if (production && (!isStripeEnabled() || !sub.stripeSubscriptionId)) {
+    throw new CommercePolicyError(
+      'LEGACY_PROVIDER_MANAGEMENT_REQUIRED',
+      'This grandfathered cancellation can only be reversed through its billing provider. Terminal contracts must start a new application stack.',
+      409,
+    );
+  }
+
+  let confirmedProviderStatus: 'active' | 'trialing' | null = null;
   if (isStripeEnabled() && sub.stripeSubscriptionId) {
     const stripe = getStripe();
     await stripe.subscriptions.update(sub.stripeSubscriptionId, {
       cancel_at_period_end: false,
     });
+    const providerSubscription = await retrieveAuthoritativeSubscription(sub.stripeSubscriptionId);
+    const providerStatus = mapStripeStatus(providerSubscription.status);
+    const providerCustomerId = stripeResourceId(providerSubscription.customer);
+    const providerConfirmed = ['active', 'trialing'].includes(providerSubscription.status)
+      && providerSubscription.cancel_at_period_end === false
+      && (!sub.stripeCustomerId || providerCustomerId === sub.stripeCustomerId);
+    if (!providerConfirmed) {
+      await db.update(subscriptions).set({
+        status: providerStatus,
+        cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
+        currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? sub.currentPeriodStart,
+        currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? sub.currentPeriodEnd,
+        updatedAt: new Date(),
+      }).where(eq(subscriptions.id, sub.id));
+      throw new CommercePolicyError(
+        'LEGACY_REACTIVATION_NOT_CONFIRMED',
+        'Stripe did not confirm an uncancelled, access-bearing grandfathered subscription.',
+        409,
+      );
+    }
+    confirmedProviderStatus = providerStatus as 'active' | 'trialing';
   }
 
   await db.update(subscriptions).set({
-    cancelAtPeriodEnd: false, status: 'active', updatedAt: new Date(),
+    cancelAtPeriodEnd: false,
+    status: confirmedProviderStatus ?? 'active',
+    updatedAt: new Date(),
   }).where(eq(subscriptions.id, sub.id));
 
   await db.insert(billingEvents).values({
@@ -329,6 +718,7 @@ export async function createCheckoutSession(
   planSlug: string,
   interval: BillingInterval = 'month',
 ): Promise<CheckoutSessionResult> {
+  legacyPlanSalesClosed();
   if (!isStripeEnabled()) {
     throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
@@ -384,15 +774,111 @@ export async function createCheckoutSession(
 export async function createStackCheckoutSession(
   input: StackCheckoutInput,
 ): Promise<CheckoutSessionResult> {
+  if (input.interval && input.interval !== 'month') {
+    throw new CommercePolicyError(
+      'APPLICATION_STACK_MONTHLY_ONLY',
+      'Application stacks are available with monthly billing only.',
+      400,
+    );
+  }
   if (!isStripeEnabled()) {
     throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
-  const normalized = normalizeStackSelection(input);
+  const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+  if (!user) throw new Error('User not found');
+
+  let normalized = normalizeStackSelection(input);
+  const [existingStack] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.tenantId, input.tenantId))
+    .limit(1);
+  const stripe = getStripe();
+  let retryPendingWithoutSession = false;
+  let existingStatusForClaim = existingStack?.status;
+  if (existingStack?.status === 'incomplete') {
+    if (!existingStack.stripeCheckoutSessionId) {
+      if (!isCoreProductKey(existingStack.coreProduct)
+          || !isEligibleCompanionModuleKey(existingStack.includedCompanionKey)) {
+        throw new CommercePolicyError(
+          'STACK_CHECKOUT_INTENT_INVALID',
+          'The pending application stack intent is invalid and requires billing support.',
+          409,
+        );
+      }
+      const pendingAdditional = existingStack.additionalModuleKeys.filter(isEligibleCompanionModuleKey);
+      normalized = normalizeStackSelection({
+        coreProduct: existingStack.coreProduct,
+        freeCompanionModule: existingStack.includedCompanionKey,
+        additionalModules: pendingAdditional,
+        additionalSeats: existingStack.additionalSeats,
+      });
+      const storedModules = [...existingStack.additionalModuleKeys].sort();
+      const normalizedModules = [...(normalized.additionalModules ?? [])].sort();
+      if (JSON.stringify(storedModules) !== JSON.stringify(normalizedModules)) {
+        throw new CommercePolicyError(
+          'STACK_CHECKOUT_INTENT_INVALID',
+          'The pending application stack intent is invalid and requires billing support.',
+          409,
+        );
+      }
+      retryPendingWithoutSession = true;
+    } else {
+      try {
+        const prior = await stripe.checkout.sessions.retrieve(existingStack.stripeCheckoutSessionId);
+        if (prior.status === 'open' && prior.url) {
+          return { url: prior.url, sessionId: prior.id };
+        }
+        if (prior.status === 'open') {
+          throw new CommercePolicyError(
+            'STRIPE_CHECKOUT_UNAVAILABLE',
+            'Stripe Checkout is open but did not return a redirect URL. Retry to reconcile it.',
+            502,
+          );
+        }
+        if (prior.status === 'expired') {
+          const [expired] = await db.update(tenantApplicationSubscriptions)
+            .set({ status: 'checkout_failed', updatedAt: new Date() })
+            .where(and(
+              eq(tenantApplicationSubscriptions.id, existingStack.id),
+              eq(tenantApplicationSubscriptions.status, 'incomplete'),
+            ))
+            .returning({ id: tenantApplicationSubscriptions.id });
+          if (!expired) {
+            throw new CommercePolicyError(
+              'STACK_CHECKOUT_IN_PROGRESS',
+              'Another checkout request already reconciled this application stack intent.',
+              409,
+            );
+          }
+          existingStatusForClaim = 'checkout_failed';
+        } else {
+          throw new CommercePolicyError(
+            'STACK_FLAGSHIP_LIMIT',
+            'This tenant already has a completed or settling application stack checkout.',
+            409,
+          );
+        }
+      } catch (error) {
+        if (error instanceof CommercePolicyError) throw error;
+        throw new CommercePolicyError(
+          'STACK_CHECKOUT_IN_PROGRESS',
+          'The existing application stack checkout could not be reconciled. Retry after it expires or use billing support.',
+          409,
+        );
+      }
+    }
+  }
+
   const product = CORE_PRODUCTS_BY_KEY[normalized.coreProduct];
-  const corePriceId = process.env[product.stripePriceEnvKey] || '';
-  const companionPriceId = process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || '';
-  const seatPriceId = process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || '';
+  const corePriceId = retryPendingWithoutSession
+    ? existingStack!.corePriceId
+    : process.env[product.stripePriceEnvKey] || '';
+  const companionPriceId = retryPendingWithoutSession
+    ? existingStack!.companionPriceId || ''
+    : process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || '';
+  const seatPriceId = retryPendingWithoutSession
+    ? existingStack!.additionalSeatPriceId || ''
+    : process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || '';
 
   if (!corePriceId) throw new Error(`Set ${product.stripePriceEnvKey}`);
   if ((normalized.additionalModules?.length ?? 0) > 0 && !companionPriceId) {
@@ -401,27 +887,142 @@ export async function createStackCheckoutSession(
   if ((normalized.additionalSeats ?? 0) > 0 && !seatPriceId) {
     throw new Error('Set STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY');
   }
-
-  const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
-  if (!user) throw new Error('User not found');
-
-  const [existingSub] = await db.select().from(subscriptions)
-    .where(eq(subscriptions.userId, input.userId))
+  await validatePriceExpectations(selectionPriceExpectations(
+    normalized.coreProduct,
+    normalized.additionalModules?.length ?? 0,
+    normalized.additionalSeats ?? 0,
+    retryPendingWithoutSession || existingStack
+      ? {
+          corePriceId,
+          companionPriceId: companionPriceId || null,
+          additionalSeatPriceId: seatPriceId || null,
+        }
+      : undefined,
+  ));
+  const blockingStatuses = new Set(['trialing', 'active', 'past_due', 'canceling']);
+  if (existingStack && blockingStatuses.has(existingStack.status)) {
+    throw new CommercePolicyError(
+      'STACK_FLAGSHIP_LIMIT',
+      'This tenant already has an application stack or a checkout in progress. Manage that stack in billing.',
+      409,
+    );
+  }
+  if (existingStack?.stripeSubscriptionId) {
+    let priorProviderSubscription: any;
+    try {
+      priorProviderSubscription = await retrieveAuthoritativeSubscription(existingStack.stripeSubscriptionId);
+    } catch {
+      throw new CommercePolicyError(
+        'STACK_PROVIDER_MANAGEMENT_REQUIRED',
+        'The prior Stripe subscription could not be confirmed terminal. Billing support must reconcile it before another checkout.',
+        409,
+      );
+    }
+    const priorProviderStatus = mapStripeStatus(priorProviderSubscription.status);
+    if (!['canceled', 'expired'].includes(priorProviderStatus)) {
+      throw new CommercePolicyError(
+        'STACK_PROVIDER_SUBSCRIPTION_EXISTS',
+        'A Stripe subscription is still attached to this tenant. Cancel or reconcile it before starting another checkout.',
+        409,
+      );
+    }
+  }
+  const [activeCore] = await db.select({ id: tenantEntitlements.id })
+    .from(tenantEntitlements)
+    .where(and(
+      eq(tenantEntitlements.tenantId, input.tenantId),
+      eq(tenantEntitlements.entitlementType, 'core_product'),
+      eq(tenantEntitlements.active, true),
+    ))
     .limit(1);
-  let customerId = existingSub?.stripeCustomerId;
-  const stripe = getStripe();
+  if (activeCore) {
+    throw new CommercePolicyError(
+      'STACK_FLAGSHIP_LIMIT',
+      'This tenant already has its release flagship application.',
+      409,
+    );
+  }
+
+  const legacyCustomerResult = await db.execute(sql`
+    SELECT stripe_customer_id
+    FROM subscriptions
+    WHERE user_id=${input.userId}
+      AND tenant_id=${input.tenantId}
+      AND legacy_access_grandfathered_at IS NOT NULL
+      AND stripe_customer_id IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+  const legacyCustomerId = legacyCustomerResult.rows[0]?.stripe_customer_id;
+  let reusableLegacyCustomerId = typeof legacyCustomerId === 'string' ? legacyCustomerId : undefined;
+  if (reusableLegacyCustomerId) {
+    if (await stripeCustomerHasForeignTenant(reusableLegacyCustomerId, input.tenantId)) {
+      reusableLegacyCustomerId = undefined;
+    }
+  }
+  let customerId = existingStack?.stripeCustomerId
+    || reusableLegacyCustomerId;
   if (!customerId) {
     const customer = await stripe.customers.create({
       email: user.email,
       name: user.name,
       metadata: { userId: input.userId, tenantId: input.tenantId },
-    });
+    }, { idempotencyKey: `operatoros-stack-customer-${input.tenantId}` });
     customerId = customer.id;
-    if (existingSub) {
-      await db.update(subscriptions)
-        .set({ stripeCustomerId: customerId })
-        .where(eq(subscriptions.id, existingSub.id));
-    }
+  }
+  if (!customerId) throw new Error('Stripe customer creation did not return a customer id');
+  if (await stripeCustomerHasForeignTenant(customerId, input.tenantId)) {
+    throw new CommercePolicyError(
+      'STRIPE_CUSTOMER_TENANT_AMBIGUOUS',
+      'The selected Stripe customer is already associated with another tenant. Billing support must separate the customer before checkout.',
+      409,
+    );
+  }
+  const tenantCustomerId = customerId;
+
+  const pendingValues = {
+    initiatedByUserId: input.userId,
+    coreProduct: normalized.coreProduct,
+    includedCompanionKey: normalized.freeCompanionModule,
+    additionalModuleKeys: [...(normalized.additionalModules ?? [])],
+    additionalSeats: normalized.additionalSeats ?? 0,
+    status: 'incomplete' as const,
+    stripeCustomerId: tenantCustomerId,
+    stripeCheckoutSessionId: null,
+    stripeSubscriptionId: null,
+    corePriceId,
+    companionPriceId: companionPriceId || null,
+    additionalSeatPriceId: seatPriceId || null,
+    currentPeriodStart: null,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    metadata: {
+      billing_model: 'core_product_stack',
+      billing_interval: 'month',
+      checkout_attempt_id: crypto.randomUUID(),
+    },
+    updatedAt: new Date(),
+  };
+  const [pending] = retryPendingWithoutSession
+      ? [existingStack!]
+    : existingStack
+      ? await db.update(tenantApplicationSubscriptions)
+          .set(pendingValues)
+          .where(and(
+            eq(tenantApplicationSubscriptions.id, existingStack.id),
+            eq(tenantApplicationSubscriptions.status, existingStatusForClaim!),
+          ))
+          .returning()
+      : await db.insert(tenantApplicationSubscriptions)
+          .values({ tenantId: input.tenantId, ...pendingValues })
+          .onConflictDoNothing({ target: tenantApplicationSubscriptions.tenantId })
+          .returning();
+  if (!pending) {
+    throw new CommercePolicyError(
+      'STACK_FLAGSHIP_LIMIT',
+      'This tenant already has an application stack or a checkout in progress.',
+      409,
+    );
   }
 
   const lineItems: Array<{ price: string; quantity: number }> = [
@@ -434,27 +1035,138 @@ export async function createStackCheckoutSession(
     lineItems.push({ price: seatPriceId, quantity: normalized.additionalSeats! });
   }
 
+  const pendingMetadata = (pending.metadata ?? {}) as Record<string, unknown>;
+  const checkoutAttemptId = typeof pendingMetadata.checkout_attempt_id === 'string'
+    && pendingMetadata.checkout_attempt_id.length > 0
+    ? pendingMetadata.checkout_attempt_id
+    : pending.id;
   const metadata = {
     billing_model: 'core_product_stack',
     tenant_id: input.tenantId,
-    user_id: input.userId,
+    user_id: pending.initiatedByUserId ?? input.userId,
     selected_core_product: normalized.coreProduct,
     selected_free_companion_module: normalized.freeCompanionModule,
     additional_module_keys: (normalized.additionalModules ?? []).join(','),
     additional_seats: String(normalized.additionalSeats ?? 0),
+    internal_application_subscription_id: pending.id,
+    checkout_attempt_id: checkoutAttemptId,
+    billing_interval: 'month',
   };
   const appUrl = resolveAppBaseUrl();
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: lineItems,
-    success_url: `${appUrl}/pricing?billing=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/pricing?billing=canceled`,
-    metadata,
-    subscription_data: { metadata },
-  });
+  let session: { id: string; url: string | null };
+  try {
+    session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: lineItems,
+      success_url: `${appUrl}/pricing?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/pricing?billing=canceled`,
+      metadata,
+      subscription_data: { metadata },
+    }, { idempotencyKey: `operatoros-stack-checkout-${checkoutAttemptId}` });
+  } catch (error) {
+    // Keep the exact pending intent. A network failure can occur after Stripe
+    // created the Session; the next request safely replays this idempotency key.
+    throw error;
+  }
 
-  return { url: session.url!, sessionId: session.id };
+  if (!session || typeof session.id !== 'string' || session.id.length === 0) {
+    await db.update(tenantApplicationSubscriptions)
+      .set({ status: 'checkout_failed', updatedAt: new Date() })
+      .where(eq(tenantApplicationSubscriptions.id, pending.id));
+    throw new CommercePolicyError(
+      'STRIPE_CHECKOUT_INVALID_RESPONSE',
+      'Stripe did not return a valid Checkout Session.',
+      502,
+    );
+  }
+
+  await db.update(tenantApplicationSubscriptions)
+    .set({ stripeCheckoutSessionId: session.id, updatedAt: new Date() })
+    .where(eq(tenantApplicationSubscriptions.id, pending.id));
+
+  if (typeof session.url !== 'string' || session.url.length === 0) {
+    throw new CommercePolicyError(
+      'STRIPE_CHECKOUT_UNAVAILABLE',
+      'Stripe created the Checkout Session but did not return a redirect URL. Retry to reconcile it.',
+      502,
+    );
+  }
+  return { url: session.url, sessionId: session.id };
+}
+
+export async function changeStackFreeCompanion(
+  tenantId: string,
+  moduleKey: string,
+): Promise<void> {
+  if (!isEligibleCompanionModuleKey(moduleKey)) {
+    throw new CommercePolicyError('FREE_COMPANION_INVALID', `Unknown companion module: ${moduleKey}`, 400);
+  }
+  const [stack] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.tenantId, tenantId)).limit(1);
+  if (!stack || !stack.stripeSubscriptionId || !['active', 'trialing', 'past_due', 'canceling'].includes(stack.status)) {
+    throw new CommercePolicyError(
+      'APPLICATION_STACK_NOT_ACTIVE',
+      'An active application stack is required to change the included companion.',
+      409,
+    );
+  }
+  if (!isStripeEnabled()) {
+    throw new CommercePolicyError('STRIPE_NOT_CONFIGURED', 'Stripe is required to update this application stack.', 409);
+  }
+
+  if (stack.includedCompanionKey === moduleKey) return;
+  const currentIncluded = stack.includedCompanionKey as CompanionModuleKey;
+  const currentAdditional = stack.additionalModuleKeys.filter(isEligibleCompanionModuleKey);
+  const nextAdditionalModules = swapIncludedCompanion(currentIncluded, currentAdditional, moduleKey);
+
+  const currentProviderSubscription = await retrieveAuthoritativeSubscription(stack.stripeSubscriptionId);
+  const currentProviderBinding = await validateAuthoritativeStackSubscription(currentProviderSubscription, stack);
+  if (!currentProviderBinding.valid) {
+    await quarantineStackSubscription(stack, stack.stripeSubscriptionId, currentProviderBinding.error);
+    throw new CommercePolicyError(
+      'STACK_SUBSCRIPTION_PROVIDER_MISMATCH',
+      'The application stack no longer matches its server-authoritative Stripe catalog and was deactivated.',
+      409,
+    );
+  }
+
+  const metadata = {
+    billing_model: 'core_product_stack',
+    tenant_id: stack.tenantId,
+    user_id: stack.initiatedByUserId ?? '',
+    selected_core_product: stack.coreProduct,
+    selected_free_companion_module: moduleKey,
+    additional_module_keys: nextAdditionalModules.join(','),
+    additional_seats: String(stack.additionalSeats),
+    internal_application_subscription_id: stack.id,
+    checkout_attempt_id: stackCheckoutAttemptId(stack),
+    billing_interval: 'month',
+  };
+  // Provider first: a provider failure leaves local access unchanged. If the
+  // local transaction then fails, the signed subscription.updated event uses
+  // this same metadata to reconcile the tenant-owned row and entitlement.
+  await getStripe().subscriptions.update(stack.stripeSubscriptionId, { metadata });
+  const updatedProviderSubscription = await retrieveAuthoritativeSubscription(stack.stripeSubscriptionId);
+  const updatedProviderBinding = await validateAuthoritativeStackSubscription(updatedProviderSubscription, stack);
+  if (!updatedProviderBinding.valid
+      || updatedProviderBinding.includedCompanion !== moduleKey
+      || JSON.stringify([...updatedProviderBinding.additionalModules].sort())
+        !== JSON.stringify([...nextAdditionalModules].sort())) {
+    await quarantineStackSubscription(
+      stack,
+      stack.stripeSubscriptionId,
+      updatedProviderBinding.valid
+        ? 'Application Stack provider did not confirm the requested companion selection'
+        : updatedProviderBinding.error,
+    );
+    throw new CommercePolicyError(
+      'STACK_SUBSCRIPTION_PROVIDER_MISMATCH',
+      'Stripe did not confirm the requested companion selection and the application stack was deactivated.',
+      409,
+    );
+  }
+  await changeFreeCompanionModule(tenantId, moduleKey, nextAdditionalModules);
 }
 
 export interface UsageCreditCheckoutInput {
@@ -539,23 +1251,41 @@ export async function createUsageCreditCheckoutSession(
   return { url: session.url, sessionId: session.id };
 }
 
-export async function createPortalSession(userId: string): Promise<PortalSessionResult> {
+export async function createPortalSession(userId: string, tenantId: string): Promise<PortalSessionResult> {
   if (!isStripeEnabled()) {
     throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
   const stripe = getStripe();
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  const [stack] = await db.select().from(tenantApplicationSubscriptions)
+    .where(and(
+      eq(tenantApplicationSubscriptions.tenantId, tenantId),
+      sql`${tenantApplicationSubscriptions.status} IN ('trialing','active','past_due','canceling')`,
+    )).limit(1);
+  const legacyCandidate = stack ? null : await findGrandfatheredLegacySubscription(userId, tenantId);
+  const legacy = legacyCandidate && ['active', 'trialing', 'past_due'].includes(legacyCandidate.status)
+    ? legacyCandidate
+    : null;
+  const customerId = stack?.stripeCustomerId || legacy?.stripeCustomerId;
 
-  if (!sub?.stripeCustomerId) {
-    throw new Error('No Stripe customer found. The user must have a Stripe subscription first.');
+  if (!customerId) {
+    throw new Error('No Stripe customer found for this tenant. Start an application stack first.');
+  }
+  if (await stripeCustomerHasForeignTenant(customerId, tenantId)) {
+    throw new CommercePolicyError(
+      'STRIPE_CUSTOMER_TENANT_AMBIGUOUS',
+      'This Stripe customer is associated with more than one tenant. Billing support must separate it before the portal can be opened.',
+      409,
+    );
   }
 
   const appUrl = resolveAppBaseUrl();
+  const configurationId = await validatedPortalConfigurationId();
 
   const session = await stripe.billingPortal.sessions.create({
-    customer: sub.stripeCustomerId,
-    return_url: `${appUrl}?page=billing`,
+    customer: customerId,
+    return_url: `${appUrl}/pricing`,
+    configuration: configurationId,
   });
 
   return { url: session.url };
@@ -870,13 +1600,37 @@ export function classifyWebhookEvent(event: { type: string; data: { object: any 
 //     uq_billing_events_stripe_event_id) makes redelivery a no-op.
 //   - Returns the claim row id for the route to update with
 //     processed_at / error_message after the handler runs.
+const STRIPE_EVENT_PROCESSING_LEASE_MS = 5 * 60 * 1000;
+
+function stripeEventLeaseMetadata(now = new Date()) {
+  return {
+    processingState: 'processing',
+    processingStartedAt: now.toISOString(),
+    processingLeaseExpiresAt: new Date(now.getTime() + STRIPE_EVENT_PROCESSING_LEASE_MS).toISOString(),
+  };
+}
+
 export async function claimStripeEvent(
   event: { id: string; type: string; data: { object: any } },
   classification: WebhookClassification,
-): Promise<{ claimedRowId: string | null; isDuplicate: boolean }> {
+): Promise<{
+  claimedRowId: string | null;
+  isDuplicate: boolean;
+  duplicateState?: 'processed' | 'in_flight' | 'payload_mismatch';
+}> {
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(event)).digest('hex');
-  const userId = classification.userId; // may be null for plan events without metadata
+  let userId: string | null = null;
+  if (typeof classification.userId === 'string' && classification.userId.length > 0) {
+    // Signed provider metadata is a lookup hint, not foreign-key authority.
+    // A deleted or mistyped user must not prevent durable event capture.
+    const [attributedUser] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, classification.userId))
+      .limit(1);
+    userId = attributedUser?.id ?? null;
+  }
   const eventTypeLabel = `${classification.isAddon ? 'addon' : 'plan'}_${event.type.replace(/\./g, '_')}`;
+  const lease = stripeEventLeaseMetadata();
 
   const claim = await db.insert(billingEvents).values({
     userId,
@@ -889,6 +1643,7 @@ export async function claimStripeEvent(
       moduleSlug: classification.moduleSlug,
       classifiedAt: classification.matchedAt,
       rawEvent: event,
+      ...lease,
     },
   }).onConflictDoNothing({
     target: billingEvents.stripeEventId,
@@ -896,7 +1651,43 @@ export async function claimStripeEvent(
   }).returning({ id: billingEvents.id });
 
   if (claim.length === 0) {
-    return { claimedRowId: null, isDuplicate: true };
+    // A failed delivery keeps the same immutable Stripe event identity and is
+    // atomically reclaimable. An in-flight delivery can only be reclaimed
+    // after its bounded lease expires, preventing live/admin double dispatch.
+    const reclaimed = await db.execute(sql`
+      UPDATE billing_events
+      SET error_message=NULL,
+          retry_count=retry_count+1,
+          metadata=COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify(lease)}::jsonb
+      WHERE stripe_event_id=${event.id}
+        AND processed_at IS NULL
+        AND payload_hash=${payloadHash}
+        AND (
+          error_message IS NOT NULL
+          OR COALESCE(
+            NULLIF(metadata->>'processingLeaseExpiresAt','')::timestamptz,
+            '-infinity'::timestamptz
+          ) <= NOW()
+        )
+      RETURNING id
+    `);
+    const reclaimedId = reclaimed.rows[0]?.id;
+    if (typeof reclaimedId === 'string') {
+      return { claimedRowId: reclaimedId, isDuplicate: false };
+    }
+    const [existing] = await db.select({
+      payloadHash: billingEvents.payloadHash,
+      processedAt: billingEvents.processedAt,
+    }).from(billingEvents).where(eq(billingEvents.stripeEventId, event.id)).limit(1);
+    return {
+      claimedRowId: null,
+      isDuplicate: true,
+      duplicateState: existing?.payloadHash !== payloadHash
+        ? 'payload_mismatch'
+        : existing?.processedAt
+          ? 'processed'
+          : 'in_flight',
+    };
   }
   return { claimedRowId: claim[0].id, isDuplicate: false };
 }
@@ -942,15 +1733,23 @@ export async function markStripeEventProcessed(claimedRowId: string, action: str
   await db.update(billingEvents).set({
     processedAt: new Date(),
     errorMessage: null,
-    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ lastAction: action ?? 'handled' })}::jsonb`,
-  }).where(eq(billingEvents.id, claimedRowId));
+    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+      lastAction: action ?? 'handled',
+      processingState: 'processed',
+      processingLeaseExpiresAt: null,
+    })}::jsonb`,
+  }).where(and(eq(billingEvents.id, claimedRowId), sql`${billingEvents.processedAt} IS NULL`));
 }
 
 export async function markStripeEventFailed(claimedRowId: string, errorMessage: string) {
   await db.update(billingEvents).set({
     errorMessage,
-    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ lastFailureAt: new Date().toISOString() })}::jsonb`,
-  }).where(eq(billingEvents.id, claimedRowId));
+    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+      lastFailureAt: new Date().toISOString(),
+      processingState: 'failed',
+      processingLeaseExpiresAt: null,
+    })}::jsonb`,
+  }).where(and(eq(billingEvents.id, claimedRowId), sql`${billingEvents.processedAt} IS NULL`));
 }
 
 export async function processWebhookEvent(event: { type: string; data: { object: any } }): Promise<WebhookProcessResult> {
@@ -962,6 +1761,7 @@ export async function processWebhookEvent(event: { type: string; data: { object:
   let result: WebhookProcessResult;
   switch (type) {
     case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded':
       result = await handleCheckoutCompleted(obj); break;
     case 'customer.subscription.created':
       result = await handleSubscriptionCreated(obj); break;
@@ -997,8 +1797,21 @@ export async function processWebhookEvent(event: { type: string; data: { object:
     let userId: string | null = obj?.metadata?.userId
       ?? obj?.metadata?.user_id
       ?? null;
+    let exactTenantId: string | null = null;
+    const stripeSubId = obj?.subscription ?? obj?.id ?? null;
+    if (stripeSubId && typeof stripeSubId === 'string') {
+      const [stackRow] = await db.select({
+        tenantId: tenantApplicationSubscriptions.tenantId,
+        initiatedByUserId: tenantApplicationSubscriptions.initiatedByUserId,
+      }).from(tenantApplicationSubscriptions)
+        .where(eq(tenantApplicationSubscriptions.stripeSubscriptionId, stripeSubId))
+        .limit(1);
+      if (stackRow) {
+        exactTenantId = stackRow.tenantId;
+        userId = stackRow.initiatedByUserId ?? userId;
+      }
+    }
     if (!userId) {
-      const stripeSubId = obj?.subscription ?? obj?.id ?? null;
       if (stripeSubId && typeof stripeSubId === 'string') {
         const [row] = await db.select({ userId: subscriptions.userId })
           .from(subscriptions)
@@ -1017,10 +1830,14 @@ export async function processWebhookEvent(event: { type: string; data: { object:
         if (row) userId = row.userId;
       }
     }
-    if (userId) {
+    if (exactTenantId || userId) {
       try {
-        const { schedulePropagationForUser } = await import('./entitlement-propagation.js');
-        schedulePropagationForUser(userId, { reason: `stripe:${type}` });
+        const { schedulePropagation, schedulePropagationForUser } = await import('./entitlement-propagation.js');
+        if (exactTenantId) {
+          schedulePropagation(exactTenantId, { reason: `stripe:${type}`, actorUserId: userId });
+        } else if (userId) {
+          schedulePropagationForUser(userId, { reason: `stripe:${type}` });
+        }
       } catch (err) {
         console.warn('[billing-service] entitlement propagation unavailable', {
           code: typeof err === 'object' && err ? (err as { code?: unknown }).code ?? 'unknown' : 'unknown',
@@ -1037,77 +1854,210 @@ async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResu
   if (session.metadata?.billing_model === 'core_product_stack') {
     return handleStackCheckoutCompleted(session);
   }
-  const userId = session.metadata?.userId;
-  const planSlug = session.metadata?.planSlug;
-  const stripeSubscriptionId = session.subscription;
-  const stripeCustomerId = session.customer;
+  // Starter/Pro/Elite and individual add-on sales are permanently closed.
+  // A pre-cutover Checkout Session may still complete after the v60 deploy;
+  // acknowledging it without mutating local authority prevents that stale
+  // provider object from creating or upgrading grandfathered access.
+  return {
+    handled: true,
+    action: 'legacy_checkout_rejected_after_cutover',
+    shouldPropagate: false,
+  };
+}
 
-  if (!userId || !planSlug) {
-    return { handled: false, error: 'Missing userId or planSlug in session metadata' };
-  }
+function stripeResourceId(value: any): string | null {
+  if (typeof value === 'string' && value.length > 0) return value;
+  if (value && typeof value.id === 'string' && value.id.length > 0) return value.id;
+  return null;
+}
 
-  const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, planSlug)).limit(1);
-  if (!plan) return { handled: false, error: `Plan not found: ${planSlug}` };
+function stripePeriodDate(value: unknown): Date | null {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? new Date(value * 1000)
+    : null;
+}
 
-  const [existingSub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
-
-  if (existingSub) {
-    await db.update(subscriptions).set({
-      planId: plan.id, status: 'active', cancelAtPeriodEnd: false,
-      stripeSubscriptionId, stripeCustomerId, updatedAt: new Date(),
-    }).where(eq(subscriptions.id, existingSub.id));
-  } else {
-    await db.insert(subscriptions).values({
-      userId, planId: plan.id, status: 'active',
-      stripeSubscriptionId, stripeCustomerId,
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    });
-  }
-
-  // Idempotency lives at the route layer (claimStripeEvent). The
-  // user-facing activity feed entry is still useful here.
-  await db.insert(activityFeed).values({
-    userId, action: 'subscribed', entityType: 'subscription',
-    metadata: { planName: plan.name, planSlug, via: 'stripe_checkout' },
+async function retrieveAuthoritativeSubscription(subscriptionId: string): Promise<any> {
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId, {
+    expand: ['items.data.price'],
   });
+  if (!subscription || subscription.id !== subscriptionId) {
+    throw new CommercePolicyError(
+      'STACK_SUBSCRIPTION_PROVIDER_MISMATCH',
+      'Stripe did not return the exact Application Stack subscription.',
+      409,
+    );
+  }
+  return subscription;
+}
 
-  console.log(`[billing-service] Checkout completed: plan=${planSlug}`);
-  return { handled: true, action: 'checkout_completed', shouldPropagate: true };
+function validateExactSubscriptionItems(
+  subscription: any,
+  expectations: readonly StackPriceExpectation[],
+): string | null {
+  const items = Array.isArray(subscription?.items?.data) ? subscription.items.data : [];
+  if (items.length !== expectations.length) return 'SUBSCRIPTION_ITEM_COUNT_MISMATCH';
+  const actual = new Map<string, number>();
+  for (const item of items) {
+    const priceId = stripeResourceId(item?.price);
+    const quantity = item?.quantity;
+    if (!priceId || !Number.isSafeInteger(quantity) || quantity <= 0 || actual.has(priceId)) {
+      return 'SUBSCRIPTION_ITEM_INVALID';
+    }
+    actual.set(priceId, quantity);
+  }
+  for (const expectation of expectations) {
+    if (actual.get(expectation.priceId) !== expectation.quantity) {
+      return 'SUBSCRIPTION_ITEM_PRICE_OR_QUANTITY_MISMATCH';
+    }
+  }
+  return null;
+}
+
+async function validateAuthoritativeStackSubscription(
+  subscription: any,
+  stackSub: TenantApplicationSubscriptionRow,
+  allowInitiallyUnbound = false,
+) {
+  const binding = validateStackSubscriptionBinding(subscription, stackSub, allowInitiallyUnbound);
+  if (!binding.valid) return binding;
+  let expectations: StackPriceExpectation[];
+  try {
+    expectations = selectionPriceExpectations(
+      stackSub.coreProduct,
+      binding.additionalModules.length,
+      stackSub.additionalSeats,
+      stackSub,
+    );
+    await validatePriceExpectations(expectations);
+  } catch (error) {
+    // A catalog/configuration mismatch is durable provider drift and must
+    // deactivate the local grant. Transient Stripe/network failures still
+    // escape so the webhook delivery is retried instead of being quarantined.
+    if (error instanceof CommercePolicyError) {
+      return { valid: false as const, error: `${error.code}: ${error.message}` };
+    }
+    throw error;
+  }
+  const itemError = validateExactSubscriptionItems(subscription, expectations);
+  if (itemError) return { valid: false as const, error: itemError };
+  return { ...binding, expectations };
 }
 
 async function handleStackCheckoutCompleted(session: any): Promise<WebhookProcessResult> {
   const metadata = session.metadata ?? {};
   const tenantId = metadata.tenant_id;
   const userId = metadata.user_id;
+  const internalSubscriptionId = metadata.internal_application_subscription_id;
   const coreProduct = metadata.selected_core_product;
   const freeCompanionModule = metadata.selected_free_companion_module;
-  const stripeSubscriptionId = typeof session.subscription === 'string'
-    ? session.subscription
-    : session.subscription?.id;
-  if (!tenantId || !userId || !stripeSubscriptionId || !isCoreProductKey(coreProduct)) {
+  const stripeSubscriptionId = stripeResourceId(session.subscription);
+  const stripeCustomerId = stripeResourceId(session.customer);
+  if (!tenantId || !userId || !internalSubscriptionId || !stripeSubscriptionId
+      || !stripeCustomerId || !isCoreProductKey(coreProduct)) {
     return { handled: false, error: 'Invalid core product checkout metadata' };
   }
 
-  const additionalModules = String(metadata.additional_module_keys ?? '')
-    .split(',')
-    .map((value: string) => value.trim())
-    .filter((value: string): value is CompanionModuleKey =>
-      COMPANION_MODULE_KEYS.has(value as CompanionModuleKey),
-    );
-  const additionalSeats = Number.parseInt(metadata.additional_seats ?? '0', 10);
+  if (session.mode !== 'subscription' || session.status !== 'complete') {
+    return { handled: false, error: 'Application Stack Checkout is not complete and paid' };
+  }
+  if (session.payment_status === 'unpaid') {
+    // Delayed-payment Checkout emits an immutable completed/unpaid event and
+    // later a distinct async_payment_succeeded event. Acknowledge the former
+    // without granting so it does not retry forever; only the paid event may
+    // cross the entitlement boundary below.
+    return { handled: true, action: 'core_product_stack_payment_pending', shouldPropagate: false };
+  }
+  if (!['paid', 'no_payment_required'].includes(session.payment_status)) {
+    return { handled: false, error: 'Application Stack Checkout payment state is invalid' };
+  }
+
+  const rawAdditionalModules = String(metadata.additional_module_keys ?? '');
+  const additionalModules = rawAdditionalModules === ''
+    ? []
+    : rawAdditionalModules.split(',').map((value: string) => value.trim());
+  const uniqueAdditionalModules = [...new Set(additionalModules)];
+  const additionalSeatsText = String(metadata.additional_seats ?? '');
+  const additionalSeats = /^\d+$/.test(additionalSeatsText)
+    ? Number.parseInt(additionalSeatsText, 10)
+    : Number.NaN;
+  if (!isEligibleCompanionModuleKey(freeCompanionModule)
+      || !additionalModules.every(isEligibleCompanionModuleKey)
+      || additionalModules.length !== uniqueAdditionalModules.length
+      || additionalModules.includes(freeCompanionModule)
+      || !Number.isSafeInteger(additionalSeats)) {
+    return { handled: false, error: 'Invalid Application Stack selection metadata' };
+  }
   const product = CORE_PRODUCTS_BY_KEY[coreProduct];
+
+  const [pending] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.id, internalSubscriptionId))
+    .limit(1);
+  if (pending && isStaleStackCheckoutGeneration(session, pending)) {
+    return { handled: true, action: 'core_product_stack_stale_checkout_generation_ignored', shouldPropagate: false };
+  }
+  const rowModules = Array.isArray(pending?.additionalModuleKeys)
+    ? [...pending.additionalModuleKeys].sort()
+    : [];
+  const eventModules = [...additionalModules].sort();
+  const rowMatches = !!pending
+    && pending.tenantId === tenantId
+    && pending.initiatedByUserId === userId
+    && pending.stripeCustomerId === stripeCustomerId
+    && pending.stripeCheckoutSessionId === session.id
+    && pending.coreProduct === coreProduct
+    && pending.includedCompanionKey === freeCompanionModule
+    && pending.additionalSeats === additionalSeats
+    && metadata.billing_interval === 'month'
+    && JSON.stringify(rowModules) === JSON.stringify(eventModules);
+  if (!rowMatches) {
+    return { handled: false, error: 'Core product checkout does not match its tenant-owned purchase intent' };
+  }
+  if (['active', 'trialing', 'canceling'].includes(pending.status)
+      && pending.stripeSubscriptionId === stripeSubscriptionId) {
+    return { handled: true, action: 'core_product_stack_already_active', shouldPropagate: false };
+  }
+  if (pending.status !== 'incomplete') {
+    return { handled: true, action: 'core_product_stack_checkout_rejected_terminal', shouldPropagate: false };
+  }
+  if (pending.stripeSubscriptionId && pending.stripeSubscriptionId !== stripeSubscriptionId) {
+    return { handled: false, error: 'Core product checkout subscription binding does not match' };
+  }
+
+  const providerSubscription = await retrieveAuthoritativeSubscription(stripeSubscriptionId);
+  if (!['active', 'trialing'].includes(providerSubscription.status)
+      || stripeResourceId(providerSubscription.customer) !== stripeCustomerId) {
+    return { handled: false, error: 'Application Stack subscription is not active for the bound customer' };
+  }
+  const providerBinding = await validateAuthoritativeStackSubscription(providerSubscription, pending, true);
+  if (!providerBinding.valid
+      || providerBinding.includedCompanion !== pending.includedCompanionKey
+      || JSON.stringify([...providerBinding.additionalModules].sort()) !== JSON.stringify(rowModules)) {
+    return {
+      handled: false,
+      error: providerBinding.valid
+        ? 'Application Stack provider selection does not match the checkout intent'
+        : providerBinding.error,
+    };
+  }
 
   await grantStackEntitlements({
     tenantId,
     coreProduct,
     freeCompanionModule,
-    additionalModules,
+    additionalModules: additionalModules as CompanionModuleKey[],
     additionalSeats,
     stripeSubscriptionId,
-    corePriceId: process.env[product.stripePriceEnvKey] || null,
-    companionPriceId: process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || null,
-    additionalSeatPriceId: process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || null,
+    corePriceId: pending.corePriceId,
+    companionPriceId: pending.companionPriceId,
+    additionalSeatPriceId: pending.additionalSeatPriceId,
+    applicationSubscriptionId: pending.id,
+    applicationSubscriptionStatus: providerSubscription.cancel_at_period_end
+      ? 'canceling'
+      : providerSubscription.status,
+    cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
+    currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start),
+    currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end),
   });
 
   await db.insert(billingEvents).values({
@@ -1117,7 +2067,7 @@ async function handleStackCheckoutCompleted(session: any): Promise<WebhookProces
     amount:
       product.monthlyPriceCents +
       additionalModules.length * COMPANION_MODULE_PRICE_CENTS +
-      additionalSeats * getAdditionalSeatPriceCents(process.env.ADDITIONAL_SEAT_PRICE_CENTS),
+      additionalSeats * DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
     metadata: {
       coreProduct,
       freeCompanionModule,
@@ -1138,92 +2088,366 @@ async function handleStackCheckoutCompleted(session: any): Promise<WebhookProces
 }
 
 async function handleSubscriptionCreated(subscription: any): Promise<WebhookProcessResult> {
-  const userId = subscription.metadata?.userId;
-  if (!userId) return { handled: false, error: 'Missing userId in subscription metadata' };
-
-  const stripeSubId = subscription.id;
-  const customerId = subscription.customer;
+  if (subscription.metadata?.billing_model === 'core_product_stack') {
+    return reconcileStackSubscriptionBeforeCheckout(subscription, 'created');
+  }
+  const existingSub = await findGrandfatheredLegacyByStripeSubscriptionId(subscription.id);
+  if (!existingSub) {
+    return { handled: true, action: 'legacy_subscription_created_rejected_after_cutover', shouldPropagate: false };
+  }
   const status = mapStripeStatus(subscription.status);
+  if (['canceled', 'expired'].includes(existingSub.status)
+      && !['canceled', 'expired'].includes(status)) {
+    return { handled: true, action: 'stale_grandfathered_subscription_created_ignored', shouldPropagate: false };
+  }
+  await db.update(subscriptions).set({
+    status,
+    stripeCustomerId: stripeResourceId(subscription.customer) ?? existingSub.stripeCustomerId,
+    cancelAtPeriodEnd: !!subscription.cancel_at_period_end,
+    currentPeriodStart: stripePeriodDate(subscription.current_period_start) ?? existingSub.currentPeriodStart,
+    currentPeriodEnd: stripePeriodDate(subscription.current_period_end) ?? existingSub.currentPeriodEnd,
+    updatedAt: new Date(),
+  }).where(eq(subscriptions.id, existingSub.id));
+  return { handled: true, action: 'grandfathered_subscription_created_synchronized', shouldPropagate: true };
+}
 
-  // Task #108: only propagate when the local subscription row already
-  // exists (was upserted by checkout.session.completed). If Stripe
-  // delivers `customer.subscription.created` BEFORE the checkout
-  // webhook lands — perfectly legal under out-of-order delivery — we
-  // would otherwise propagate against an empty subscriptions table
-  // and the recompute pass would mass-revoke module access.
-  const [existingSub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
-  if (existingSub) {
-    await db.update(subscriptions).set({
-      stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
-      status, updatedAt: new Date(),
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-    }).where(eq(subscriptions.id, existingSub.id));
-    console.log('[billing-service] Subscription created and synchronized');
-    return { handled: true, action: 'subscription_created', shouldPropagate: true };
+async function findGrandfatheredLegacyByStripeSubscriptionId(stripeSubscriptionId: string) {
+  if (!stripeSubscriptionId) return null;
+  const result = await db.execute(sql`
+    SELECT id FROM subscriptions
+    WHERE stripe_subscription_id=${stripeSubscriptionId}
+      AND legacy_access_grandfathered_at IS NOT NULL
+    LIMIT 1
+  `);
+  const id = result.rows[0]?.id;
+  if (typeof id !== 'string') return null;
+  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1);
+  return row ?? null;
+}
+
+async function findStackSubscriptionCandidate(subscription: any): Promise<TenantApplicationSubscriptionRow | null> {
+  const stripeSubscriptionId = stripeResourceId(subscription?.id);
+  if (stripeSubscriptionId) {
+    const [bound] = await db.select().from(tenantApplicationSubscriptions)
+      .where(eq(tenantApplicationSubscriptions.stripeSubscriptionId, stripeSubscriptionId))
+      .limit(1);
+    if (bound) return bound;
+  }
+  const internalId = subscription?.metadata?.internal_application_subscription_id;
+  if (subscription?.metadata?.billing_model !== 'core_product_stack'
+      || typeof internalId !== 'string' || !internalId) return null;
+  const [pending] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.id, internalId))
+    .limit(1);
+  return pending ?? null;
+}
+
+function stackCheckoutAttemptId(stackSub: TenantApplicationSubscriptionRow): string {
+  const metadata = (stackSub.metadata ?? {}) as Record<string, unknown>;
+  return typeof metadata.checkout_attempt_id === 'string' && metadata.checkout_attempt_id.length > 0
+    ? metadata.checkout_attempt_id
+    : stackSub.id;
+}
+
+function isStaleStackCheckoutGeneration(
+  providerResource: any,
+  stackSub: TenantApplicationSubscriptionRow,
+): boolean {
+  const metadata = providerResource?.metadata ?? {};
+  const providerAttemptId = metadata.checkout_attempt_id;
+  return metadata.billing_model === 'core_product_stack'
+    && metadata.internal_application_subscription_id === stackSub.id
+    && metadata.tenant_id === stackSub.tenantId
+    && stripeResourceId(providerResource?.customer) === stackSub.stripeCustomerId
+    && typeof providerAttemptId === 'string'
+    && providerAttemptId.length > 0
+    && providerAttemptId !== stackCheckoutAttemptId(stackSub);
+}
+
+async function quarantineStackSubscription(
+  stackSub: TenantApplicationSubscriptionRow,
+  stripeSubscriptionId: string,
+  reason: string,
+): Promise<void> {
+  await deactivateSubscriptionEntitlements(stripeSubscriptionId);
+  const quarantineStatus = stackSub.status === 'incomplete'
+    ? 'checkout_failed'
+    : ['checkout_failed', 'canceled', 'expired'].includes(stackSub.status)
+      ? stackSub.status
+      : 'past_due';
+  await db.update(tenantApplicationSubscriptions).set({
+    status: quarantineStatus,
+    stripeSubscriptionId,
+    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+      providerValidation: 'failed',
+      providerValidationReason: reason,
+      providerValidationFailedAt: new Date().toISOString(),
+    })}::jsonb`,
+    updatedAt: new Date(),
+  }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
+}
+
+async function reconcileStackSubscriptionBeforeCheckout(
+  eventSubscription: any,
+  eventKind: 'created' | 'updated',
+): Promise<WebhookProcessResult> {
+  const stripeSubscriptionId = stripeResourceId(eventSubscription?.id);
+  if (!stripeSubscriptionId) return { handled: false, error: 'Stripe subscription id is missing' };
+  const stackSub = await findStackSubscriptionCandidate(eventSubscription);
+  if (!stackSub) return { handled: false, error: 'No matching Application Stack purchase intent' };
+  if (stackSub.status !== 'incomplete') {
+    return { handled: true, action: `core_product_stack_${eventKind}_terminal_ignored`, shouldPropagate: false };
   }
 
-  console.warn(
-    '[billing-service] subscription.created arrived before its local row; ' +
-    'skipping propagation until checkout synchronization completes.',
-  );
-  return { handled: true, action: 'subscription_created_deferred', shouldPropagate: false };
+  const providerSubscription = await retrieveAuthoritativeSubscription(stripeSubscriptionId);
+  if (isStaleStackCheckoutGeneration(providerSubscription, stackSub)) {
+    return {
+      handled: true,
+      action: `core_product_stack_stale_${eventKind}_generation_ignored`,
+      shouldPropagate: false,
+    };
+  }
+  const binding = await validateAuthoritativeStackSubscription(providerSubscription, stackSub, true);
+  if (!binding.valid) {
+    await quarantineStackSubscription(stackSub, stripeSubscriptionId, binding.error);
+    return { handled: true, action: 'core_product_stack_provider_drift_deactivated', shouldPropagate: true };
+  }
+  const providerStatus = mapStripeStatus(providerSubscription.status);
+  const terminal = providerStatus === 'canceled' || providerStatus === 'expired';
+  await db.update(tenantApplicationSubscriptions).set({
+    stripeSubscriptionId,
+    status: terminal ? providerStatus : 'incomplete',
+    cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
+    currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stackSub.currentPeriodStart,
+    currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stackSub.currentPeriodEnd,
+    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+      providerObservedStatus: providerStatus,
+      providerObservedBeforeCheckoutAt: new Date().toISOString(),
+    })}::jsonb`,
+    updatedAt: new Date(),
+  }).where(and(
+    eq(tenantApplicationSubscriptions.id, stackSub.id),
+    eq(tenantApplicationSubscriptions.status, 'incomplete'),
+  ));
+  if (terminal) await deactivateSubscriptionEntitlements(stripeSubscriptionId);
+  return {
+    handled: true,
+    action: terminal
+      ? 'core_product_stack_terminal_before_checkout'
+      : `core_product_stack_${eventKind}_deferred`,
+    shouldPropagate: terminal,
+  };
+}
+
+function validateStackSubscriptionBinding(
+  subscription: any,
+  stackSub: TenantApplicationSubscriptionRow,
+  allowInitiallyUnbound = false,
+): { valid: true; includedCompanion: CompanionModuleKey; additionalModules: CompanionModuleKey[] }
+  | { valid: false; error: string } {
+  const md = subscription.metadata ?? {};
+  const customerId = typeof subscription.customer === 'string'
+    ? subscription.customer
+    : subscription.customer?.id;
+  const includedCompanion = md.selected_free_companion_module;
+  const additionalSeatsText = String(md.additional_seats ?? '');
+  const additionalSeats = /^\d+$/.test(additionalSeatsText)
+    ? Number.parseInt(additionalSeatsText, 10)
+    : Number.NaN;
+  const rawAdditionalModules = String(md.additional_module_keys ?? '');
+  const additionalModules = rawAdditionalModules === ''
+    ? []
+    : rawAdditionalModules.split(',').map((value: string) => value.trim());
+  const uniqueAdditionalModules = [...new Set(additionalModules)];
+  const checkoutAttemptId = stackCheckoutAttemptId(stackSub);
+
+  if (md.billing_model !== 'core_product_stack'
+      || md.billing_interval !== 'month'
+      || md.internal_application_subscription_id !== stackSub.id
+      || md.checkout_attempt_id !== checkoutAttemptId
+      || md.tenant_id !== stackSub.tenantId
+      || customerId !== stackSub.stripeCustomerId
+      || (stackSub.stripeSubscriptionId
+        ? subscription.id !== stackSub.stripeSubscriptionId
+        : !allowInitiallyUnbound)
+      || md.selected_core_product !== stackSub.coreProduct
+      || typeof md.user_id !== 'string'
+      || md.user_id.length === 0
+      || (stackSub.initiatedByUserId !== null && md.user_id !== stackSub.initiatedByUserId)
+      || !isEligibleCompanionModuleKey(includedCompanion)
+      || !Number.isSafeInteger(additionalSeats)
+      || additionalSeats !== stackSub.additionalSeats
+      || additionalModules.length !== uniqueAdditionalModules.length
+      || !uniqueAdditionalModules.every(isEligibleCompanionModuleKey)
+      || uniqueAdditionalModules.includes(includedCompanion)) {
+    return { valid: false, error: 'Application stack subscription metadata binding mismatch' };
+  }
+
+  const currentIncluded = stackSub.includedCompanionKey;
+  const currentAdditionalModules = stackSub.additionalModuleKeys.filter(isEligibleCompanionModuleKey);
+  if (!isEligibleCompanionModuleKey(currentIncluded)
+      || currentAdditionalModules.length !== stackSub.additionalModuleKeys.length) {
+    return { valid: false, error: 'Application stack subscription row contains an invalid selection' };
+  }
+  const expectedAdditionalModules = includedCompanion === currentIncluded
+    ? currentAdditionalModules
+    : swapIncludedCompanion(currentIncluded, currentAdditionalModules, includedCompanion);
+  const expectedSorted = [...expectedAdditionalModules].sort();
+  const providerSorted = [...uniqueAdditionalModules].sort();
+  if (JSON.stringify(expectedSorted) !== JSON.stringify(providerSorted)) {
+    return { valid: false, error: 'Application stack subscription selection metadata mismatch' };
+  }
+
+  return {
+    valid: true,
+    includedCompanion,
+    additionalModules: uniqueAdditionalModules as CompanionModuleKey[],
+  };
 }
 
 async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProcessResult> {
-  const stripeSubId = subscription.id;
-  const status = mapStripeStatus(subscription.status);
-  const cancelAtEnd = subscription.cancel_at_period_end;
+  const stripeSubId = stripeResourceId(subscription?.id);
+  if (!stripeSubId) return { handled: false, error: 'Stripe subscription id is missing' };
+  const stackSub = await findStackSubscriptionCandidate(subscription);
+  if (stackSub) {
+    if (stackSub.stripeSubscriptionId && stackSub.stripeSubscriptionId !== stripeSubId) {
+      return { handled: true, action: 'core_product_stack_stale_update_binding_ignored', shouldPropagate: false };
+    }
+    if (stackSub.status === 'incomplete') {
+      return reconcileStackSubscriptionBeforeCheckout(subscription, 'updated');
+    }
+    const providerSubscription = await retrieveAuthoritativeSubscription(stripeSubId);
+    const binding = await validateAuthoritativeStackSubscription(providerSubscription, stackSub);
+    if (!binding.valid) {
+      await quarantineStackSubscription(stackSub, stripeSubId, binding.error);
+      return { handled: true, action: 'core_product_stack_provider_drift_deactivated', shouldPropagate: true };
+    }
+    const providerStatus = mapStripeStatus(providerSubscription.status);
+    const cancelAtEnd = !!providerSubscription.cancel_at_period_end;
+    const status = cancelAtEnd && ['active', 'trialing', 'past_due'].includes(providerStatus)
+      ? 'canceling'
+      : providerStatus;
+    const providerCarriesAccess = ['active', 'trialing', 'past_due'].includes(providerSubscription.status);
+    const recoveryEligible = ['active', 'trialing', 'past_due', 'canceling'].includes(stackSub.status);
+    if (providerCarriesAccess && !recoveryEligible) {
+      // Only checkout completion may establish a new paid grant. Provider
+      // updates can repair an already-activated/quarantined stack, but cannot
+      // revive canceled/expired contracts or bypass checkout after a failed
+      // pre-checkout reconciliation.
+      await deactivateSubscriptionEntitlements(stripeSubId);
+      return {
+        handled: true,
+        action: 'core_product_stack_terminal_update_ignored',
+        shouldPropagate: true,
+      };
+    }
+    const [activeCoreGrant] = await db.select({ id: tenantEntitlements.id })
+      .from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.tenantId, stackSub.tenantId),
+        eq(tenantEntitlements.entitlementType, 'core_product'),
+        eq(tenantEntitlements.stripeSubscriptionId, stripeSubId),
+        eq(tenantEntitlements.active, true),
+      ))
+      .limit(1);
+    if (providerCarriesAccess && !activeCoreGrant) {
+      // A corrected provider subscription can recover a stack that a prior
+      // mismatch quarantined, but only after passing the same exact catalog,
+      // item, quantity, tenant, and metadata validation used at checkout.
+      await grantStackEntitlements({
+        tenantId: stackSub.tenantId,
+        coreProduct: stackSub.coreProduct,
+        freeCompanionModule: binding.includedCompanion,
+        additionalModules: binding.additionalModules,
+        additionalSeats: stackSub.additionalSeats,
+        stripeSubscriptionId: stripeSubId,
+        corePriceId: stackSub.corePriceId,
+        companionPriceId: stackSub.companionPriceId,
+        additionalSeatPriceId: stackSub.additionalSeatPriceId,
+      });
+    } else if (providerCarriesAccess && binding.includedCompanion !== stackSub.includedCompanionKey) {
+      await changeFreeCompanionModule(
+        stackSub.tenantId,
+        binding.includedCompanion,
+        binding.additionalModules,
+      );
+    }
+    await db.update(tenantApplicationSubscriptions).set({
+      status,
+      cancelAtPeriodEnd: cancelAtEnd,
+      currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stackSub.currentPeriodStart,
+      currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stackSub.currentPeriodEnd,
+      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+        providerValidation: 'validated',
+        providerValidatedAt: new Date().toISOString(),
+      })}::jsonb`,
+      updatedAt: new Date(),
+    }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
+    if (!providerCarriesAccess) {
+      await deactivateSubscriptionEntitlements(stripeSubId);
+    }
+    return { handled: true, action: 'core_product_stack_updated', shouldPropagate: true };
+  }
 
-  const [existingSub] = await db.select().from(subscriptions)
-    .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
-
+  const existingSub = await findGrandfatheredLegacyByStripeSubscriptionId(stripeSubId);
   if (!existingSub) {
-    console.log('[billing-service] No local subscription matched the update');
-    return { handled: false, error: 'No matching local subscription' };
+    return { handled: true, action: 'non_grandfathered_subscription_update_ignored', shouldPropagate: false };
   }
-
-  const priceId = subscription.items?.data?.[0]?.price?.id;
-  let newPlanId = existingSub.planId;
-
-  if (priceId) {
-    const [matchingPlan] = await db.select().from(subscriptionPlans)
-      .where(eq(subscriptionPlans.stripePriceId, priceId)).limit(1);
-    if (matchingPlan) newPlanId = matchingPlan.id;
+  const status = mapStripeStatus(subscription.status);
+  if (['canceled', 'expired'].includes(existingSub.status)
+      && !['canceled', 'expired'].includes(status)) {
+    return { handled: true, action: 'stale_grandfathered_subscription_update_ignored', shouldPropagate: false };
   }
-
   await db.update(subscriptions).set({
-    planId: newPlanId, status, cancelAtPeriodEnd: cancelAtEnd,
-    currentPeriodStart: new Date(subscription.current_period_start * 1000),
-    currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    // The v60 marker freezes the commercial tier. Provider item/Price changes
+    // can update lifecycle facts but can never expand the grandfathered plan.
+    status,
+    cancelAtPeriodEnd: !!subscription.cancel_at_period_end,
+    currentPeriodStart: stripePeriodDate(subscription.current_period_start) ?? existingSub.currentPeriodStart,
+    currentPeriodEnd: stripePeriodDate(subscription.current_period_end) ?? existingSub.currentPeriodEnd,
     updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  console.log(`[billing-service] Subscription updated: status=${status}`);
-  return { handled: true, action: 'subscription_updated' };
+  return { handled: true, action: 'grandfathered_subscription_lifecycle_updated' };
 }
 
 async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProcessResult> {
-  const stripeSubId = subscription.id;
+  const stripeSubId = stripeResourceId(subscription?.id);
+  if (!stripeSubId) return { handled: false, error: 'Stripe subscription id is missing' };
+  const stackSub = await findStackSubscriptionCandidate(subscription);
 
-  const deactivatedTenantId = await deactivateSubscriptionEntitlements(stripeSubId);
-  if (deactivatedTenantId) {
+  if (stackSub) {
+    if (stackSub.stripeSubscriptionId && stackSub.stripeSubscriptionId !== stripeSubId) {
+      return { handled: true, action: 'core_product_stack_stale_delete_binding_ignored', shouldPropagate: false };
+    }
+    if (isStaleStackCheckoutGeneration(subscription, stackSub)) {
+      return { handled: true, action: 'core_product_stack_stale_delete_generation_ignored', shouldPropagate: false };
+    }
+    const binding = validateStackSubscriptionBinding(subscription, stackSub, true);
+    const alreadyBound = stackSub.stripeSubscriptionId === stripeSubId;
+    if (!binding.valid && !alreadyBound) return { handled: false, error: binding.error };
+    await deactivateSubscriptionEntitlements(stripeSubId);
+    await db.update(tenantApplicationSubscriptions).set({
+      status: 'canceled',
+      stripeSubscriptionId: stripeSubId,
+      cancelAtPeriodEnd: false,
+      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+        providerTerminalEvent: 'customer.subscription.deleted',
+        providerTerminalAt: new Date().toISOString(),
+        ...(binding.valid ? {} : { providerValidationReason: binding.error }),
+      })}::jsonb`,
+      updatedAt: new Date(),
+    }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
     return { handled: true, action: 'core_product_stack_deactivated', shouldPropagate: true };
   }
 
-  const [existingSub] = await db.select().from(subscriptions)
-    .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
-
+  const existingSub = await findGrandfatheredLegacyByStripeSubscriptionId(stripeSubId);
   if (!existingSub) {
-    return { handled: false, error: 'No matching local subscription' };
+    return { handled: true, action: 'unknown_subscription_delete_observed', shouldPropagate: false };
   }
-
-  const starterPlan = await db.select().from(subscriptionPlans)
-    .where(eq(subscriptionPlans.slug, 'starter')).limit(1);
 
   await db.update(subscriptions).set({
     status: 'canceled', cancelAtPeriodEnd: false,
-    planId: starterPlan[0]?.id || existingSub.planId,
     updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
@@ -1237,37 +2461,46 @@ async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProc
 }
 
 async function handlePaymentFailed(invoice: any): Promise<WebhookProcessResult> {
-  const stripeSubId = invoice.subscription;
+  const stripeSubId = stripeResourceId(invoice.subscription);
   if (!stripeSubId) return { handled: false, error: 'No subscription on invoice' };
 
-  const [existingSub] = await db.select().from(subscriptions)
-    .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
+  const [stackSub] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
+  if (stackSub) {
+    // Invoice delivery is not subscription lifecycle authority. Re-read the
+    // provider object so an older invoice cannot revive or regress a terminal
+    // subscription, and run the same exact-item validation as update events.
+    const providerSubscription = await retrieveAuthoritativeSubscription(stripeSubId);
+    return handleSubscriptionUpdated(providerSubscription);
+  }
 
-  if (!existingSub) return { handled: false, error: 'No matching local subscription' };
-
-  await db.update(subscriptions).set({
-    status: 'past_due', updatedAt: new Date(),
-  }).where(eq(subscriptions.id, existingSub.id));
-
-  console.log('[billing-service] Payment failed');
-  return { handled: true, action: 'payment_failed' };
+  return {
+    handled: true,
+    action: await findGrandfatheredLegacyByStripeSubscriptionId(stripeSubId)
+      ? 'grandfathered_invoice_payment_failed_observed'
+      : 'unknown_invoice_payment_failed_observed',
+    shouldPropagate: false,
+  };
 }
 
 async function handleInvoicePaid(invoice: any): Promise<WebhookProcessResult> {
-  const stripeSubId = invoice.subscription;
+  const stripeSubId = stripeResourceId(invoice.subscription);
   if (!stripeSubId) return { handled: false, error: 'No subscription on invoice' };
 
-  const [existingSub] = await db.select().from(subscriptions)
-    .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
+  const [stackSub] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
+  if (stackSub) {
+    const providerSubscription = await retrieveAuthoritativeSubscription(stripeSubId);
+    return handleSubscriptionUpdated(providerSubscription);
+  }
 
-  if (!existingSub) return { handled: false, error: 'No matching local subscription' };
-
-  await db.update(subscriptions).set({
-    status: 'active', updatedAt: new Date(),
-  }).where(eq(subscriptions.id, existingSub.id));
-
-  console.log('[billing-service] Invoice paid');
-  return { handled: true, action: 'invoice_paid' };
+  return {
+    handled: true,
+    action: await findGrandfatheredLegacyByStripeSubscriptionId(stripeSubId)
+      ? 'grandfathered_invoice_paid_observed'
+      : 'unknown_invoice_paid_observed',
+    shouldPropagate: false,
+  };
 }
 
 type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired';
@@ -1283,7 +2516,8 @@ function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
     incomplete_expired: 'expired',
     paused: 'canceled',
   };
-  return map[stripeStatus] || 'active';
+  // Unknown provider states never grant access by optimistic default.
+  return map[stripeStatus] || 'past_due';
 }
 
 // ---------------------------------------------------------------------------
@@ -1466,33 +2700,13 @@ export interface CreateAddonStripePriceResult {
   currency: string;
 }
 export async function createAddonStripePrice(
-  args: CreateAddonStripePriceArgs,
+  _args: CreateAddonStripePriceArgs,
 ): Promise<CreateAddonStripePriceResult> {
-  if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled (set STRIPE_SECRET_KEY and STRIPE_MODE=test or live)');
-  }
-  if (!Number.isInteger(args.unitAmountCents) || args.unitAmountCents <= 0) {
-    throw new Error('unitAmountCents must be a positive integer (cents)');
-  }
-  const currency = (args.currency || 'usd').toLowerCase();
-  const stripe = getStripe();
-  const price = await stripe.prices.create({
-    unit_amount: args.unitAmountCents,
-    currency,
-    recurring: { interval: 'month' },
-    product_data: { name: `OperatorOS — ${args.moduleName} (add-on)` },
-    metadata: { moduleSlug: args.moduleSlug, source: 'platform_pricing_create' },
-  });
-  return {
-    priceId: price.id,
-    productId: typeof price.product === 'string'
-      ? price.product
-      : (price.product && typeof price.product === 'object' && 'id' in price.product
-          ? String(price.product.id)
-          : ''),
-    unitAmountCents: typeof price.unit_amount === 'number' ? price.unit_amount : args.unitAmountCents,
-    currency: price.currency || currency,
-  };
+  throw new CommercePolicyError(
+    'APPLICATION_STACK_SHARED_PRICE_REQUIRED',
+    'Application stacks use one shared companion price. Per-module Stripe price creation is closed.',
+    409,
+  );
 }
 
 // Validates a Stripe Price ID by retrieving it from Stripe. Used by the
@@ -1545,10 +2759,9 @@ export async function validateAddonStripePriceId(priceId: string): Promise<Addon
 export function isAddonPurchasable(
   mod: AddonModuleCandidate | null | undefined,
 ): boolean {
-  if (!isCommercialAddonModule(mod)) return false;
-  if (mod?.status === 'disabled' || mod?.status === 'coming_soon') return false;
-  if (!isStripeEnabled()) return true;
-  return !!getAddonStripePriceIdFromModule(mod);
+  // Existing rows remain effective/cancelable, but no individual application
+  // is sold outside the application-stack checkout.
+  return false;
 }
 
 export class AddonNotPurchasableError extends Error {
@@ -1594,6 +2807,7 @@ export async function subscribeToAddon(
   moduleSlug: string,
   opts?: { tenantId?: string | null; initiatedByUserId?: string | null },
 ): Promise<AddonSubscribeResult> {
+  legacyAddonSalesClosed();
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) throw new Error(`Module not found: ${moduleSlug}`);
   if (mod.status === 'disabled') throw new Error(`Module is disabled: ${moduleSlug}`);
@@ -1660,8 +2874,8 @@ export async function subscribeToAddon(
       internalAddonSubscriptionId: pending.id,
     };
     if (tenantId) {
-      md.tenant_id = tenantId;
-      md.tenantId = tenantId;
+      md.tenant_id = String(tenantId);
+      md.tenantId = String(tenantId);
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -1705,12 +2919,16 @@ export async function subscribeToAddon(
   return { ok: true, moduleSlug, action: 'subscribed' };
 }
 
-export async function cancelAddon(userId: string, moduleSlug: string): Promise<{ ok: boolean; message: string }> {
+export async function cancelAddon(userId: string, tenantId: string, moduleSlug: string): Promise<{ ok: boolean; message: string }> {
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) throw new Error(`Module not found: ${moduleSlug}`);
 
   const rows = await db.select().from(addonSubscriptions)
-    .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
+    .where(and(
+      eq(addonSubscriptions.userId, userId),
+      eq(addonSubscriptions.tenantId, tenantId),
+      eq(addonSubscriptions.moduleId, mod.id),
+    ));
   const active = rows.find(a => ['active', 'trialing'].includes(a.status));
   if (!active) return { ok: false, message: 'No active add-on for this module' };
 
@@ -1727,7 +2945,7 @@ export async function cancelAddon(userId: string, moduleSlug: string): Promise<{
   }
 
   await db.insert(billingEvents).values({
-    userId, eventType: 'addon_cancel_scheduled',
+    userId, tenantId, eventType: 'addon_cancel_scheduled',
     metadata: { moduleSlug, mode: isStripeEnabled() ? 'stripe' : 'local' },
     processedAt: new Date(),
   });
@@ -1849,14 +3067,48 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
     replayResult: { handled: true, action: 'duplicate_ignored' },
   };
 
-  const next = (evt.retryCount ?? 0) + 1;
+  const lease = stripeEventLeaseMetadata();
+  const acquired = await db.execute(sql`
+    UPDATE billing_events
+    SET retry_count=retry_count+1,
+        error_message=NULL,
+        metadata=COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+          ...lease,
+          replayInProgress: true,
+        })}::jsonb
+    WHERE id=${eventId}
+      AND processed_at IS NULL
+      AND (
+        error_message IS NOT NULL
+        OR COALESCE(
+          NULLIF(metadata->>'processingLeaseExpiresAt','')::timestamptz,
+          '-infinity'::timestamptz
+        ) <= NOW()
+      )
+    RETURNING retry_count
+  `);
+  const acquiredRetryCount = acquired.rows[0]?.retry_count;
+  if (typeof acquiredRetryCount !== 'number') {
+    const [current] = await db.select({ processedAt: billingEvents.processedAt })
+      .from(billingEvents).where(eq(billingEvents.id, eventId)).limit(1);
+    if (current?.processedAt) return {
+      ok: true,
+      replayed: false,
+      message: 'Event already processed; ignoring duplicate retry.',
+      replayResult: { handled: true, action: 'duplicate_ignored' },
+    };
+    return {
+      ok: false,
+      replayed: false,
+      message: 'Event processing is already in progress; retry after its processing lease expires.',
+    };
+  }
+  const next = acquiredRetryCount;
   const rawEvent = (evt.metadata as any)?.rawEvent;
 
   // No raw payload → just mark resolved (legacy / non-replayable)
   if (!rawEvent || typeof rawEvent !== 'object' || !rawEvent.type) {
-    await db.update(billingEvents).set({
-      retryCount: next, processedAt: new Date(), errorMessage: null,
-    }).where(eq(billingEvents.id, eventId));
+    await markStripeEventProcessed(eventId, 'legacy_event_marked_resolved');
     return {
       ok: true,
       message: `Event marked resolved (attempts=${next}). No raw payload was captured for true replay.`,
@@ -1864,44 +3116,43 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
     };
   }
 
-  // Release the stripe_event_id slot so the replay can re-claim it via the
-  // partial unique index. The DLQ row's stripe_event_id stays NULL.
-  await db.update(billingEvents).set({
-    stripeEventId: null,
-    metadata: { ...(evt.metadata as any || {}), replayInProgress: true },
-  }).where(eq(billingEvents.id, eventId));
-
   // Dispatch by event family. Stripe's webhook router tags addon flows via
   // metadata.type==='addon' || metadata.kind==='addon' on the affected object;
   // everything else is a plan/base-subscription event handled by
   // processWebhookEvent. Without this branch, plan-side failures could not be
   // replayed and would stay stuck in the DLQ forever.
-  const replayObj = rawEvent?.data?.object || {};
-  const replayMd = (replayObj.metadata || {}) as Record<string, string>;
-  const isAddonReplay = replayMd.type === 'addon' || replayMd.kind === 'addon';
+  const replayClassification = classifyWebhookEvent(rawEvent);
 
   let replayResult: WebhookProcessResult;
   try {
-    replayResult = isAddonReplay
-      ? await processAddonWebhookEvent(rawEvent)
-      : await processWebhookEvent(rawEvent);
+    if (replayClassification.isFeatureAddon) {
+      const numberBilling = await import('./callcommand-number-billing.js');
+      replayResult = replayClassification.featureKey === numberBilling.CALLCOMMAND_NUMBER_FEATURE_KEY
+        ? await numberBilling.processCallCommandNumberWebhookEvent(rawEvent)
+        : await (await import('./callcommand-lane-billing.js')).processCallCommandLaneWebhookEvent(rawEvent);
+    } else {
+      replayResult = replayClassification.isAddon
+        ? await processAddonWebhookEvent(rawEvent)
+        : await processWebhookEvent(rawEvent);
+    }
   } catch (err: any) {
+    await markStripeEventFailed(eventId, `replay_error: ${err.message}`);
     await db.update(billingEvents).set({
-      retryCount: next,
-      errorMessage: `replay_error: ${err.message}`,
-      metadata: { ...(evt.metadata as any || {}), replayedAt: new Date().toISOString(), replayError: err.message },
+      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+        replayedAt: new Date().toISOString(),
+        replayError: err.message,
+      })}::jsonb`,
     }).where(eq(billingEvents.id, eventId));
     return { ok: false, message: `Replay threw: ${err.message}` };
   }
 
   if (replayResult.handled) {
+    await markStripeEventProcessed(eventId, replayResult.action);
     await db.update(billingEvents).set({
-      retryCount: next, processedAt: new Date(), errorMessage: null,
-      metadata: {
-        ...(evt.metadata as any || {}),
+      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
         replayedAt: new Date().toISOString(),
         replayedAction: replayResult.action || 'handled',
-      },
+      })}::jsonb`,
     }).where(eq(billingEvents.id, eventId));
     return {
       ok: true,
@@ -1911,14 +3162,12 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
     };
   }
 
+  await markStripeEventFailed(eventId, `replay_failed: ${replayResult.error || 'not_handled'}`);
   await db.update(billingEvents).set({
-    retryCount: next,
-    errorMessage: `replay_failed: ${replayResult.error || 'not_handled'}`,
-    metadata: {
-      ...(evt.metadata as any || {}),
+    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
       replayedAt: new Date().toISOString(),
       replayError: replayResult.error || 'not_handled',
-    },
+    })}::jsonb`,
   }).where(eq(billingEvents.id, eventId));
   return {
     ok: false,

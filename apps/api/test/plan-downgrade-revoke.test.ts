@@ -14,7 +14,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   tenants, tenantUsers, tenantModules, tenantUserModuleAccess, planModules,
@@ -76,8 +76,13 @@ after(async () => {
 
 test('on elite plan -> module unlocked, access_level preserved', async () => {
   await db.insert(subscriptions).values({
-    userId: owner.id, planId: elitePlan.id, status: 'active',
+    userId: owner.id, tenantId: tenant.id, planId: elitePlan.id, status: 'active',
   });
+  await db.execute(sql`
+    UPDATE subscriptions
+    SET legacy_access_grandfathered_at=clock_timestamp()
+    WHERE user_id=${owner.id} AND tenant_id=${tenant.id}
+  `);
   const snap = await resolveEntitlements(owner.id, tenant.id);
   const entry = snap!.modules.find(m => m.slug === mod.slug);
   assert.ok(entry);

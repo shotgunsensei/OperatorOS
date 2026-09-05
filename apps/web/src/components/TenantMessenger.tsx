@@ -415,7 +415,7 @@ export default function TenantMessenger() {
                 <span className={`${styles.connection} ${socketState === 'open' ? styles.connectionOpen : ''}`} aria-hidden="true" />
                 <div className={styles.sidebarTitle}>
                   <strong>{activeTenant?.name || 'Organization'} messages</strong>
-                  <span className={styles.subtle}>{socketState === 'open' ? 'Live and tenant-private' : socketState === 'closed' ? 'Offline — reconnecting with polling' : 'Connecting securely…'}</span>
+                  <span className={styles.subtle}>{socketState === 'open' ? 'Live and organization-only' : socketState === 'closed' ? 'Offline — reconnecting with polling' : 'Connecting securely…'}</span>
                 </div>
                 <button type="button" className={styles.iconButton} onClick={beginNewConversation} aria-label="Start a conversation" title="New conversation"><MessageSquarePlus size={16} /></button>
                 <button type="button" className={styles.iconButton} onClick={() => setOpen(false)} aria-label="Close messenger"><X size={16} /></button>
@@ -430,7 +430,7 @@ export default function TenantMessenger() {
               {newConversation ? (
                 <div className={styles.composerView}>
                   <div className={styles.searchWrap}>
-                    <input className={styles.input} value={memberSearch} onChange={event => setMemberSearch(event.target.value)} placeholder="Find a tenant member" aria-label="Find a tenant member" autoFocus />
+                    <input className={styles.input} value={memberSearch} onChange={event => setMemberSearch(event.target.value)} placeholder="Find a teammate" aria-label="Find a teammate" autoFocus />
                   </div>
                   <div className={styles.memberList}>
                     {sortedMembers.length === 0 ? <div className={styles.state}>No matching members in this organization.</div> : sortedMembers.map(member => {
@@ -449,7 +449,7 @@ export default function TenantMessenger() {
                   </div>
                 </div>
               ) : loading ? <div className={styles.state}>Loading conversations…</div> : conversations.length === 0 ? (
-                <div className={styles.state}><MessageCircle size={25} /><p>No conversations yet.</p><button type="button" className={styles.primaryButton} onClick={beginNewConversation}>Message a tenant member</button></div>
+                <div className={styles.state}><MessageCircle size={25} /><p>No conversations yet.</p><button type="button" className={styles.primaryButton} onClick={beginNewConversation}>Message a teammate</button></div>
               ) : (
                 <div className={styles.conversationList}>
                   {conversations.map(conversation => {
@@ -478,7 +478,7 @@ export default function TenantMessenger() {
                         <button type="button" className={styles.secondaryButton} onClick={() => setRenamingConversation(false)}>Cancel</button>
                       </div>
                     ) : (
-                      <div className={styles.chatIdentity}><strong>{conversationName(selectedConversation, user.id)}</strong><span className={styles.subtle}>{selectedConversation.kind === 'group' ? `${selectedConversation.participants.length} tenant members` : `${conversationPresence(selectedConversation, user.id) === 'online' ? 'Online' : 'Offline'} · same organization only`}</span></div>
+                      <div className={styles.chatIdentity}><strong>{conversationName(selectedConversation, user.id)}</strong><span className={styles.subtle}>{selectedConversation.kind === 'group' ? `${selectedConversation.participants.length} organization members` : `${conversationPresence(selectedConversation, user.id) === 'online' ? 'Online' : 'Offline'} · same organization only`}</span></div>
                     )}
                     <div className={styles.chatActions}>
                       {canRenameSelected && !renamingConversation && <button type="button" className={styles.iconButton} onClick={() => { setRenameDraft(selectedConversation.title || ''); setRenamingConversation(true); }} aria-label="Rename group conversation" title="Rename group"><Edit3 size={15} /></button>}
@@ -514,7 +514,7 @@ export default function TenantMessenger() {
                   </div>
                 </>
               ) : (
-                <div className={styles.state} style={{ margin: 'auto', maxWidth: 380 }}><MoreHorizontal size={28} /><h2 style={{ color: '#eef5ff', fontSize: 17 }}>Organization messenger</h2><p>Select a saved conversation or start a tenant-private direct or group message.</p></div>
+                <div className={styles.state} style={{ margin: 'auto', maxWidth: 380 }}><MoreHorizontal size={28} /><h2 style={{ color: '#eef5ff', fontSize: 17 }}>Organization messenger</h2><p>Select a saved conversation or start an organization-only direct or group message.</p></div>
               )}
             </div>
               </section>

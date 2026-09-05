@@ -1,3 +1,5 @@
+import { MODULE_PRODUCT_VALUE_BY_SLUG } from './product-value.js';
+
 export type CoreProductKey = 'tradeflowkit' | 'pulsedesk' | 'techdeck';
 export type IncludedAppKey = 'torqueshed' | 'faultlinelab' | 'ninja-pool-hall';
 export type CompanionModuleKey =
@@ -47,7 +49,7 @@ export const CORE_PRODUCTS: readonly ProductCatalogEntry[] = [
     name: 'TradeFlowKit',
     monthlyPriceCents: 14900,
     includedSeats: INCLUDED_SEATS,
-    description: 'Quote-to-payment operations and revenue-flow control.',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.tradeflowkit.promise,
     stripePriceEnvKey: 'STRIPE_PRICE_TRADEFLOWKIT_MONTHLY',
   },
   {
@@ -55,7 +57,7 @@ export const CORE_PRODUCTS: readonly ProductCatalogEntry[] = [
     name: 'PulseDesk',
     monthlyPriceCents: 14900,
     includedSeats: INCLUDED_SEATS,
-    description: 'Healthcare operations coordination, department escalation, inventory, and asset visibility.',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.pulsedesk.promise,
     stripePriceEnvKey: 'STRIPE_PRICE_PULSEDESK_MONTHLY',
   },
   {
@@ -63,7 +65,7 @@ export const CORE_PRODUCTS: readonly ProductCatalogEntry[] = [
     name: 'TechDeck',
     monthlyPriceCents: 9900,
     includedSeats: INCLUDED_SEATS,
-    description: 'Engineer-first IT and MSP operations console.',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.techdeck.promise,
     stripePriceEnvKey: 'STRIPE_PRICE_TECHDECK_MONTHLY',
   },
 ] as const;
@@ -79,32 +81,54 @@ export const FREE_WITH_ANY_ACCOUNT: readonly ModuleCatalogItem[] = [
   {
     key: 'torqueshed',
     name: 'TorqueShed',
-    description: 'Automotive diagnostics, repair workflow, and proof-of-knowledge tools.',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.torqueshed.promise,
   },
   {
     key: 'faultlinelab',
     name: 'FaultlineLab',
-    description: 'Diagnostic challenges and proof-of-skill scenarios.',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.faultlinelab.promise,
   },
   {
     key: 'ninja-pool-hall',
     name: 'Operator Pool Hall',
-    description: 'Operator-themed digital pool hall with deterministic 8-ball, practice, CPU, local, and protected online play.',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG['ninja-pool-hall'].promise,
   },
 ] as const;
 
 export const COMPANION_MODULES: readonly ModuleCatalogItem[] = [
-  { key: 'snapproofos', name: 'SnapProofOS', description: 'Evidence, proof, and validation workflows.' },
-  { key: 'brandforgeos', name: 'BrandForgeOS', description: 'Brand and campaign production workspace.' },
-  { key: 'studyforge-ai', name: 'StudyForge AI', description: 'AI-assisted study and team training.' },
-  { key: 'ninja-launch-kit', name: 'Deploy Ops', description: 'Release readiness, promotion evidence, approval gates, rollback planning, and audited exports.' },
-  { key: 'callcommand-ai', name: 'CallCommand AI', description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation.' },
-  { key: 'ninjamation', name: 'Script Ops', description: 'Reviewed infrastructure and endpoint automation scripts with governed AI drafting.' },
+  { key: 'snapproofos', name: 'SnapProofOS', description: MODULE_PRODUCT_VALUE_BY_SLUG.snapproofos.promise },
+  { key: 'brandforgeos', name: 'BrandForgeOS', description: MODULE_PRODUCT_VALUE_BY_SLUG.brandforgeos.promise },
+  { key: 'studyforge-ai', name: 'StudyForge AI', description: MODULE_PRODUCT_VALUE_BY_SLUG['studyforge-ai'].promise },
+  { key: 'ninja-launch-kit', name: 'Deploy Ops', description: MODULE_PRODUCT_VALUE_BY_SLUG['ninja-launch-kit'].promise },
+  { key: 'callcommand-ai', name: 'CallCommand AI', description: MODULE_PRODUCT_VALUE_BY_SLUG['callcommand-ai'].promise },
+  { key: 'ninjamation', name: 'Script Ops', description: MODULE_PRODUCT_VALUE_BY_SLUG.ninjamation.promise },
 ] as const;
 
 export const COMPANION_MODULE_KEYS = new Set<CompanionModuleKey>(
   COMPANION_MODULES.map(module => module.key as CompanionModuleKey),
 );
+
+/**
+ * Forward-sale companion catalog. Core applications, free applications, and
+ * OutCall are intentionally absent. Keep this set as the shared authority for
+ * checkout validation, billing readiness, and price administration.
+ */
+export const ELIGIBLE_COMPANION_MODULE_KEYS: readonly CompanionModuleKey[] =
+  COMPANION_MODULES.map(module => module.key as CompanionModuleKey);
+
+export function isEligibleCompanionModuleKey(value: string): value is CompanionModuleKey {
+  return COMPANION_MODULE_KEYS.has(value as CompanionModuleKey);
+}
+
+/** Preserve paid companion quantity when the included companion is changed. */
+export function swapIncludedCompanion(
+  currentIncluded: CompanionModuleKey,
+  additionalModules: readonly CompanionModuleKey[],
+  nextIncluded: CompanionModuleKey,
+): CompanionModuleKey[] {
+  if (currentIncluded === nextIncluded) return [...additionalModules];
+  return additionalModules.map(module => module === nextIncluded ? currentIncluded : module);
+}
 
 export interface StackSelection {
   coreProduct: CoreProductKey;
@@ -122,11 +146,11 @@ export interface StackPriceBreakdown {
 }
 
 export function getAdditionalSeatPriceCents(envValue?: string): number {
-  if (!envValue) return DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS;
-  const parsed = Number.parseInt(envValue, 10);
-  return Number.isSafeInteger(parsed) && parsed >= 0
-    ? parsed
-    : DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS;
+  // Forward commerce has one published seat price. The optional parameter is
+  // retained only as a source-compatible bridge for older callers; runtime
+  // environment values may not silently change the public billing contract.
+  void envValue;
+  return DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS;
 }
 
 export function normalizeStackSelection(selection: StackSelection): StackSelection {
@@ -153,14 +177,13 @@ export function normalizeStackSelection(selection: StackSelection): StackSelecti
 
 export function calculateStackMonthlyPrice(
   selection: StackSelection,
-  additionalSeatPriceCents = DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
 ): StackPriceBreakdown {
   const normalized = normalizeStackSelection(selection);
   const baseProductCents = CORE_PRODUCTS_BY_KEY[normalized.coreProduct].monthlyPriceCents;
   const additionalModulesCents =
     (normalized.additionalModules?.length ?? 0) * COMPANION_MODULE_PRICE_CENTS;
   const additionalSeatsCents =
-    (normalized.additionalSeats ?? 0) * additionalSeatPriceCents;
+    (normalized.additionalSeats ?? 0) * DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS;
 
   return {
     baseProductCents,

@@ -34,9 +34,10 @@ import {
 import { moduleShellApi } from '@/lib/auth';
 import { useModuleDeepLinkTarget } from '@/app/apps/[slug]/ModuleDeepLinkTarget';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ExperiencePrimitives';
-import { ShellLiveBadge } from './ShellChrome';
+import { ShellWorkspaceBadge } from './ShellChrome';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildScriptOpsWorkflowFocus } from '@/lib/companion-workflow';
+import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 
 type Row = Record<string, any>;
 type Section = 'dashboard' | 'library' | 'generate' | 'sync' | 'account' | 'admin';
@@ -130,6 +131,17 @@ function date(value: unknown) {
   const parsed = new Date(String(value));
   return Number.isNaN(parsed.valueOf()) ? '—' : parsed.toLocaleString();
 }
+function libraryName(value: unknown) {
+  const source = String(value ?? '').trim();
+  const known: Record<string, string> = {
+    manual: 'Organization library',
+    built_in: 'Built-in library',
+    github: 'Approved GitHub library',
+    imported: 'Imported library',
+  };
+  if (known[source.toLowerCase()]) return known[source.toLowerCase()];
+  return source ? source.replaceAll('_', ' ') : 'Organization library';
+}
 function badge(value: string): React.CSSProperties {
   const color =
     value === 'approved' || value === 'completed' || value === 'active'
@@ -180,12 +192,16 @@ export default function NinjamationShell({
   embedded = false,
   view,
   hrefFor = path => path,
+  canWrite,
+  canManage,
 }: {
   baseUrl?: string;
   routePath?: string;
   embedded?: boolean;
   view?: string;
   hrefFor?: (path: string) => string;
+  canWrite: boolean;
+  canManage: boolean;
 }) {
   const router = useRouter();
   const deepLink = useModuleDeepLinkTarget();
@@ -291,12 +307,12 @@ export default function NinjamationShell({
         .account()
         .then(setAccount)
         .catch((caught) => setError(errorMessage(caught, 'Could not load account')));
-    if (active === 'admin' && !admin)
+    if (active === 'admin' && canManage && !admin)
       moduleShellApi.ninjamation
         .admin()
         .then(setAdmin)
         .catch((caught) => setError(errorMessage(caught, 'Could not load administration')));
-  }, [active, account, admin]);
+  }, [active, account, admin, canManage]);
 
   async function search(event: React.FormEvent) {
     event.preventDefault();
@@ -311,7 +327,7 @@ export default function NinjamationShell({
     }
   }
   async function toggleFavorite() {
-    if (!detail || busy) return;
+    if (!canWrite || !detail || busy) return;
     setBusy('favorite');
     try {
       if (detail.favorite) await moduleShellApi.ninjamation.unfavorite(detail.script.id);
@@ -353,7 +369,7 @@ export default function NinjamationShell({
         link.remove();
       }, 1_000);
       setNotice(
-        `Downloaded exact approved version ${detail.script.currentVersionNumber}; SHA-256 ${detail.script.contentSha256}.`,
+        `Downloaded approved version ${detail.script.currentVersionNumber}. The approved file check remains available in Script Ops.`,
       );
       await Promise.all([loadDetail(detail.script.id), loadWorkspace()]);
     } catch (caught) {
@@ -363,7 +379,8 @@ export default function NinjamationShell({
     }
   }
   async function lifecycle(action: 'review' | 'approve' | 'reject' | 'retire') {
-    if (!detail || busy) return;
+    const permitted = action === 'review' ? canWrite : canManage;
+    if (!permitted || !detail || busy) return;
     setBusy(action);
     setError(null);
     try {
@@ -391,7 +408,7 @@ export default function NinjamationShell({
   }
   async function generateScript(event: React.FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (!canWrite || busy) return;
     setBusy('generate');
     setError(null);
     setNotice(null);
@@ -416,7 +433,7 @@ export default function NinjamationShell({
   }
   async function createManual(event: React.FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (!canManage || busy) return;
     setBusy('manual');
     setError(null);
     try {
@@ -436,7 +453,7 @@ export default function NinjamationShell({
     }
   }
   async function queueSync() {
-    if (busy) return;
+    if (!canManage || busy) return;
     setBusy('sync');
     setError(null);
     try {
@@ -456,7 +473,7 @@ export default function NinjamationShell({
     }
   }
   async function retrySync(id: string) {
-    if (busy) return;
+    if (!canManage || busy) return;
     setBusy(`retry:${id}`);
     setError(null);
     try {
@@ -473,7 +490,7 @@ export default function NinjamationShell({
     }
   }
   async function setSchedule(enabled: boolean) {
-    if (busy) return;
+    if (!canManage || busy) return;
     setBusy('schedule');
     setError(null);
     try {
@@ -493,6 +510,8 @@ export default function NinjamationShell({
 
   const metrics = workspace?.metrics ?? {};
   const selectedFindings = detail?.script.staticAnalysis?.findings ?? [];
+  const applicationStack = workspace?.access.source === 'application_stack';
+  const accessLabel = applicationStack ? 'Application Stack' : workspace?.access.plan;
 
   return (
     <div
@@ -538,10 +557,10 @@ export default function NinjamationShell({
               <h1 style={{ margin: 0, fontSize: 'clamp(25px,4vw,40px)', letterSpacing: '-.045em' }}>
                 SCRIPT OPS
               </h1>
-              <ShellLiveBadge />
+              <ShellWorkspaceBadge />
             </div>
             <p style={{ margin: '4px 0 0', color: colors.muted }}>
-              Script intelligence, provenance, review, and controlled delivery.
+              Find, create, review, approve, and safely hand off reusable automation scripts.
             </p>
           </div>
           <div
@@ -629,6 +648,18 @@ export default function NinjamationShell({
             {notice}
           </div>
         )}
+        {!canWrite && (
+          <div
+            data-testid="ninjamation-read-only"
+            role="status"
+            style={{ ...card, marginBottom: 14, borderColor: '#fbbf2455', color: '#fde68a' }}
+          >
+            <ShieldCheck size={16} style={{ verticalAlign: -3, marginRight: 8 }} />
+            Read-only library access lets you inspect, copy, and download approved scripts. Creating drafts,
+            saving favorites, changing review status, and refreshing shared sources require contributor or
+            administrator access.
+          </div>
+        )}
         {loading ? (
           <LoadingState label="Loading the automation arsenal" />
         ) : (
@@ -687,19 +718,17 @@ export default function NinjamationShell({
                         fontSize: 11,
                       }}
                     >
-                      CATALOG PROVENANCE
+                      SCRIPT LIBRARY
                     </span>
-                    <h2>AutomationPacks</h2>
-                    <p style={{ color: colors.muted }}>
-                      {workspace?.catalog.repository} · {workspace?.catalog.branch}
-                    </p>
-                    <code style={{ color: '#bfdbfe', overflowWrap: 'anywhere' }}>
-                      {workspace?.catalog.pinnedCommit}
-                    </code>
+                    <h2>Ready-to-use AutomationPacks</h2>
                     <p style={{ color: colors.muted, fontSize: 13 }}>
-                      Incremental synchronization versions changed files, restores reappearing
-                      paths, and deprecates missing paths without destructive deletion.
+                      Refresh new and updated scripts while keeping prior working versions available for review and recovery.
                     </p>
+                    <details style={{ color: colors.muted, fontSize: 12, marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer' }}>Technical library source</summary>
+                      <p>{workspace?.catalog.repository} · {workspace?.catalog.branch}</p>
+                      <code style={{ color: '#bfdbfe', overflowWrap: 'anywhere' }}>{workspace?.catalog.pinnedCommit}</code>
+                    </details>
                     <button style={button} onClick={() => navigateSection('sync')}>
                       <GitBranch size={15} />
                       Open sync control
@@ -714,9 +743,9 @@ export default function NinjamationShell({
                         fontSize: 11,
                       }}
                     >
-                      PLAN + USAGE
+                      ACCESS + USAGE
                     </span>
-                    <h2 style={{ textTransform: 'capitalize' }}>{workspace?.access.plan}</h2>
+                    <h2 style={{ textTransform: 'capitalize' }}>{accessLabel}</h2>
                     <p style={{ color: colors.muted }}>
                       Downloads this month: {workspace?.planUsage.downloadCount ?? 0}
                       {workspace?.access.limits?.monthlyDownloads === null
@@ -742,15 +771,14 @@ export default function NinjamationShell({
                         fontSize: 11,
                       }}
                     >
-                      EXECUTION BOUNDARY
+                      SAFE DELIVERY
                     </span>
-                    <h2>Library, not remote shell</h2>
+                    <h2>Reviewed scripts, ready for your approved tools</h2>
                     <p style={{ color: colors.muted }}>
-                      Display, review, copy, and download do not imply execution or universal
-                      safety. Any future execution must use a separately approved runner-gateway
-                      policy and isolated signed jobs.
+                      Script Ops prepares, checks, approves, and downloads scripts. Run them only
+                      through your organization&apos;s approved management tool after a technician reviews them.
                     </p>
-                    <span style={badge('deprecated')}>web/API execution denied</span>
+                    <span style={badge('deprecated')}>Does not run scripts</span>
                   </article>
                 </div>
               </section>
@@ -946,7 +974,7 @@ export default function NinjamationShell({
                     {!detail ? (
                       <EmptyState
                         title="Select a script"
-                        description="Open a script to inspect inert source, exact checksum, immutable versions, safety metadata, and provenance."
+                        description="Open a script to review what it does, its safety checks, approval status, prior versions, and download history."
                       />
                     ) : (
                       <>
@@ -976,8 +1004,9 @@ export default function NinjamationShell({
                           </div>
                           <button
                             aria-label={detail.favorite ? 'Remove favorite' : 'Add favorite'}
-                            style={secondary}
+                            style={{ ...secondary, opacity: canWrite ? 1 : .5 }}
                             onClick={() => void toggleFavorite()}
+                            disabled={!canWrite || Boolean(busy)}
                           >
                             <Heart
                               size={16}
@@ -997,11 +1026,11 @@ export default function NinjamationShell({
                         >
                           {[
                             ['Status', detail.script.status],
-                            ['Version', detail.script.currentVersionNumber],
-                            ['SHA-256', String(detail.script.contentSha256).slice(0, 16) + '…'],
+                            ['Revision', detail.script.currentVersionNumber],
+                            ['File check', 'Passed'],
                             ['Safety', detail.script.safetyStatus],
                             ['Downloads', detail.script.downloadCount],
-                            ['Source', detail.script.source],
+                            ['Library', libraryName(detail.script.source)],
                           ].map(([label, value]) => (
                             <div
                               key={String(label)}
@@ -1061,13 +1090,13 @@ export default function NinjamationShell({
                               data-testid="button-ninjamation-submit-review"
                               style={button}
                               onClick={() => void lifecycle('review')}
-                              disabled={Boolean(busy)}
+                              disabled={!canWrite || Boolean(busy)}
                             >
                               <Send size={14} />
                               Submit for review
                             </button>
                           )}
-                          {detail.script.status === 'review' && (
+                          {canManage && detail.script.status === 'review' && (
                             <>
                               <button
                                 data-testid="button-ninjamation-approve"
@@ -1103,7 +1132,7 @@ export default function NinjamationShell({
                               {busy === 'download' ? 'Preparing…' : 'Download verified version'}
                             </button>
                           )}
-                          {detail.script.status !== 'retired' && (
+                          {canManage && detail.script.status !== 'retired' && (
                             <button
                               data-testid="button-ninjamation-retire"
                               style={{ ...secondary, color: '#fecaca' }}
@@ -1115,6 +1144,29 @@ export default function NinjamationShell({
                             </button>
                           )}
                         </div>
+                        {detail.script.status === 'approved' && (
+                          <div style={{ marginTop: 16 }}>
+                            <OutcomeWorkflowAction
+                              workflowKey="ninjamation.script_to_techdeck"
+                              aggregateId={detail.script.id}
+                              sourceVersion={detail.script.currentVersionNumber ?? detail.script.version}
+                              sourceDeepLink={`/modules/ninjamation/scripts/${detail.script.id}`}
+                              title="Turn this approved script into a TechDeck runbook package"
+                              description={`Give technicians a controlled, documented way to use “${detail.script.displayName ?? detail.script.name ?? 'this approved script'}” without executing it from Script Ops.`}
+                              destinationLabel="TechDeck"
+                              actionLabel="Review TechDeck package"
+                              previewItems={[
+                                { label: 'One draft TechDeck runbook', detail: 'Purpose, platform, safety notes, and the approved script in a technician-reviewable procedure.' },
+                                { label: 'One saved revision', detail: 'Keeps the exact approved script in the runbook history for later comparison.' },
+                                { label: 'One protected copy of the approved script file', detail: 'Keeps the approved file and its recorded check with the TechDeck package.' },
+                              ]}
+        confirmationText="I reviewed what will be created in TechDeck. This creates a draft runbook, its first revision, and a protected copy of the approved script file. It does not execute the script, change an endpoint, or approve the runbook."
+                              disabled={!canWrite}
+                              disabledReason={!canWrite ? 'You need script edit access to create a TechDeck package.' : undefined}
+                              testId="scriptops-techdeck-handoff"
+                            />
+                          </div>
+                        )}
                         <div
                           style={{
                             marginTop: 18,
@@ -1132,8 +1184,8 @@ export default function NinjamationShell({
                                 data-testid="text-ninjamation-analysis-clean"
                                 style={{ color: colors.green }}
                               >
-                                <CheckCircle2 size={14} /> No static rule matched. Human review
-                                remains required.
+                                <CheckCircle2 size={14} /> No known safety issue was found. Human
+                                review remains required.
                               </p>
                             ) : (
                               selectedFindings.map((finding: Row, index: number) => (
@@ -1144,15 +1196,15 @@ export default function NinjamationShell({
                                       finding.severity === 'critical' ? '#fca5a5' : colors.amber,
                                   }}
                                 >
-                                  <strong>{finding.code}</strong> · {finding.message}
+                                  <strong>Safety finding</strong> · {finding.message}
                                 </p>
                               ))
                             )}
                           </section>
-                          <section style={{ background: '#020813', borderRadius: 12, padding: 13 }}>
-                            <h3>
-                              <GitBranch size={16} /> Source provenance
-                            </h3>
+                          <details style={{ background: '#020813', borderRadius: 12, padding: 13 }}>
+                            <summary style={{ cursor: 'pointer', fontWeight: 800 }}>
+                              <GitBranch size={16} /> Technical source details
+                            </summary>
                             <p style={{ color: colors.muted, overflowWrap: 'anywhere' }}>
                               {detail.script.sourceRepository || 'OperatorOS authored'}
                               {detail.script.sourcePath ? ` / ${detail.script.sourcePath}` : ''}
@@ -1171,11 +1223,11 @@ export default function NinjamationShell({
                                 {detail.script.sourceBlobSha || 'not applicable'}
                               </code>
                             </p>
-                          </section>
+                          </details>
                         </div>
                         <details style={{ marginTop: 14 }}>
                           <summary style={{ cursor: 'pointer', fontWeight: 800 }}>
-                            <History size={14} /> Version and sync history ({detail.versions.length}
+                            <History size={14} /> Revision and update history ({detail.versions.length}
                             )
                           </summary>
                           <div style={{ display: 'grid', gap: 7, marginTop: 10 }}>
@@ -1184,9 +1236,8 @@ export default function NinjamationShell({
                                 key={version.id}
                                 style={{ background: '#020813', padding: 10, borderRadius: 9 }}
                               >
-                                v{version.versionNumber} ·{' '}
-                                <code>{String(version.contentSha256).slice(0, 20)}…</code> ·{' '}
-                                {version.safetyStatus} · {date(version.createdAt)}
+                                Revision {version.versionNumber} · {version.safetyStatus} · {date(version.createdAt)}
+                                <details style={{ marginTop: 5 }}><summary>Technical file details</summary><code>{String(version.contentSha256).slice(0, 20)}…</code></details>
                               </div>
                             ))}
                             {detail.syncHistory.map((item, index) => (
@@ -1224,15 +1275,24 @@ export default function NinjamationShell({
                       fontSize: 11,
                     }}
                   >
-                    SHARED AI / VALIDATED JSON
+                    REVIEW-READY SCRIPT CREATION
                   </span>
                   <h2>Forge a defensive draft</h2>
                   <p style={{ color: colors.muted }}>
-                    PowerShell, Python, Batch, and Bash output is persisted with provider, model,
-                    prompt hash, output hash, usage, and safety provenance. It is never
-                    auto-approved.
+                    Describe the task and create a PowerShell, Python, Batch, or Bash draft. Every
+                    draft is saved with safety checks and must be reviewed before anyone can download it.
                   </p>
-                  {workspace?.access.limits?.aiGeneration ? (
+                  {!canWrite ? (
+                    <div
+                      data-testid="ninjamation-generation-read-only"
+                      style={{ padding: 18, borderRadius: 12, border: '1px solid #fbbf2455', background: '#78350f22' }}
+                    >
+                      <h3>Contributor access required</h3>
+                      <p style={{ color: colors.muted, marginBottom: 0 }}>
+                        You can review existing scripts, but this access level cannot create an AI-assisted draft.
+                      </p>
+                    </div>
+                  ) : workspace?.access.limits?.aiGeneration ? (
                     <form onSubmit={generateScript} style={{ display: 'grid', gap: 10 }}>
                       <label>
                         Name (optional)
@@ -1289,10 +1349,10 @@ export default function NinjamationShell({
                         background: '#78350f22',
                       }}
                     >
-                      <h3>Pro entitlement required</h3>
+                      <h3>AI drafting is a Pro feature</h3>
                       <p style={{ color: colors.muted }}>
-                        The library remains available. AI generation is enforced server-side by
-                        OperatorOS.
+                        The script library remains available. Upgrade to Pro in OperatorOS to
+                        create AI-assisted drafts.
                       </p>
                       <a href="/app/billing" style={{ ...button, textDecoration: 'none' }}>
                         Review OperatorOS plans
@@ -1301,16 +1361,16 @@ export default function NinjamationShell({
                   )}
                 </article>
                 <article style={card}>
-                  <h2>Generation boundary</h2>
+                  <h2>What Script Ops protects</h2>
                   {[
-                    'Strict structured response validation',
-                    'No raw prompt stored; SHA-256 provenance only',
-                    'Potential secret and dangerous-pattern detection',
-                    'Atomic monthly plan usage',
-                    'Idempotent replay without duplicate script',
-                    'Provider-disabled state returns unavailable',
-                    'Human review before approved download',
-                    'No execution claim or command interpolation',
+                    'Checks the draft format before saving it',
+                    'Does not store your full request text',
+                    'Flags possible secrets and dangerous patterns',
+                    'Counts monthly usage only when a draft is accepted',
+                    'Prevents duplicate drafts after a lost response',
+                    'Clearly stops when the creation service is unavailable',
+                    'Requires human review before approved download',
+                    'Never executes a script',
                   ].map((item) => (
                     <p key={item} style={{ display: 'flex', gap: 8, color: colors.muted }}>
                       <Check size={15} color={colors.green} />
@@ -1334,22 +1394,26 @@ export default function NinjamationShell({
                 >
                   <GitBranch size={26} color={colors.blueSoft} />
                   <div style={{ flex: 1, minWidth: 240 }}>
-                    <h2 style={{ margin: '0 0 5px' }}>AutomationPacks synchronization</h2>
+                    <h2 style={{ margin: '0 0 5px' }}>Refresh the AutomationPacks library</h2>
                     <p style={{ margin: 0, color: colors.muted }}>
-                      Fixed repository and branch; full commit, tree, blob, content checksum,
-                      update, restore, deprecation, and failure evidence.
+                      Bring in new and updated scripts, restore files that return, and mark removed files unavailable without deleting their history.
                     </p>
                   </div>
                   <button
                     data-testid="button-ninjamation-sync"
-                    style={button}
+                    style={{ ...button, opacity: canManage ? 1 : .5 }}
                     onClick={() => void queueSync()}
-                    disabled={busy === 'sync'}
+                    disabled={!canManage || busy === 'sync'}
                   >
                     {busy === 'sync' ? <Loader2 size={15} /> : <RefreshCw size={15} />}Queue
                     incremental sync
                   </button>
                 </article>
+                {!canManage && (
+                  <div role="status" style={{ ...card, borderColor: '#fbbf2455', color: '#fde68a' }}>
+                    An organization administrator manages shared catalog refreshes and retries. You can review the sync history below.
+                  </div>
+                )}
                 <div style={{ display: 'grid', gap: 9 }}>
                   {(workspace?.syncRuns.length ?? 0) === 0 ? (
                     <EmptyState
@@ -1397,7 +1461,7 @@ export default function NinjamationShell({
                           <button
                             style={secondary}
                             onClick={() => void retrySync(run.id)}
-                            disabled={busy === `retry:${run.id}`}
+                            disabled={!canManage || busy === `retry:${run.id}`}
                           >
                             <RefreshCw size={14} />
                             Retry
@@ -1427,10 +1491,11 @@ export default function NinjamationShell({
                       <Star color={colors.blueSoft} />
                       <h2>{account.profile.name || account.profile.email}</h2>
                       <p style={{ color: colors.muted }}>{account.profile.email}</p>
-                      <span style={badge(account.access.plan)}>{account.access.plan}</span>
+                      <span style={badge(applicationStack ? 'active' : account.access.plan)}>{applicationStack ? 'Application Stack' : `${account.access.plan} plan`}</span>
                       <p style={{ color: colors.muted }}>
-                        OperatorOS owns identity, tenant membership, entitlements, and profile
-                        changes.
+                        {applicationStack
+                          ? 'Script Ops is fully unlocked for this organization through Application Stack. Subscription and team access are managed in OperatorOS.'
+                          : 'Your profile, organization access, grandfathered plan, and billing are managed in OperatorOS.'}
                       </p>
                     </article>
                     <article style={card}>
@@ -1460,10 +1525,10 @@ export default function NinjamationShell({
                         <p style={{ color: colors.muted }}>No generated scripts yet.</p>
                       ) : (
                         account.generationHistory.slice(0, 8).map((row: Row) => (
-                          <p key={row.id} style={{ color: colors.muted }}>
-                            {row.language} · {row.provider}/{row.model} · {row.tokenCount} tokens ·{' '}
-                            {date(row.createdAt)}
-                          </p>
+                          <div key={row.id} style={{ color: colors.muted, marginBottom: 9 }}>
+                            AI-assisted {row.language} draft · {date(row.createdAt)}
+                            <details><summary>Technical details</summary>{row.provider}/{row.model} · {row.tokenCount} usage units</details>
+                          </div>
                         ))
                       )}
                     </article>
@@ -1474,7 +1539,12 @@ export default function NinjamationShell({
 
             {active === 'admin' && (
               <section id="ninjamation-admin" style={{ display: 'grid', gap: 14 }}>
-                {!admin ? (
+                {!canManage ? (
+                  <EmptyState
+                    title="Administrator access required"
+                    description="An organization owner or administrator manages source schedules, review policy, and administrative script drafts."
+                  />
+                ) : !admin ? (
                   <LoadingState label="Loading Script Ops administration" />
                 ) : (
                   <>
@@ -1509,11 +1579,11 @@ export default function NinjamationShell({
                     >
                       <article style={card}>
                         <h2>
-                          <Users size={17} /> Users and tiers
+                          <Users size={17} /> Users and access
                         </h2>
                         <p style={{ color: colors.muted }}>
-                          Script Ops projects parent membership, module access, and tenant plan. It
-                          cannot mutate child billing or invent a local tier.
+                          Script Ops uses organization membership and application access managed in
+                          OperatorOS. Subscription and billing changes happen there.
                         </p>
                         {admin.users.map((user: Row) => (
                           <div
@@ -1522,8 +1592,7 @@ export default function NinjamationShell({
                           >
                             <strong>{user.email}</strong>
                             <small style={{ display: 'block', color: colors.muted }}>
-                              {user.role} · {user.accessLevel || 'inherited'} · {user.plan} via{' '}
-                              {user.planAuthority}
+                              {user.role} · {user.accessLevel || 'standard'} access · {applicationStack ? 'Application Stack' : `${user.plan} plan`}
                             </small>
                           </div>
                         ))}

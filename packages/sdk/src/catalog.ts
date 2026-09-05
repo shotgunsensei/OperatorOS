@@ -14,6 +14,8 @@
  * working until ops swaps them in the dashboard.
  */
 
+import { MODULE_PRODUCT_VALUE_BY_SLUG } from './product-value.js';
+
 export type ModuleCategory = 'ops' | 'support' | 'ai';
 export type ModulePlanTier = 'starter' | 'pro' | 'elite';
 export type ModuleStatus = 'live' | 'coming_soon' | 'beta';
@@ -79,7 +81,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'tradeflowkit',
     name: 'TradeFlowKit',
-    description: 'Quote-to-payment revenue and business operations control',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.tradeflowkit.promise,
     category: 'ops',
     commercialType: 'core',
     applicationType: 'main-module',
@@ -95,7 +97,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'pulsedesk',
     name: 'PulseDesk',
-    description: 'Healthcare operations coordination and department escalation',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.pulsedesk.promise,
     category: 'support',
     commercialType: 'core',
     applicationType: 'main-module',
@@ -111,7 +113,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'techdeck',
     name: 'TechDeck',
-    description: 'Engineer-first IT and MSP operations console',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.techdeck.promise,
     category: 'ops',
     commercialType: 'core',
     applicationType: 'main-module',
@@ -127,7 +129,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'torqueshed',
     name: 'TorqueShed',
-    description: 'Automotive diagnostics, repair workflow, and proof-of-knowledge community',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.torqueshed.promise,
     category: 'ops',
     commercialType: 'free',
     applicationType: 'companion-application',
@@ -143,7 +145,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'faultlinelab',
     name: 'FaultlineLab',
-    description: 'Cross-discipline diagnostic challenges and proof-of-skill labs',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.faultlinelab.promise,
     category: 'support',
     commercialType: 'free',
     applicationType: 'companion-application',
@@ -161,7 +163,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninja-pool-hall',
     name: 'Operator Pool Hall',
-    description: 'Operator-themed digital pool hall with deterministic 8-ball, practice, CPU, local, and protected online play',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG['ninja-pool-hall'].promise,
     category: 'support',
     commercialType: 'free',
     applicationType: 'companion-application',
@@ -183,7 +185,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     // remain as fallbacks so live secrets keep working pre-cutover.
     slug: 'brandforgeos',
     name: 'BrandForgeOS',
-    description: 'Brand assets, campaigns, positioning, and marketing workflow command center',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.brandforgeos.promise,
     category: 'ops',
     commercialType: 'addon',
     applicationType: 'companion-application',
@@ -199,7 +201,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'snapproofos',
     name: 'SnapProofOS',
-    description: 'Photo-based proof of work',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.snapproofos.promise,
     category: 'ops',
     commercialType: 'addon',
     applicationType: 'companion-application',
@@ -215,7 +217,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'studyforge-ai',
     name: 'StudyForge AI',
-    description: 'AI study & training partner',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG['studyforge-ai'].promise,
     category: 'ai',
     commercialType: 'addon',
     applicationType: 'companion-application',
@@ -231,7 +233,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninja-launch-kit',
     name: 'Deploy Ops',
-    description: 'Release readiness, promotion evidence, approval gates, and rollback planning',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG['ninja-launch-kit'].promise,
     category: 'ai',
     commercialType: 'addon',
     applicationType: 'companion-application',
@@ -248,7 +250,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'callcommand-ai',
     name: 'CallCommand AI',
-    description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG['callcommand-ai'].promise,
     category: 'ai',
     commercialType: 'addon',
     applicationType: 'companion-application',
@@ -264,7 +266,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninjamation',
     name: 'Script Ops',
-    description: 'Reviewed infrastructure and endpoint automation scripts with governed AI drafting',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.ninjamation.promise,
     category: 'ai',
     commercialType: 'addon',
     applicationType: 'companion-application',
@@ -281,7 +283,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'outcall',
     name: 'OutCall',
-    description: 'Discreet exit-assistance and personal-safety calling',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.outcall.promise,
     category: 'support',
     commercialType: 'addon',
     applicationType: 'companion-application',

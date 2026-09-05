@@ -27,6 +27,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { MARKETING_MODULES } from '../../web/src/lib/marketing-catalog.ts';
 
 const WEB_ROOT = resolve(import.meta.dirname, '..', '..', 'web');
 
@@ -543,7 +544,7 @@ test('marketing phase 2 · section components exist with required test-ids', () 
   const expectations: Array<[string, RegExp]> = [
     ['src/components/marketing/sections/Hero.tsx',                /data-testid="marketing-hero"/],
     ['src/components/marketing/sections/Hero.tsx',                /Run Every Operation From One Place/],
-    ['src/components/marketing/sections/Hero.tsx',                /Open your free command layer/],
+    ['src/components/marketing/sections/Hero.tsx',                /Open My Apps/],
     ['src/components/marketing/sections/Hero.tsx',                /Explore the ecosystem/],
     ['src/components/marketing/sections/CommandOrbit.tsx',        /data-testid="marketing-orbit"/],
     ['src/components/marketing/sections/CommandOrbit.tsx',        /prefers-reduced-motion/],
@@ -560,7 +561,7 @@ test('marketing phase 2 · section components exist with required test-ids', () 
     ['src/components/marketing/sections/HowItWorks.tsx',          /how-it-works-step-\$\{i \+ 1\}/],
     ['src/components/marketing/sections/HowItWorks.tsx',          /STEPS:\s*Step\[\]\s*=\s*\[[\s\S]{200,}\]/],
     ['src/components/marketing/sections/FinalCta.tsx',            /Stop juggling tools/],
-    ['src/components/marketing/sections/FinalCta.tsx',            /Enter the Command Layer/],
+    ['src/components/marketing/sections/FinalCta.tsx',            /Open OperatorOS/],
   ];
   for (const [rel, re] of expectations) {
     const src = read(rel);
@@ -578,18 +579,20 @@ test('marketing phase 2 · /modules and /how-it-works reuse the shared sections'
   assert.match(how, /MarketingLayout/, '/how-it-works must stay inside the marketing shell');
 });
 
-test('marketing phase 2 · catalog mirror covers all 13 modules with outcome copy', async () => {
+test('marketing phase 2 · catalog mirror covers all 13 modules with outcome copy', () => {
   const src = read('src/lib/marketing-catalog.ts');
-  // Every slug from the SDK catalog must be present in the marketing
-  // outcome map so visitors never see an empty card body.
+  assert.match(src, /getModuleProductValue\(entry\.slug\)/);
   const slugs = [
     'tradeflowkit', 'torqueshed', 'techdeck', 'pulsedesk', 'faultlinelab',
     'ninja-pool-hall', 'brandforgeos', 'snapproofos', 'studyforge-ai',
     'ninja-launch-kit', 'callcommand-ai', 'ninjamation', 'outcall',
   ];
   for (const slug of slugs) {
-    const property = slug.includes('-') ? `'${slug}'` : slug;
-    assert.match(src, new RegExp(`${property}\\s*:`), `marketing-catalog missing outcome for ${slug}`);
+    const module = MARKETING_MODULES.find(item => item.slug === slug);
+    assert.ok(module, `marketing-catalog missing ${slug}`);
+    assert.ok(module.outcome.trim().length > 0, `marketing-catalog missing outcome for ${slug}`);
+    assert.ok(module.audience.trim().length > 0, `marketing-catalog missing audience for ${slug}`);
+    assert.ok(module.solves.trim().length > 0, `marketing-catalog missing first result for ${slug}`);
   }
   // Status mapping must produce the four marketing labels used by
   // statusBadgeColor.
@@ -669,10 +672,10 @@ test('marketing phase 3 · trust section avoids unsupported compliance claims', 
   // claims tied to certifications we have not actually completed.
   const banned = /\b(SOC\s*2|HIPAA|ISO\s*27001|PCI[- ]DSS|FedRAMP)\b/i;
   assert.doesNotMatch(stripped, banned, 'TrustSection must not assert unsupported compliance certifications');
-  // Required positioning bullets from the brief.
+  // Required positioning remains visible in customer language.
   assert.match(src, /[Rr]ole-based access/);
-  assert.match(src, /[Tt]enant-aware/);
-  assert.match(src, /[Aa]udit/);
+  assert.match(src, /[Oo]rganization stays separate/);
+  assert.match(src, /[Ii]mportant changes stay reviewable/);
 });
 
 test('marketing phase 3 · billing CTA helper centralizes the auth-aware routing rule', () => {

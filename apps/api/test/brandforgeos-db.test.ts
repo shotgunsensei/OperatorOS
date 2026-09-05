@@ -20,6 +20,7 @@ let createdModule = false;
 let signToken: typeof import('../src/lib/auth.js').signToken;
 let brandId = '';
 let campaignId = '';
+let resetAttachmentScanner: (() => void) | null = null;
 
 function headers(user: typeof ownerA, tenantId: string) {
   return {
@@ -43,6 +44,26 @@ async function makeApp() {
   await registerBrandForgeOsPhase31Routes(instance);
   await instance.ready();
   return instance;
+}
+
+async function processLogoSafetyScan(attachmentId: string) {
+  const queued = await db.execute(sql`
+    SELECT * FROM shared_jobs
+    WHERE tenant_id=${ownerA.currentTenantId} AND module_id=${moduleRow.id}
+      AND handler_key='shared.attachment.scan.v1'
+      AND payload_json->>'attachmentId'=${attachmentId}
+    ORDER BY created_at DESC LIMIT 1
+  `);
+  assert.ok(queued.rows[0], 'logo safety scan job must be queued');
+  const jobId = String(queued.rows[0]?.id);
+  await db.execute(sql`
+    UPDATE shared_jobs SET status='processing',lease_owner='brandforge-logo-test',
+      lease_expires_at=NOW()+INTERVAL '1 minute'
+    WHERE id=${jobId}
+  `);
+  const current = await db.execute(sql`SELECT * FROM shared_jobs WHERE id=${jobId}`);
+  const { processSharedJob } = await import('../src/lib/shared-background-jobs.js');
+  await processSharedJob(current.rows[0] as Record<string, unknown>);
 }
 
 async function cleanTenant(tenantId: string) {
@@ -71,11 +92,16 @@ async function cleanTenant(tenantId: string) {
   await db.execute(sql`DELETE FROM shared_activity_events WHERE tenant_id=${tenantId} AND module_id=${moduleRow.id}`);
   await db.execute(sql`DELETE FROM shared_idempotency_keys WHERE tenant_id=${tenantId} AND module_id=${moduleRow.id}`);
   await db.execute(sql`DELETE FROM shared_jobs WHERE tenant_id=${tenantId} AND module_id=${moduleRow.id}`);
+  await db.execute(sql`DELETE FROM shared_attachment_blobs WHERE tenant_id=${tenantId}`);
+  await db.execute(sql`DELETE FROM shared_attachments WHERE tenant_id=${tenantId} AND module_id=${moduleRow.id}`);
   await db.execute(sql`DELETE FROM shared_provider_configs WHERE tenant_id=${tenantId} AND module_id=${moduleRow.id}`);
 }
 
 before(async () => {
   await ensureSchemaReady();
+  const { setAttachmentScannerForTests } = await import('../src/lib/shared-attachments.js');
+  setAttachmentScannerForTests({ name: 'brandforge-clean-test-scanner', configured: true, async scan() { return 'clean'; } });
+  resetAttachmentScanner = () => setAttachmentScannerForTests(null);
   ({ signToken } = await import('../src/lib/auth.js'));
   ownerA = await createTestUser();
   ownerB = await createTestUser();
@@ -126,6 +152,7 @@ after(async () => {
   }
   for (const user of [viewer, ownerA, ownerB]) if (user) await cleanupUser(user.id);
   if (createdModule && moduleRow) await cleanupModule(moduleRow.id);
+  resetAttachmentScanner?.();
 });
 
 test('BrandForgeOS requires an authenticated entitled OperatorOS session', async () => {
@@ -181,6 +208,169 @@ test('BrandForgeOS persists the approved creative workflow and reports only reco
   brandId = brand.json().id;
   assert.equal('tenantId' in brand.json(), false);
   assert.deepEqual(brand.json().assetSummary, ['Primary logo', 'Operator campaign imagery']);
+
+  const injectedLogoOnCreate = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/brands',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      name: 'Untrusted logo reference',
+      logoAttachmentId: '00000000-0000-4000-8000-000000000001',
+    },
+  });
+  assert.equal(injectedLogoOnCreate.statusCode, 400, injectedLogoOnCreate.body);
+
+  const injectedLogoOnPatch = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/brandforgeos/brands/${brandId}`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      expectedVersion: 1,
+      logoAttachmentId: '00000000-0000-4000-8000-000000000001',
+    },
+  });
+  assert.equal(injectedLogoOnPatch.statusCode, 400, injectedLogoOnPatch.body);
+
+  const logoRequest = {
+    expectedVersion: 1,
+    fileName: 'operator-launch-concept.png',
+    mimeType: 'image/png',
+    contentBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    idempotencyKey: 'brandforge-logo-concept-0001',
+  };
+  const stagedLogo = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: logoRequest,
+  });
+  assert.equal(stagedLogo.statusCode, 202, stagedLogo.body);
+  assert.equal(stagedLogo.json().pendingSafetyCheck, true);
+  assert.equal(stagedLogo.json().brand.version, 1);
+  assert.notEqual(stagedLogo.json().brand.logoAttachmentId, stagedLogo.json().logo.id);
+  const logoId = String(stagedLogo.json().logo.id);
+  await processLogoSafetyScan(logoId);
+  const logo = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: logoRequest,
+  });
+  assert.equal(logo.statusCode, 201, logo.body);
+  assert.equal(logo.json().brand.version, 2);
+  assert.equal(logo.json().brand.logoAttachmentId, logo.json().logo.id);
+  assert.equal(logo.json().logo.mimeType, 'image/png');
+  assert.equal(logo.json().logo.scanStatus, 'clean');
+  assert.match(logo.json().brand.assetSummary.at(-1), /^Primary logo:/);
+
+  const logoReplay = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      expectedVersion: 1,
+      fileName: 'operator-launch-concept.png',
+      mimeType: 'image/png',
+      contentBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      idempotencyKey: 'brandforge-logo-concept-0001',
+    },
+  });
+  assert.equal(logoReplay.statusCode, 200, logoReplay.body);
+  assert.equal(logoReplay.json().duplicate, true);
+  assert.equal(logoReplay.json().brand.version, 2);
+  assert.equal(logoReplay.json().logo.id, logoId);
+
+  const logoMismatch = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      expectedVersion: 2,
+      fileName: 'different.png',
+      mimeType: 'image/png',
+      contentBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZgWQAAAAASUVORK5CYII=',
+      idempotencyKey: 'brandforge-logo-concept-0001',
+    },
+  });
+  assert.equal(logoMismatch.statusCode, 400, logoMismatch.body);
+  assert.equal(logoMismatch.json().code, 'ATTACHMENT_IDEMPOTENCY_MISMATCH');
+  for (const status of ['pending', 'error', 'infected'] as const) {
+    await db.execute(sql`
+      UPDATE shared_attachments SET scan_status=${status}
+      WHERE tenant_id=${ownerA.currentTenantId} AND module_id=${moduleRow.id} AND id=${logoId}
+    `);
+    const blocked = await app.inject({
+      method: 'GET',
+      url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+      headers: headers(ownerA, ownerA.currentTenantId),
+    });
+    assert.equal(blocked.statusCode, status === 'infected' ? 404 : 409, `${status}: ${blocked.body}`);
+    assert.equal(blocked.json().code, status === 'infected' ? 'ATTACHMENT_QUARANTINED' : 'ATTACHMENT_SCAN_PENDING');
+  }
+
+  await db.execute(sql`
+    UPDATE shared_attachments SET scan_status='unavailable'
+    WHERE tenant_id=${ownerA.currentTenantId} AND module_id=${moduleRow.id} AND id=${logoId}
+  `);
+  const scannerUnavailable = await app.inject({
+    method: 'GET',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+  });
+  assert.equal(scannerUnavailable.statusCode, 200, scannerUnavailable.body);
+  assert.equal(scannerUnavailable.headers['content-type'], 'image/png');
+  assert.equal(scannerUnavailable.headers['cache-control'], 'private, no-store');
+
+  const largePng = Buffer.alloc(1_100_000);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(largePng);
+  const largePayload = {
+    expectedVersion: 2,
+    fileName: 'operator-launch-large-concept.png',
+    mimeType: 'image/png',
+    contentBase64: largePng.toString('base64'),
+    idempotencyKey: 'brandforge-logo-concept-large-0001',
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify(largePayload)) > 1_048_576, 'test payload must exceed Fastify default body limit');
+  const stagedLargeLogo = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: largePayload,
+  });
+  assert.equal(stagedLargeLogo.statusCode, 202, stagedLargeLogo.body);
+  assert.equal(stagedLargeLogo.json().brand.version, 2);
+  assert.equal(stagedLargeLogo.json().pendingSafetyCheck, true);
+  await processLogoSafetyScan(String(stagedLargeLogo.json().logo.id));
+  const largeLogo = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: largePayload,
+  });
+  assert.equal(largeLogo.statusCode, 201, largeLogo.body);
+  assert.equal(largeLogo.json().brand.version, 3);
+  assert.equal(largeLogo.json().logo.mimeType, 'image/png');
+  assert.notEqual(largeLogo.json().logo.id, logoId);
+  const retiredLogo = await db.execute(sql`
+    SELECT deleted_at,retention_until FROM shared_attachments
+    WHERE tenant_id=${ownerA.currentTenantId} AND module_id=${moduleRow.id} AND id=${logoId}
+  `);
+  assert.ok(retiredLogo.rows[0]?.deleted_at);
+  assert.ok(retiredLogo.rows[0]?.retention_until);
+  const retiredReplay = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      expectedVersion: 3,
+      fileName: 'operator-launch-concept.png',
+      mimeType: 'image/png',
+      contentBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      idempotencyKey: 'brandforge-logo-concept-0001',
+    },
+  });
+  assert.equal(retiredReplay.statusCode, 400, retiredReplay.body);
+  assert.equal(retiredReplay.json().code, 'ATTACHMENT_IDEMPOTENCY_RETIRED');
 
   const persona = await app.inject({
     method: 'POST',
@@ -259,6 +449,47 @@ test('BrandForgeOS persists the approved creative workflow and reports only reco
     },
   });
   assert.equal(calendar.statusCode, 201, calendar.body);
+
+  const publicationBypass = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/brandforgeos/calendar-items/${calendar.json().id}`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: { expectedVersion: 1, status: 'published' },
+  });
+  assert.equal(publicationBypass.statusCode, 409, publicationBypass.body);
+  assert.equal(publicationBypass.json().code, 'BRANDFORGE_PUBLICATION_CONFIRMATION_REQUIRED');
+
+  const publicationRequest = {
+    expectedVersion: 1,
+    externalPublicationConfirmed: true,
+    externalReference: 'provider-post:launch-email-2026-08-15',
+    idempotencyKey: 'brandforge-publication-email-0001',
+  };
+  const published = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/calendar-items/${calendar.json().id}/record-publication`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: publicationRequest,
+  });
+  assert.equal(published.statusCode, 200, published.body);
+  assert.equal(published.json().calendarItem.status, 'published');
+  assert.equal(published.json().externalPublication.performedByOperatorOS, false);
+  const publishedReplay = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/calendar-items/${calendar.json().id}/record-publication`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: publicationRequest,
+  });
+  assert.equal(publishedReplay.statusCode, 200, publishedReplay.body);
+  assert.equal(publishedReplay.json().replayed, true);
+  const publicationAudit = await db.execute(sql`
+    SELECT metadata_json FROM shared_activity_events
+    WHERE tenant_id=${ownerA.currentTenantId} AND module_id=${moduleRow.id}
+      AND object_type='brandforge_calendar_item' AND object_id=${calendar.json().id}
+      AND event_type='external_publication.confirmed'
+  `);
+  assert.equal(publicationAudit.rows.length, 1);
+  assert.equal((publicationAudit.rows[0]?.metadata_json as any)?.externalActionPerformedByOperatorOS, false);
 
   const metric = await app.inject({
     method: 'POST',
@@ -714,4 +945,12 @@ test('BrandForgeOS enforces cross-tenant non-enumeration and viewer read-only ac
   });
   assert.equal(viewerWrite.statusCode, 403, viewerWrite.body);
   assert.equal(viewerWrite.json().code, 'TENANT_MODULE_WRITE_ACCESS_REQUIRED');
+  const viewerLogoWrite = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/brands/${brandId}/logo`,
+    headers: headers(viewer, ownerA.currentTenantId),
+    payload: {},
+  });
+  assert.equal(viewerLogoWrite.statusCode, 403, viewerLogoWrite.body);
+  assert.equal(viewerLogoWrite.json().code, 'TENANT_MODULE_WRITE_ACCESS_REQUIRED');
 });

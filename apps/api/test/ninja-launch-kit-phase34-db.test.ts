@@ -16,6 +16,8 @@ let app: ReturnType<typeof Fastify>;
 let ownerA: Awaited<ReturnType<typeof createTestUser>>;
 let ownerB: Awaited<ReturnType<typeof createTestUser>>;
 let viewer: Awaited<ReturnType<typeof createTestUser>>;
+let reviewer: Awaited<ReturnType<typeof createTestUser>>;
+let tenantAdmin: Awaited<ReturnType<typeof createTestUser>>;
 let moduleRow: typeof modules.$inferSelect;
 let createdModule = false;
 let signToken: typeof import('../src/lib/auth.js').signToken;
@@ -63,15 +65,22 @@ before(async () => {
   await ensureSchemaReady();
   await ensureNinjaLaunchKitPhase34Tables();
   ({ signToken } = await import('../src/lib/auth.js'));
-  ownerA = await createTestUser(); ownerB = await createTestUser(); viewer = await createTestUser();
+  ownerA = await createTestUser(); ownerB = await createTestUser(); viewer = await createTestUser(); reviewer = await createTestUser(); tenantAdmin = await createTestUser();
   const [existing] = await db.select().from(modules).where(eq(modules.slug, 'ninja-launch-kit')).limit(1);
   moduleRow = existing ?? await createTestModule('ninja-launch-kit'); createdModule = !existing;
   await db.insert(tenantModules).values([
     { tenantId: ownerA.currentTenantId, moduleId: moduleRow.id, status: 'enabled', source: 'admin', allowAllMembers: true, metadata: { features: { ninjaLaunchKitPlan: 'pro' } } },
     { tenantId: ownerB.currentTenantId, moduleId: moduleRow.id, status: 'enabled', source: 'admin', allowAllMembers: true, metadata: { features: { ninjaLaunchKitPlan: 'free' } } },
   ]);
-  await db.insert(tenantUsers).values({ tenantId: ownerA.currentTenantId, userId: viewer.id, role: 'member' });
-  await db.insert(tenantUserModuleAccess).values({ tenantId: ownerA.currentTenantId, userId: viewer.id, moduleId: moduleRow.id, accessLevel: 'viewer' });
+  await db.insert(tenantUsers).values([
+    { tenantId: ownerA.currentTenantId, userId: viewer.id, role: 'member' },
+    { tenantId: ownerA.currentTenantId, userId: reviewer.id, role: 'member' },
+    { tenantId: ownerA.currentTenantId, userId: tenantAdmin.id, role: 'admin' },
+  ]);
+  await db.insert(tenantUserModuleAccess).values([
+    { tenantId: ownerA.currentTenantId, userId: viewer.id, moduleId: moduleRow.id, accessLevel: 'viewer' },
+    { tenantId: ownerA.currentTenantId, userId: reviewer.id, moduleId: moduleRow.id, accessLevel: 'manager' },
+  ]);
   app = Fastify(); await app.register(cookie);
   const { registerNinjaLaunchKitPhase34Routes } = await import('../src/routes/ninja-launch-kit-phase34-routes.js');
   await registerNinjaLaunchKitPhase34Routes(app); await app.ready();
@@ -85,7 +94,7 @@ after(async () => {
     await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.moduleId, moduleRow.id));
     await db.delete(tenantModules).where(eq(tenantModules.moduleId, moduleRow.id));
   }
-  for (const user of [viewer, ownerA, ownerB]) if (user) await cleanupUser(user.id);
+  for (const user of [viewer, reviewer, tenantAdmin, ownerA, ownerB]) if (user) await cleanupUser(user.id);
   if (createdModule && moduleRow) await cleanupModule(moduleRow.id);
 });
 
@@ -111,6 +120,64 @@ test('complete kit creation persists every output, nine briefs, one revision, on
   assert.equal(replay.json().kit.id, kitId);
   const counts = await db.execute(sql`SELECT (SELECT count(*) FROM launchkit_product_kits WHERE tenant_id=${ownerA.currentTenantId})::int AS kits,(SELECT count(*) FROM launchkit_product_revisions WHERE tenant_id=${ownerA.currentTenantId})::int AS revisions,(SELECT count(*) FROM shared_usage_events WHERE tenant_id=${ownerA.currentTenantId} AND module_id=${moduleRow.id} AND operation='launchkit.complete_generation')::int AS events`);
   assert.deepEqual({ kits: Number(counts.rows[0].kits), revisions: Number(counts.rows[0].revisions), events: Number(counts.rows[0].events) }, { kits: 1, revisions: 1, events: 1 });
+
+  const owned = await app.inject({ method: 'GET', url: `/v1/modules/ninja-launch-kit/product/kits/${kitId}`, headers: headers(ownerA, ownerA.currentTenantId) });
+  assert.equal(owned.statusCode, 200, owned.body);
+  assert.deepEqual(owned.json().capabilities, { ownedByCurrentUser: true, canManage: true });
+});
+
+test('an authorized module manager can review an exact tenant handoff without taking ownership', async () => {
+  const reviewed = await app.inject({ method: 'GET', url: `/v1/modules/ninja-launch-kit/product/kits/${kitId}`, headers: headers(reviewer, ownerA.currentTenantId) });
+  assert.equal(reviewed.statusCode, 200, reviewed.body);
+  assert.equal(reviewed.json().kit.id, kitId);
+  assert.deepEqual(reviewed.json().capabilities, { ownedByCurrentUser: false, canManage: false });
+
+  const privateList = await app.inject({ method: 'GET', url: '/v1/modules/ninja-launch-kit/product/kits', headers: headers(reviewer, ownerA.currentTenantId) });
+  assert.equal(privateList.statusCode, 200, privateList.body);
+  assert.equal(privateList.json().kits.some((kit: Record<string, unknown>) => kit.id === kitId), false);
+
+  const unprivileged = await app.inject({ method: 'GET', url: `/v1/modules/ninja-launch-kit/product/kits/${kitId}`, headers: headers(viewer, ownerA.currentTenantId) });
+  assert.equal(unprivileged.statusCode, 404, unprivileged.body);
+
+  const mutation = await app.inject({ method: 'POST', url: `/v1/modules/ninja-launch-kit/product/kits/${kitId}/archive`, headers: headers(reviewer, ownerA.currentTenantId) });
+  assert.equal(mutation.statusCode, 404, mutation.body);
+});
+
+test('tenant owner and tenant admin can review a teammate exact handoff but cannot list or manage it', async () => {
+  const created = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/ninja-launch-kit/product/kits',
+    headers: headers(reviewer, ownerA.currentTenantId),
+    payload: payload('Shared Ronin', 'phase34-shared-review-0001'),
+  });
+  assert.equal(created.statusCode, 201, created.body);
+  const sharedKitId = created.json().kit.id as string;
+
+  for (const privilegedReviewer of [ownerA, tenantAdmin]) {
+    const reviewed = await app.inject({
+      method: 'GET',
+      url: `/v1/modules/ninja-launch-kit/product/kits/${sharedKitId}`,
+      headers: headers(privilegedReviewer, ownerA.currentTenantId),
+    });
+    assert.equal(reviewed.statusCode, 200, reviewed.body);
+    assert.equal(reviewed.json().kit.id, sharedKitId);
+    assert.deepEqual(reviewed.json().capabilities, { ownedByCurrentUser: false, canManage: false });
+
+    const privateList = await app.inject({
+      method: 'GET',
+      url: '/v1/modules/ninja-launch-kit/product/kits',
+      headers: headers(privilegedReviewer, ownerA.currentTenantId),
+    });
+    assert.equal(privateList.statusCode, 200, privateList.body);
+    assert.equal(privateList.json().kits.some((kit: Record<string, unknown>) => kit.id === sharedKitId), false);
+
+    const mutation = await app.inject({
+      method: 'POST',
+      url: `/v1/modules/ninja-launch-kit/product/kits/${sharedKitId}/archive`,
+      headers: headers(privilegedReviewer, ownerA.currentTenantId),
+    });
+    assert.equal(mutation.statusCode, 404, mutation.body);
+  }
 });
 
 test('concurrent duplicate replay creates one business row and rejects cross-operation key reuse', async () => {

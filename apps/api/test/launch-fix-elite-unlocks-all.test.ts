@@ -20,7 +20,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   subscriptions, subscriptionPlans, modules, planModules, tenantModules,
@@ -100,9 +100,14 @@ before(async () => {
 
   const now = new Date(); const future = new Date(Date.now() + 30 * 86400_000);
   await db.insert(subscriptions).values([
-    { userId: eliteUserId,   planId: elitePlanId,   status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
-    { userId: starterUserId, planId: starterPlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
+    { userId: eliteUserId, tenantId: eliteTenantId, planId: elitePlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
+    { userId: starterUserId, tenantId: starterTenantId, planId: starterPlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
   ]);
+  await db.execute(sql`
+    UPDATE subscriptions
+    SET legacy_access_grandfathered_at=clock_timestamp()
+    WHERE user_id IN (${eliteUserId}, ${starterUserId})
+  `);
 });
 
 after(async () => {

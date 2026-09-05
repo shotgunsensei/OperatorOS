@@ -183,6 +183,15 @@ export function parseLaunchPatch(input: unknown) {
     }
     result.status = status;
   }
+  if ('externalLaunchConfirmed' in value) {
+    if (typeof value.externalLaunchConfirmed !== 'boolean') {
+      throw new LaunchKitValidationError('externalLaunchConfirmed must be true or false', 'externalLaunchConfirmed');
+    }
+    result.externalLaunchConfirmed = value.externalLaunchConfirmed;
+  }
+  if ('externalLaunchEvidence' in value) {
+    result.externalLaunchEvidence = text(value.externalLaunchEvidence, 'externalLaunchEvidence', 500);
+  }
   return result as {
     expectedVersion: number;
     [key: string]: unknown;

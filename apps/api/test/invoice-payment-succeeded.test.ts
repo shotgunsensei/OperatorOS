@@ -6,11 +6,10 @@
  * a dashboard endpoint subscribed to `invoice.payment_succeeded` hit the
  * silent no-op default branch. Both must now reach `handleInvoicePaid`.
  *
- * We route a payload whose subscription does NOT exist locally: that makes
- * `handleInvoicePaid` return `{ handled: false, error: 'No matching local
- * subscription' }` — distinct from the default branch's `{ handled: false }`
- * with NO error. The presence of that specific error proves routing, without
- * requiring any DB fixtures.
+ * We route a payload whose subscription does NOT exist locally. Invoice-paid
+ * notifications are observations rather than entitlement grants, so the
+ * handler acknowledges the immutable provider event without propagating it.
+ * That distinct action proves routing without creating retry/DLQ churn.
  */
 
 import { test, before } from 'node:test';
@@ -31,9 +30,10 @@ test('invoice.payment_succeeded routes to the invoice-paid handler', async () =>
     type: 'invoice.payment_succeeded',
     data: { object: { subscription: 'sub_does_not_exist_133' } },
   });
-  assert.equal(result.handled, false);
-  assert.equal(result.error, 'No matching local subscription',
-    'reaching this error proves the event was routed to handleInvoicePaid');
+  assert.equal(result.handled, true);
+  assert.equal(result.action, 'unknown_invoice_paid_observed',
+    'the observed action proves the event was routed to handleInvoicePaid');
+  assert.equal(result.shouldPropagate, false);
 });
 
 test('invoice.paid still routes to the same handler', async () => {
@@ -42,8 +42,9 @@ test('invoice.paid still routes to the same handler', async () => {
     type: 'invoice.paid',
     data: { object: { subscription: 'sub_does_not_exist_133' } },
   });
-  assert.equal(result.handled, false);
-  assert.equal(result.error, 'No matching local subscription');
+  assert.equal(result.handled, true);
+  assert.equal(result.action, 'unknown_invoice_paid_observed');
+  assert.equal(result.shouldPropagate, false);
 });
 
 test('a genuinely unknown event still hits the no-op default branch', async () => {

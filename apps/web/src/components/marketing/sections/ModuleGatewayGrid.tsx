@@ -28,8 +28,8 @@ interface ModuleGatewayGridProps {
 const PACKAGE_ORDER: MarketingPackageType[] = ['core', 'included', 'companion'];
 
 export default function ModuleGatewayGrid({
-  heading = 'Main modules first. Every companion application connected.',
-  subheading = 'OperatorOS is the parent platform. TradeFlowKit, PulseDesk, and TechDeck lead as main modules; active companion applications follow beneath them.',
+  heading = 'Business applications that earn their place.',
+  subheading = 'Start with a flagship application, use the included applications at no extra charge, and add specialized tools when your operation needs them.',
   testId = 'marketing-module-grid',
   headingLevel = 'h2',
 }: ModuleGatewayGridProps) {
@@ -249,7 +249,7 @@ export default function ModuleGatewayGrid({
                   }}
                 >
                   {laneModules.length}{' '}
-                  {packageType === 'core' ? 'main module' : 'companion application'}
+                  {packageType === 'core' ? 'flagship application' : packageType === 'included' ? 'included application' : 'business add-on'}
                   {laneModules.length === 1 ? '' : 's'}
                 </span>
               </div>
@@ -419,7 +419,7 @@ function ModuleCard({ module: m, signedIn }: { module: MarketingModule; signedIn
               marginBottom: 5,
             }}
           >
-            Operator value
+            Your first useful result
           </div>
           <p style={{ fontSize: 12, lineHeight: 1.45, color: brand.textSecondary, margin: 0 }}>
             {m.solves}

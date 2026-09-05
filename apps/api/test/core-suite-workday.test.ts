@@ -54,7 +54,7 @@ test('TradeFlowKit workday ranks cash, handoff, and delivery risks without mutat
 
   const brief = buildTradeFlowKitWorkday(operations, revenue, now);
   assert.equal(brief.state, 'active');
-  assert.equal(brief.title, 'Revenue Rescue');
+  assert.equal(brief.title, 'Move the next job toward payment');
   assert.equal(brief.actions[0]?.id, 'invoice-invoice-1');
   assert.ok(brief.actions.some(action => action.id === 'quote-quote-1'));
   assert.ok(brief.actions.some(action => action.id === 'job-job-1'));
@@ -94,7 +94,7 @@ test('TechDeck workday ranks overdue dispatch and technical risk ahead of review
 
   const brief = buildTechDeckWorkday(workspace, [ticket], now);
   assert.equal(brief.state, 'active');
-  assert.equal(brief.title, 'Risk-to-Proof Brief');
+  assert.equal(brief.title, 'Handle the highest-risk work first');
   assert.equal(brief.actions[0]?.id, 'ticket-overdue-ticket-1');
   assert.ok(brief.actions.some(action => action.id === 'asset-risk-asset-1'));
   assert.ok(brief.actions.some(action => action.id === 'document-doc-1'));
@@ -121,7 +121,7 @@ test('PulseDesk workday ranks PHI-minimized SLA and ownership pressure', () => {
 
   const brief = buildPulseDeskWorkday(dashboard, tickets, true);
   assert.equal(brief.state, 'active');
-  assert.equal(brief.title, 'Operational Pulse');
+  assert.equal(brief.title, 'Resolve the most urgent operational issue');
   assert.equal(brief.actions[0]?.id, 'request-overdue-request-1');
   assert.ok(brief.actions.some(action => action.id === 'request-risk-request-2'));
   assert.ok(brief.actions.some(action => action.id === 'pending-supplies'));

@@ -19,6 +19,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import {
   ModuleApplicationShell,
   type ModuleRouteManifestGroup,
@@ -144,34 +145,34 @@ const copy: Record<string, { eyebrow: string; title: string; subtitle: string }>
     subtitle: 'Choose practice, CPU, local hot-seat, or protected online play.',
   },
   practice: {
-    eyebrow: 'Free shoot',
+    eyebrow: 'Learn the table at your pace',
     title: 'Practice table',
-    subtitle: 'Clear the rack at your pace and persist a practice summary.',
+    subtitle: 'Practice shots, clear the rack, and save a summary of the session.',
   },
   cpu: {
     eyebrow: 'House opponent',
     title: 'CPU match',
-    subtitle: 'Play a complete deterministic 8-ball match against the house.',
+    subtitle: 'Play a complete 8-ball match against the house opponent.',
   },
   local: {
     eyebrow: 'Hot-seat play',
     title: 'Local match',
-    subtitle: 'Play and persist a two-player match on one device.',
+    subtitle: 'Play a two-player match on one device and save the result.',
   },
   online: {
-    eyebrow: 'Authenticated rooms',
+    eyebrow: 'Play with another operator',
     title: 'Online lobby and match',
-    subtitle: 'Host, join, play, and reconnect to server-verified rooms.',
+    subtitle: 'Host or join a protected room, play the match, and reconnect if the session drops.',
   },
   history: {
-    eyebrow: 'Durable results',
+    eyebrow: 'Follow your progress',
     title: 'History and stats',
     subtitle: 'Review saved results and player progression.',
   },
   profile: {
-    eyebrow: 'Player context',
+    eyebrow: 'Your player record',
     title: 'Profile',
-    subtitle: 'Review progression and player identity under OperatorOS.',
+    subtitle: 'Review your player profile, results, and progression.',
   },
   settings: {
     eyebrow: 'Table control',
@@ -202,7 +203,13 @@ export default function NinjaPoolHallRouteShell({
   const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
+  const moduleAccessLevel = useModuleAccessLevel();
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
+  const platformAdmin = user?.platformRole === 'super_admin';
+  const canWrite = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManage = canWrite && (platformAdmin || activeRole === 'owner' || activeRole === 'admin' || moduleAccessLevel === 'manager');
   const current = area(routePath || pathname);
   const game = ['practice', 'cpu', 'local', 'online'].includes(current);
   const localRoute = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
@@ -242,14 +249,18 @@ export default function NinjaPoolHallRouteShell({
         }
         organization={{
           label: 'Organization',
-          value: activeTenant?.name ?? tenantId ?? 'No organization selected',
+          value: activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected'),
         }}
         accessContext={{
           label: 'Player access',
           value:
-            user?.platformRole === 'super_admin'
+            platformAdmin
               ? 'Platform administrator'
-              : (activeRole ?? 'member'),
+              : !canWrite
+                ? 'Read-only player'
+                : canManage
+                  ? 'Pool Hall manager'
+                  : 'Player',
         }}
         utilityActions={[
           {
@@ -292,6 +303,7 @@ export default function NinjaPoolHallRouteShell({
             routePath={routePath || `/${current}`}
             embedded
             gameActive={game}
+            canWrite={canWrite}
           />
         )}
       </ModuleApplicationShell>

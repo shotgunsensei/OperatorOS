@@ -2,53 +2,90 @@
 
 OperatorOS is the free command and entitlement layer. It provides SSO, tenant
 and user management, billing, module launch, entitlement enforcement, and audit
-history. Tenants pay for applications, not OperatorOS.
+history. Tenants pay for the operating application they need, not the command
+center that secures and launches it.
+
+This is the only forward-sale model. It is monthly-only and tenant-owned. A
+tenant may purchase one flagship stack; adding another flagship requires a
+separate future commercial offer and is not accepted by the current checkout.
 
 ## Core products
 
-| Core product | Monthly price | Included seats |
+| Flagship product | Monthly price | Included tenant seats |
 | --- | ---: | ---: |
 | TradeFlowKit | $149 | 5 |
 | PulseDesk | $149 | 5 |
 | TechDeck | $99 | 5 |
 
-An active core product is fully unlocked. OperatorOS does not apply
-feature-level restrictions inside a purchased application.
+An active flagship is fully unlocked for the purchasing tenant. OperatorOS
+does not apply artificial feature restrictions inside a purchased
+application. The five included seats are shared by the tenant; they are not
+five additional seats per user or per companion.
 
-Every active core product also grants:
+## Free applications
+
+These applications are available at $0 and do not require a Stripe
+subscription:
 
 - TorqueShed
 - FaultlineLab
-- Ninja Pool Hall
-- One selectable companion module at $0
+- Operator Pool Hall
 
-Eligible companion modules are SnapProofOS, BrandForgeOS, StudyForge AI, Ninja
-Launch Kit, CallCommand AI, and Ninjamation. Additional companion modules cost
-$29/month each. Additional operator seats default to $15/month each and are
-configured with `ADDITIONAL_SEAT_PRICE_CENTS`.
+They remain tenant-isolated, authenticated where required, and subject to
+their normal role and safety policies. Free does not mean public access to
+another organization's data.
 
-The authoritative shared catalog is
-`packages/sdk/src/products.ts`. Public pricing, checkout line items, webhook
-grants, and tests must consume that catalog rather than duplicating amounts.
+## Companion applications
 
-## OperatorOS workspace capacity
+Every active flagship includes one tenant-wide companion application selected
+at checkout. The six eligible companions are:
 
-The legacy Starter, Pro, and Elite subscriptions remain as a compatibility
-layer for OperatorOS-native workspace allowances: workspaces, projects, tasks,
-team-member limits, AI actions, and related platform features. They do not
-define the customer-facing application stack and should not be presented as a
-module-access tier system.
+- SnapProofOS
+- BrandForgeOS
+- StudyForge AI
+- Deploy Ops (stable key and route: `ninja-launch-kit`)
+- CallCommand AI
+- Script Ops (stable key and route: `ninjamation`)
 
-Customer-facing billing surfaces use two explicit lanes:
+Additional companion applications cost $29/month each. A companion is enabled
+for the entitled tenant, not purchased separately by each member. OutCall is
+coming soon and is not a purchasable or included companion.
 
-- **Application stack:** core product, included apps, companion modules, and
-  tenant seats. This is the primary commercial model and uses the stack checkout.
-- **Workspace capacity:** OperatorOS-native usage allowances. This preserves
-  existing subscriptions and quota enforcement while the legacy plan model is
-  gradually retired or folded into the stack.
+Additional operator seats cost $15/month each. Checkout uses one shared monthly
+Stripe Price for paid companion quantity and one shared monthly Stripe Price
+for additional-seat quantity; it does not create a separate sellable Price for
+each companion.
 
-Locked module CTAs should route customers to stack options. Resource-limit CTAs
-may continue opening the workspace-capacity selector. This separation prevents
-Starter/Pro/Elite language from conflicting with the finalized core-product
-pricing model.
+## Existing-contract compatibility
+
+Starter, Pro, Elite, and individual module add-on sales are closed. Their
+catalog records, subscription rows, Stripe references, and compatibility
+aliases remain because deleting them would break existing customers, audits,
+quota history, cancellation, or rollback. They must not appear as a new
+purchase, upgrade, plan-change, reactivation, or local entitlement-grant path.
+
+Only subscriptions explicitly marked as existing before the forward-model
+database release may retain legacy plan-to-application access. A later plan
+assignment can still carry OperatorOS-native workspace-capacity data, but it
+must not silently grant application access. Existing customers retain safe
+read/portal/cancellation handling; every new locked-application CTA routes to
+the flagship stack configurator.
+
+## Commercial authority and permissions
+
+- OperatorOS owns Stripe checkout, portal, webhook verification, subscription
+  state, and application entitlements.
+- Billing customer and subscription identity belong to the tenant rather than
+  whichever member happened to initiate checkout.
+- The tenant owner may start checkout, select the included companion, add paid
+  companions or seats, and open the billing portal. Tenant administrators have
+  billing visibility but cannot mutate the commercial contract.
+- Platform superadministrators retain audited support authority without
+  turning browser-supplied tenant or role values into authorization.
+- A paid entitlement is created or changed only from verified Stripe state. A
+  missing provider configuration never produces a local "successful" sale.
+
+The authoritative shared catalog is `packages/sdk/src/products.ts`. Public
+pricing, checkout line items, webhook grants, billing screens, and tests must
+consume that catalog rather than duplicating amounts or sellable sets.
 

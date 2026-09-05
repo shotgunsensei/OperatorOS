@@ -4,37 +4,152 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Minus, Plus } from 'lucide-react';
 import {
-  calculateStackMonthlyPrice,
   COMPANION_MODULES,
-  COMPANION_MODULE_PRICE_CENTS,
   CORE_PRODUCTS,
-  DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
   FREE_WITH_ANY_ACCOUNT,
   type CompanionModuleKey,
   type CoreProductKey,
 } from '@operatoros/sdk';
 import { brand } from '@/lib/brand';
-import { billingApi } from '@/lib/auth';
+import { billingApi, meApi } from '@/lib/auth';
 import { useAuth } from '../../AuthProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
-const money = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+interface BillingCatalog {
+  billingInterval?: 'month';
+  includedSeats?: number;
+  includedCompanionCount?: number;
+  coreProducts?: Array<{ key: CoreProductKey; monthlyPriceCents: number }>;
+  companionModuleMonthlyPriceCents?: number;
+  additionalSeatMonthlyPriceCents?: number;
+  stripeConfigured?: Record<string, boolean> & {
+    companionModule?: boolean;
+    additionalSeat?: boolean;
+  };
+}
+
+const money = (cents: number | null | undefined) => cents == null
+  ? 'Price unavailable'
+  : `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
 export default function PricingSection() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>('tradeflowkit');
   const [freeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>('snapproofos');
   const [additionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>([]);
   const [additionalSeats, setAdditionalSeats] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [catalog, setCatalog] = React.useState<BillingCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = React.useState(true);
+  const [viewerRole, setViewerRole] = React.useState<string | null>(null);
+  const [viewerStack, setViewerStack] = React.useState<any | null>(null);
+  const [accountLoading, setAccountLoading] = React.useState(true);
 
-  const price = calculateStackMonthlyPrice({
-    coreProduct,
-    freeCompanionModule: freeCompanion,
-    additionalModules,
-    additionalSeats,
-  }, DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      setCatalogLoading(true);
+      try {
+        const response = await billingApi.getCatalog();
+        if (alive) setCatalog(response as BillingCatalog);
+      } catch {
+        if (alive) {
+          setCatalog(null);
+          setError('Current Application Stack pricing could not be loaded. Checkout is disabled; nothing can be charged.');
+        }
+      } finally {
+        if (alive) setCatalogLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    if (authLoading) return () => { alive = false; };
+    if (!user) {
+      setViewerRole(null);
+      setViewerStack(null);
+      setAccountLoading(false);
+      return () => { alive = false; };
+    }
+    setAccountLoading(true);
+    (async () => {
+      try {
+        const [tenantData, stackData] = await Promise.all([
+          meApi.tenants(),
+          billingApi.getStack(),
+        ]);
+        const current = tenantData.current ?? tenantData.tenants?.[0]?.id ?? null;
+        const activeTenant = current ? tenantData.tenants?.find((row: any) => row.id === current) : null;
+        if (alive) {
+          setViewerRole(activeTenant?.role ?? null);
+          setViewerStack(stackData);
+        }
+      } catch {
+        if (alive) {
+          setViewerRole(null);
+          setViewerStack(null);
+          setError('Your organization billing authority could not be verified. Checkout is disabled; nothing was charged.');
+        }
+      } finally {
+        if (alive) setAccountLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [authLoading, user]);
+
+  const catalogCorePrice = (key: CoreProductKey) =>
+    catalog?.coreProducts?.find((product) => product.key === key)?.monthlyPriceCents ?? null;
+  const baseProductCents = catalogCorePrice(coreProduct);
+  const companionPriceCents = catalog?.companionModuleMonthlyPriceCents ?? null;
+  const seatPriceCents = catalog?.additionalSeatMonthlyPriceCents ?? null;
+  const price = baseProductCents == null || companionPriceCents == null || seatPriceCents == null
+    ? null
+    : {
+        baseProductCents,
+        additionalModulesCents: additionalModules.length * companionPriceCents,
+        additionalSeatsCents: additionalSeats * seatPriceCents,
+        totalMonthlyCents: baseProductCents + additionalModules.length * companionPriceCents + additionalSeats * seatPriceCents,
+      };
+  const viewerApplicationSubscription = viewerStack?.applicationSubscription ?? viewerStack?.billingAccount ?? null;
+  const blockingStackStatuses = new Set(['active', 'trialing', 'past_due', 'incomplete', 'canceling']);
+  const hasExistingFlagship = viewerApplicationSubscription
+    ? Boolean(viewerApplicationSubscription.coreProduct && blockingStackStatuses.has(viewerApplicationSubscription.status))
+    : Boolean((viewerStack?.entitlements ?? []).some((row: any) => row.active !== false && row.entitlementType === 'core_product'));
+  const pricingContractReady = Boolean(
+    catalog
+    && catalog.billingInterval === 'month'
+    && catalog.includedSeats === 5
+    && catalog.includedCompanionCount === 1
+    && price,
+  );
+  const providerReady = Boolean(
+    catalog?.stripeConfigured?.[coreProduct]
+    && (additionalModules.length === 0 || catalog?.stripeConfigured?.companionModule)
+    && (additionalSeats === 0 || catalog?.stripeConfigured?.additionalSeat),
+  );
+  const ownerCanCheckout = Boolean(
+    user
+    && !authLoading
+    && !accountLoading
+    && viewerRole === 'owner'
+    && !hasExistingFlagship
+    && pricingContractReady
+    && providerReady,
+  );
+  const checkoutStatus = catalogLoading || authLoading || (Boolean(user) && accountLoading)
+    ? 'Verifying current monthly pricing and organization authority…'
+    : user && viewerRole !== 'owner'
+      ? 'Read-only billing view — only the organization owner can start checkout.'
+      : user && hasExistingFlagship
+        ? 'This organization already has its one flagship application. Manage the existing Stack instead of opening another checkout.'
+        : !pricingContractReady
+          ? 'Current monthly pricing is unavailable. Checkout is disabled and nothing can be charged.'
+          : !providerReady
+            ? 'Secure provider checkout is not configured for this selection. Checkout is disabled and nothing can be charged.'
+            : null;
 
   const toggleAdditionalModule = (moduleKey: CompanionModuleKey) => {
     setAdditionalModules(current =>
@@ -54,6 +169,18 @@ export default function PricingSection() {
       window.location.href = '/login?next=/pricing%23build-stack';
       return;
     }
+    if (viewerRole !== 'owner') {
+      setError('Only the organization owner can start or change an Application Stack subscription. Nothing was charged.');
+      return;
+    }
+    if (hasExistingFlagship) {
+      setError('This organization already has its one flagship application. Use organization billing to manage the existing Stack.');
+      return;
+    }
+    if (!pricingContractReady || !providerReady) {
+      setError('Secure monthly checkout is not ready for this selection. Nothing was charged.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -62,11 +189,20 @@ export default function PricingSection() {
         freeCompanionModule: freeCompanion,
         additionalModules,
         additionalSeats,
+        interval: 'month',
       });
-      if (result?.url) window.location.href = result.url;
-      else setError('Checkout did not return a redirect URL.');
-    } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : 'Checkout is not available.');
+      const redirectUrl = typeof result?.url === 'string' ? result.url : '';
+      let validRedirect = false;
+      try {
+        validRedirect = new URL(redirectUrl).protocol === 'https:';
+      } catch {}
+      if (validRedirect) window.location.assign(redirectUrl);
+      else setError('Secure checkout did not return a valid provider URL. Nothing was charged.');
+    } catch (checkoutError: any) {
+      const code = checkoutError?.code;
+      setError(code === 'STACK_FLAGSHIP_LIMIT'
+        ? 'This organization already has its one flagship application. Use organization billing to manage it.'
+        : checkoutError?.error || checkoutError?.message || 'Checkout is not available. Nothing was charged.');
     } finally {
       setBusy(false);
     }
@@ -118,7 +254,7 @@ export default function PricingSection() {
             </h1>
             <p style={{ color: brand.textSecondary, fontSize: 18, lineHeight: 1.65, margin: '0 0 30px' }}>
               OperatorOS is free — including TorqueShed, FaultlineLab, and Operator Pool Hall with any account.
-              Add a fully unlocked main module for 5 operator seats and one companion application at no additional cost.
+              Add one flagship application for the organization with all current features, 5 team seats, and one eligible organization-wide companion at no additional cost. Application Stack is monthly-only.
             </p>
             <div className="pricing-hero-actions" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
               {!user && (
@@ -145,7 +281,7 @@ export default function PricingSection() {
           }}>
             <img
               src="/media/operatoros/operatoros-command-nexus.png"
-              alt="OperatorOS command layer visualization"
+              alt="OperatorOS home base connecting applications, teams, and billing"
               style={{ width: '100%', height: '100%', minHeight: 350, objectFit: 'cover', objectPosition: 'center', display: 'block' }}
             />
           </div>
@@ -163,13 +299,13 @@ export default function PricingSection() {
           gridTemplateColumns: 'minmax(220px, .7fr) minmax(0, 1.3fr)',
         }}>
           <div>
-            <div style={{ color: brand.accentCyan, fontWeight: 750, fontSize: 14 }}>OperatorOS command layer — $0</div>
+            <div style={{ color: brand.accentCyan, fontWeight: 750, fontSize: 14 }}>OperatorOS home base — $0</div>
             <p style={{ color: brand.textSecondary, fontSize: 14, lineHeight: 1.55, margin: '8px 0 0' }}>
-              The parent authority stays free while your organization pays only for the applications it operates.
+              Your OperatorOS command center stays free while your organization pays only for the applications it uses.
             </p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 22px', alignContent: 'center' }}>
-            {['SSO', 'Tenant Management', 'User Management', 'Billing', 'Entitlements', 'Audit Trail'].map(item => (
+            {['One Sign-in', 'Organizations', 'Team Access', 'Billing', 'Application Access', 'Activity History'].map(item => (
               <span key={item} style={{ color: brand.textPrimary, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                 <Check size={14} color={brand.accentGreen} /> {item}
               </span>
@@ -180,8 +316,8 @@ export default function PricingSection() {
 
       <section className="pricing-shell" aria-labelledby="core-products-heading" style={{ paddingBottom: 90 }}>
         <header style={{ marginBottom: 30 }}>
-          <h2 id="core-products-heading" style={sectionHeadingStyle}>Choose one fully unlocked main module.</h2>
-          <p style={sectionCopyStyle}>No feature gates. No bundles to decode. Each product includes the same operator foundation.</p>
+          <h2 id="core-products-heading" style={sectionHeadingStyle}>Choose one flagship application with all current features included.</h2>
+          <p style={sectionCopyStyle}>No feature maze. Choose one flagship per organization for this release; every Stack includes the OperatorOS home base and 5 team seats.</p>
         </header>
         <div className="core-product-grid">
           {CORE_PRODUCTS.map(product => (
@@ -191,16 +327,17 @@ export default function PricingSection() {
                 <p style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.55, minHeight: 42 }}>{product.description}</p>
               </div>
               <div style={{ color: brand.textPrimary, fontFamily: brand.fontDisplay, fontWeight: 800, fontSize: 34 }}>
-                {money(product.monthlyPriceCents)}<span style={{ color: brand.textMuted, fontSize: 13, fontWeight: 500 }}>/mo</span>
+                {money(catalogCorePrice(product.key))}{catalogCorePrice(product.key) != null && <span style={{ color: brand.textMuted, fontSize: 13, fontWeight: 500 }}>/month</span>}
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 9 }}>
                 {[
-                  'Fully Unlocked',
+                  'All current features included',
                   '5 Seats Included',
                   'TorqueShed + FaultlineLab + Operator Pool Hall (free for everyone)',
-                  'Choose 1 included companion application',
-                  'Extra modules $29/mo',
-                  'Extra seats available',
+                  'Choose 1 included organization-wide companion',
+                  'Extra companions $29/month',
+                  'Extra seats $15/month',
+                  'Monthly billing only',
                 ].map(item => (
                   <li key={item} style={{ color: brand.textSecondary, fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                     <Check size={15} color={brand.accentCyan} style={{ marginTop: 2, flexShrink: 0 }} /> {item}
@@ -218,21 +355,21 @@ export default function PricingSection() {
       <section id="build-stack" style={{ background: brand.bgSecondary, borderTop: `1px solid ${brand.borderSoft}`, borderBottom: `1px solid ${brand.borderSoft}` }}>
         <div className="pricing-shell" style={{ paddingTop: 88, paddingBottom: 88 }}>
           <header style={{ marginBottom: 34 }}>
-            <h2 style={sectionHeadingStyle}>Build Your Stack</h2>
-            <p style={sectionCopyStyle}>Choose one main module, one included companion application, and any additional capacity your team needs.</p>
+            <h2 style={sectionHeadingStyle}>Build Your Application Stack</h2>
+            <p style={sectionCopyStyle}>Choose one flagship application, one included organization-wide companion, and only the additional monthly capacity your team needs.</p>
           </header>
           <div className="stack-grid">
             <div style={{ display: 'grid', gap: 28 }}>
-              <ConfiguratorStep number="1" title="Core Product">
+              <ConfiguratorStep number="1" title="Flagship Application">
                 <div className="stack-options">
                   {CORE_PRODUCTS.map(product => (
                     <ChoiceButton key={product.key} selected={coreProduct === product.key} onClick={() => setCoreProduct(product.key)}>
-                      <strong>{product.name}</strong><span>{money(product.monthlyPriceCents)}/mo</span>
+                      <strong>{product.name}</strong><span>{catalogCorePrice(product.key) == null ? 'Price unavailable' : `${money(catalogCorePrice(product.key))}/month`}</span>
                     </ChoiceButton>
                   ))}
                 </div>
               </ConfiguratorStep>
-              <ConfiguratorStep number="2" title="Included Companion Module">
+              <ConfiguratorStep number="2" title="Included Organization-wide Companion">
                 <div className="stack-options">
                   {COMPANION_MODULES.map(module => (
                     <ChoiceButton key={module.key} selected={freeCompanion === module.key} onClick={() => chooseFreeCompanion(module.key as CompanionModuleKey)}>
@@ -241,13 +378,13 @@ export default function PricingSection() {
                   ))}
                 </div>
               </ConfiguratorStep>
-              <ConfiguratorStep number="3" title="Additional Modules">
+              <ConfiguratorStep number="3" title="Additional Organization-wide Companions">
                 <div className="stack-options">
                   {COMPANION_MODULES.filter(module => module.key !== freeCompanion).map(module => {
                     const moduleKey = module.key as CompanionModuleKey;
                     return (
                       <ChoiceButton key={module.key} selected={additionalModules.includes(moduleKey)} onClick={() => toggleAdditionalModule(moduleKey)}>
-                        <strong>{module.name}</strong><span>+{money(COMPANION_MODULE_PRICE_CENTS)}/mo</span>
+                        <strong>{module.name}</strong><span>{companionPriceCents == null ? 'Price unavailable' : `+${money(companionPriceCents)}/month`}</span>
                       </ChoiceButton>
                     );
                   })}
@@ -262,7 +399,7 @@ export default function PricingSection() {
                   <button className="pricing-control" type="button" aria-label="Add additional seat" onClick={() => setAdditionalSeats(value => value + 1)} style={counterButtonStyle}>
                     <Plus size={16} />
                   </button>
-                  <span style={{ color: brand.textSecondary, fontSize: 13 }}>+{money(DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS)}/mo per seat</span>
+                  <span style={{ color: brand.textSecondary, fontSize: 13 }}>{seatPriceCents == null ? 'Price unavailable' : `+${money(seatPriceCents)}/month per seat`}</span>
                 </div>
               </ConfiguratorStep>
             </div>
@@ -271,23 +408,24 @@ export default function PricingSection() {
               <div>
                 <div style={{ color: brand.textMuted, fontSize: 12, textTransform: 'uppercase', letterSpacing: '.08em' }}>Estimated Monthly Total</div>
                 <div data-testid="stack-monthly-total" style={{ color: brand.textPrimary, fontFamily: brand.fontDisplay, fontSize: 46, fontWeight: 850, marginTop: 8 }}>
-                  {money(price.totalMonthlyCents)}<span style={{ color: brand.textMuted, fontSize: 14, fontWeight: 500 }}>/mo</span>
+                  {money(price?.totalMonthlyCents)}{price && <span style={{ color: brand.textMuted, fontSize: 14, fontWeight: 500 }}>/month</span>}
                 </div>
               </div>
-              <SummaryRow label="Base product" value={money(price.baseProductCents)} />
-              <SummaryRow label="Included companion" value="$0" />
-              <SummaryRow label={`${additionalModules.length} additional module${additionalModules.length === 1 ? '' : 's'}`} value={money(price.additionalModulesCents)} />
-              <SummaryRow label={`${additionalSeats} additional seat${additionalSeats === 1 ? '' : 's'}`} value={money(price.additionalSeatsCents)} />
+              <SummaryRow label="Flagship application" value={money(price?.baseProductCents)} />
+              <SummaryRow label="Included organization-wide companion" value="$0" />
+              <SummaryRow label={`${additionalModules.length} additional companion${additionalModules.length === 1 ? '' : 's'}`} value={money(price?.additionalModulesCents)} />
+              <SummaryRow label={`${additionalSeats} additional seat${additionalSeats === 1 ? '' : 's'}`} value={money(price?.additionalSeatsCents)} />
               <div style={{ borderTop: `1px solid ${brand.borderSoft}`, paddingTop: 16 }}>
                 <div style={{ color: brand.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Free With Any Account</div>
                 <div style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.6 }}>TorqueShed · FaultlineLab · Operator Pool Hall</div>
               </div>
               {error && <p role="alert" style={{ color: '#ff7b72', fontSize: 13, margin: 0 }}>{error}</p>}
-              <button data-testid="stack-checkout-cta" type="button" onClick={continueToCheckout} disabled={busy} className="pricing-control" style={{ ...primaryButtonStyle, border: 0, width: '100%', cursor: busy ? 'wait' : 'pointer' }}>
-                {busy ? 'Preparing Checkout…' : user ? 'Continue to Checkout' : 'Sign In to Continue'}
+              {checkoutStatus && <p role="status" style={{ color: brand.textSecondary, fontSize: 12, lineHeight: 1.5, margin: 0 }}>{checkoutStatus}</p>}
+              <button data-testid="stack-checkout-cta" type="button" onClick={continueToCheckout} disabled={busy || (Boolean(user) && !ownerCanCheckout)} className="pricing-control" style={{ ...primaryButtonStyle, border: 0, width: '100%', cursor: busy ? 'wait' : user && !ownerCanCheckout ? 'not-allowed' : 'pointer', opacity: user && !ownerCanCheckout ? .55 : 1 }}>
+                {busy ? 'Preparing Secure Checkout…' : !user ? 'Sign In to Continue' : accountLoading || authLoading ? 'Verifying Owner Access…' : hasExistingFlagship ? 'One Flagship Already Active' : viewerRole !== 'owner' ? 'Owner Action Required' : 'Continue to Secure Checkout'}
               </button>
-              {user ? <Link href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Return to OperatorOS</Link> : <Link href="/login" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Sign In Instead</Link>}
-              <p style={{ color: brand.textMuted, fontSize: 11, textAlign: 'center', margin: 0 }}>Final price confirmed in Stripe Checkout.</p>
+              {user ? <Link href={hasExistingFlagship || viewerRole !== 'owner' ? '/app?page=tenant-billing' : DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>{hasExistingFlagship || viewerRole !== 'owner' ? 'View organization billing state' : 'Return to OperatorOS'}</Link> : <Link href="/login" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Sign In Instead</Link>}
+              <p style={{ color: brand.textMuted, fontSize: 11, textAlign: 'center', margin: 0 }}>Final price confirmed in secure Stripe Checkout before any charge.</p>
             </aside>
           </div>
         </div>
@@ -297,7 +435,7 @@ export default function PricingSection() {
         <header style={{ marginBottom: 30, display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
             <h2 style={sectionHeadingStyle}>Free with every account</h2>
-            <p style={sectionCopyStyle}>These three companion applications come with every OperatorOS account at no cost — no paid main module required.</p>
+            <p style={sectionCopyStyle}>These three applications come with every OperatorOS account at no cost—no paid subscription required.</p>
           </div>
           {!user && (
             <Link href="/login?mode=register" data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>
@@ -314,13 +452,13 @@ export default function PricingSection() {
           ))}
         </div>
         <div style={{ marginTop: 54, padding: '30px', background: brand.bgSecondary, border: `1px solid ${brand.borderSoft}`, borderRadius: 14 }}>
-          <h3 style={{ color: brand.textPrimary, fontSize: 20, margin: '0 0 18px' }}>Choose one companion application at no additional cost</h3>
+          <h3 style={{ color: brand.textPrimary, fontSize: 20, margin: '0 0 18px' }}>Choose one organization-wide companion at no additional cost</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {COMPANION_MODULES.map(module => (
               <span key={module.key} style={{ color: brand.textSecondary, padding: '8px 11px', border: `1px solid ${brand.borderSoft}`, borderRadius: 8, fontSize: 13 }}>{module.name}</span>
             ))}
           </div>
-          <p style={{ color: brand.accentCyan, fontSize: 13, margin: '18px 0 0' }}>Additional modules are $29/mo each.</p>
+          <p style={{ color: brand.accentCyan, fontSize: 13, margin: '18px 0 0' }}>Additional eligible companions are $29/month each. OutCall remains coming soon and is not sold.</p>
         </div>
       </section>
     </>

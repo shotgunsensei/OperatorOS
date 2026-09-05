@@ -74,7 +74,7 @@ function groups(data: TradeFlowKitSearchResponse | null): SearchGroup[] {
     {
       key: 'quotes', label: 'Quotes', Icon: FileText,
       hits: data.quotes.map(row => ({
-        id: row.id, label: row.number ? `Quote #${row.number}` : `Quote ${row.id.slice(0, 8)}`,
+        id: row.id, label: row.number ? `Quote #${row.number}` : 'Draft quote',
         detail: `${row.customerName} · ${row.status} · ${money(row.totalCents)}`,
         href: `/quotes/${row.id}`,
       })),
@@ -82,7 +82,7 @@ function groups(data: TradeFlowKitSearchResponse | null): SearchGroup[] {
     {
       key: 'invoices', label: 'Invoices', Icon: Receipt,
       hits: data.invoices.map(row => ({
-        id: row.id, label: row.number ? `Invoice #${row.number}` : `Invoice ${row.id.slice(0, 8)}`,
+        id: row.id, label: row.number ? `Invoice #${row.number}` : 'Draft invoice',
         detail: `${row.customerName} · ${row.status} · ${money(row.balanceCents)} due`,
         href: `/invoices/${row.id}`,
       })),

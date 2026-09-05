@@ -60,16 +60,16 @@ export const PULSEDESK_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
 ] as const;
 
 const copy: Record<PulseDeskRouteArea, Pick<PulseDeskRouteState, 'eyebrow' | 'title' | 'subtitle'>> = {
-  overview: { eyebrow: 'Healthcare operations coordination', title: 'Operations overview', subtitle: 'See request pressure, service posture, equipment, supply, and facility work without storing patient charts.' },
-  requests: { eyebrow: 'Operational service desk', title: 'Requests and work queues', subtitle: 'Triage, assign, respond to, and resolve PHI-minimized operational requests.' },
-  assignments: { eyebrow: 'Department coordination', title: 'Assignments and escalation', subtitle: 'Route operational work to authorized departments and track escalation state.' },
-  contacts: { eyebrow: 'Authorized directory', title: 'Facilities and contacts', subtitle: 'Manage service clients, facilities, contacts, and vendors. Do not store patient charts or clinical records.' },
-  operations: { eyebrow: 'Facility operations', title: 'Equipment, supplies, and facilities', subtitle: 'Coordinate operational equipment, restock needs, and physical facility requests.' },
-  inbound: { eyebrow: 'Secure intake', title: 'Inbound communication', subtitle: 'Review authorized organization mailboxes and operational email-to-request delivery state.' },
-  analytics: { eyebrow: 'Operational insight', title: 'Analytics', subtitle: 'Review demand, SLA pressure, equipment, supply, facility, and time posture.' },
-  knowledge: { eyebrow: 'Operational guidance', title: 'Knowledge', subtitle: 'Maintain PHI-minimized requester guidance and internal service procedures.' },
-  integrations: { eyebrow: 'Provider configuration', title: 'Integrations', subtitle: 'Configure and verify organization-scoped email connectors with encrypted credential references and fail-closed live modes.' },
-  settings: { eyebrow: 'Workspace control', title: 'PulseDesk settings', subtitle: 'Manage queues, SLA policies, notifications, access, and the healthcare operational-data boundary.' },
+  overview: { eyebrow: 'Healthcare operations', title: 'Operations overview', subtitle: 'See urgent requests, department workload, equipment needs, supplies, and facility issues at a glance.' },
+  requests: { eyebrow: 'Resolve operational requests', title: 'Requests and work queues', subtitle: 'Triage, assign, update, and close operational work while keeping patient details out of the request.' },
+  assignments: { eyebrow: 'Keep departments coordinated', title: 'Assignments and escalation', subtitle: 'Give each request a responsible team, track handoffs, and escalate work before it stalls.' },
+  contacts: { eyebrow: 'Know who to contact', title: 'Facilities and contacts', subtitle: 'Keep service clients, facilities, contacts, and vendors ready for operational work. Do not store patient charts here.' },
+  operations: { eyebrow: 'Keep facilities running', title: 'Equipment, supplies, and facilities', subtitle: 'Track equipment issues, restock needs, vendor work, and facility requests through completion.' },
+  inbound: { eyebrow: 'Bring requests into one queue', title: 'Request intake', subtitle: 'Use protected request intake today and see what is needed to connect an organization mailbox later.' },
+  analytics: { eyebrow: 'Find pressure early', title: 'Analytics', subtitle: 'See demand, missed response targets, equipment issues, supply needs, facility work, and time trends.' },
+  knowledge: { eyebrow: 'Give teams clear answers', title: 'Knowledge', subtitle: 'Maintain requester guidance and internal procedures without including unnecessary patient information.' },
+  integrations: { eyebrow: 'Plan safe intake connections', title: 'Mailbox connections', subtitle: 'Use protected request intake today and see what is needed to connect an organization mailbox later. Mailbox import is not connected yet.' },
+  settings: { eyebrow: 'Keep operational work safe', title: 'Access and privacy guidance', subtitle: 'Review what belongs in PulseDesk, where team access is managed, and which request channels are available now.' },
 };
 
 function state(area: PulseDeskRouteArea, canonicalPath: string, recordId?: string): PulseDeskRouteState {

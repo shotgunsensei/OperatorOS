@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
@@ -11,13 +12,21 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 59);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 60);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 59);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 59);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 60);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 60);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'core_suite_trial_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS[58].id, 'core_suite_trial_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'forward_commerce_contract');
+  assert.equal(
+    createHash('sha256')
+      .update(JSON.stringify(release.DATABASE_RELEASE_STEPS.slice(0, 59)))
+      .digest('hex'),
+    '8538083fe1ebbeaa54f7d11031f30d57c03118089e597f5c5314e0a1c08af746',
+    'v60 must append to, never reorder or mutate, the immutable first 59 release steps',
+  );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'core_suite_trial_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_managed_number_provisioning'),

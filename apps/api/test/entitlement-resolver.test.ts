@@ -11,7 +11,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
@@ -53,6 +53,11 @@ before(async () => {
     { tenantId: tenant.id, userId: owner.id, role: 'owner' },
     { tenantId: tenant.id, userId: member.id, role: 'member' },
   ]);
+  await db.execute(sql`
+    UPDATE subscriptions
+    SET tenant_id=${tenant.id}, legacy_access_grandfathered_at=clock_timestamp()
+    WHERE user_id=${owner.id}
+  `);
   // Per-tenant overrides one feature flag.
   await db.insert(tenantModules).values({
     tenantId: tenant.id, moduleId: mod.id,

@@ -74,8 +74,10 @@ test('Help and support entry points no longer send customers to the biography pa
   assert.match(floatingHelp, /DEFAULT_OPERATOROS_NAVIGATION_URLS\.supportUrl/);
   assert.match(helpPage, /<HelpCenter/);
   assert.match(helpCenter, /Search all help/);
-  assert.match(helpCenter, /What you can do/);
-  assert.match(helpCenter, /Normal workflow/);
+  assert.match(helpCenter, /What you will accomplish/);
+  assert.match(helpCenter, /How to do it/);
+  assert.doesNotMatch(helpCenter, /<code>\{page\.path\}<\/code>/);
+  assert.doesNotMatch(helpCenter, /HELP_CONTENT_VERSION/);
   assert.doesNotMatch(`${navigation}\n${sidebar}\n${layout}\n${header}\n${platform}\n${floatingHelp}`, /operatoros\.net\/john/);
 });
 

@@ -8,6 +8,7 @@ import {
   queueSnapProofCapture,
   reconcileSnapProofCaptures,
 } from '@/lib/snapproof-offline-queue';
+import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 
 export type SnapProofFieldTab =
   | 'customers'
@@ -102,13 +103,19 @@ function saveBlob(blob: Blob, filename: string) {
 export default function SnapProofFieldWorkspace({
   tab,
   selectedJobId,
+  selectedReportId,
   onSelectJob,
   onOpenJob = onSelectJob,
+  canWrite = false,
+  canManage = false,
 }: {
   tab: SnapProofFieldTab;
   selectedJobId: string | null;
+  selectedReportId?: string | null;
   onSelectJob: (id: string) => void;
   onOpenJob?: (id: string) => void;
+  canWrite?: boolean;
+  canManage?: boolean;
 }) {
   const [customers, setCustomers] = useState<Row[]>([]);
   const [jobs, setJobs] = useState<Row[]>([]);
@@ -176,8 +183,18 @@ export default function SnapProofFieldWorkspace({
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
+  useEffect(() => {
+    if (!selectedReportId || !detail?.reports?.some((item: Row) => item.id === selectedReportId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`snapproof-field-report-${selectedReportId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [detail, selectedReportId]);
   const reconcile = useCallback(async () => {
-    if (!navigator.onLine) return;
+    if (!canWrite || !navigator.onLine) return;
     const result = await reconcileSnapProofCaptures((item) =>
       moduleShellApi.snapproofos.uploadJobFile(item.jobId, item.payload),
     );
@@ -186,7 +203,7 @@ export default function SnapProofFieldWorkspace({
       await load();
       await loadDetail();
     }
-  }, [load, loadDetail]);
+  }, [canWrite, load, loadDetail]);
   useEffect(() => {
     const connected = () => {
       setOnline(true);
@@ -236,6 +253,12 @@ export default function SnapProofFieldWorkspace({
           {error}
         </div>
       )}
+      {!canWrite && (
+        <div data-testid="snapproofos-field-read-only" role="status" style={{ ...card, borderColor: '#64748b', background: '#172033', color: '#e2e8f0', marginBottom: 14 }}>
+          <strong>Read-only field workspace</strong>
+          <div style={{ color: colors.muted, marginTop: 4 }}>You can inspect customers, jobs, proof, costs, reports, and downloads. Ask an organization administrator for edit access before capturing or changing field work.</div>
+        </div>
+      )}
       {!online && (
         <div role="status" style={{ ...card, borderColor: '#b45309', marginBottom: 14 }}>
           Offline capture mode is active. New photos remain on this device until a connection
@@ -257,14 +280,14 @@ export default function SnapProofFieldWorkspace({
           <span>
             {queued} capture{queued === 1 ? '' : 's'} waiting to upload
           </span>
-          <button style={quiet} onClick={() => void reconcile()} disabled={!online}>
+          <button style={quiet} onClick={() => void reconcile()} disabled={!canWrite || !online}>
             <RefreshCw size={15} />
             Retry
           </button>
         </div>
       )}
       {tab === 'customers' && (
-        <Customers customers={customers} saving={saving} mutate={mutate} />
+        <Customers customers={customers} saving={saving} mutate={mutate} canWrite={canWrite} canManage={canManage} />
       )}{' '}
       {tab === 'jobs' && (
         <Jobs
@@ -276,6 +299,7 @@ export default function SnapProofFieldWorkspace({
           onSelect={onOpenJob}
           saving={saving}
           mutate={mutate}
+          canWrite={canWrite}
         />
       )}{' '}
       {tab === 'capture' && (
@@ -288,6 +312,7 @@ export default function SnapProofFieldWorkspace({
           queued={queued}
           setQueued={setQueued}
           mutate={mutate}
+          canWrite={canWrite}
         />
       )}{' '}
       {tab === 'work' && (
@@ -298,6 +323,7 @@ export default function SnapProofFieldWorkspace({
           onSelect={onSelectJob}
           saving={saving}
           mutate={mutate}
+          canWrite={canWrite}
         />
       )}{' '}
       {tab === 'costs' && (
@@ -308,6 +334,7 @@ export default function SnapProofFieldWorkspace({
           onSelect={onSelectJob}
           saving={saving}
           mutate={mutate}
+          canWrite={canWrite}
         />
       )}{' '}
       {tab === 'templates' && (
@@ -318,10 +345,11 @@ export default function SnapProofFieldWorkspace({
           onSelect={onSelectJob}
           saving={saving}
           mutate={mutate}
+          canWrite={canWrite}
         />
       )}{' '}
       {tab === 'team' && <Team rows={team} />} {tab === 'activity' && <Activity rows={events} />}{' '}
-      {tab === 'branding' && <Branding value={branding} saving={saving} mutate={mutate} />}{' '}
+      {tab === 'branding' && <Branding value={branding} saving={saving} mutate={mutate} canManage={canManage} />}{' '}
       {lastShare && (
         <div style={{ ...card, marginTop: 14, borderColor: colors.green }}>
           <strong>Secure link created</strong>
@@ -338,7 +366,7 @@ export default function SnapProofFieldWorkspace({
         </div>
       )}
       {['reports', 'share', 'exports'].includes(tab) && !selected && (
-        <State>Create or select a job before generating a report, export, or secure share.</State>
+        <State>{canWrite ? 'Create or select a job before generating a report, export, or secure share.' : 'Select a job to review its reports, exports, and secure shares.'}</State>
       )}
       {['reports', 'share', 'exports'].includes(tab) && selected && (
         <Reports
@@ -347,6 +375,8 @@ export default function SnapProofFieldWorkspace({
           saving={saving}
           mutate={mutate}
           setLastShare={setLastShare}
+          canWrite={canWrite}
+          selectedReportId={selectedReportId}
         />
       )}
     </section>
@@ -482,10 +512,14 @@ function Customers({
   customers,
   saving,
   mutate,
+  canWrite,
+  canManage,
 }: {
   customers: Row[];
   saving: boolean;
   mutate: (task: () => Promise<unknown>) => void;
+  canWrite: boolean;
+  canManage: boolean;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -499,6 +533,7 @@ function Customers({
   );
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!canWrite) return;
     void mutate(async () => {
       await moduleShellApi.snapproofos.createCustomer({
         name,
@@ -517,13 +552,13 @@ function Customers({
       title="Customers"
       description="Customer history stays attached to every field job and approved report."
     >
-      <Form onSubmit={submit}>
+      {canWrite && <Form onSubmit={submit}>
         <Text name="Customer name" value={name} set={setName} required />
         <Text name="Company" value={company} set={setCompany} />
         <Text name="Email" value={email} set={setEmail} type="email" />
         <Text name="Phone" value={phone} set={setPhone} />
         <Submit saving={saving} label="Create customer" />
-      </Form>
+      </Form>}
       <div style={{ ...card, marginBottom: 16 }}>
         <Text name="Search customers" value={search} set={setSearch} />
       </div>
@@ -537,7 +572,7 @@ function Customers({
                 {item.email || 'No email'} · {item.phone || 'No phone'}
               </p>
               <strong>{item.jobCount || 0} jobs</strong>
-              <div style={{ marginTop: 12 }}>
+              {canManage && <div style={{ marginTop: 12 }}>
                 <button
                   style={quiet}
                   disabled={saving}
@@ -547,7 +582,7 @@ function Customers({
                 >
                   Archive customer
                 </button>
-              </div>
+              </div>}
             </article>
           ))
         ) : (
@@ -567,6 +602,7 @@ function Jobs({
   onSelect,
   saving,
   mutate,
+  canWrite,
 }: {
   customers: Row[];
   jobs: Row[];
@@ -576,6 +612,7 @@ function Jobs({
   onSelect: (id: string) => void;
   saving: boolean;
   mutate: (task: () => Promise<unknown>) => void;
+  canWrite: boolean;
 }) {
   const [title, setTitle] = useState('');
   const [customerId, setCustomer] = useState('');
@@ -594,6 +631,7 @@ function Jobs({
   );
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!canWrite) return;
     void mutate(async () => {
       const result = await moduleShellApi.snapproofos.createJob({
         title,
@@ -615,7 +653,7 @@ function Jobs({
       title="Jobs"
       description="Schedule, assign, document, complete, review, and archive field work without losing proof history."
     >
-      <Form onSubmit={submit}>
+      {canWrite && <Form onSubmit={submit}>
         <Text name="Job title" value={title} set={setTitle} required />
         <Select
           name="Customer"
@@ -632,7 +670,7 @@ function Jobs({
           rows={team.map((item) => [item.id, item.name || item.email])}
         />
         <Submit saving={saving} label="Create job" />
-      </Form>
+      </Form>}
       <div style={{ ...card, ...grid, marginBottom: 16 }}>
         <Text name="Search jobs" value={search} set={setSearch} />
         <Select
@@ -696,7 +734,7 @@ function Jobs({
                 <Status value={selected.proofStatus} />
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 15 }}>
+            {canWrite && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 15 }}>
               {selected.status === 'draft' && (
                 <button
                   style={button}
@@ -743,7 +781,7 @@ function Jobs({
                   Archive job
                 </button>
               )}
-            </div>
+            </div>}
           </article>
         ) : (
           <State>Select a job.</State>
@@ -762,6 +800,7 @@ function Capture({
   queued,
   setQueued,
   mutate,
+  canWrite,
 }: {
   jobs: Row[];
   detail: Row | null;
@@ -771,13 +810,14 @@ function Capture({
   queued: number;
   setQueued: (value: number) => void;
   mutate: (task: () => Promise<unknown>) => void;
+  canWrite: boolean;
 }) {
   const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!file || !selectedJobId) return;
+    if (!canWrite || !file || !selectedJobId) return;
     const clientMutationId = crypto.randomUUID();
     const payload = {
       title,
@@ -829,9 +869,9 @@ function Capture({
   return (
     <Section
       title="Mobile capture"
-      description="Camera, document, and voice evidence is MIME-validated, scanned, hashed, EXIF-scrubbed for JPEGs, and retried safely after reconnect."
+      description="Capture photos, documents, and voice notes from the job. Files are checked before upload, photo location metadata is removed, and offline captures safely resume when the connection returns."
     >
-      <Form onSubmit={(event) => void submit(event)}>
+      {canWrite && <Form onSubmit={(event) => void submit(event)}>
         <Select
           name="Job"
           value={selectedJobId || ''}
@@ -853,7 +893,7 @@ function Capture({
           />
         </Label>
         <Submit saving={saving} label="Secure capture" />
-      </Form>
+      </Form>}
       <State>
         Files remain private. Clean scan state is required before retrieval; infected content is
         quarantined and pending scans do not download.
@@ -881,7 +921,7 @@ function Capture({
                   <Download size={14} />
                   Download
                 </button>
-                <button
+                {canWrite && <button
                   style={quiet}
                   disabled={saving}
                   onClick={() =>
@@ -889,7 +929,7 @@ function Capture({
                   }
                 >
                   Remove
-                </button>
+                </button>}
               </div>
             </article>
           ))
@@ -908,6 +948,7 @@ function Work({
   onSelect,
   saving,
   mutate,
+  canWrite,
 }: {
   jobs: Row[];
   detail: Row | null;
@@ -915,6 +956,7 @@ function Work({
   onSelect: (id: string) => void;
   saving: boolean;
   mutate: (task: () => Promise<unknown>) => void;
+  canWrite: boolean;
 }) {
   const [issue, setIssue] = useState('');
   const [cause, setCause] = useState('');
@@ -925,7 +967,7 @@ function Work({
   const [voice, setVoice] = useState<File | null>(null);
   const finding = (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedJobId) return;
+    if (!canWrite || !selectedJobId) return;
     void mutate(async () => {
       await moduleShellApi.snapproofos.createJobFinding(selectedJobId, {
         issue,
@@ -940,7 +982,7 @@ function Work({
   };
   const addNote = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedJobId) return;
+    if (!canWrite || !selectedJobId) return;
     void mutate(async () => {
       await moduleShellApi.snapproofos.createJobNote(selectedJobId, {
         body: note,
@@ -966,7 +1008,7 @@ function Work({
         rows={jobs.map((item) => [item.id, `${item.reference} · ${item.title}`])}
       />
       <div style={{ height: 12 }} />
-      <Form onSubmit={finding}>
+      {canWrite && <><Form onSubmit={finding}>
         <Text name="Issue" value={issue} set={setIssue} required />
         <Text name="Cause" value={cause} set={setCause} required />
         <Text name="Resolution" value={resolution} set={setResolution} />
@@ -1001,7 +1043,7 @@ function Work({
           />
         </Label>
         <Submit saving={saving} label="Add note" />
-      </Form>
+      </Form></>}
       <div style={grid}>
         {detail?.findings?.map((item: Row) => (
           <article key={item.id} style={card}>
@@ -1046,6 +1088,7 @@ function Costs({
   onSelect,
   saving,
   mutate,
+  canWrite,
 }: {
   jobs: Row[];
   detail: Row | null;
@@ -1053,6 +1096,7 @@ function Costs({
   onSelect: (id: string) => void;
   saving: boolean;
   mutate: (task: () => Promise<unknown>) => void;
+  canWrite: boolean;
 }) {
   const [part, setPart] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -1062,7 +1106,7 @@ function Costs({
   const [rate, setRate] = useState('0');
   const addPart = (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedJobId) return;
+    if (!canWrite || !selectedJobId) return;
     void mutate(async () => {
       await moduleShellApi.snapproofos.createPart(selectedJobId, {
         name: part,
@@ -1074,7 +1118,7 @@ function Costs({
   };
   const addLabor = (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedJobId) return;
+    if (!canWrite || !selectedJobId) return;
     void mutate(async () => {
       await moduleShellApi.snapproofos.createLabor(selectedJobId, {
         description,
@@ -1098,7 +1142,7 @@ function Costs({
   return (
     <Section
       title="Parts and labor"
-      description="Customer price, internal cost, hours, rates, and historical report totals use integer cents and persisted quantities."
+      description="Track customer prices, internal costs, quantities, hours, and rates while keeping completed report totals consistent."
     >
       <Select
         name="Job"
@@ -1108,7 +1152,7 @@ function Costs({
         rows={jobs.map((item) => [item.id, `${item.reference} · ${item.title}`])}
       />
       <div style={{ height: 12 }} />
-      <Form onSubmit={addPart}>
+      {canWrite && <><Form onSubmit={addPart}>
         <Text name="Part" value={part} set={setPart} required />
         <Text name="Quantity" value={quantity} set={setQuantity} type="number" />
         <Text name="Unit price" value={price} set={setPrice} type="number" />
@@ -1119,7 +1163,7 @@ function Costs({
         <Text name="Hours" value={hours} set={setHours} type="number" />
         <Text name="Hourly rate" value={rate} set={setRate} type="number" />
         <Submit saving={saving} label="Add labor" />
-      </Form>
+      </Form></>}
       <div style={grid}>
         <article style={card}>
           <small>Parts total</small>
@@ -1155,6 +1199,7 @@ function Templates({
   onSelect,
   saving,
   mutate,
+  canWrite,
 }: {
   jobs: Row[];
   templates: Row[];
@@ -1162,11 +1207,12 @@ function Templates({
   onSelect: (id: string) => void;
   saving: boolean;
   mutate: (task: () => Promise<unknown>) => void;
+  canWrite: boolean;
 }) {
   return (
     <Section
       title="Job templates"
-      description="System and organization templates apply a durable checklist and default job type to active work."
+      description="Apply a reusable checklist and job type so field teams collect the same required proof every time."
     >
       <Select
         name="Job"
@@ -1185,7 +1231,7 @@ function Templates({
               {item.sections?.length || 0} sections · {item.defaultJobType}
             </p>
             <button
-              disabled={saving || !selectedJobId}
+              disabled={!canWrite || saving || !selectedJobId}
               style={button}
               onClick={() =>
                 selectedJobId &&
@@ -1204,7 +1250,7 @@ function Team({ rows }: { rows: Row[] }) {
   return (
     <Section
       title="Team and assignment"
-      description="Membership, roles, and SnapProofOS access are projected from OperatorOS—there is no second identity system."
+      description="See who can work in SnapProofOS and assign the right person to each job. Manage membership and roles in OperatorOS."
     >
       <div style={grid}>
         {rows.map((item) => (
@@ -1222,7 +1268,7 @@ function Activity({ rows }: { rows: Row[] }) {
   return (
     <Section
       title="Activity and audit"
-      description="Field actions are written to the shared tenant-scoped OperatorOS activity stream."
+      description="See who completed each field action and when, all in your organization’s activity history."
     >
       <div style={{ display: 'grid', gap: 8 }}>
         {rows.length ? (
@@ -1246,10 +1292,12 @@ function Branding({
   value,
   saving,
   mutate,
+  canManage,
 }: {
   value: Row;
   saving: boolean;
   mutate: (task: () => Promise<unknown>) => void;
+  canManage: boolean;
 }) {
   const [company, setCompany] = useState(value.companyName || '');
   const [accent, setAccent] = useState(value.accentColor || '#dc2626');
@@ -1260,6 +1308,7 @@ function Branding({
   const [logo, setLogo] = useState<File | null>(null);
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!canManage) return;
     void mutate(async () => {
       await moduleShellApi.snapproofos.updateBranding({
         companyName: company || null,
@@ -1284,7 +1333,7 @@ function Branding({
       title="Organization branding"
       description="Approved reports snapshot these values so later brand changes cannot rewrite historical documents."
     >
-      <Form onSubmit={submit}>
+      {canManage ? <Form onSubmit={submit}>
         <Text name="Company name" value={company} set={setCompany} />
         <Text name="Accent color" value={accent} set={setAccent} type="color" />
         <Text name="Report footer" value={footer} set={setFooter} />
@@ -1301,7 +1350,7 @@ function Branding({
           />
         </Label>
         <Submit saving={saving} label="Save branding" />
-      </Form>
+      </Form> : <State>Only an organization administrator can change report branding. You can still download and review the current logo below.</State>}
       {value.logoAttachmentId && (
         <button
           style={quiet}
@@ -1316,7 +1365,7 @@ function Branding({
         </button>
       )}
       <State>
-        Profile, team, usage, plan, entitlement, and billing controls remain in OperatorOS.
+        Profile, team, usage, plan access, and billing controls remain in OperatorOS.
       </State>
     </Section>
   );
@@ -1328,17 +1377,28 @@ function Reports({
   saving,
   mutate,
   setLastShare,
+  canWrite,
+  selectedReportId,
 }: {
   detail: Row | null;
   exports: Row[];
   saving: boolean;
   mutate: (task: () => Promise<unknown>) => void;
   setLastShare: (url: string | null) => void;
+  canWrite: boolean;
+  selectedReportId?: string | null;
 }) {
   const reports = detail?.reports || [];
   const job = detail?.job;
-  const create = () =>
-    job &&
+  const sourceContext = (job?.sourceContext ?? {}) as Row;
+  const tradeFlowJobId =
+    sourceContext.sourceModule === 'tradeflowkit' &&
+    typeof sourceContext.jobId === 'string' &&
+    /^[0-9a-f-]{36}$/i.test(sourceContext.jobId)
+      ? sourceContext.jobId
+      : null;
+  const create = () => {
+    if (!canWrite || !job) return;
     void mutate(() =>
       moduleShellApi.snapproofos.generateReport({
         jobId: job.id,
@@ -1347,7 +1407,9 @@ function Reports({
         tone: 'client_friendly',
       }),
     );
-  const exportReport = (reportId: string, format: 'pdf' | 'docx') =>
+  };
+  const exportReport = (reportId: string, format: 'pdf' | 'docx') => {
+    if (!canWrite) return;
     void mutate(async () => {
       const result = await moduleShellApi.snapproofos.createReportExport(reportId, format);
       saveBlob(
@@ -1355,7 +1417,9 @@ function Reports({
         result.export.filename,
       );
     });
-  const share = (reportId: string) =>
+  };
+  const share = (reportId: string) => {
+    if (!canWrite) return;
     void mutate(async () => {
       const result = await moduleShellApi.snapproofos.createShareLink(reportId, {
         expiresInDays: 7,
@@ -1363,25 +1427,45 @@ function Reports({
       });
       setLastShare(result.shareLink.url);
     });
+  };
   return (
     <div style={{ marginTop: 22 }}>
       <Section
         title="Reports, exports, and secure shares"
-        description="Drafts move through review and approval. Valid PDF/DOCX bytes and their SHA-256 hashes are persisted; share tokens expire and can be revoked."
+        description="Move each customer report from draft to approval, download a checked PDF or DOCX file, and create a share link that expires and can be revoked."
       >
-        <button style={button} onClick={create} disabled={saving || !job}>
+        <button style={button} onClick={create} disabled={!canWrite || saving || !job}>
           Generate draft report
         </button>
         <div style={{ ...grid, marginTop: 12 }}>
-          {reports.map((item: Row) => (
-            <article key={item.id} style={card}>
+          {reports.map((item: Row) => {
+            const highlighted = item.id === selectedReportId;
+            const verifiedExports = exports.filter((exported) => exported.reportId === item.id);
+            return (
+            <article
+              key={item.id}
+              id={`snapproof-field-report-${item.id}`}
+              data-highlighted={highlighted ? 'true' : undefined}
+              aria-current={highlighted ? 'true' : undefined}
+              style={{ ...card, borderColor: highlighted ? colors.green : colors.line, background: highlighted ? '#102a28' : colors.raised, boxShadow: highlighted ? '0 0 0 3px rgba(52,211,153,.13)' : undefined }}
+            >
               <Status value={item.status} />
               <h3>{item.title}</h3>
-              <code style={{ fontSize: 10, color: '#fca5a5', wordBreak: 'break-all' }}>
-                {item.contentHash}
-              </code>
+              {verifiedExports.length ? (
+                <div style={{ color: colors.green, fontSize: 12 }}>
+                  File verified · {verifiedExports.length} checked export{verifiedExports.length === 1 ? '' : 's'} available
+                </div>
+              ) : (
+                <div style={{ color: colors.muted, fontSize: 12 }}>
+                  {item.status === 'approved'
+                    ? 'Report approved · create an export to verify the downloadable file'
+                    : item.status === 'in_review'
+                      ? 'Report submitted for review · no verified export yet'
+                      : 'Report draft saved · no verified export yet'}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
-                {['draft', 'rejected'].includes(item.status) && (
+                {canWrite && ['draft', 'rejected'].includes(item.status) && (
                   <button
                     style={quiet}
                     onClick={() =>
@@ -1391,11 +1475,11 @@ function Reports({
                     Submit for review
                   </button>
                 )}
-                {item.status === 'approved' && (
+                {canWrite && item.status === 'approved' && (
                   <>
                     <button style={quiet} onClick={() => exportReport(item.id, 'pdf')}>
                       <Download size={14} />
-                      PDF
+                      Create / download PDF
                     </button>
                     <button style={quiet} onClick={() => exportReport(item.id, 'docx')}>
                       <Download size={14} />
@@ -1408,8 +1492,50 @@ function Reports({
                   </>
                 )}
               </div>
+              {item.status === 'approved' && (() => {
+                const hasVerifiedPdf = exports.some(
+                  exported => exported.reportId === item.id && exported.format === 'pdf',
+                );
+                if (!tradeFlowJobId) {
+                  return (
+                    <p style={{ color: colors.muted, fontSize: 12, lineHeight: 1.5, marginTop: 12 }}>
+                      Returning proof to TradeFlowKit is available only when the field job originated from a TradeFlowKit job. This approved report can still be downloaded or shared from SnapProofOS.
+                    </p>
+                  );
+                }
+                if (!hasVerifiedPdf) {
+                  return (
+                    <p style={{ color: '#fcd34d', fontSize: 12, lineHeight: 1.5, marginTop: 12 }}>
+                      Download the approved PDF first. SnapProofOS must create and verify that file before it can be attached to the originating TradeFlowKit job.
+                    </p>
+                  );
+                }
+                return (
+                  <div style={{ marginTop: 14 }}>
+                    <OutcomeWorkflowAction
+                      workflowKey="snapproof.approved_report_to_tradeflowkit"
+                      aggregateId={item.id}
+                      sourceVersion={item.version}
+                      sourceDeepLink={`/modules/snapproofos/reports/${item.id}`}
+                      title="Return approved proof to the original TradeFlowKit job"
+                      description={`Attach “${item.title}” to the exact job that requested this field proof, without changing its quote, invoice, payment, or job status.`}
+                      destinationLabel="TradeFlowKit"
+                      actionLabel="Review TradeFlowKit attachment"
+                      payload={{ tradeFlowJobId }}
+                      previewItems={[
+                        { label: 'One verified PDF attachment', detail: 'Uses the latest approved SnapProofOS PDF after SnapProofOS confirms the file is unchanged.' },
+                        { label: 'One link on the originating TradeFlowKit job', detail: 'The attachment stays tied to the existing customer job that created this proof request.' },
+                      ]}
+                      confirmationText="I reviewed the destination job and approved report. This adds the verified PDF as a job attachment only; it does not send it to the customer, issue an invoice, collect payment, or change job status."
+                      disabled={!canWrite}
+                      disabledReason={!canWrite ? 'You need proof edit access to return this report to TradeFlowKit.' : undefined}
+                      testId={`snapproof-tradeflow-handoff-${item.id}`}
+                    />
+                  </div>
+                );
+              })()}
             </article>
-          ))}
+          );})}
         </div>
         <h3>Export history</h3>
         <div style={grid}>
@@ -1419,7 +1545,9 @@ function Reports({
               <article key={item.id} style={card}>
                 <Status value={item.format} />
                 <p>{item.filename}</p>
-                <code style={{ fontSize: 10, wordBreak: 'break-all' }}>{item.exportHash}</code>
+                <small style={{ color: colors.green }}>
+                  File verified{item.byteLength ? ` · ${Math.max(1, Math.ceil(Number(item.byteLength) / 1024)).toLocaleString()} KB` : ''}
+                </small>
                 <button
                   style={quiet}
                   onClick={() =>

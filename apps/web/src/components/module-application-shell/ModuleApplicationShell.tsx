@@ -91,11 +91,11 @@ export interface ModuleApplicationShellProps<Capability extends string = string,
 }
 
 const defaultStateCopy: Record<Exclude<ModuleShellState, 'ready'>, { title: string; body: string }> = {
-  loading: { title: 'Loading workspace', body: 'Preparing this route and its authorized organization context.' },
-  empty: { title: 'Nothing here yet', body: 'This route is ready, but it does not have any records to show.' },
-  error: { title: 'This route could not load', body: 'Retry the focused request. Other module areas remain available.' },
-  forbidden: { title: 'Access unavailable', body: 'Your validated role or capability does not permit this route.' },
-  'provider-disabled': { title: 'Provider not enabled', body: 'Configure and verify the required provider before using this workflow.' },
+  loading: { title: 'Loading your workspace', body: 'Getting this section ready for you.' },
+  empty: { title: 'Nothing here yet', body: 'Add your first item here, or choose another section to keep working.' },
+  error: { title: 'This section could not load', body: 'Try again. The rest of the app is still available.' },
+  forbidden: { title: 'You do not have access', body: 'Ask an organization owner or administrator if you need this section.' },
+  'provider-disabled': { title: 'Connection needed', body: 'Connect the service required for this task, then try again. An organization owner or administrator may need to help.' },
 };
 
 const stateIcons = {
@@ -159,25 +159,45 @@ export default function ModuleApplicationShell<Capability extends string = strin
   const navigationItem = (item: ModuleRouteManifestItem<Capability, Role>, mobile = false) => {
     const active = isModuleRouteActive(item, props.currentPath);
     const permitted = canAccessModuleRoute(item, access);
+    const unavailable = !permitted || item.status === 'disabled';
     const baseClass = mobile
       ? (props.classNames?.mobileNavLink ?? styles.navLink)
       : classes(props.classNames, 'navLink');
     const activeClass = mobile
       ? (props.classNames?.mobileNavLinkActive ?? styles.navLinkActive)
       : classes(props.classNames, 'navLinkActive');
+    const content = (
+      <>
+        <item.icon size={mobile ? 19 : 17} aria-hidden="true" />
+        <span>{mobile ? (item.mobileLabel || item.label) : item.label}</span>
+        {(item.badge || item.status === 'attention') && <span className={styles.navBadge}>{item.badge || '!'}</span>}
+      </>
+    );
+    if (unavailable) {
+      return (
+        <span
+          key={item.id}
+          className={`${baseClass} ${active ? activeClass : ''}`}
+          aria-current={active ? 'page' : undefined}
+          aria-disabled="true"
+          title={!permitted ? 'Ask an organization owner or administrator for access.' : 'This section is not available yet.'}
+          data-route-capability={item.requiredCapability || undefined}
+          data-testid={`${props.moduleId}-${mobile ? 'mobile' : 'sidebar'}-${item.id}`}
+        >
+          {content}
+        </span>
+      );
+    }
     return (
       <Link
         key={item.id}
         href={item.canonicalPath}
         className={`${baseClass} ${active ? activeClass : ''}`}
         aria-current={active ? 'page' : undefined}
-        aria-disabled={!permitted || item.status === 'disabled' ? 'true' : undefined}
         data-route-capability={item.requiredCapability || undefined}
         data-testid={`${props.moduleId}-${mobile ? 'mobile' : 'sidebar'}-${item.id}`}
       >
-        <item.icon size={mobile ? 19 : 17} aria-hidden="true" />
-        <span>{mobile ? (item.mobileLabel || item.label) : item.label}</span>
-        {(item.badge || item.status === 'attention') && <span className={styles.navBadge}>{item.badge || '!'}</span>}
+        {content}
       </Link>
     );
   };

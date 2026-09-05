@@ -49,7 +49,7 @@ interface ModuleListResponse {
 
 const sourceLabel: Record<string, { label: string; color: string; bg: string }> = {
   plan:       { label: 'Included',  color: '#3fb950', bg: 'rgba(63,185,80,0.15)' },
-  addon:      { label: 'Add-on',    color: '#bc8cff', bg: 'rgba(188,140,255,0.15)' },
+  addon:      { label: 'Paid access', color: '#bc8cff', bg: 'rgba(188,140,255,0.15)' },
   override:   { label: 'Access granted', color: '#58a6ff', bg: 'rgba(88,166,255,0.15)' },
   admin_role: { label: 'Administrator', color: '#f0b400', bg: 'rgba(240,180,0,0.15)' },
   locked:     { label: 'Not included', color: '#8b949e', bg: 'rgba(139,148,158,0.15)' },
@@ -58,27 +58,21 @@ const sourceLabel: Record<string, { label: string; color: string; bg: string }> 
 const statusLabel: Record<string, { label: string; color: string }> = {
   live:        { label: 'Ready',       color: '#3fb950' },
   beta:        { label: 'Beta',        color: '#d29922' },
-  coming_soon: { label: 'Planned',     color: '#8b949e' },
+  coming_soon: { label: 'Coming soon', color: '#8b949e' },
   disabled:    { label: 'Unavailable', color: '#f85149' },
 };
 
 const marketingBySlug = new Map(MARKETING_MODULES.map((m) => [m.slug, m]));
 
-function priceLabel(cents: number | null): string {
-  if (!cents || cents <= 0) return '';
-  const dollars = cents / 100;
-  return dollars % 1 === 0 ? `$${dollars}/mo` : `$${dollars.toFixed(2)}/mo`;
-}
-
 function accessReason(reason?: string): string {
   const messages: Record<string, string> = {
-    addon_required: 'Available as an add-on',
+    addon_required: 'Available through Application Stack',
     module_access_denied: 'Ask an organization admin for access',
     module_disabled: 'Temporarily unavailable',
     module_not_seeded: 'Not available in this workspace',
     module_planned: 'Planned for a future release',
     tenant_required: 'Choose an organization first',
-    upgrade_required: 'Another workspace plan is required',
+    upgrade_required: 'Choose a flagship through Application Stack',
   };
   return reason ? (messages[reason] ?? 'Access is not available for this organization') : '';
 }
@@ -96,12 +90,11 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   const [warningShown, setWarningShown] = useState(false);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  // Role-awareness for the CTA matrix:
-  //   - tenant owner/admin (or platform super_admin) sees a "Manage" CTA on
-  //     every card (jumps to the Tenant Admin → Modules surface).
-  //   - regular members see "Request access" on locked-but-live modules
-  //     where there is no purchasable add-on or upgrade path.
+  // Access administration and billing authority are deliberately separate.
+  // Owners may start Application Stack checkout, tenant/platform admins can
+  // inspect billing and manage access, and other members receive instructions.
   const [isTenantAdmin, setIsTenantAdmin] = useState(false);
+  const [isTenantOwner, setIsTenantOwner] = useState(false);
   const [requested, setRequested] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const { user } = useAuth();
@@ -118,6 +111,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         const current = t.current ?? t.tenants?.[0]?.id;
         const row = current ? t.tenants.find((x: any) => x.id === current) : null;
         if (alive) {
+          setIsTenantOwner(row?.role === 'owner');
           setIsTenantAdmin(
             isPlatformSuperAdmin || row?.role === 'owner' || row?.role === 'admin',
           );
@@ -150,20 +144,6 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   };
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const subscribe = async (slug: string) => {
-    try {
-      const result = await modulesApi.subscribeAddon(slug);
-      if (result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
-        return;
-      }
-      toast(result.action === 'already_active' ? 'Add-on already active' : 'Add-on activated', 'success');
-      await load();
-    } catch (err: any) {
-      toast('We could not start the add-on purchase. Nothing was charged. Check your billing access and try again.', 'error');
-    }
-  };
 
   // Hooks must be called unconditionally — keep useMemo above the early
   // return so React's hook order is stable across renders.
@@ -224,7 +204,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
     return sections;
   }, [filtered]);
 
-  const renderCard = ({ module: m, unlocked, access_source, cta, addon_price_cents, reason }: ModuleSummary) => {
+  const renderCard = ({ module: m, unlocked, access_source, cta, reason }: ModuleSummary) => {
     const srcKey = unlocked && access_source ? access_source : 'locked';
     const src = sourceLabel[srcKey] || sourceLabel.locked;
     const status = statusLabel[m.status] || statusLabel.coming_soon;
@@ -359,32 +339,48 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                 flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
                 background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
               }}
-            >Not available yet</button>
+            >Coming soon</button>
           )}
-          {cta === 'buy_addon' && (
+          {(cta === 'buy_addon' || cta === 'upgrade') && isTenantOwner && (
             <button
-              data-testid={`button-subscribe-${m.slug}`}
-              onClick={() => subscribe(m.slug)}
+              data-testid={`button-stack-${m.slug}`}
+              onClick={() => { window.location.href = '/pricing#build-stack'; }}
               style={{
                 flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8,
                 border: `1px solid ${colors.accent}`, background: 'transparent',
                 color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              {priceLabel(addon_price_cents) ? `Add ${m.name} — ${priceLabel(addon_price_cents)}` : `Add ${m.name}`}
+              Configure Application Stack
             </button>
           )}
-          {cta === 'upgrade' && (
+          {(cta === 'buy_addon' || cta === 'upgrade') && !isTenantOwner && isTenantAdmin && (
             <button
-              data-testid={`button-upgrade-${m.slug}`}
-              onClick={() => onNavigate ? onNavigate('billing') : (window.location.href = '/')}
+              data-testid={`button-view-billing-${m.slug}`}
+              onClick={() => onNavigate ? onNavigate('tenant-billing') : null}
               style={{
                 flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8,
-                border: `1px solid ${colors.accent}`, background: 'transparent',
-                color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: `1px solid ${colors.border}`, background: 'transparent',
+                color: colors.textMuted, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              View plan options
+              View billing state
+            </button>
+          )}
+          {(cta === 'buy_addon' || cta === 'upgrade') && !isTenantOwner && !isTenantAdmin && (
+            <button
+              data-testid={`button-request-${m.slug}`}
+              onClick={() => {
+                setRequested(r => ({ ...r, [m.slug]: true }));
+                toast('Ask your organization owner to add this tool through Application Stack.', 'success');
+              }}
+              style={{
+                flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8,
+                border: `1px solid ${colors.accentPurple}`, background: 'transparent',
+                color: colors.accentPurple, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              <Lock size={12} aria-hidden="true" /> Ask owner for access
             </button>
           )}
           {cta === 'disabled' && (() => {
@@ -393,11 +389,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
             //     (regular members) or Manage (tenant admins, already
             //     rendered above).
             //   - module is offline or hard-disabled -> Unavailable.
-            //   - addon-shaped but Stripe price missing -> show the
-            //     Stripe-missing tooltip on the disabled button so
-            //     admins know why the buy CTA never rendered.
-            const stripeMissing = !!addon_price_cents && addon_price_cents > 0;
-            const isLockedLive = m.status === 'live' && !unlocked && !stripeMissing;
+            const isLockedLive = m.status === 'live' && !unlocked;
             if (isLockedLive && !isTenantAdmin) {
               const sent = !!requested[m.slug];
               return (
@@ -423,16 +415,12 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
               <button
                 data-testid={`button-disabled-${m.slug}`}
                 disabled
-                title={
-                  stripeMissing
-                    ? 'A purchase cannot be started right now. Nothing will be charged. Contact support for help.'
-                    : (reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable')
-                }
+                title={reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable'}
                 style={{
                   flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
                   background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
                 }}
-              >{stripeMissing ? 'Purchase temporarily unavailable' : 'Unavailable'}</button>
+              >Unavailable</button>
             );
           })()}
         </div>

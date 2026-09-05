@@ -8,6 +8,7 @@ import { Activity, Beaker, ExternalLink, FlaskConical, Grid2X2, LifeBuoy, Settin
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import {
@@ -43,17 +44,24 @@ export default function FaultlineLabShell({ routePath }: FaultlineLabShellProps)
     items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })),
   })), [hrefFor]);
   const platformAdmin = user?.platformRole === 'super_admin';
-  const canManage = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
+  const moduleAccessLevel = useModuleAccessLevel();
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin' || moduleAccessLevel === 'manager');
+  const canAdminModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin');
   const roleLabel = platformAdmin
     ? 'Platform administrator'
+    : !canWriteModule
+      ? 'Read-only observer'
     : activeRole === 'owner'
       ? 'Organization owner'
       : activeRole === 'admin'
         ? 'Organization administrator'
-        : activeRole === 'viewer'
-          ? 'Read-only observer'
+        : moduleAccessLevel === 'manager'
+          ? 'Lab manager'
           : 'Investigator';
-  const tenantLabel = activeTenant?.name ?? tenantId ?? 'No organization selected';
+  const tenantLabel = activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected');
   const pageAction = route.area === 'challenges'
     ? null
     : route.area === 'settings' && platformAdmin
@@ -89,7 +97,7 @@ export default function FaultlineLabShell({ routePath }: FaultlineLabShellProps)
       ]}
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId ?? route.challengeId }}
       state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}
-      stateMessage={!tenantId ? 'Choose an organization in My Apps before opening tenant-scoped diagnostic work.' : undefined}
+      stateMessage={!tenantId ? 'Choose an organization in My Apps before opening its diagnostic training.' : undefined}
       pageHeaderTestId="faultlinelab-module-header"
       mobileNavigation="drawer"
       testId="faultlinelab-module-shell"
@@ -103,16 +111,19 @@ export default function FaultlineLabShell({ routePath }: FaultlineLabShellProps)
           recordId={route.recordId}
           challengeId={route.challengeId}
           hrefFor={hrefFor}
+          canWrite={canWriteModule}
+          canManage={canManageModule}
+          canAdmin={canAdminModule}
         />
       )}
       {tenantId && route.area === 'settings' && (
         <section className="faultline-settings" data-testid="faultlinelab-settings-route">
-          <h2><Settings size={19} />Diagnostic workspace boundaries</h2>
-          <p>FaultlineLab records training investigations and server-scored diagnostic work. It does not grant production access or issue certificates.</p>
-          <SettingsRow label="Identity and tenancy" value="OperatorOS owns sign-in, entitlement, organization membership, and role authority." />
-          <SettingsRow label="Execution boundary" value="Challenge commands are allowlisted simulations defined by published content; arbitrary host commands are unavailable." />
-          <SettingsRow label="Evidence" value="Actions, submissions, scores, revisions, assignments, and private proof remain tenant-scoped and auditable." />
-          <SettingsRow label="Authoring" value={canManage ? 'You can manage tenant challenge assignments and publication.' : 'Workspace managers control shared assignment and publication.'} />
+          <h2><Settings size={19} />How the learning workspace works</h2>
+          <p>FaultlineLab keeps training investigations and scored diagnostic practice. It does not grant production access or issue certificates.</p>
+          <SettingsRow label="Team access" value="Use OperatorOS to manage sign-in, application access, organization membership, and roles." />
+          <SettingsRow label="Safe practice" value="Each challenge provides its own simulated commands. FaultlineLab never runs arbitrary commands on a live system." />
+          <SettingsRow label="Learning history" value="Actions, submissions, scores, revisions, assignments, and private proof remain available to the approved people in your organization." />
+          <SettingsRow label="Authoring" value={canAdminModule ? 'You can manage team challenge assignments and publication.' : 'Organization owners and administrators with edit access control shared assignments and publication.'} />
           <div className="faultline-safety"><ShieldCheck size={17} />No certificate, production authorization, or live-system access is implied by a score.</div>
         </section>
       )}

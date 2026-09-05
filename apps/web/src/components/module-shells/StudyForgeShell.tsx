@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
-import { ShellLiveBadge } from './ShellChrome';
+import { ShellWorkspaceBadge } from './ShellChrome';
 import StudyForgeCompleteWorkspace from './StudyForgeCompleteWorkspace';
 
 type Item = Record<string, any>;
@@ -30,8 +30,8 @@ const sections = [
   ['studyforge-account', 'Plan & usage', CheckCircle2],
   ['studyforge-phase11c-dashboard', 'Legacy dashboard', BarChart3],
   ['studyforge-subjects', 'Subjects', GraduationCap],
-  ['studyforge-sources', 'Sources', FileText],
-  ['studyforge-studio', 'AI Studio', Sparkles],
+  ['studyforge-sources', 'Learning materials', FileText],
+  ['studyforge-studio', 'Create from materials', Sparkles],
   ['studyforge-decks', 'Flashcards', Library],
   ['studyforge-quizzes', 'Quizzes', Brain],
   ['studyforge-plans', 'Study Plans', CalendarDays],
@@ -50,12 +50,13 @@ const subtleButton: React.CSSProperties = {
   ...buttonStyle, background: 'transparent', border: `1px solid ${semantic.border}`,
   color: semantic.text,
 };
+const READ_ONLY_MESSAGE = 'Your StudyForge AI access is read-only. Ask an organization owner or administrator for edit access.';
 
 function key(prefix: string) {
   return `${prefix}:${Date.now()}:${crypto.randomUUID()}`;
 }
 
-export default function StudyForgeShell({ routePath = '', embedded = false, view = 'overview', hrefFor = path => path }: { baseUrl?: string; routePath?: string; embedded?: boolean; view?: string; hrefFor?: (path: string) => string }) {
+export default function StudyForgeShell({ routePath = '', embedded = false, view = 'overview', hrefFor = path => path, canWrite = true }: { baseUrl?: string; routePath?: string; embedded?: boolean; view?: string; hrefFor?: (path: string) => string; canWrite?: boolean }) {
   const [data, setData] = useState<Workspace | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,6 +75,10 @@ export default function StudyForgeShell({ routePath = '', embedded = false, view
   useEffect(() => { if (legacyView) void load(); }, [load, legacyView]);
 
   const mutate = async (action: () => Promise<unknown>) => {
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -101,6 +106,7 @@ export default function StudyForgeShell({ routePath = '', embedded = false, view
       id="studyforge-workspace"
       data-testid="shell-studyforge-ai"
       data-evidence="persisted_records_only"
+      data-can-write={canWrite ? 'true' : 'false'}
       style={{ minHeight: '100vh', overflowX: 'clip', background: 'radial-gradient(circle at 85% 0%,rgba(124,58,237,.18),transparent 35%),#070a13', color: semantic.text, padding: `0 clamp(16px, 4vw, ${space.xxl}px) ${space.xxl}px` }}
     >
       {!embedded && <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `${space.xl}px 0`, flexWrap: 'wrap' }}>
@@ -109,9 +115,9 @@ export default function StudyForgeShell({ routePath = '', embedded = false, view
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ margin: 0, fontSize: 28 }}>StudyForge AI</h1><ShellLiveBadge />
+            <h1 style={{ margin: 0, fontSize: 28 }}>StudyForge AI</h1><ShellWorkspaceBadge />
           </div>
-          <p style={{ margin: '4px 0 0', color: semantic.textMuted }}>Source-grounded learning materials, human review, and durable progress.</p>
+          <p style={{ margin: '4px 0 0', color: semantic.textMuted }}>Turn trusted study material into reviewed flashcards, quizzes, study plans, and measurable progress.</p>
         </div>
         <button style={subtleButton} onClick={() => setMobileNav((value) => !value)} aria-expanded={mobileNav}>Workspace menu</button>
         <button style={subtleButton} onClick={() => void load()} disabled={busy}><RefreshCw size={14} /> Refresh</button>
@@ -126,15 +132,16 @@ export default function StudyForgeShell({ routePath = '', embedded = false, view
       </nav>}
 
       {error && <div role="alert" data-testid="studyforge-error" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
-      {(!legacyView || view === 'sessions') && <StudyForgeCompleteWorkspace routePath={routePath} view={view} hrefFor={hrefFor} />}
+      {!canWrite && legacyView && view !== 'sessions' && <div role="status" data-testid="studyforge-read-only" style={{ ...cardStyle, borderColor: 'rgba(196,181,253,.55)', color: '#ddd6fe', marginBottom: space.lg }}>Read-only access: you can review saved study material, reveal flashcards, practice quiz answers locally, and download allowed exports. Creating or changing records, saving study results, and updating progress require member, administrator, or owner access.</div>}
+      {(!legacyView || view === 'sessions') && <StudyForgeCompleteWorkspace routePath={routePath} view={view} hrefFor={hrefFor} canWrite={canWrite} />}
       {legacyView && (!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading your courses and study progress…</p></Panel> : (
         <>
-          {view === 'sources' && <Subjects data={data} mutate={mutate} busy={busy} />}
-          {view === 'sources' && <Sources data={data} mutate={mutate} busy={busy} />}
-          {view === 'studio' && <Studio data={data} mutate={mutate} busy={busy} />}
-          {view === 'flashcards' && <Decks data={data} mutate={mutate} busy={busy} />}
-          {view === 'quizzes' && <Quizzes data={data} mutate={mutate} busy={busy} />}
-          {view === 'sessions' && <Plans data={data} mutate={mutate} busy={busy} />}
+          {view === 'sources' && <Subjects data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}
+          {view === 'sources' && <Sources data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}
+          {view === 'studio' && <Studio data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}
+          {view === 'flashcards' && <Decks data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}
+          {view === 'quizzes' && <Quizzes data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}
+          {view === 'sessions' && <Plans data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}
           {view === 'progress' && <Progress data={data} />}
         </>
       ))}
@@ -163,7 +170,7 @@ function Empty({ text }: { text: string }) {
 function Dashboard({ data }: { data: Workspace }) {
   const metrics = [
     ['Subjects', data.dashboard.subjects],
-    ['Source records', data.dashboard.sources],
+    ['Learning materials', data.dashboard.sources],
     ['Published decks', data.dashboard.publishedDecks],
     ['Due cards', data.dashboard.dueCards],
     ['Average quiz score', `${data.dashboard.averageScore}%`],
@@ -176,7 +183,7 @@ function Dashboard({ data }: { data: Workspace }) {
   );
 }
 
-function Subjects({ data, mutate, busy }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean }) {
+function Subjects({ data, mutate, busy, canWrite }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean; canWrite: boolean }) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const submit = (event: FormEvent) => {
@@ -191,14 +198,14 @@ function Subjects({ data, mutate, busy }: { data: Workspace; mutate: (action: ()
       <form onSubmit={submit} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))', gap: 10, marginBottom: space.md }}>
         <input data-testid="input-studyforge-subject-name" aria-label="Subject name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={160} placeholder="Network Fundamentals" style={inputStyle} />
         <input aria-label="Course code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={80} placeholder="NET-201" style={inputStyle} />
-        <button data-testid="button-studyforge-subject-create" disabled={busy} style={buttonStyle}>Add subject</button>
+        <button data-testid="button-studyforge-subject-create" disabled={busy || !canWrite} style={buttonStyle}>Add subject</button>
       </form>
       <Grid>{data.subjects.length ? data.subjects.map((subject) => <article key={subject.id} style={cardStyle}><strong>{subject.name}</strong><div style={{ color: '#a78bfa', marginTop: 6 }}>{subject.courseCode || 'No course code'}</div><p style={{ color: semantic.textMuted }}>{subject.description || 'No description recorded.'}</p></article>) : <Empty text="No subjects yet." />}</Grid>
     </Panel>
   );
 }
 
-function Sources({ data, mutate, busy }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean }) {
+function Sources({ data, mutate, busy, canWrite }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean; canWrite: boolean }) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [subjectId, setSubjectId] = useState('');
@@ -226,25 +233,25 @@ function Sources({ data, mutate, busy }: { data: Workspace; mutate: (action: () 
     setTitle(''); setFile(null);
   };
   return (
-    <Panel id="studyforge-sources" title="Authorized sources" description="Private notes and approved documents stay protected, with no public links or fabricated attribution.">
+    <Panel id="studyforge-sources" title="Learning materials" description="Keep the private notes and documents you want StudyForge to use together in one protected library.">
       <form onSubmit={createNote} style={{ ...cardStyle, display: 'grid', gap: 10, marginBottom: space.md }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))', gap: 10 }}>
-          <input data-testid="input-studyforge-source-title" aria-label="Source title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Source title" style={inputStyle} />
-          <select aria-label="Source subject" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">No subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
+          <input data-testid="input-studyforge-source-title" aria-label="Material title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Material title" style={inputStyle} />
+          <select aria-label="Material subject" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">No subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
         </div>
-        <textarea data-testid="textarea-studyforge-source-body" aria-label="Source content" value={body} onChange={(e) => setBody(e.target.value)} minLength={8} maxLength={100000} rows={5} placeholder="Paste private notes or source text…" style={inputStyle} />
+        <textarea data-testid="textarea-studyforge-source-body" aria-label="Learning material" value={body} onChange={(e) => setBody(e.target.value)} minLength={8} maxLength={100000} rows={5} placeholder="Paste private notes or study text…" style={inputStyle} />
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button data-testid="button-studyforge-source-create" disabled={busy || body.trim().length < 8} style={buttonStyle}>Save note source</button>
-          <label style={{ ...subtleButton, display: 'inline-flex', alignItems: 'center', gap: 7 }}><Upload size={14} /> Select document<input type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: 'none' }} /></label>
-          {file && <button type="button" disabled={busy || !title} onClick={() => void upload()} style={subtleButton}>Upload {file.name}</button>}
+          <button data-testid="button-studyforge-source-create" disabled={busy || !canWrite || body.trim().length < 8} style={buttonStyle}>Save notes</button>
+          <label aria-disabled={!canWrite} style={{ ...subtleButton, display: 'inline-flex', alignItems: 'center', gap: 7, opacity: canWrite ? 1 : .6 }}><Upload size={14} /> Select document<input disabled={!canWrite} type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: 'none' }} /></label>
+          {file && <button type="button" disabled={busy || !canWrite || !title} onClick={() => void upload()} style={subtleButton}>Upload {file.name}</button>}
         </div>
       </form>
-      <Grid>{data.sources.length ? data.sources.map((source) => <article key={source.id} style={cardStyle}><strong>{source.title}</strong><div style={{ marginTop: 7, color: '#93c5fd' }}>{source.sourceType === 'document' ? 'Private document' : 'Private note'}</div><div style={{ marginTop: 6, color: semantic.textMuted, fontSize: 12 }}>SHA-256 {String(source.contentSha256).slice(0, 14)}…</div></article>) : <Empty text="No source material yet." />}</Grid>
+      <Grid>{data.sources.length ? data.sources.map((source) => <article key={source.id} style={cardStyle}><strong>{source.title}</strong><div style={{ marginTop: 7, color: '#93c5fd' }}>{source.sourceType === 'document' ? 'Private document' : 'Private note'}</div><details style={{ marginTop: 6, color: semantic.textMuted, fontSize: 12 }}><summary>Technical details</summary><code>SHA-256 {String(source.contentSha256).slice(0, 14)}…</code></details></article>) : <Empty text="No learning materials yet." />}</Grid>
     </Panel>
   );
 }
 
-function Studio({ data, mutate, busy }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean }) {
+function Studio({ data, mutate, busy, canWrite }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean; canWrite: boolean }) {
   const [sourceId, setSourceId] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [type, setType] = useState<'deck' | 'quiz' | 'study_plan'>('deck');
@@ -258,49 +265,50 @@ function Studio({ data, mutate, busy }: { data: Workspace; mutate: (action: () =
     }));
   };
   return (
-    <Panel id="studyforge-studio" title="Source-grounded AI studio" description="AI creates review-ready drafts while every quoted excerpt is checked against your sources before saving.">
+    <Panel id="studyforge-studio" title="Build from your materials" description="Create review-ready flashcards, quizzes, or a study plan from the notes and documents you choose.">
       <form onSubmit={submit} style={{ ...cardStyle, display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
-          <select data-testid="select-studyforge-generation-source" aria-label="Generation source" value={sourceId} onChange={(e) => setSourceId(e.target.value)} required style={inputStyle}><option value="">Select source</option>{data.sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}</select>
-          <select aria-label="Generation subject" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">Use source subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
-          <select data-testid="select-studyforge-generation-type" aria-label="Generation type" value={type} onChange={(e) => setType(e.target.value as any)} style={inputStyle}><option value="deck">Flashcard deck</option><option value="quiz">Quiz</option><option value="study_plan">Study plan</option></select>
+          <select data-testid="select-studyforge-generation-source" aria-label="Learning material" value={sourceId} onChange={(e) => setSourceId(e.target.value)} required style={inputStyle}><option value="">Select learning material</option>{data.sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}</select>
+          <select aria-label="Study subject" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">Use the material's subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
+          <select data-testid="select-studyforge-generation-type" aria-label="Study pack type" value={type} onChange={(e) => setType(e.target.value as any)} style={inputStyle}><option value="deck">Flashcard deck</option><option value="quiz">Quiz</option><option value="study_plan">Study plan</option></select>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))', gap: 10 }}>
           <input data-testid="input-studyforge-generation-title" aria-label="Material title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Material title" style={inputStyle} />
           <input aria-label="Study plan target date" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} style={inputStyle} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <button data-testid="button-studyforge-generation-create" disabled={busy || !sourceId} style={buttonStyle}><Sparkles size={14} /> Generate draft</button>
-          <span style={{ color: semantic.textMuted, fontSize: 13 }}>AI service: {data.ai.name} · monthly limit {data.ai.monthlyLimit} · review required</span>
+          <button data-testid="button-studyforge-generation-create" disabled={busy || !canWrite || !sourceId} style={buttonStyle}><Sparkles size={14} /> Create draft</button>
+          <span style={{ color: semantic.textMuted, fontSize: 13 }}>AI-assisted creation · up to {data.ai.monthlyLimit} drafts each month · review required</span>
+          <details style={{ color: semantic.textMuted, fontSize: 12 }}><summary>Technical details</summary><code>Creation service: {data.ai.name}</code></details>
         </div>
       </form>
     </Panel>
   );
 }
 
-function lifecycle(entity: 'decks' | 'quizzes' | 'plans', item: Item, mutate: (action: () => Promise<unknown>) => Promise<void>) {
+function lifecycle(entity: 'decks' | 'quizzes' | 'plans', item: Item, mutate: (action: () => Promise<unknown>) => Promise<void>, canWrite: boolean) {
   const next: Record<string, string | null> = { draft: 'review', review: 'published', published: 'review', completed: 'archived', archived: null };
   const status = next[item.status];
-  return status ? <button style={subtleButton} onClick={() => void mutate(() => moduleShellApi.studyforge.setStatus(entity, item.id, status, item.version))}>Move to {status}</button> : null;
+  return status ? <button disabled={!canWrite} style={subtleButton} onClick={() => void mutate(() => moduleShellApi.studyforge.setStatus(entity, item.id, status, item.version))}>Move to {status}</button> : null;
 }
 
-function Decks({ data, mutate, busy }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean }) {
+function Decks({ data, mutate, busy, canWrite }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean; canWrite: boolean }) {
   const progress = new Map(data.progress.map((item) => [item.cardId, item]));
   return (
-    <Panel id="studyforge-decks" title="Flashcard decks" description="Edit generated cards before review and publish. Published cards feed durable spaced repetition.">
+    <Panel id="studyforge-decks" title="Flashcard decks" description="Edit generated cards before review and publishing. Published cards return when you are due to practice them.">
       {data.decks.length ? data.decks.map((deck) => {
         const cards = data.cards.filter((card) => card.deckId === deck.id);
-        return <article key={deck.id} style={{ ...cardStyle, marginBottom: space.md }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><h3 style={{ marginTop: 0 }}>{deck.title}</h3><span style={{ color: '#a78bfa' }}>{deck.status} · {cards.length} cards</span></div>{!busy && lifecycle('decks', deck, mutate)}</div>
-          <div data-testid="list-studyforge-cards" style={{ display: 'grid', gap: 9, marginTop: 12 }}>{cards.map((card) => <CardEditor key={card.id} card={card} editable={deck.status === 'draft' || deck.status === 'review'} busy={busy} mutate={mutate} progress={progress.get(card.id)} published={deck.status === 'published'} />)}</div>
+        return <article key={deck.id} style={{ ...cardStyle, marginBottom: space.md }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><h3 style={{ marginTop: 0 }}>{deck.title}</h3><span style={{ color: '#a78bfa' }}>{deck.status} · {cards.length} cards</span></div>{!busy && lifecycle('decks', deck, mutate, canWrite)}</div>
+          <div data-testid="list-studyforge-cards" style={{ display: 'grid', gap: 9, marginTop: 12 }}>{cards.map((card) => <CardEditor key={card.id} card={card} editable={deck.status === 'draft' || deck.status === 'review'} busy={busy} mutate={mutate} progress={progress.get(card.id)} published={deck.status === 'published'} canWrite={canWrite} />)}</div>
         </article>;
-      }) : <Empty text="No flashcard decks yet. Create one from an authorized source in AI Studio." />}
+      }) : <Empty text="No flashcard decks yet. Create one from your learning materials." />}
     </Panel>
   );
 }
 
-function CardEditor({ card, editable, busy, mutate, progress, published }: {
+function CardEditor({ card, editable, busy, mutate, progress, published, canWrite }: {
   card: Item; editable: boolean; busy: boolean; mutate: (action: () => Promise<unknown>) => Promise<void>;
-  progress?: Item; published: boolean;
+  progress?: Item; published: boolean; canWrite: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [question, setQuestion] = useState(String(card.question));
@@ -319,31 +327,31 @@ function CardEditor({ card, editable, busy, mutate, progress, published }: {
         <textarea aria-label="Card answer" value={answer} onChange={(event) => setAnswer(event.target.value)} rows={3} style={inputStyle} />
         <textarea aria-label="Card source excerpt" value={excerpt} onChange={(event) => setExcerpt(event.target.value)} rows={2} style={inputStyle} />
         <div style={{ display: 'flex', gap: 8 }}>
-          <button disabled={busy || !question.trim() || !answer.trim()} style={buttonStyle} onClick={() => void save()}>Save card</button>
+          <button disabled={busy || !canWrite || !question.trim() || !answer.trim()} style={buttonStyle} onClick={() => void save()}>Save card</button>
           <button style={subtleButton} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       </div> : <>
         <strong>{card.question}</strong>
         <p data-testid={`text-studyforge-answer-${card.id}`} style={{ color: semantic.textMuted }}>{card.answer}</p>
         {card.sourceExcerpt && <blockquote style={{ margin: '8px 0', borderLeft: '3px solid #7c3aed', paddingLeft: 10, color: '#c4b5fd' }}>Source: {card.sourceExcerpt}</blockquote>}
-        {editable && <button style={subtleButton} onClick={() => setEditing(true)}>Edit card</button>}
-        {published && <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>{(['again', 'hard', 'good', 'easy'] as const).map((rating) => <button key={rating} style={subtleButton} onClick={() => void mutate(() => moduleShellApi.studyforge.reviewCard(card.id, rating, progress?.version))}>{rating}</button>)}</div>}
+        {editable && <button disabled={!canWrite} style={subtleButton} onClick={() => setEditing(true)}>Edit card</button>}
+        {published && <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>{(['again', 'hard', 'good', 'easy'] as const).map((rating) => <button key={rating} disabled={busy || !canWrite} style={subtleButton} onClick={() => void mutate(() => moduleShellApi.studyforge.reviewCard(card.id, rating, progress?.version))}>{rating}</button>)}</div>}
       </>}
     </div>
   );
 }
 
-function Quizzes({ data, mutate, busy }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean }) {
+function Quizzes({ data, mutate, busy, canWrite }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean; canWrite: boolean }) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   return (
-    <Panel id="studyforge-quizzes" title="Quizzes and attempts" description="Only published quizzes can be attempted; grading is server-authoritative.">
+    <Panel id="studyforge-quizzes" title="Quizzes and attempts" description="Only published quizzes can be attempted, and every answer is graded consistently from the saved quiz key.">
       {data.quizzes.length ? data.quizzes.map((quiz) => {
         const questions = data.questions.filter((question) => question.quizId === quiz.id);
-        return <article key={quiz.id} style={{ ...cardStyle, marginBottom: space.md }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><h3 style={{ margin: 0 }}>{quiz.title}</h3><span style={{ color: '#93c5fd' }}>{quiz.status} · {questions.length} questions</span></div>{!busy && lifecycle('quizzes', quiz, mutate)}</div>
+        return <article key={quiz.id} style={{ ...cardStyle, marginBottom: space.md }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><h3 style={{ margin: 0 }}>{quiz.title}</h3><span style={{ color: '#93c5fd' }}>{quiz.status} · {questions.length} questions</span></div>{!busy && lifecycle('quizzes', quiz, mutate, canWrite)}</div>
           <div style={{ marginTop: 12 }}>{questions.map((question) => quiz.status === 'published'
             ? <fieldset key={question.id} style={{ border: `1px solid ${semantic.border}`, borderRadius: 8, marginBottom: 10 }}><legend>{question.question}</legend>{question.choices.map((choice: string, index: number) => <label key={index} style={{ display: 'block', padding: 6 }}><input type="radio" name={question.id} checked={answers[question.id] === index} onChange={() => setAnswers((current) => ({ ...current, [question.id]: index }))} /> {choice}</label>)}</fieldset>
-            : <QuestionEditor key={question.id} question={question} busy={busy} mutate={mutate} />)}
-            {quiz.status === 'published' && <button data-testid={`button-studyforge-quiz-submit-${quiz.id}`} disabled={busy || questions.some((question) => answers[question.id] === undefined)} style={buttonStyle} onClick={() => void mutate(() => moduleShellApi.studyforge.submitAttempt(quiz.id, questions.map((question) => ({ questionId: question.id, selectedIndex: answers[question.id] }))))}>Submit quiz</button>}
+            : <QuestionEditor key={question.id} question={question} busy={busy} mutate={mutate} canWrite={canWrite} />)}
+            {quiz.status === 'published' && <button data-testid={`button-studyforge-quiz-submit-${quiz.id}`} disabled={busy || !canWrite || questions.some((question) => answers[question.id] === undefined)} style={buttonStyle} onClick={() => void mutate(() => moduleShellApi.studyforge.submitAttempt(quiz.id, questions.map((question) => ({ questionId: question.id, selectedIndex: answers[question.id] }))))}>Submit quiz</button>}
           </div>
         </article>;
       }) : <Empty text="No quizzes yet." />}
@@ -351,8 +359,8 @@ function Quizzes({ data, mutate, busy }: { data: Workspace; mutate: (action: () 
   );
 }
 
-function QuestionEditor({ question, busy, mutate }: {
-  question: Item; busy: boolean; mutate: (action: () => Promise<unknown>) => Promise<void>;
+function QuestionEditor({ question, busy, mutate, canWrite }: {
+  question: Item; busy: boolean; mutate: (action: () => Promise<unknown>) => Promise<void>; canWrite: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [prompt, setPrompt] = useState(String(question.question));
@@ -378,7 +386,7 @@ function QuestionEditor({ question, busy, mutate }: {
         <textarea aria-label="Question explanation" value={explanation} onChange={(event) => setExplanation(event.target.value)} rows={2} style={inputStyle} />
         <textarea aria-label="Question source excerpt" value={excerpt} onChange={(event) => setExcerpt(event.target.value)} rows={2} style={inputStyle} />
         <div style={{ display: 'flex', gap: 8 }}>
-          <button disabled={busy || !prompt.trim() || choices.some((choice) => !choice.trim())} style={buttonStyle} onClick={() => void save()}>Save question</button>
+          <button disabled={busy || !canWrite || !prompt.trim() || choices.some((choice) => !choice.trim())} style={buttonStyle} onClick={() => void save()}>Save question</button>
           <button style={subtleButton} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       </div> : <>
@@ -386,28 +394,28 @@ function QuestionEditor({ question, busy, mutate }: {
         <ol>{question.choices.map((choice: string) => <li key={choice}>{choice}</li>)}</ol>
         <p style={{ color: semantic.textMuted }}>{question.explanation}</p>
         {question.sourceExcerpt && <blockquote style={{ margin: '8px 0', borderLeft: '3px solid #7c3aed', paddingLeft: 10, color: '#c4b5fd' }}>Source: {question.sourceExcerpt}</blockquote>}
-        <button style={subtleButton} onClick={() => setEditing(true)}>Edit question</button>
+        <button disabled={!canWrite} style={subtleButton} onClick={() => setEditing(true)}>Edit question</button>
       </>}
     </div>
   );
 }
 
-function Plans({ data, mutate, busy }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean }) {
+function Plans({ data, mutate, busy, canWrite }: { data: Workspace; mutate: (action: () => Promise<unknown>) => Promise<void>; busy: boolean; canWrite: boolean }) {
   return (
     <Panel id="studyforge-plans" title="Study plans and sessions" description="Review the generated schedule, publish it, then record actual completion.">
       {data.plans.length ? data.plans.map((plan) => {
         const sessions = data.sessions.filter((session) => session.planId === plan.id);
-        return <article key={plan.id} style={{ ...cardStyle, marginBottom: space.md }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><h3 style={{ margin: 0 }}>{plan.title}</h3><span style={{ color: '#a78bfa' }}>{plan.status} · target {plan.targetDate || 'not set'}</span></div>{!busy && lifecycle('plans', plan, mutate)}</div>
-          <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>{sessions.map((session) => <PlanSessionEditor key={session.id} session={session} editable={plan.status === 'draft' || plan.status === 'review'} published={plan.status === 'published'} busy={busy} mutate={mutate} />)}</div>
+        return <article key={plan.id} style={{ ...cardStyle, marginBottom: space.md }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><h3 style={{ margin: 0 }}>{plan.title}</h3><span style={{ color: '#a78bfa' }}>{plan.status} · target {plan.targetDate || 'not set'}</span></div>{!busy && lifecycle('plans', plan, mutate, canWrite)}</div>
+          <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>{sessions.map((session) => <PlanSessionEditor key={session.id} session={session} editable={plan.status === 'draft' || plan.status === 'review'} published={plan.status === 'published'} busy={busy} mutate={mutate} canWrite={canWrite} />)}</div>
         </article>;
       }) : <Empty text="No study plans yet." />}
     </Panel>
   );
 }
 
-function PlanSessionEditor({ session, editable, published, busy, mutate }: {
+function PlanSessionEditor({ session, editable, published, busy, mutate, canWrite }: {
   session: Item; editable: boolean; published: boolean; busy: boolean;
-  mutate: (action: () => Promise<unknown>) => Promise<void>;
+  mutate: (action: () => Promise<unknown>) => Promise<void>; canWrite: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(String(session.title));
@@ -431,13 +439,13 @@ function PlanSessionEditor({ session, editable, published, busy, mutate }: {
           <input aria-label="Study session minutes" type="number" min={5} max={480} value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} style={inputStyle} />
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button disabled={busy || !title.trim() || !focus.trim()} style={buttonStyle} onClick={() => void save()}>Save session</button>
+          <button disabled={busy || !canWrite || !title.trim() || !focus.trim()} style={buttonStyle} onClick={() => void save()}>Save session</button>
           <button style={subtleButton} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       </div> : <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <div><strong>{session.title}</strong><div style={{ color: semantic.textMuted }}>{session.focus} · {session.estimatedMinutes} min</div></div>
-        {editable && <button style={subtleButton} onClick={() => setEditing(true)}>Edit session</button>}
-        {published && <button style={subtleButton} onClick={() => void mutate(() => moduleShellApi.studyforge.completeSession(session.id, !session.completedAt, session.version))}>{session.completedAt ? 'Reopen' : 'Complete'}</button>}
+        {editable && <button disabled={!canWrite} style={subtleButton} onClick={() => setEditing(true)}>Edit session</button>}
+        {published && <button disabled={busy || !canWrite} style={subtleButton} onClick={() => void mutate(() => moduleShellApi.studyforge.completeSession(session.id, !session.completedAt, session.version))}>{session.completedAt ? 'Reopen' : 'Complete'}</button>}
       </div>}
     </div>
   );

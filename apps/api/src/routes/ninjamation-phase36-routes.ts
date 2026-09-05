@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
+import { COMPANION_MODULE_PRICE_CENTS } from '@operatoros/sdk';
 import { db } from '../db.js';
 import {
   requireTenantAdmin,
@@ -143,11 +144,13 @@ export async function registerNinjamationPhase36Routes(app: FastifyInstance) {
     positioning: 'Reviewed automation scripts and AI-assisted drafts without unsafe web-process execution.',
     repository: { name: NINJAMATION_REPOSITORY, branch: NINJAMATION_REPOSITORY_BRANCH },
     formats: NINJAMATION_LIBRARY_FORMATS,
-    plans: [
-      { id: 'starter', name: 'Starter', monthlyDownloads: 10, aiGeneration: false, features: ['Script library', 'Checksums and version history', 'Favorites', '10 downloads per month'] },
-      { id: 'pro', name: 'Pro', monthlyDownloads: null, monthlyGenerations: 50, aiGeneration: true, features: ['Everything in Starter', 'AI generation', 'Unlimited downloads', '50 generations per month'] },
-      { id: 'enterprise', name: 'Enterprise', monthlyDownloads: null, monthlyGenerations: null, aiGeneration: true, features: ['Everything in Pro', 'Unlimited generation', 'OperatorOS API entitlement', 'Team administration'] },
-    ],
+    applicationStack: {
+      access: 'complete_application',
+      includedCompanion: true,
+      additionalCompanionMonthlyCents: COMPANION_MODULE_PRICE_CENTS,
+      billingPath: '/pricing',
+    },
+    legacyTierSales: { status: 'closed', existingContractsHonored: true },
     billingAuthority: 'OperatorOS',
     executionSupported: false,
   }));

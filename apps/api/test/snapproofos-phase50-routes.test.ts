@@ -17,7 +17,7 @@ test('Phase 50 SnapProofOS exposes a route-first application shell and honest wo
     '/team', '/activity', '/cases', '/evidence', '/review', '/findings', '/reports',
     '/share', '/exports', '/custody', '/retention', '/branding', '/settings',
   ]) assert.match(contract, new RegExp(route.replaceAll('/', '\\/')));
-  assert.match(contract, /no separate duplicate project record is invented/i);
+  assert.match(contract, /Use each job as a workspace for the people, proof, findings, costs, and final report/i);
   assert.match(shell, /ModuleApplicationShell/);
   assert.match(shell, /SNAPPROOF_THEME/);
   assert.match(shell, /DEFAULT_OPERATOROS_NAVIGATION_URLS/);

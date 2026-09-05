@@ -121,6 +121,7 @@ export type TradeFlowKitRevenueView = 'all' | 'customers' | 'quotes' | 'invoices
 
 export default function TradeFlowKitRevenueFlow({
   tenantKey,
+  canWrite,
   canManage,
   view = 'all',
   recordId,
@@ -128,6 +129,7 @@ export default function TradeFlowKitRevenueFlow({
   routePrefix = '',
 }: {
   tenantKey: string;
+  canWrite: boolean;
   canManage: boolean;
   view?: TradeFlowKitRevenueView;
   recordId?: string;
@@ -213,6 +215,7 @@ export default function TradeFlowKitRevenueFlow({
   }, [intent, view]);
 
   async function run(operation: () => Promise<unknown>) {
+    if (!canWrite) return;
     setPending(true); setError(null);
     try { await operation(); await load(); }
     catch (err: any) { setError(err?.error || err?.message || 'Revenue workflow action failed'); }
@@ -393,45 +396,45 @@ export default function TradeFlowKitRevenueFlow({
       </div>}
       {loading ? <div style={{ color: c.muted, padding: '18px 0' }}>Loading revenue records…</div> : (
         <>
-          {canManage ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+          {canWrite ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
             <form data-testid="tradeflowkit-customer-create" onSubmit={createCustomer} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>1. Customer</strong><input aria-label="Customer name" required maxLength={160} placeholder="Customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={input} /><input aria-label="Customer email" type="email" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={input} /><button disabled={pending || customerName.trim().length < 2} style={button()}><Plus size={14} /> Add customer</button></form>
             <form onSubmit={importCustomers} data-testid="tradeflowkit-customer-import" style={{ ...panel, flex: '1 1 240px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>Import customers</strong>
               <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: name, email, phone, address, notes. Maximum 100 rows and 256 KB.</span>
               <label style={{ ...input, position: 'relative', overflow: 'hidden', display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer' }}><FileUp size={15} /><span>{customerImportName || 'Choose CSV'}</span><input aria-label="Customer CSV file" type="file" accept=".csv,text/csv" onChange={(event) => void selectCustomerImport(event.target.files?.[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} /></label>
-              {customerImportRows.length > 0 && <span style={{ color: c.primary, fontSize: 12, fontWeight: 800 }}>{customerImportRows.length} rows ready for server validation.</span>}
+              {customerImportRows.length > 0 && <span style={{ color: c.primary, fontSize: 12, fontWeight: 800 }}>{customerImportRows.length} rows checked and ready to import.</span>}
               {customerImportError && <span role="alert" style={{ color: c.red, fontSize: 12 }}>{customerImportError}</span>}
               {customerImportResult && <div data-testid="tradeflowkit-customer-import-result" style={{ color: c.ink, fontSize: 12 }}>
                 <div>Imported {customerImportResult.imported}; skipped {customerImportResult.skipped}; errors {customerImportResult.errors.length}.</div>
                 {customerImportResult.errors.slice(0, 3).map(importError => <div key={`${importError.row}:${importError.code}`}>Row {importError.row}: {importError.code}{importError.field ? ` (${importError.field})` : ''}</div>)}
                 {customerImportResult.errors.length > 3 && <div>{customerImportResult.errors.length - 3} more validation errors.</div>}
               </div>}
-              <button disabled={pending || customerImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import validated rows</button>
+              <button disabled={pending || customerImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import checked customers</button>
             </form>
             <form onSubmit={importJobs} data-testid="tradeflowkit-job-import" style={{ ...panel, flex: '1 1 260px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>Import jobs</strong>
               <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: customerName, title, description, status, priority, scheduledStart, scheduledEnd, internalNotes. Active customer names must match exactly.</span>
               <label style={{ ...input, position: 'relative', overflow: 'hidden', display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer' }}><FileUp size={15} /><span>{jobImportName || 'Choose job CSV'}</span><input aria-label="Job CSV file" type="file" accept=".csv,text/csv" onChange={(event) => void selectJobImport(event.target.files?.[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} /></label>
-              {jobImportRows.length > 0 && <span style={{ color: c.primary, fontSize: 12, fontWeight: 800 }}>{jobImportRows.length} rows ready for server validation.</span>}
+              {jobImportRows.length > 0 && <span style={{ color: c.primary, fontSize: 12, fontWeight: 800 }}>{jobImportRows.length} jobs checked and ready to import.</span>}
               {jobImportError && <span role="alert" style={{ color: c.red, fontSize: 12 }}>{jobImportError}</span>}
               {jobImportResult && <div data-testid="tradeflowkit-job-import-result" style={{ color: c.ink, fontSize: 12 }}>
                 <div>Imported {jobImportResult.imported}; skipped {jobImportResult.skipped}; errors {jobImportResult.errors.length}.</div>
                 {jobImportResult.errors.slice(0, 3).map(importError => <div key={`${importError.row}:${importError.code}:${importError.field || ''}`}>Row {importError.row}: {importError.code}{importError.field ? ` (${importError.field})` : ''}</div>)}
               </div>}
-              <button disabled={pending || jobImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import validated jobs</button>
+              <button disabled={pending || jobImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import checked jobs</button>
             </form>
             <form data-testid="tradeflowkit-job-create" onSubmit={createJob} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>2. Job</strong><select aria-label="Job customer" required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={input}><option value="">Select customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input aria-label="Job title" required maxLength={200} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} style={input} /><button disabled={pending || !customerId || jobTitle.trim().length < 2} style={button(c.blue)}><Plus size={14} /> Add job</button></form>
             <form onSubmit={importInvoices} data-testid="tradeflowkit-invoice-import" style={{ ...panel, flex: '1 1 280px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>Import invoices</strong>
-              <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: invoiceRef, customerName, status, dueDate, taxRate, discount, notes, itemDescription, itemQty, itemUnitPrice. Repeat invoiceRef for multiple lines. Paid status is rejected so payment history stays authoritative.</span>
+              <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: invoiceRef, customerName, status, dueDate, taxRate, discount, notes, itemDescription, itemQty, itemUnitPrice. Repeat invoiceRef for multiple lines. Imports cannot mark an invoice paid; payments must be recorded in its payment history.</span>
               <label style={{ ...input, position: 'relative', overflow: 'hidden', display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer' }}><FileUp size={15} /><span>{invoiceImportName || 'Choose invoice CSV'}</span><input aria-label="Invoice CSV file" type="file" accept=".csv,text/csv" onChange={(event) => void selectInvoiceImport(event.target.files?.[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} /></label>
-              {invoiceImportRows.length > 0 && <span style={{ color: c.primary, fontSize: 12, fontWeight: 800 }}>{invoiceImportRows.length} rows ready for server validation.</span>}
+              {invoiceImportRows.length > 0 && <span style={{ color: c.primary, fontSize: 12, fontWeight: 800 }}>{invoiceImportRows.length} invoices checked and ready to import.</span>}
               {invoiceImportError && <span role="alert" style={{ color: c.red, fontSize: 12 }}>{invoiceImportError}</span>}
               {invoiceImportResult && <div data-testid="tradeflowkit-invoice-import-result" style={{ color: c.ink, fontSize: 12 }}>
                 <div>Imported {invoiceImportResult.imported}; skipped {invoiceImportResult.skipped}; errors {invoiceImportResult.errors.length}.</div>
                 {invoiceImportResult.errors.slice(0, 3).map(importError => <div key={`${importError.row}:${importError.code}:${importError.field || ''}`}>Row {importError.row}: {importError.code}{importError.field ? ` (${importError.field})` : ''}</div>)}
               </div>}
-              <button disabled={pending || invoiceImportRows.length === 0} style={button(c.gold)}><FileUp size={14} /> Import validated invoices</button>
+              <button disabled={pending || invoiceImportRows.length === 0} style={button(c.gold)}><FileUp size={14} /> Import checked invoices</button>
             </form>
             <form onSubmit={createDocument} data-testid="tradeflowkit-document-create-form" style={{ ...panel, flex: '2 1 340px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>3. Revenue document</strong>
@@ -445,7 +448,7 @@ export default function TradeFlowKitRevenueFlow({
               <input aria-label="Document notes" maxLength={4000} placeholder="Notes (optional)" value={documentNotes} onChange={(e) => setDocumentNotes(e.target.value)} style={input} />
               <button disabled={pending || !customerId || !lineDescription.trim()} style={button(c.gold)}><Plus size={14} /> Create {documentKind}</button>
             </form>
-          </div> : <div data-testid="tradeflowkit-revenue-readonly" style={{ color: c.muted, background: c.soft, borderRadius: 8, padding: 12, marginTop: 16 }}>Viewer access is read-only. Revenue mutations require module operator access.</div>}
+          </div> : <div data-testid="tradeflowkit-revenue-readonly" style={{ color: c.muted, background: c.soft, borderRadius: 8, padding: 12, marginTop: 16 }}>Your access is read-only. Creating or changing revenue records requires contributor access.</div>}
 
           <div data-testid="tradeflowkit-customer-records" style={{ display: 'grid', gap: 10, marginTop: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'end', flexWrap: 'wrap' }}>
@@ -454,10 +457,13 @@ export default function TradeFlowKitRevenueFlow({
             </div>
             {data.customers.length === 0
               ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No customers yet.</div>
-              : customerRecords.map(customer => <CustomerRow key={customer.id} customer={customer} selected={customer.id === customerId} pending={pending} canManage={canManage} run={run} onSelect={() => setCustomerId(customer.id)} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('customers', customer.id)} />)}
+              : customerRecords.map(customer => <CustomerRow key={customer.id} customer={customer} selected={customer.id === customerId} pending={pending} canManage={canWrite} run={run} onSelect={() => setCustomerId(customer.id)} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('customers', customer.id)} />)}
           </div>
 
           <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+            {(quoteRecords.length > 0 || invoiceRecords.length > 0) && <div data-testid="tradeflowkit-status-action-guidance" style={{ color: c.muted, background: c.soft, border: `1px solid ${c.border}`, borderRadius: 8, padding: 10, fontSize: 12 }}>
+              Status actions only update your organization&apos;s revenue record. They do not email or deliver a document, and they do not independently prove what a customer did. Create a secure link separately and record customer decisions only after your team confirms them.
+            </div>}
             {canManage && data.invoices.some(invoice => ['sent', 'processing'].includes(invoice.status) && invoice.balanceCents > 0) && <section data-testid="tradeflowkit-invoice-bulk-payment" aria-label="Invoice batch payment" style={{ border: '1px solid rgba(56,189,248,.28)', borderRadius: 8, background: 'rgba(56,189,248,.08)', padding: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 220px', display: 'grid', color: c.ink }}><strong>{selectedInvoiceIds.size} payable invoices selected</strong><span style={{ color: c.muted, fontSize: 11 }}>Records the exact current balance as first-class offline payment history. Maximum 25.</span></div>
               <select aria-label="Bulk payment method" value={bulkPaymentMethod} onChange={event => setBulkPaymentMethod(event.target.value)} style={{ ...input, flex: '0 1 150px' }}><option value="other">Other</option><option value="cash">Cash</option><option value="check">Check</option><option value="card_external">External card</option><option value="bank_transfer">Bank transfer</option></select>
@@ -466,8 +472,8 @@ export default function TradeFlowKitRevenueFlow({
               {selectedInvoiceIds.size > 0 && <button type="button" disabled={pending} onClick={() => setSelectedInvoiceIds(new Set())} style={button(c.muted)}>Clear</button>}
             </section>}
             {data.quotes.length === 0 && data.invoices.length === 0 ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No quotes or invoices yet. Build the first customer revenue flow above.</div> : null}
-            {quoteRecords.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} selected={quote.id === deepQuoteId} pending={pending} canManage={canManage} run={run} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('quotes', quote.id)} />)}
-            {invoiceRecords.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} selected={invoice.id === deepInvoiceId} batchSelected={selectedInvoiceIds.has(invoice.id)} batchSelectionFull={selectedInvoiceIds.size >= 25} pending={pending} canManage={canManage} run={run} onToggleBatch={() => toggleInvoice(invoice.id)} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('invoices', invoice.id)} />)}
+            {quoteRecords.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} selected={quote.id === deepQuoteId} pending={pending} canManage={canWrite} run={run} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('quotes', quote.id)} />)}
+            {invoiceRecords.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} selected={invoice.id === deepInvoiceId} batchSelected={selectedInvoiceIds.has(invoice.id)} batchSelectionFull={selectedInvoiceIds.size >= 25} pending={pending} canManage={canWrite} run={run} onToggleBatch={() => toggleInvoice(invoice.id)} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('invoices', invoice.id)} />)}
           </div>
         </>
       )}
@@ -521,7 +527,7 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect, ro
       <textarea aria-label="Customer notes" maxLength={4000} value={notes} onChange={event => setNotes(event.target.value)} placeholder="Internal notes" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Action disabled={pending} label="Cancel" Icon={X} tone={c.muted} onClick={() => setEditing(false)} />
-        <button disabled={pending || name.trim().length < 2} style={{ border: 0, borderRadius: 6, padding: '7px 10px', background: c.primary, color: '#fff', fontWeight: 800 }}>Save customer · v{customer.version}</button>
+        <button disabled={pending || name.trim().length < 2} style={{ border: 0, borderRadius: 6, padding: '7px 10px', background: c.primary, color: '#fff', fontWeight: 800 }}>Save customer</button>
       </div>
     </form>;
   }
@@ -529,12 +535,12 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect, ro
   return <article id={`tradeflowkit-customer-${customer.id}`} data-testid={`tradeflowkit-customer-${customer.id}`} style={{ ...frame, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }} onClick={onSelect}>
     <div>
       <strong style={{ color: c.ink }}>{customer.name}</strong>
-      <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{customer.email || 'No email'} · {customer.phone || 'No phone'} · v{customer.version}</div>
+      <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{customer.email || 'No email'} · {customer.phone || 'No phone'}</div>
       {(customer.address || customer.notes) && <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{customer.address || customer.notes}</div>}
     </div>
     <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
-      <a href={`${routePrefix}/customers/${customer.id}`} onClick={event => event.stopPropagation()} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
-      {canManage && <Action disabled={pending} label="Public portal" Icon={Link2} tone={c.blue} onClick={onPublicLink} />}
+      <a href={`${routePrefix}/customers/${customer.id}`} onClick={event => event.stopPropagation()} style={{ color: c.blue, fontSize: 12 }}>Open customer</a>
+      {canManage && <Action disabled={pending} label="Create secure customer link" Icon={Link2} tone={c.blue} onClick={onPublicLink} />}
       {canManage && <Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => { onSelect(); setEditing(true); }} />}
       {canManage && <Action disabled={pending} label="Archive" Icon={Archive} tone={c.red} onClick={() => {
         if (window.confirm('Archive this customer? Active jobs, quotes, or invoices must be archived first.')) void run(() => moduleShellApi.tradeflowkit.archiveCustomer(customer.id, customer.version));
@@ -560,13 +566,19 @@ function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, selected,
     <div data-testid={`tradeflowkit-quote-${quote.id}`} style={{ border: `1px solid ${selected ? c.primary : c.border}`, borderRadius: 8, padding: 12, background: selected ? 'hsl(25 95% 95%)' : c.panel, boxShadow: selected ? `inset 3px 0 ${c.primary}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div>
         <strong style={{ color: c.ink }}>Quote {quote.number ? `#${quote.number}` : ''} · {customer?.name ?? 'Customer'}</strong>
-        <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{job?.title ?? 'Unlinked quote'} · {money(quote.totalCents)} · <b>{quote.status}</b> · v{quote.version}</div>
+        <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{job?.title ?? 'Unlinked quote'} · {money(quote.totalCents)} · <b>{quote.status}</b></div>
       </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
-        <a href={`${routePrefix}/quotes/${quote.id}`} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
-        {canManage && <Action disabled={pending} label="Public quote" Icon={Link2} tone={c.blue} onClick={onPublicLink} />}
-        {canManage && quote.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Send" onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'sent'))} /></>}
-        {canManage && quote.status === 'sent' && <><Action disabled={pending} label="Accept" onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'accepted'))} /><Action disabled={pending} label="Decline" tone={c.red} onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'declined'))} /></>}
+        <a href={`${routePrefix}/quotes/${quote.id}`} style={{ color: c.blue, fontSize: 12 }}>Open quote</a>
+        {canManage && <Action disabled={pending} label="Create secure quote link" Icon={Link2} tone={c.blue} onClick={onPublicLink} />}
+        {canManage && quote.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Mark as sent" onClick={() => {
+          if (window.confirm('Mark this quote as sent? This only updates the shared status. It does not email or deliver the quote.')) void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'sent'));
+        }} /></>}
+        {canManage && quote.status === 'sent' && <><Action disabled={pending} label="Record customer acceptance" onClick={() => {
+          if (window.confirm('Record that the customer accepted this quote? This does not contact the customer or independently prove acceptance. Record it only after your team confirms the decision.')) void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'accepted'));
+        }} /><Action disabled={pending} label="Record customer decline" tone={c.red} onClick={() => {
+          if (window.confirm('Record that the customer declined this quote? This does not contact the customer or independently prove a decline. Record it only after your team confirms the decision.')) void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'declined'));
+        }} /></>}
         {canManage && quote.status === 'accepted' && !quote.jobId && <Action disabled={pending} label="Create job" Icon={BriefcaseBusiness} tone={c.primary} onClick={() => void run(() => moduleShellApi.tradeflowkit.quoteToJob(quote.id, quote.version))} />}
         {canManage && quote.status === 'accepted' && !hasInvoice && <Action disabled={pending} label="Create invoice" tone={c.gold} onClick={() => void run(() => moduleShellApi.tradeflowkit.invoiceQuote(quote.id, quote.version))} />}
         {canManage && archivable && <Action disabled={pending} label="Archive" Icon={Archive} tone={c.red} onClick={() => {
@@ -598,13 +610,15 @@ function InvoiceRow({ invoice, customer, customers, jobs, selected, batchSelecte
         {canManage && payable && <input type="checkbox" aria-label={`Select invoice ${invoice.number ?? invoice.id} for batch payment`} checked={batchSelected} disabled={pending || (!batchSelected && batchSelectionFull)} onChange={onToggleBatch} style={{ marginTop: 3, accentColor: c.primary }} />}
         <div>
         <strong style={{ color: c.ink }}>Invoice {invoice.number ? `#${invoice.number}` : ''} · {customer?.name ?? 'Customer'}</strong>
-        <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{money(invoice.totalCents)} · balance {money(invoice.balanceCents)} · <b>{invoice.status}</b> · v{invoice.version}{invoice.paymentReference ? ` · ${invoice.paymentReference}` : ''}</div>
+        <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{money(invoice.totalCents)} · balance {money(invoice.balanceCents)} · <b>{invoice.status}</b>{invoice.paymentReference ? ` · ${invoice.paymentReference}` : ''}</div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
-        <a href={`${routePrefix}/invoices/${invoice.id}`} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
-        {canManage && <Action disabled={pending} label="Public invoice" Icon={Link2} tone={c.blue} onClick={onPublicLink} />}
-        {canManage && invoice.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Send invoice" onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionInvoice(invoice.id, invoice.version, 'sent'))} /></>}
+        <a href={`${routePrefix}/invoices/${invoice.id}`} style={{ color: c.blue, fontSize: 12 }}>Open invoice</a>
+        {canManage && <Action disabled={pending} label="Create secure invoice link" Icon={Link2} tone={c.blue} onClick={onPublicLink} />}
+        {canManage && invoice.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Mark invoice as sent" onClick={() => {
+          if (window.confirm('Mark this invoice as sent? This only updates the shared status. It does not email or deliver the invoice.')) void run(() => moduleShellApi.tradeflowkit.transitionInvoice(invoice.id, invoice.version, 'sent'));
+        }} /></>}
         {canManage && ['sent', 'processing'].includes(invoice.status) && <Action disabled={pending} label="Record payment" tone={c.primary} onClick={() => { const ref = window.prompt('Payment reference (optional)') || undefined; void run(() => moduleShellApi.tradeflowkit.payInvoice(invoice.id, invoice.version, 'other', ref)); }} />}
         {canManage && payable && <Action disabled={pending} label="Stripe payment link" tone={c.blue} onClick={() => void run(async () => {
           const result = await moduleShellApi.tradeflowkit.createPaymentLink(invoice.id, invoice.version, `payment-link:${crypto.randomUUID()}`);
@@ -670,7 +684,7 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
       });
     }} style={{ border: `1px solid ${c.gold}`, borderRadius: 8, padding: 12, background: 'rgba(251,191,36,.08)', display: 'grid', gap: 9 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <strong style={{ color: c.ink }}>Edit {kind} #{document.number ?? document.id.slice(0, 8)}</strong>
+        <strong style={{ color: c.ink }}>Edit {kind}{document.number ? ` #${document.number}` : ''}</strong>
         <button type="button" aria-label="Cancel editing" onClick={onCancel} style={{ border: 0, background: 'transparent', color: c.muted, cursor: 'pointer' }}><X size={18} /></button>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

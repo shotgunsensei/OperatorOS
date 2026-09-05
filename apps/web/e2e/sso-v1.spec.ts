@@ -734,7 +734,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await connectorConsole.locator('input[name="secretReference"]').fill('e2e-encrypted-reference-only');
     await connectorConsole.getByRole('button', { name: 'Save connector' }).click();
     await expect(connectorConsole.getByText(connectorLabel, { exact: true })).toBeVisible({ timeout: 30_000 });
-    await connectorConsole.getByRole('button', { name: 'Test intake' }).click();
+    await connectorConsole.getByRole('button', { name: 'Try sample request' }).click();
     await expect(connectorConsole.getByRole('status')).toContainText('Deterministic ingestion completed.', { timeout: 30_000 });
 
     const publicPolicy = await sibling.evaluate(async () => {
@@ -1088,8 +1088,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await openLiteralRoute('/compliance', ['techdeck-secure-intake', 'techdeck-compliance']);
     const compliance = page.locator('#techdeck-compliance');
-    await compliance.getByRole('button', { name: 'Build deterministic ZIP packet' }).click();
-    await expect(compliance).toContainText(/queued|integrity artifact ready/i, { timeout: 30_000 });
+    await compliance.getByRole('button', { name: 'Build verified ZIP package' }).click();
+    await expect(compliance).toContainText(/queued|download ready/i, { timeout: 30_000 });
 
     const anonymous = await browser.newContext({ ignoreHTTPSErrors: true });
     try {
@@ -2189,6 +2189,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       await expect(artifactButton).toHaveText('Return to draft');
     }
     await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
+    await modulePage.getByTestId('input-launchkit-external-evidence').fill('E2E release ticket verified in the external provider.');
+    await modulePage.getByTestId('checkbox-launchkit-external-confirmed').check();
     await modulePage.getByTestId('button-launchkit-mark-launched').click();
     await expect(modulePage.getByText(/SaaS service · launched/)).toBeVisible();
 
@@ -2277,7 +2279,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('button-launch-callcommand-ai').click();
     const modulePage = page;
     await expect(modulePage.getByTestId('callcommand-module-shell')).toBeVisible({ timeout: 30_000 });
-    await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Twilio voice provider');
+    await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Twilio voice connection');
     assertNoCredentialQuery(modulePage.url());
 
     await modulePage.getByRole('link', { name: 'AI receptionists', exact: true }).click();
@@ -2402,7 +2404,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const caseUrl = `https://snapproofos.operatoros.net/cases/${createdCase.id}`;
     await expect(modulePage).toHaveURL(caseUrl);
 
-    await modulePage.getByRole('link', { name: 'Evidence integrity', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'File verification', exact: true }).click();
     await modulePage.getByLabel('Evidence type').selectOption('note');
     await modulePage.getByLabel('Title', { exact: true }).fill(noteTitle);
     await modulePage.getByLabel('Source type').fill('acceptance_test');
@@ -2447,7 +2449,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: 'Add internal note' }).click();
     await expect(modulePage.getByText('Internal reviewer context is append-only and custody linked.')).toBeVisible();
 
-    await modulePage.getByRole('link', { name: 'Evidence integrity', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'File verification', exact: true }).click();
     await noteCard.getByRole('button', { name: 'Submit for review' }).click();
     await fileCard.getByRole('button', { name: 'Submit for review' }).click();
     await modulePage.getByRole('link', { name: 'Review', exact: true }).click();

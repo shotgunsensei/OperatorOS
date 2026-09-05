@@ -1,5 +1,31 @@
 # OperatorOS current release gate
 
+## Module outcome and release-v60 candidate - FINAL SOURCE/LOCAL GATES PASS / UNPUBLISHED (2026-09-05)
+
+The source/local candidate now plans 60 ordered database-release entries ending
+in `forward_commerce_contract`. Fresh final verification passed the full
+**1,440-test API aggregate with 1,434 passed, 0 failed, 6 intentional Next-server
+HTTP-only skips, 0 todos, and a duration of 713,438.7749 ms**; root typecheck and
+lint; disposable PostgreSQL 16 v60 plan in 798 ms, clean apply in 18,916 ms,
+immediate idempotent reapply in 2,907 ms, and verify-current in 1,860 ms; and the
+Next 15.5.23 production build with all 35 of 35 generated pages.
+
+This is an unpublished release candidate until its exact commit and successful
+push are recorded. It is not the live release. Live production remains Replit
+deployment `0a1f03b4`, application commit
+`2b385f56a3ff04e319b8448e41d995fd52feb10d`, immutable build
+`9c6511f9dc457a180839112f`, and database release v59/59 ending in
+`core_suite_trial_tables`, as recorded below. No production database apply or
+Replit redeploy occurred during this verification.
+
+The production serving supervisor remains verify-only and invokes
+`--verify-current`. A reviewed backup and separate one-shot production v60
+apply and verification must therefore precede the user-initiated Replit
+redeploy. Redeploying the v60 artifact while production remains at v59 is
+expected to fail closed. Exact deployed identity, authenticated browser,
+Stripe/provider, reconciliation, monitoring, restore, and rollback acceptance
+remain open.
+
 ## Autoscale startup/readiness repair - LIVE ACCEPTED (2026-09-03)
 
 The Replit serving runtime no longer owns database-apply authority. A reviewed

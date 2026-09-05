@@ -189,6 +189,9 @@ test('TechDeck state-5 managed infrastructure, documentation, evidence, reports,
     summary: 'Secondary WAN path is degraded.', observedAt: '2026-07-18T14:00:00.000Z',
   });
   assert.equal(evidence.statusCode, 201, evidence.body);
+  const exactEvidence = await inject('GET', `/v1/modules/techdeck/evidence/${evidence.json().id}`, viewer);
+  assert.equal(exactEvidence.statusCode, 200, exactEvidence.body);
+  assert.equal(exactEvidence.json().title, 'Firewall health observation');
 
   const attachment = await inject('POST', `/v1/modules/techdeck/attachments/evidence/${evidence.json().id}`, member, {
     originalName: 'observation.txt', declaredMimeType: 'text/plain', contentBase64: Buffer.from('Documented observation only.').toString('base64'),
@@ -212,6 +215,20 @@ test('TechDeck state-5 managed infrastructure, documentation, evidence, reports,
   assert.equal(report.statusCode, 201, report.body);
   assert.match(report.json().sha256, /^[0-9a-f]{64}$/);
   assert.equal(report.json().snapshot.configurationItems.total, 5);
+  const exactReport = await inject('GET', `/v1/modules/techdeck/reports/${report.json().id}`, viewer);
+  assert.equal(exactReport.statusCode, 200, exactReport.body);
+  assert.equal(exactReport.json().name, 'Northstar infrastructure baseline');
+  const reportJson = await inject('GET', `/v1/modules/techdeck/reports/${report.json().id}/download?format=json`, viewer);
+  assert.equal(reportJson.statusCode, 200, reportJson.body);
+  assert.match(String(reportJson.headers['content-disposition']), /^attachment; filename="techdeck-report-[a-z0-9-]+\.json"$/);
+  assert.equal(reportJson.headers['x-techdeck-snapshot-sha256'], report.json().sha256);
+  assert.equal(reportJson.json().schema, 'operatoros.techdeck.operations-report.v1');
+  assert.equal(reportJson.json().snapshot.configurationItems.total, 5);
+  const reportCsv = await inject('GET', `/v1/modules/techdeck/reports/${report.json().id}/download?format=csv`, viewer);
+  assert.equal(reportCsv.statusCode, 200, reportCsv.body);
+  assert.match(reportCsv.body, /"configurationItems","total","5"/);
+  const invalidReportFormat = await inject('GET', `/v1/modules/techdeck/reports/${report.json().id}/download?format=pdf`, viewer);
+  assert.equal(invalidReportFormat.statusCode, 400, invalidReportFormat.body);
 
   const workspace = await inject('GET', '/v1/modules/techdeck/workspace', viewer);
   assert.equal(workspace.statusCode, 200, workspace.body);
@@ -226,6 +243,12 @@ test('TechDeck state-5 managed infrastructure, documentation, evidence, reports,
   assert.equal(foreign.json().configurationItems.length, 0);
   const foreignDetail = await inject('GET', `/v1/modules/techdeck/configuration-items/${items[0].id}`, ownerB);
   assert.equal(foreignDetail.statusCode, 404, foreignDetail.body);
+  const foreignEvidence = await inject('GET', `/v1/modules/techdeck/evidence/${evidence.json().id}`, ownerB);
+  assert.equal(foreignEvidence.statusCode, 404, foreignEvidence.body);
+  const foreignReportDetail = await inject('GET', `/v1/modules/techdeck/reports/${report.json().id}`, ownerB);
+  assert.equal(foreignReportDetail.statusCode, 404, foreignReportDetail.body);
+  const foreignReport = await inject('GET', `/v1/modules/techdeck/reports/${report.json().id}/download?format=json`, ownerB);
+  assert.equal(foreignReport.statusCode, 404, foreignReport.body);
 
   const execute = await inject('POST', `/v1/modules/techdeck/documents/${docOne.id}/execute`, ownerA, { expectedVersion: docOne.version });
   assert.equal(execute.statusCode, 404, execute.body);

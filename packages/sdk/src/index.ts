@@ -1,5 +1,6 @@
 export * from './catalog.js';
 export * from './ecosystem.js';
+export * from './product-value.js';
 export * from './products.js';
 export * from './shared-platform.js';
 

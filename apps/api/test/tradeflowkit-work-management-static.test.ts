@@ -17,6 +17,7 @@ test('TradeFlowKit work-management UI calls real APIs, exposes states, and disab
   const api = readFileSync(resolve(root, 'apps/web/src/lib/auth.ts'), 'utf8');
 
   assert.match(shell, /<TradeFlowKitWorkManagement/);
+  assert.match(shell, /canWrite=\{canWrite\}/);
   assert.match(shell, /canManage=\{canManageModule\}/);
   for (const route of ['workflows', 'tasks', 'recurring-jobs', 'activity']) {
     assert.match(shell, new RegExp(`/${route}`));
@@ -37,7 +38,7 @@ test('TradeFlowKit work-management UI calls real APIs, exposes states, and disab
   assert.match(component, /transitionJobWorkflow/);
   assert.match(component, /updateTask/);
   assert.match(component, /archiveTask/);
-  assert.equal((component.match(/disabled=\{!canManage \|\| pending/g) ?? []).length, 2);
+  assert.equal((component.match(/disabled=\{!canWrite \|\| pending/g) ?? []).length, 2);
   assert.match(api, /\/tradeflowkit\/workflows/);
   assert.match(api, /\/workflow-transition/);
   assert.match(api, /\/tradeflowkit\/activity/);

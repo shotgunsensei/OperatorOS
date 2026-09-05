@@ -21,6 +21,7 @@ import { isOperatorOSTestEnvironment } from '../lib/shared-service-safety.js';
 import { runDeterministicConnectorForTests } from '../lib/shared-provider-adapters.js';
 import { writeAudit } from '../lib/audit.js';
 import { resolveEntitlements } from '../lib/entitlement-resolver.js';
+import { tenantHasActiveApplicationStackCompanion } from '../lib/product-entitlements.js';
 import {
   BRANDFORGE_COPY_MODES,
   BRANDFORGE_INTEGRATION_CATALOG,
@@ -151,7 +152,14 @@ function integrationCatalog(provider: string) {
 
 async function brandForgeFeatures(request: FastifyRequest) {
   const snapshot = await resolveEntitlements(actor(request), tenant(request));
-  return snapshot?.modules.find((item) => item.slug === MODULE_SLUG && item.enabled)?.features ?? {};
+  const features = snapshot?.modules.find((item) => item.slug === MODULE_SLUG && item.enabled)?.features ?? {};
+  if (!(await tenantHasActiveApplicationStackCompanion(tenant(request), 'brandforgeos'))) {
+    return features;
+  }
+  return BRANDFORGE_INTEGRATION_CATALOG.reduce<Record<string, unknown>>(
+    (complete, item) => ({ ...complete, [item.requiredFeature]: true }),
+    { ...features },
+  );
 }
 
 async function requireIntegrationEntitlement(
@@ -170,7 +178,8 @@ async function requireIntegrationEntitlement(
 }
 
 async function entitlementProjection(tenantId: string) {
-  const result = await db.execute(sql`
+  const [result, applicationStack] = await Promise.all([
+    db.execute(sql`
     SELECT tm.status,tm.source,COALESCE(tm.metadata,'{}'::jsonb) AS module_metadata,
       te.entitlement_key,te.entitlement_type,te.source AS entitlement_source,COALESCE(te.metadata,'{}'::jsonb) AS entitlement_metadata
     FROM modules m
@@ -178,10 +187,18 @@ async function entitlementProjection(tenantId: string) {
     LEFT JOIN tenant_entitlements te ON te.tenant_id=${tenantId} AND te.active=TRUE
       AND (te.entitlement_key=${MODULE_SLUG} OR te.entitlement_key LIKE 'brandforgeos.%')
     WHERE m.slug=${MODULE_SLUG}
-  `);
+  `),
+    tenantHasActiveApplicationStackCompanion(tenantId, 'brandforgeos'),
+  ]);
   const rows = result.rows as Row[];
   const metadata = (rows[0]?.module_metadata ?? {}) as Row;
-  const features = (metadata.features ?? {}) as Row;
+  const configuredFeatures = (metadata.features ?? {}) as Row;
+  const features = applicationStack
+    ? BRANDFORGE_INTEGRATION_CATALOG.reduce<Row>(
+        (complete, item) => ({ ...complete, [item.requiredFeature]: true }),
+        { ...configuredFeatures },
+      )
+    : configuredFeatures;
   const monthlyCredits = Number.isSafeInteger(Number(features.brandforgeMonthlyCredits))
     ? Math.max(0, Number(features.brandforgeMonthlyCredits))
     : null;
@@ -190,7 +207,13 @@ async function entitlementProjection(tenantId: string) {
     sql`SELECT used_credits,limit_snapshot FROM brandforge_credit_counters WHERE tenant_id=${tenantId} AND period_start=${period}::date`,
   );
   return {
-    module: rows[0] ? { status: rows[0].status, source: rows[0].source } : null,
+    module: applicationStack
+      ? { status: 'enabled', source: 'application_stack' }
+      : rows[0]
+        ? { status: rows[0].status, source: rows[0].source }
+        : null,
+    accessModel: applicationStack ? 'application_stack' : 'grandfathered_or_manual',
+    completeAccess: applicationStack,
     entitlements: rows
       .filter((row) => row.entitlement_key)
       .map((row) => ({
@@ -384,7 +407,11 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     tones: BRANDFORGE_TONES,
     workflows: BRANDFORGE_WORKFLOWS,
     reportTypes: BRANDFORGE_REPORT_TYPES,
-    integrations: BRANDFORGE_INTEGRATION_CATALOG,
+    integrations: BRANDFORGE_INTEGRATION_CATALOG.map((item) => ({
+      ...item,
+      runtimeAvailable: isOperatorOSTestEnvironment(),
+      availability: isOperatorOSTestEnvironment() ? 'test_only' : 'planned',
+    })),
     authority: {
       identity: 'operatoros',
       tenant: 'operatoros',
@@ -623,13 +650,20 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     },
   );
 
-  app.get(`${base}/templates`, { preHandler: readGuards }, async (request) => ({
-    templates: (
-      await db.execute(
+  app.get(`${base}/templates`, { preHandler: readGuards }, async (request) => {
+    const [result, applicationStack] = await Promise.all([
+      db.execute(
         sql`SELECT template.*,CASE WHEN template.is_premium THEN EXISTS(SELECT 1 FROM tenant_entitlements entitlement WHERE entitlement.tenant_id=${tenant(request)} AND entitlement.active=TRUE AND entitlement.entitlement_key=template.required_entitlement) ELSE TRUE END AS usable FROM brandforge_templates template WHERE (template.tenant_id=${tenant(request)} OR template.is_global=TRUE) AND template.deleted_at IS NULL ORDER BY template.is_featured DESC,template.created_at DESC`,
-      )
-    ).rows,
-  }));
+      ),
+      tenantHasActiveApplicationStackCompanion(tenant(request), 'brandforgeos'),
+    ]);
+    return {
+      templates: (result.rows as Row[]).map((template) => ({
+        ...template,
+        usable: applicationStack || template.usable === true,
+      })),
+    };
+  });
   app.post(`${base}/templates`, { preHandler: writeGuards }, async (request, reply) => {
     let input;
     try {
@@ -643,15 +677,18 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     return reply.code(201).send(result.rows[0]);
   });
   app.post(`${base}/templates/:id/use`, { preHandler: writeGuards }, async (request, reply) => {
-    const selected = await db.execute(
-      sql`SELECT template.*,CASE WHEN template.is_premium THEN EXISTS(SELECT 1 FROM tenant_entitlements entitlement WHERE entitlement.tenant_id=${tenant(request)} AND entitlement.active=TRUE AND entitlement.entitlement_key=template.required_entitlement) ELSE TRUE END AS usable FROM brandforge_templates template WHERE template.id=${param(request, 'id')} AND (template.tenant_id=${tenant(request)} OR template.is_global=TRUE) AND template.deleted_at IS NULL LIMIT 1`,
-    );
+    const [selected, applicationStack] = await Promise.all([
+      db.execute(
+        sql`SELECT template.*,CASE WHEN template.is_premium THEN EXISTS(SELECT 1 FROM tenant_entitlements entitlement WHERE entitlement.tenant_id=${tenant(request)} AND entitlement.active=TRUE AND entitlement.entitlement_key=template.required_entitlement) ELSE TRUE END AS usable FROM brandforge_templates template WHERE template.id=${param(request, 'id')} AND (template.tenant_id=${tenant(request)} OR template.is_global=TRUE) AND template.deleted_at IS NULL LIMIT 1`,
+      ),
+      tenantHasActiveApplicationStackCompanion(tenant(request), 'brandforgeos'),
+    ]);
     const template = selected.rows[0] as Row | undefined;
     if (!template)
       return reply
         .code(404)
         .send({ error: 'Template not found', code: 'BRANDFORGE_TEMPLATE_NOT_FOUND' });
-    if (!template.usable)
+    if (!applicationStack && !template.usable)
       return reply.code(403).send({
         error: 'Template requires an OperatorOS entitlement',
         code: 'BRANDFORGE_TEMPLATE_ENTITLEMENT_REQUIRED',
@@ -692,6 +729,8 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     return {
       integrations: BRANDFORGE_INTEGRATION_CATALOG.map((item) => ({
         ...item,
+        runtimeAvailable: isOperatorOSTestEnvironment(),
+        availability: isOperatorOSTestEnvironment() ? 'test_only' : 'planned',
         entitled: features[item.requiredFeature] === true,
         connection: byProvider.get(item.provider) ?? null,
       })),
@@ -704,6 +743,12 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     `${base}/integrations/:provider/connect`,
     { preHandler: adminGuards },
     async (request, reply) => {
+      if (!isOperatorOSTestEnvironment()) {
+        return reply.code(503).send({
+          error: 'Direct provider connections are not available in this release. Export the approved campaign package for deliberate provider handoff.',
+          code: 'PROVIDER_ADAPTER_UNAVAILABLE',
+        });
+      }
       const catalog = integrationCatalog(param(request, 'provider'));
       if (!catalog)
         return reply.code(404).send({
@@ -763,6 +808,12 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     `${base}/integrations/:provider/sync`,
     { preHandler: adminGuards },
     async (request, reply) => {
+      if (!isOperatorOSTestEnvironment()) {
+        return reply.code(503).send({
+          error: 'Direct provider synchronization is not available in this release. No external delivery was attempted.',
+          code: 'PROVIDER_ADAPTER_UNAVAILABLE',
+        });
+      }
       const catalog = integrationCatalog(param(request, 'provider'));
       if (!catalog)
         return reply.code(404).send({

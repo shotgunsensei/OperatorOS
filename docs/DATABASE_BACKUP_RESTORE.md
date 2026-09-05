@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints 59 ordered step identifiers without secrets
+`db:plan` is read-only and prints 60 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -44,6 +44,73 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+Release v60 appends `forward_commerce_contract` after the v59 evaluation-trial
+step. It adds the one-time `subscriptions.legacy_access_grandfathered_at`
+cutover marker and the tenant-owned `tenant_application_subscriptions` billing
+authority for one Application Stack per organization. The first application
+marks only the active or trialing legacy subscription rows that exist at that
+cutover; later applications do not grandfather rows created after the sale
+model closed. The step also converges required columns, constraints, and
+indexes before final release verification.
+
+### Release v60 production promotion gate
+
+Treat the database apply and application redeploy as one controlled maintenance
+window even though they remain separately authorized actions. The currently
+deployed v59 application can still expose legacy sale paths, while the v60
+artifact refuses to serve against a v59 database. Before applying v60:
+
+1. Verify the provider-managed backup/PITR point, capture its timestamp and
+   identifier outside Git, and prove restore access. Capture pre-cutover counts
+   for active/trialing legacy subscriptions, tenant module grants, Stripe
+   customers/subscriptions, and failed or processing webhook deliveries.
+2. Quiesce checkout, portal, webhook, subscription, entitlement, and other
+   application writes using the approved Replit/provider maintenance controls.
+   This repository does not define a magic maintenance-mode environment flag;
+   do not invent one. Leave the window closed until the v60 artifact is ready.
+3. From the exact reviewed release commit, run `corepack pnpm db:plan`, set
+   `OPERATOROS_DATABASE_RELEASE_MODE=apply` only for the one-shot process, run
+   `corepack pnpm db:apply`, unset the variable, and run
+   `corepack pnpm db:verify`. Never place `DATABASE_URL` or command output that
+   contains customer/provider identifiers in a ticket or Git.
+4. Reconcile the number of grandfathered subscription rows to the captured
+   active/trialing pre-cutover count. Confirm the new stack table and every v60
+   constraint/index pass the supported verifier. Investigate any difference
+   before opening traffic; do not repair it with ad hoc SQL.
+5. Redeploy the same v60 source commit, then require public `/readyz` to report
+   that exact commit/build and database release v60/60 ending in
+   `forward_commerce_contract` before reopening writes. Run owner/admin/member
+   access checks and Stripe test-mode checkout, signed-webhook, cancellation,
+   retry, and portal acceptance before live catalog activation.
+
+For a Replit Linux shell, the one-shot release commands are:
+
+```bash
+corepack pnpm db:plan
+export OPERATOROS_DATABASE_RELEASE_MODE=apply
+corepack pnpm db:apply
+unset OPERATOROS_DATABASE_RELEASE_MODE
+corepack pnpm db:verify
+```
+
+Do not roll an older application artifact onto a v60 database as a routine code
+rollback. Older entitlement code does not understand the one-time legacy
+marker or Application Stack rows. The safe rollback choices are to retain the
+v60-compatible application while new sales remain closed, or restore the
+verified pre-v60 backup into a new database, validate it, and deliberately
+switch traffic. Preserve the failed database for investigation.
+
+### Release v60 disposable rehearsal (2026-09-05)
+
+On an empty isolated PostgreSQL 16 Docker database, `corepack pnpm db:plan`
+reported all 60 ordered non-destructive entries with
+`forward_commerce_contract` last in 798 ms. The supported root apply path then
+completed and verified the clean release in 18,916 ms; an immediate idempotent
+reapply completed in 2,907 ms; and a separate read-only `db:verify` confirmed
+current v60/60 in 1,860 ms. The disposable database was removed after the run.
+No production database, customer record, Stripe object, provider, or Replit
+deployment was read or changed.
 
 Release v59 appends `core_suite_trial_tables` after the v58 managed-number
 provisioning step. It adds `users.email_verified_at`, hashed single-use email

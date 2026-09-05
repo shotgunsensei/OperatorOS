@@ -59,6 +59,40 @@ type TechDeckContext = { tenantId: string; role: 'owner' | 'admin' | 'member'; v
 type TechDeckUser = { id: string };
 type Executor = Pick<typeof db, 'insert'>;
 
+function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function flattenReportSnapshot(
+  value: unknown,
+  path: string[],
+  rows: Array<[section: string, metric: string, value: string]>,
+): void {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right));
+    for (const [key, nested] of entries) flattenReportSnapshot(nested, [...path, key], rows);
+    return;
+  }
+  const section = path[0] ?? 'report';
+  const metric = path.slice(1).join('.') || 'value';
+  rows.push([section, metric, Array.isArray(value) ? JSON.stringify(value) : String(value ?? '')]);
+}
+
+function buildReportCsv(report: typeof techdeckReports.$inferSelect): string {
+  const rows: Array<[string, string, string]> = [
+    ['report', 'name', report.name],
+    ['report', 'type', report.reportType],
+    ['report', 'createdAt', report.createdAt.toISOString()],
+    ['report', 'snapshotSha256', report.sha256],
+  ];
+  flattenReportSnapshot(report.snapshot, [], rows);
+  return `${[
+    ['section', 'metric', 'value'],
+    ...rows,
+  ].map(row => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+}
+
 function tenant(request: FastifyRequest): string {
   return ((request as any).tenantContext as TechDeckContext).tenantId;
 }
@@ -505,6 +539,18 @@ export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void
     return reply.code(201).send(evidence);
   });
 
+  app.get('/v1/modules/techdeck/evidence/:id', { preHandler: [...readGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const tenantId = tenant(request);
+    const [evidence] = await db.select().from(techdeckEvidence).where(and(
+      eq(techdeckEvidence.tenantId, tenantId),
+      eq(techdeckEvidence.id, id),
+      isNull(techdeckEvidence.archivedAt),
+    )).limit(1);
+    if (!evidence) return notFound(reply, 'evidence record');
+    return evidence;
+  });
+
   app.post('/v1/modules/techdeck/reports', { preHandler: [...writeGuards] }, async (request, reply) => {
     let name: string;
     let reportType: string;
@@ -529,6 +575,61 @@ export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void
     const [report] = await db.insert(techdeckReports).values({ tenantId, name, reportType, filters: {}, snapshot, sha256, createdByUserId: user(request) }).returning();
     await audit(db, { tenantId, userId: user(request), action: 'generated', entityType: 'report', entityId: report.id, metadata: { reportType, sha256 } });
     return reply.code(201).send(report);
+  });
+
+  app.get('/v1/modules/techdeck/reports/:id', { preHandler: [...readGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const tenantId = tenant(request);
+    const [report] = await db.select().from(techdeckReports).where(and(
+      eq(techdeckReports.tenantId, tenantId),
+      eq(techdeckReports.id, id),
+      isNull(techdeckReports.archivedAt),
+    )).limit(1);
+    if (!report) return notFound(reply, 'report');
+    return report;
+  });
+
+  app.get('/v1/modules/techdeck/reports/:id/download', { preHandler: [...readGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const format = String((request.query as { format?: unknown } | undefined)?.format ?? 'json');
+    if (format !== 'json' && format !== 'csv') {
+      return reply.code(400).send({ error: 'Choose JSON or CSV for this report download', code: 'TECHDECK_REPORT_FORMAT_INVALID' });
+    }
+    const tenantId = tenant(request);
+    const [report] = await db.select().from(techdeckReports).where(and(
+      eq(techdeckReports.tenantId, tenantId),
+      eq(techdeckReports.id, id),
+      isNull(techdeckReports.archivedAt),
+    )).limit(1);
+    if (!report) return notFound(reply, 'report');
+
+    const content = format === 'json'
+      ? `${JSON.stringify({
+        schema: 'operatoros.techdeck.operations-report.v1',
+        report: {
+          id: report.id,
+          name: report.name,
+          reportType: report.reportType,
+          createdAt: report.createdAt,
+          snapshotSha256: report.sha256,
+        },
+        snapshot: report.snapshot,
+      }, null, 2)}\n`
+      : buildReportCsv(report);
+    await audit(db, {
+      tenantId,
+      userId: user(request),
+      action: 'downloaded',
+      entityType: 'report',
+      entityId: report.id,
+      metadata: { format },
+    });
+    return reply
+      .type(format === 'json' ? 'application/json; charset=utf-8' : 'text/csv; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="techdeck-report-${report.id}.${format}"`)
+      .header('Cache-Control', 'private, no-store')
+      .header('X-TechDeck-Snapshot-SHA256', report.sha256)
+      .send(content);
   });
 
   app.post('/v1/modules/techdeck/time', { preHandler: [...writeGuards] }, async (request, reply) => {

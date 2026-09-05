@@ -65,6 +65,7 @@ interface Props {
   mode: NinjaPoolMatchMode;
   profile: NinjaPoolProfile;
   onMatchPath: (matchId: string | null) => void;
+  canWrite: boolean;
 }
 
 const BALL_COLORS: Record<number, string> = {
@@ -166,7 +167,7 @@ function stateParity(local: GameState, server: GameState): boolean {
   );
 }
 
-export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props) {
+export default function NinjaPoolHallMatch({ mode, profile, onMatchPath, canWrite }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const botTimerRef = useRef<number | null>(null);
@@ -200,6 +201,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
   const playerOnEight = playerHasClearedGroup(gameState, gameState.currentPlayer);
   const requiresCalledPocket = preferences.callShotOn8 && playerOnEight;
   const humanCanShoot =
+    canWrite &&
     active &&
     !recoveryRequired &&
     !animating &&
@@ -343,6 +345,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
   );
 
   const startMatch = useCallback(async () => {
+    if (!canWrite) return;
     setStarting(true);
     setError(null);
     try {
@@ -356,7 +359,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
       if (created.recovered) {
         setRecoveryRequired(true);
         setStatus(
-          'An active match already exists. Physical table state cannot be reconstructed from the bounded server summary.',
+          'An active match already exists. The exact ball positions cannot be rebuilt from its saved match summary.',
         );
       } else {
         setGameState(initialState(profile, mode, mode === 'bot' ? 'CPU' : opponentName));
@@ -369,10 +372,10 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
     } finally {
       setStarting(false);
     }
-  }, [loadMatches, mode, onMatchPath, opponentName, profile]);
+  }, [canWrite, loadMatches, mode, onMatchPath, opponentName, profile]);
 
   const abandon = useCallback(async () => {
-    if (!match || match.status !== 'active') return;
+    if (!canWrite || !match || match.status !== 'active') return;
     setEnding(true);
     setError(null);
     try {
@@ -387,7 +390,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
     } finally {
       setEnding(false);
     }
-  }, [loadMatches, match, onMatchPath]);
+  }, [canWrite, loadMatches, match, onMatchPath]);
 
   const executeShot = useCallback(
     async (shot: Shot, shooterSeat: 0 | 1) => {
@@ -433,7 +436,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
         };
         const response = await moduleShellApi.ninjaPoolHall.saveMatchShot(match.id, input);
         if (!stateParity(resolved.state, response.match.logicalState)) {
-          throw new Error('Server rule projection did not match the local deterministic result.');
+          throw new Error('The saved match result did not match this shot.');
         }
         setMatch(response.match);
         setGameState(resolved.state);
@@ -459,12 +462,8 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
       } catch (cause: any) {
         setAnimationFrame(null);
         setRecoveryRequired(true);
-        setError(
-          cause?.error ||
-            cause?.message ||
-            'The shot could not be reconciled. End or reload this match.',
-        );
-        setStatus('Physical state is no longer trusted after an uncertain save.');
+        setError('We could not confirm that shot. The match is paused so an incorrect result is not saved. Reload the match before continuing.');
+        setStatus('Match paused until the latest saved state is reloaded.');
       } finally {
         setSaving(false);
         setAnimating(false);
@@ -548,7 +547,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
 
   const resolveChoice = useCallback(
     async (action: 'accept' | 'rerack') => {
-      if (!match || !gameState.pendingChoice) return;
+      if (!canWrite || !match || !gameState.pendingChoice) return;
       setSaving(true);
       try {
         const response = await moduleShellApi.ninjaPoolHall.resolveMatchChoice(match.id, {
@@ -574,7 +573,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
         setSaving(false);
       }
     },
-    [gameState, match],
+    [canWrite, gameState, match],
   );
 
   const pointerAim = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -617,8 +616,8 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
           <header className="nphm-toolbar">
             <div>
               <span>
-                {mode === 'bot' ? <Bot size={14} /> : <Users size={14} />} SYS::
-                {mode === 'bot' ? 'CPU_MATCH' : 'HOT_SEAT'}
+                {mode === 'bot' ? <Bot size={14} /> : <Users size={14} />}
+                {mode === 'bot' ? 'CPU MATCH' : 'LOCAL MATCH'}
               </span>
               <h2>{mode === 'bot' ? 'Vs CPU' : 'Local two-player'}</h2>
               <p>{status}</p>
@@ -676,7 +675,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
                     : 'Start a real rules-driven local match. All saved outcomes remain clearly labeled client-reported.'}
                 </span>
                 {recoveryRequired && match?.status === 'active' ? (
-                  <button type="button" onClick={() => void abandon()} disabled={ending}>
+                  <button type="button" onClick={() => void abandon()} disabled={!canWrite || ending}>
                     {ending ? <Loader2 className="nphm-spin" size={17} /> : <RotateCcw size={17} />}{' '}
                     End recovered match
                   </button>
@@ -695,7 +694,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
                     <button
                       type="button"
                       onClick={() => void startMatch()}
-                      disabled={starting || (mode === 'local' && !opponentName.trim())}
+                      disabled={!canWrite || starting || (mode === 'local' && !opponentName.trim())}
                       data-testid="ninja-pool-start-match"
                     >
                       {starting ? <Loader2 className="nphm-spin" size={17} /> : <Play size={17} />}{' '}
@@ -781,7 +780,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
             <button
               type="button"
               onClick={() => void abandon()}
-              disabled={!active || animating || saving || ending}
+              disabled={!canWrite || !active || animating || saving || ending}
             >
               <RotateCcw size={17} /> End match
             </button>

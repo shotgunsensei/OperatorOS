@@ -31,6 +31,7 @@ interface Props {
   roomId: string | null;
   profile: NinjaPoolProfile;
   onRoomPath: (roomId: string | null) => void;
+  canWrite: boolean;
 }
 
 const BALL_COLORS: Record<number, string> = {
@@ -84,7 +85,7 @@ function drawBall(ctx: CanvasRenderingContext2D, ball: Ball, pos: Vec2): void {
   ctx.restore();
 }
 
-export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath }: Props) {
+export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath, canWrite }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const socketRef = useRef<NinjaPoolRoomSocket | null>(null);
@@ -94,9 +95,9 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
   const [room, setRoom] = useState<NinjaPoolOnlineRoom | null>(null);
   const [socketState, setSocketState] = useState<NinjaPoolSocketState>('closed');
   const [joinCode, setJoinCode] = useState('');
-  const [loading, setLoading] = useState(entry === 'host' || Boolean(roomId));
+  const [loading, setLoading] = useState((canWrite && entry === 'host') || Boolean(roomId));
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState('Host a protected room or join another player in your OperatorOS tenant.');
+  const [status, setStatus] = useState('Host a private room or join another player in your organization.');
   const [aimPoint, setAimPoint] = useState<Vec2>({ x: 650, y: TABLE_HEIGHT / 2 });
   const [cuePlacement, setCuePlacement] = useState<Vec2 | null>(null);
   const [power, setPower] = useState(0.58);
@@ -113,7 +114,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
     setRoom(next);
     setCuePlacement(null);
     setError(null);
-    if (next.status === 'waiting') setStatus(`Room ${next.code} is ready. Share the code with a tenant member.`);
+    if (next.status === 'waiting') setStatus(`Room ${next.code} is ready. Share the code with another member of your organization.`);
     else if (next.status === 'completed') setStatus(next.authoritativeState.gameOver?.reason ?? 'The rack is complete.');
     else if (next.status === 'active') setStatus(`${next.authoritativeState.players[next.authoritativeState.currentPlayer].name}'s turn.`);
   }, []);
@@ -151,7 +152,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
 
   const processGuestShot = useCallback(async (message: Record<string, any>) => {
     const current = roomRef.current;
-    if (!current || current.role !== 'host' || processedGuestShots.current.has(message.clientShotId)) return;
+    if (!canWrite || !current || current.role !== 'host' || processedGuestShots.current.has(message.clientShotId)) return;
     processedGuestShots.current.add(message.clientShotId);
     try {
       setStatus('Guest shot received. Host simulation is verifying the table…');
@@ -170,7 +171,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
       setError(cause?.message || 'The guest shot could not be verified.');
       socketRef.current?.send({ type: 'stateRequest' });
     }
-  }, [animateShot]);
+  }, [animateShot, canWrite]);
 
   handlerRef.current = (message) => {
     if (message.type === 'joined' || message.type === 'roomSnapshot' || message.type === 'staleVersion') {
@@ -186,7 +187,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
       return;
     }
     if (message.type === 'desync') {
-      setError('A deterministic result mismatch was rejected. The authoritative room state has been restored.');
+      setError('That shot could not be verified. The last saved room state has been restored.');
       return;
     }
     if (message.type === 'error') setError(message.error || 'The online room rejected that action.');
@@ -210,7 +211,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
   useEffect(() => {
     let cancelled = false;
     const open = async () => {
-      if (entry === 'host' && !roomId) {
+      if (canWrite && entry === 'host' && !roomId) {
         try {
           const created = await moduleShellApi.ninjaPoolHall.hostOnlineRoom({ clientRoomId: clientId('room') });
           if (!cancelled) { adoptRoom(created); onRoomPath(created.id); }
@@ -228,13 +229,14 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
     };
     void open();
     return () => { cancelled = true; };
-  }, [adoptRoom, entry, onRoomPath, roomId]);
+  }, [adoptRoom, canWrite, entry, onRoomPath, roomId]);
 
   useEffect(() => () => {
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
   }, []);
 
   const join = async () => {
+    if (!canWrite) return;
     setLoading(true);
     setError(null);
     try {
@@ -248,7 +250,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
 
   const state = room?.authoritativeState ?? null;
   const seat = room?.role === 'host' ? 0 : 1;
-  const canShoot = Boolean(room && state && room.status === 'active' && socketState === 'open' && !animating
+  const canShoot = Boolean(canWrite && room && state && room.status === 'active' && socketState === 'open' && !animating
     && !state.gameOver && !state.pendingChoice && state.currentPlayer === seat);
   const cueBall = state?.balls.find((ball) => ball.id === 0) ?? null;
   const onEight = state ? playerHasClearedGroup(state, seat) : false;
@@ -315,7 +317,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
         ? { type: 'hostShotResult', expectedVersion, clientShotId, shooterSeat: 0, shot, resultHash: result.resultHash }
         : { type: 'shotIntent', expectedVersion, clientShotId, shot };
       if (!socketRef.current?.send(message)) throw new Error('The room connection closed before the shot could be sent.');
-      setStatus(current.role === 'host' ? 'Server re-simulating the host result…' : 'Shot sent to the host authority for verification…');
+      setStatus(current.role === 'host' ? 'OperatorOS is checking the shot…' : 'Shot sent for match verification…');
     } catch (cause: any) {
       setError(cause?.message || 'The shot could not be submitted.');
       socketRef.current?.send({ type: 'stateRequest' });
@@ -329,7 +331,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
   };
 
   const choose = (action: 'accept' | 'rerack') => {
-    if (!room || !state?.pendingChoice || state.pendingChoice.chooser !== seat) return;
+    if (!canWrite || !room || !state?.pendingChoice || state.pendingChoice.chooser !== seat) return;
     socketRef.current?.send({ type: 'choice', expectedVersion: room.version, clientActionId: clientId('choice'), action });
   };
 
@@ -337,12 +339,12 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
     return (
       <section className="npho-lobby" data-testid="ninja-pool-online-lobby">
         <style>{onlineCss}</style>
-        <header><Wifi size={28} /><div><span>SYS::AUTHORIZED_ROOMS</span><h2>Online 8-ball</h2><p>Rooms are restricted to entitled members of your active OperatorOS tenant.</p></div></header>
+        <header><Wifi size={28} /><div><span>PRIVATE TEAM ROOMS</span><h2>Online 8-ball</h2><p>Play only with people who have access to your organization’s Pool Hall.</p></div></header>
         {error && <div className="npho-error" role="alert"><AlertTriangle size={17} />{error}</div>}
         {loading ? <div className="npho-loading"><Loader2 className="npho-spin" /> Preparing the table…</div> : (
           <div className="npho-entry-grid">
-            <article><Users size={25} /><strong>Host a room</strong><p>Create a durable, authenticated room and share its four-character code.</p><button type="button" onClick={async () => { setLoading(true); try { const created = await moduleShellApi.ninjaPoolHall.hostOnlineRoom({ clientRoomId: clientId('room') }); adoptRoom(created); onRoomPath(created.id); } catch (cause: any) { setError(cause?.error || cause?.message); } finally { setLoading(false); } }}>Host table</button></article>
-            <article><DoorOpen size={25} /><strong>Join a room</strong><p>Enter the room code from a player in your tenant.</p><label>Room code<input value={joinCode} maxLength={4} autoCapitalize="characters" onChange={(event) => setJoinCode(event.target.value.replace(/[^a-z0-9]/gi, '').toUpperCase())} /></label><button type="button" disabled={joinCode.length !== 4} onClick={() => void join()}>Join table</button></article>
+            <article><Users size={25} /><strong>Host a room</strong><p>Create a private room that players can rejoin, then share its four-character code.</p><button type="button" disabled={!canWrite} onClick={async () => { if (!canWrite) return; setLoading(true); try { const created = await moduleShellApi.ninjaPoolHall.hostOnlineRoom({ clientRoomId: clientId('room') }); adoptRoom(created); onRoomPath(created.id); } catch (cause: any) { setError(cause?.error || cause?.message); } finally { setLoading(false); } }}>Host table</button></article>
+            <article><DoorOpen size={25} /><strong>Join a room</strong><p>Enter the code shared by another player in your organization.</p><label>Room code<input value={joinCode} maxLength={4} autoCapitalize="characters" onChange={(event) => setJoinCode(event.target.value.replace(/[^a-z0-9]/gi, '').toUpperCase())} /></label><button type="button" disabled={!canWrite || joinCode.length !== 4} onClick={() => void join()}>Join table</button></article>
           </div>
         )}
       </section>
@@ -360,7 +362,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
       {error && <div className="npho-error" role="alert"><AlertTriangle size={17} /><span>{error}</span><button type="button" onClick={() => socketRef.current?.send({ type: 'stateRequest' })}><RefreshCw size={14} /> Resync</button></div>}
       <div className="npho-card">
         <header className="npho-toolbar">
-          <div><span><Wifi size={14} /> SYS::HOST_AUTHORITY</span><h2>Online room <b>{room.code}</b></h2><p>{status}</p></div>
+          <div><span><Wifi size={14} /> PROTECTED ONLINE TABLE</span><h2>Online room <b>{room.code}</b></h2><p>{status}</p></div>
           <div className={`npho-connection ${socketState}`}><i />{socketState}</div>
           <button className="npho-code" type="button" onClick={() => void navigator.clipboard?.writeText(room.code)}><Copy size={14} /> Copy code</button>
         </header>
@@ -369,10 +371,10 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
         </div>
         <div className="npho-table">
           <canvas ref={canvasRef} width={TABLE_WIDTH} height={TABLE_HEIGHT} tabIndex={0} data-testid="ninja-pool-online-table" aria-label="Authenticated online 8-ball table. Touch or click to aim." onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); pointerAim(event); }} onPointerMove={(event) => { if (event.buttons > 0 && !state?.ballInHand) pointerAim(event); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void takeShot(); } }} />
-          {room.status === 'waiting' && <div className="npho-overlay"><Users size={34} /><strong>Waiting for player two</strong><span>Share room code {room.code}. Only an authenticated member of this tenant can join.</span></div>}
-          {room.status !== 'waiting' && room.status !== 'active' && <div className="npho-overlay"><CircleDot size={34} /><strong>Rack {room.status}</strong><span>{state?.gameOver?.reason ?? 'This room is finalized and remains available as a durable match trace.'}</span></div>}
+          {room.status === 'waiting' && <div className="npho-overlay"><Users size={34} /><strong>Waiting for player two</strong><span>Share room code {room.code}. Only a signed-in member of your organization with Pool Hall access can join.</span></div>}
+          {room.status !== 'waiting' && room.status !== 'active' && <div className="npho-overlay"><CircleDot size={34} /><strong>Rack {room.status}</strong><span>{state?.gameOver?.reason ?? 'This rack is complete. Its result and shot history are saved for later review.'}</span></div>}
         </div>
-        {state?.pendingChoice && state.pendingChoice.chooser === seat && <div className="npho-choice"><strong>Rules choice required</strong><button type="button" onClick={() => choose('accept')}>Accept table</button><button type="button" onClick={() => choose('rerack')}>Re-rack</button></div>}
+        {canWrite && state?.pendingChoice && state.pendingChoice.chooser === seat && <div className="npho-choice"><strong>Rules choice required</strong><button type="button" onClick={() => choose('accept')}>Accept table</button><button type="button" onClick={() => choose('rerack')}>Re-rack</button></div>}
         <div className="npho-controls">
           <label>Power <b>{Math.round(power * 100)}%</b><input type="range" min="0.08" max="1" step="0.01" value={power} disabled={!canShoot} onChange={(event) => setPower(Number(event.target.value))} /></label>
           <label>Side English <b>{english.x.toFixed(2)}</b><input type="range" min="-0.85" max="0.85" step="0.05" value={english.x} disabled={!canShoot} onChange={(event) => setEnglish((value) => ({ ...value, x: Number(event.target.value) }))} /></label>
@@ -381,7 +383,7 @@ export default function NinjaPoolHallOnline({ entry, roomId, profile, onRoomPath
           <button className="primary" type="button" disabled={!canShoot} onClick={() => void takeShot()} data-testid="ninja-pool-online-shoot">{animating ? <Loader2 className="npho-spin" size={17} /> : <CircleDot size={17} />}{animating ? 'Balls moving…' : 'Take shot'}</button>
           <button type="button" onClick={leave}><DoorOpen size={16} /> Leave</button>
         </div>
-        <div className="npho-trust"><ShieldCheck size={17} /><span><b>Authoritative room:</b> the host runs the visible simulation, OperatorOS independently re-simulates every result, rejects impossible or stale shots, and persists each accepted state for reconnect recovery.</span></div>
+        <div className="npho-trust"><ShieldCheck size={17} /><span><b>Protected online match:</b> OperatorOS checks every submitted shot against the same game rules, rejects impossible or out-of-date moves, and saves accepted turns so players can reconnect.</span></div>
       </div>
     </section>
   );

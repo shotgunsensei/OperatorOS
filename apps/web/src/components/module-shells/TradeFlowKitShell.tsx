@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
@@ -33,6 +33,7 @@ import {
 import { ModuleApplicationShell, type ModuleShellClassNames } from '@/components/module-application-shell';
 import { useAuth } from '@/components/AuthProvider';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
@@ -82,6 +83,7 @@ type TradeFlowKitScreen =
 interface RouteState {
   screen: TradeFlowKitScreen;
   recordId?: string;
+  attachmentId?: string;
   intent?: 'new';
 }
 
@@ -111,9 +113,9 @@ const shellClasses: Partial<ModuleShellClassNames> = {
 
 const pageCopy: Record<TradeFlowKitScreen, { eyebrow: string; title: string; description: string }> = {
   dashboard: {
-    eyebrow: 'Service management overview',
+    eyebrow: 'Lead to payment',
     title: 'Dashboard',
-    description: 'Move leads into customers, jobs, quotes, invoices, payments, and a clear collection state for this organization.',
+    description: 'See what needs to be quoted, scheduled, completed, invoiced, or collected next.',
   },
   leads: {
     eyebrow: 'Sales pipeline',
@@ -121,44 +123,44 @@ const pageCopy: Record<TradeFlowKitScreen, { eyebrow: string; title: string; des
     description: 'Capture, qualify, follow up, and convert service opportunities into customers and numbered jobs.',
   },
   customers: {
-    eyebrow: 'Customer records',
+    eyebrow: 'Customer relationships',
     title: 'Customers',
-    description: 'Manage persisted customer profiles and follow their linked work and revenue history.',
+    description: 'Keep customer details, active work, quotes, invoices, and payment history together.',
   },
   jobs: {
     eyebrow: 'Field operations',
     title: 'Jobs',
-    description: 'Schedule and update real jobs, coordinate tasks, and keep the workflow stage current.',
+    description: 'Schedule work, assign the next steps, track progress, and keep customers informed.',
   },
   workflows: {
     eyebrow: 'Workflow studio',
     title: 'Workflows',
-    description: 'Define reusable job and task stages, then move active work through the approved delivery process.',
+    description: 'Build a repeatable path for common jobs so every team member knows what happens next.',
   },
   tasks: {
     eyebrow: 'Team execution',
     title: 'Team tasks',
-    description: 'Search and update the job-scoped work assigned across this organization without losing record context.',
+    description: 'See assigned work across every job, clear blockers, and keep deadlines from slipping.',
   },
   recurring: {
     eyebrow: 'Scheduled automation',
     title: 'Recurring jobs',
-    description: 'Create, pause, resume, and review repeat work enqueued by the shared audited scheduler.',
+    description: 'Schedule repeat service, pause it when needed, and see which jobs will be created next.',
   },
   activity: {
     eyebrow: 'Operational history',
     title: 'Activity',
-    description: 'Review tenant-scoped job, task, recurring-work, and workflow changes recorded by TradeFlowKit.',
+    description: 'See who changed a job, task, schedule, or workflow and when it happened.',
   },
   quotes: {
     eyebrow: 'Revenue documents',
     title: 'Quotes',
-    description: 'Create, edit, send, and track customer quotes backed by the TradeFlowKit revenue ledger.',
+    description: 'Prepare, send, and track customer quotes, then turn accepted work into an invoice.',
   },
   invoices: {
     eyebrow: 'Billing operations',
     title: 'Invoices',
-    description: 'Issue invoices, record authoritative payment history, and share secure customer documents.',
+    description: 'Send invoices, record payments, follow open balances, and share customer documents securely.',
   },
   payments: {
     eyebrow: 'Business payments',
@@ -168,42 +170,42 @@ const pageCopy: Record<TradeFlowKitScreen, { eyebrow: string; title: string; des
   analytics: {
     eyebrow: 'Operational reporting',
     title: 'Analytics',
-    description: 'Use persisted lead, job, task, invoice, and collection totals to understand current performance.',
+    description: 'Understand where sales, delivery, billing, and collections are moving or getting stuck.',
   },
   directory: {
-    eyebrow: 'Connected workspace',
+    eyebrow: 'Shared business details',
     title: 'Business Directory',
-    description: 'Reuse tenant-scoped organizations, contacts, and sites across TradeFlowKit workflows.',
+    description: 'Keep organizations, contacts, and sites ready to use across customer and job workflows.',
   },
   trash: {
     eyebrow: 'Retention workspace',
     title: 'Trash',
-    description: 'Review and restore retained business records without bypassing record dependencies.',
+    description: 'Review removed records and restore the ones your business still needs.',
   },
   settings: {
     eyebrow: 'Workspace configuration',
     title: 'Settings',
-    description: 'Configure operating defaults, lead intake, and provider readiness under OperatorOS authority.',
+    description: 'Set business defaults, lead intake preferences, and the services TradeFlowKit connects to.',
   },
   subscription: {
-    eyebrow: 'OperatorOS commercial authority',
+    eyebrow: 'Plan and access',
     title: 'Subscription',
-    description: 'Review the organization plan, module access, invoices, and subscription changes in OperatorOS.',
+    description: 'Review your plan, included apps, invoices, and subscription options in OperatorOS.',
   },
   'call-recovery': {
-    eyebrow: 'Connected customer recovery',
+    eyebrow: 'Recover missed opportunities',
     title: 'Call recovery',
-    description: 'Continue missed-call recovery through the tenant-scoped OutCall companion application.',
+    description: 'Turn eligible missed calls into a clear follow-up path with OutCall.',
   },
   admin: {
-    eyebrow: 'Shared platform administration',
+    eyebrow: 'Team administration',
     title: 'Administration',
-    description: 'Manage organization membership and platform controls through the authoritative OperatorOS console.',
+    description: 'Manage team members, access, and shared platform settings in OperatorOS.',
   },
   'access-denied': {
-    eyebrow: 'Access boundary',
-    title: 'Access denied',
-    description: 'OperatorOS could not validate the required organization or module authority for this request.',
+    eyebrow: 'Permission needed',
+    title: 'You do not have access',
+    description: 'Ask an organization owner or administrator if you need to use this section.',
   },
 };
 
@@ -213,15 +215,24 @@ function operatorConsolePageUrl(page: string): string {
   return url.toString();
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
 function resolveRoute(routePath?: string): RouteState {
-  const clean = (routePath || '/dashboard').split('?')[0].replace(/^\/modules\/tradeflowkit/, '') || '/dashboard';
+  const raw = routePath || '/dashboard';
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(raw) || raw.startsWith('//') || /[\u0000-\u001f\u007f]/u.test(raw)) {
+    return { screen: 'dashboard' };
+  }
+  const [rawPath, rawQuery = ''] = raw.split('#', 1)[0].split('?', 2);
+  const clean = rawPath.replace(/^\/modules\/tradeflowkit\/?/u, '/') || '/dashboard';
   const segments = clean.split('/').filter(Boolean);
   const resource = segments[0] || 'dashboard';
-  const recordId = segments.length > 1 && segments[1] !== 'new' ? segments[1] : undefined;
+  const recordId = segments.length > 1 && segments[1] !== 'new' && /^[A-Za-z0-9_-]{1,128}$/u.test(segments[1]) ? segments[1] : undefined;
   const intent = segments[1] === 'new' ? 'new' : undefined;
+  const requestedAttachmentId = new URLSearchParams(rawQuery).get('attachment') ?? '';
+  const attachmentId = UUID_PATTERN.test(requestedAttachmentId) ? requestedAttachmentId : undefined;
   if (resource === 'leads') return { screen: 'leads', recordId };
   if (resource === 'customers') return { screen: 'customers', recordId };
-  if (resource === 'jobs') return { screen: 'jobs', recordId };
+  if (resource === 'jobs') return { screen: 'jobs', recordId, attachmentId };
   if (resource === 'workflows') return { screen: 'workflows', recordId };
   if (resource === 'tasks') return { screen: 'tasks', recordId };
   if (resource === 'recurring-jobs') return { screen: 'recurring', recordId };
@@ -244,13 +255,19 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>('system');
   const [systemDark, setSystemDark] = useState(false);
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
   const tenantId = activeTenant?.id ?? fallbackTenantId;
   const platformAdmin = hasPlatformAdminAuthority(user);
+  const moduleAccessLevel = useModuleAccessLevel();
   const adapterRole = platformAdmin ? 'admin' : activeRole ?? 'member';
-  const route = resolveRoute(routePath || pathname);
+  const currentQuery = searchParams.toString();
+  const routeInput = routePath
+    ? `${routePath}${routePath.includes('?') || !currentQuery ? '' : `?${currentQuery}`}`
+    : `${pathname}${currentQuery ? `?${currentQuery}` : ''}`;
+  const route = resolveRoute(routeInput);
   // Embedded and source-compatible entry points use the stable local fallback
   // route. On tradeflowkit.operatoros.net middleware canonicalizes this prefix
   // to the clean host-relative path before auth and internal module rewriting.
@@ -289,17 +306,22 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
   }), [adapterRole, platformAdmin, tenantId, user]);
 
   const hasTenantContext = !!adapter.tenantId || platformAdmin;
-  const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
-  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin');
+  const tenantLabel = activeTenant?.name ?? (adapter.tenantId ? 'Selected organization' : 'No organization selected');
   const roleLabel = platformAdmin
     ? 'Platform administrator'
-    : activeRole === 'owner'
-      ? 'Organization owner'
-      : activeRole === 'admin'
-        ? 'Organization administrator'
-        : activeRole === 'viewer'
-          ? 'Read-only access'
-          : 'Team member';
+    : !canWriteModule
+      ? 'Read-only access'
+      : activeRole === 'owner'
+        ? 'Organization owner'
+        : activeRole === 'admin'
+          ? 'Organization administrator'
+          : moduleAccessLevel === 'manager'
+            ? 'TradeFlowKit manager'
+            : 'Team member';
   const hrefFor = (href: string) => `${routePrefix}${href}`;
   const darkThemeActive = theme === 'dark' || (theme === 'system' && systemDark);
   const toggleTheme = () => {
@@ -317,12 +339,12 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
           : 'member',
     ]),
   };
-  const currentManifestPath = hrefFor(`/${route.screen}${route.recordId ? `/${route.recordId}` : ''}`);
+  const currentManifestPath = hrefFor(`/${route.screen}${route.recordId ? `/${route.recordId}` : ''}${route.attachmentId ? `?attachment=${encodeURIComponent(route.attachmentId)}` : ''}`);
   const pageActions = route.screen === 'dashboard'
     ? <Link className={styles.primaryLink} href={hrefFor('/leads')} data-testid="tradeflowkit-start-with-lead"><ClipboardList size={15} /> Start with a lead</Link>
-    : route.screen === 'quotes' && canManageModule
+    : route.screen === 'quotes' && canWriteModule
       ? <Link className={styles.primaryLink} href={hrefFor('/quotes/new')}><FileText size={15} /> New quote</Link>
-      : route.screen === 'invoices' && canManageModule
+      : route.screen === 'invoices' && canWriteModule
         ? <Link className={styles.primaryLink} href={hrefFor('/invoices/new')}><Receipt size={15} /> New invoice</Link>
         : undefined;
 
@@ -394,8 +416,10 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
         <TradeFlowKitScreen
           screen={route.screen}
           recordId={route.recordId}
+          attachmentId={route.attachmentId}
           intent={route.intent}
           tenantKey={adapter.tenantId}
+          canWrite={canWriteModule}
           canManage={canManageModule}
           hrefFor={hrefFor}
         />
@@ -408,63 +432,65 @@ function TradeFlowKitScreen({
   screen,
   recordId,
   intent,
+  attachmentId,
   tenantKey,
+  canWrite,
   canManage,
   hrefFor,
-}: RouteState & { tenantKey: string; canManage: boolean; hrefFor: (href: string) => string }) {
+}: RouteState & { tenantKey: string; canWrite: boolean; canManage: boolean; hrefFor: (href: string) => string }) {
   if (screen === 'dashboard') {
     return <>
       <TradeFlowKitGlobalSearch tenantKey={tenantKey} />
-      <TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="dashboard" routePrefix={hrefFor('')} />
+      <TradeFlowKitOperations tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="dashboard" routePrefix={hrefFor('')} />
       <div className={styles.dashboardGrid} aria-label="TradeFlowKit active workflows">
         <QuickLink href={hrefFor('/leads')} Icon={ClipboardList} title="Lead pipeline" body="Capture and qualify real service opportunities." />
-        <QuickLink href={hrefFor('/customers')} Icon={Users} title="Customer records" body="Open persisted customer and service history." />
+        <QuickLink href={hrefFor('/customers')} Icon={Users} title="Customers" body="Open customer details, active work, and payment history." />
         <QuickLink href={hrefFor('/jobs')} Icon={BriefcaseBusiness} title="Jobs and tasks" body="Coordinate scheduled work and task completion." />
         <QuickLink href={hrefFor('/workflows')} Icon={GitBranch} title="Workflows" body="Manage reusable stages and job workflow assignment." />
         <QuickLink href={hrefFor('/tasks')} Icon={ListChecks} title="Team tasks" body="Open the organization-wide task queue." />
         <QuickLink href={hrefFor('/recurring-jobs')} Icon={CalendarClock} title="Recurring jobs" body="Schedule and monitor repeat service work." />
-        <QuickLink href={hrefFor('/activity')} Icon={Activity} title="Activity" body="Review persisted operational history." />
+        <QuickLink href={hrefFor('/activity')} Icon={Activity} title="Activity" body="See who changed business work and when." />
         <QuickLink href={hrefFor('/quotes')} Icon={FileText} title="Quotes" body="Prepare customer quotes and track responses." />
         <QuickLink href={hrefFor('/invoices')} Icon={Receipt} title="Invoices" body="Issue invoices and record payment history." />
-        <QuickLink href={hrefFor('/payments')} Icon={CreditCard} title="Payments" body="Review balances and authoritative customer payments." />
-        <QuickLink href={hrefFor('/analytics')} Icon={BarChart3} title="Analytics" body="Review metrics calculated from persisted records." />
-        <QuickLink href={hrefFor('/directory')} Icon={ContactRound} title="Business Directory" body="Reuse tenant-scoped organizations, contacts, and sites." />
+        <QuickLink href={hrefFor('/payments')} Icon={CreditCard} title="Payments" body="Review open balances and recorded customer payments." />
+        <QuickLink href={hrefFor('/analytics')} Icon={BarChart3} title="Analytics" body="See where sales, delivery, billing, and collections are getting stuck." />
+        <QuickLink href={hrefFor('/directory')} Icon={ContactRound} title="Business Directory" body="Keep organizations, contacts, and sites ready for customer work." />
       </div>
     </>;
   }
-  if (screen === 'leads') return <section id="tradeflowkit-lead-center" data-testid="tradeflowkit-lead-center-panel" tabIndex={-1}><TradeFlowKitLeadCenter tenantKey={tenantKey} canManage={canManage} view="leads" routePrefix={hrefFor('')} /></section>;
+  if (screen === 'leads') return <section id="tradeflowkit-lead-center" data-testid="tradeflowkit-lead-center-panel" tabIndex={-1}><TradeFlowKitLeadCenter tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} recordId={recordId} view="leads" routePrefix={hrefFor('')} /></section>;
   if (screen === 'customers' || screen === 'quotes' || screen === 'invoices' || screen === 'payments') {
     const view: TradeFlowKitRevenueView = screen;
-    return <TradeFlowKitRevenueFlow tenantKey={tenantKey} canManage={canManage} view={view} recordId={recordId} intent={intent} routePrefix={hrefFor('')} />;
+    return <TradeFlowKitRevenueFlow tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view={view} recordId={recordId} intent={intent} routePrefix={hrefFor('')} />;
   }
-  if (screen === 'jobs') return <><TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="jobs" recordId={recordId} routePrefix={hrefFor('')} /><TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="jobs" /></>;
-  if (screen === 'workflows') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="workflows" recordId={recordId} />;
-  if (screen === 'tasks') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="tasks" recordId={recordId} />;
-  if (screen === 'recurring') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="recurring" recordId={recordId} />;
-  if (screen === 'activity') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} view="activity" />;
-  if (screen === 'analytics') return <TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="analytics" routePrefix={hrefFor('')} />;
-  if (screen === 'directory') return <section id="tradeflowkit-directory" tabIndex={-1}><BusinessDirectory moduleSlug="tradeflowkit" tenantKey={tenantKey} canArchive={canManage} /></section>;
-  if (screen === 'trash') return <TradeFlowKitTrash tenantKey={tenantKey} canManage={canManage} />;
+  if (screen === 'jobs') return <><TradeFlowKitOperations tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="jobs" recordId={recordId} highlightedAttachmentId={attachmentId} routePrefix={hrefFor('')} /><TradeFlowKitWorkManagement tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="jobs" /></>;
+  if (screen === 'workflows') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="workflows" recordId={recordId} />;
+  if (screen === 'tasks') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="tasks" recordId={recordId} />;
+  if (screen === 'recurring') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="recurring" recordId={recordId} />;
+  if (screen === 'activity') return <TradeFlowKitWorkManagement tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="activity" />;
+  if (screen === 'analytics') return <TradeFlowKitOperations tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="analytics" routePrefix={hrefFor('')} />;
+  if (screen === 'directory') return <section id="tradeflowkit-directory" tabIndex={-1}><BusinessDirectory moduleSlug="tradeflowkit" tenantKey={tenantKey} canWrite={canWrite} canArchive={canManage} /></section>;
+  if (screen === 'trash') return <TradeFlowKitTrash tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} />;
   if (screen === 'settings') {
     const operationsView: TradeFlowKitOperationsView = 'settings';
-    return <section id="tradeflowkit-settings" data-testid="tradeflowkit-settings-panel" tabIndex={-1}><TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view={operationsView} routePrefix={hrefFor('')} /><TradeFlowKitLeadCenter tenantKey={tenantKey} canManage={canManage} view="settings" routePrefix={hrefFor('')} /></section>;
+    return <section id="tradeflowkit-settings" data-testid="tradeflowkit-settings-panel" tabIndex={-1}><TradeFlowKitOperations tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view={operationsView} routePrefix={hrefFor('')} /><TradeFlowKitLeadCenter tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="settings" routePrefix={hrefFor('')} /></section>;
   }
   if (screen === 'subscription') {
     return <section className={styles.dashboardGrid} data-testid="tradeflowkit-subscription-route" tabIndex={-1}>
-      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl} Icon={CreditCard} title="Manage subscription" body="Open the OperatorOS-owned plan, invoice, checkout, and customer-portal controls." />
-      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} Icon={ShieldCheck} title="Review module access" body="Return to My Apps to review the organization and its enabled modules." />
+      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl} Icon={CreditCard} title="Manage subscription" body="Open OperatorOS to review plans, invoices, checkout, and the customer billing portal." />
+      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} Icon={ShieldCheck} title="Review app access" body="Return to My Apps to see which applications are available to this organization." />
     </section>;
   }
   if (screen === 'call-recovery') {
     return <section className={styles.dashboardGrid} data-testid="tradeflowkit-call-recovery-route" tabIndex={-1}>
-      <QuickLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}modules/outcall`} Icon={PhoneCall} title="Review OutCall availability" body="Continue only when OperatorOS has enabled the verified-self companion module and its provider gate for this organization." />
+      <QuickLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}modules/outcall`} Icon={PhoneCall} title="Review OutCall availability" body="Continue after OutCall is available and the personal destination number and calling service are ready." />
       <QuickLink href={hrefFor('/leads')} Icon={ClipboardList} title="Return to leads" body="Keep qualification, follow-up, and lead conversion inside TradeFlowKit." />
     </section>;
   }
   if (screen === 'admin') {
     return <section className={styles.dashboardGrid} data-testid="tradeflowkit-admin-route" tabIndex={-1}>
-      <QuickLink href={operatorConsolePageUrl('tenant-users')} Icon={Users} title="Organization members" body="Manage tenant membership and bounded roles through OperatorOS." />
-      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl} Icon={ShieldCheck} title="Commercial controls" body="Manage module entitlement and billing without creating a second authority in TradeFlowKit." />
+      <QuickLink href={operatorConsolePageUrl('tenant-users')} Icon={Users} title="Organization members" body="Add or remove organization members and choose what each person can manage in OperatorOS." />
+      <QuickLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl} Icon={ShieldCheck} title="Plans and billing" body="Manage TradeFlowKit access, plan, and billing in OperatorOS." />
     </section>;
   }
   if (screen === 'access-denied') {

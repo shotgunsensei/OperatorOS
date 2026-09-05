@@ -5,7 +5,7 @@
  *
  * Shared module-shell status and canonical launch controls.
  *
- *   • <ShellLiveBadge />     — green "Live" pill next to the title.
+ *   • <ShellWorkspaceBadge /> — neutral availability pill next to the title.
  *   • <ShellLaunchButton />  — primary CTA that becomes a disabled
  *                              unavailable state when the module's
  *                              canonical base URL is absent.
@@ -16,21 +16,19 @@ import { ArrowRight, Clock } from 'lucide-react';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { badgeStyles, buttonStyles, semantic, fontSize, radius } from '@/lib/design-tokens';
 
-export function ShellLiveBadge() {
+export function ShellWorkspaceBadge() {
   return (
     <span
-      data-testid="badge-shell-live"
+      data-testid="badge-shell-workspace-available"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: '2px 8px', borderRadius: 999,
-        ...badgeStyles.success,
-        background: '#14532d',
-        color: '#dcfce7',
-        borderColor: '#22c55e',
+        ...badgeStyles.neutral,
+        background: semantic.bgHover,
         fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4,
       }}
     >
-      Live
+      Workspace available
     </span>
   );
 }

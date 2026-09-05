@@ -1,24 +1,27 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
-import { subscriptions, subscriptionPlans, billingEvents, modules, tenantEntitlements, tenants } from '../schema.js';
-import { eq, desc, isNull, asc, and } from 'drizzle-orm';
+import { subscriptions, subscriptionPlans, billingEvents, modules, tenantEntitlements, tenants, tenantApplicationSubscriptions, addonSubscriptions } from '../schema.js';
+import { eq, desc, isNull, asc, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
-import { canPurchaseAddon, resolveTenantContext } from '../lib/tenant-auth.js';
-import { hasPlatformAdminAuthority } from '../lib/rbac.js';
+import { resolveTenantContext } from '../lib/tenant-auth.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
   isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
   PLAN_CATALOG_BY_SLUG,
 } from '../lib/plans.js';
 import {
-  subscribeToPlan, cancelSubscription, reactivateSubscription,
-  createCheckoutSession, createPortalSession, processWebhookEvent,
+  cancelSubscription, reactivateSubscription,
+  createPortalSession, processWebhookEvent,
   isStripeEnabled, getBillingMode,
-  subscribeToAddon, cancelAddon, processAddonWebhookEvent,
-  AddonNotPurchasableError, classifyWebhookEvent, claimStripeEvent,
+  cancelAddon, processAddonWebhookEvent,
+  classifyWebhookEvent, claimStripeEvent,
   markStripeEventProcessed, markStripeEventFailed,
   createStackCheckoutSession,
+  changeStackFreeCompanion,
+  CommercePolicyError,
+  legacyPlanSalesClosed,
+  legacyAddonSalesClosed,
   recordTorqueStripeEventDispatch,
 } from '../lib/billing-service.js';
 import {
@@ -32,11 +35,11 @@ import {
   COMPANION_MODULES,
   COMPANION_MODULE_PRICE_CENTS,
   CORE_PRODUCTS,
-  getAdditionalSeatPriceCents,
+  DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
   FREE_WITH_ANY_ACCOUNT,
   getCanonicalModuleDisplayName,
 } from '@operatoros/sdk';
-import { changeFreeCompanionModule } from '../lib/product-entitlements.js';
+import { ProductEntitlementConflictError } from '../lib/product-entitlements.js';
 import { processCallCommandLaneWebhookEvent } from '../lib/callcommand-lane-billing.js';
 import {
   CALLCOMMAND_NUMBER_FEATURE_KEY,
@@ -44,14 +47,27 @@ import {
 } from '../lib/callcommand-number-billing.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
+  const ownerRequired = (ctx: { viaPlatformRole?: boolean; role?: string }, reply: any) => {
+    if (ctx.viaPlatformRole || ctx.role === 'owner') return false;
+    reply.code(403).send({ error: 'Tenant owner access required', code: 'TENANT_OWNER_REQUIRED' });
+    return true;
+  };
+  const billingReadRequired = (ctx: { viaPlatformRole?: boolean; role?: string }, reply: any) => {
+    if (ctx.viaPlatformRole || ctx.role === 'owner' || ctx.role === 'admin') return false;
+    reply.code(403).send({ error: 'Tenant billing visibility requires an owner or administrator', code: 'TENANT_BILLING_READ_REQUIRED' });
+    return true;
+  };
   registerTorqueTokenWebhookHandler();
   app.get('/v1/billing/catalog', async () => ({
     operatorOsMonthlyPriceCents: 0,
     coreProducts: CORE_PRODUCTS,
     includedApps: FREE_WITH_ANY_ACCOUNT,
     companionModules: COMPANION_MODULES,
+    billingInterval: 'month',
+    includedSeats: 5,
+    includedCompanionCount: 1,
     companionModuleMonthlyPriceCents: COMPANION_MODULE_PRICE_CENTS,
-    additionalSeatMonthlyPriceCents: getAdditionalSeatPriceCents(process.env.ADDITIONAL_SEAT_PRICE_CENTS),
+    additionalSeatMonthlyPriceCents: DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
     stripeConfigured: {
       tradeflowkit: !!process.env.STRIPE_PRICE_TRADEFLOWKIT_MONTHLY,
       pulsedesk: !!process.env.STRIPE_PRICE_PULSEDESK_MONTHLY,
@@ -64,26 +80,80 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   app.get('/v1/billing/stack', { preHandler: [authenticate] }, async (request, reply) => {
     const ctx = await resolveTenantContext(request);
     if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (billingReadRequired(ctx, reply)) return;
     const [tenant] = await db.select({ seatLimit: tenants.seatLimit })
       .from(tenants)
       .where(eq(tenants.id, ctx.tenantId))
       .limit(1);
-    const entitlements = await db.select().from(tenantEntitlements)
+    const entitlements = await db.select({
+      entitlementKey: tenantEntitlements.entitlementKey,
+      entitlementType: tenantEntitlements.entitlementType,
+      source: tenantEntitlements.source,
+      active: tenantEntitlements.active,
+      createdAt: tenantEntitlements.createdAt,
+    }).from(tenantEntitlements)
       .where(and(
         eq(tenantEntitlements.tenantId, ctx.tenantId),
         eq(tenantEntitlements.active, true),
       ))
       .orderBy(asc(tenantEntitlements.createdAt));
-    return { tenantId: ctx.tenantId, seatLimit: tenant?.seatLimit ?? 0, entitlements };
+    const [applicationSubscription] = await db.select({
+      status: tenantApplicationSubscriptions.status,
+      coreProduct: tenantApplicationSubscriptions.coreProduct,
+      includedCompanionKey: tenantApplicationSubscriptions.includedCompanionKey,
+      additionalModuleKeys: tenantApplicationSubscriptions.additionalModuleKeys,
+      additionalSeats: tenantApplicationSubscriptions.additionalSeats,
+      cancelAtPeriodEnd: tenantApplicationSubscriptions.cancelAtPeriodEnd,
+      currentPeriodStart: tenantApplicationSubscriptions.currentPeriodStart,
+      currentPeriodEnd: tenantApplicationSubscriptions.currentPeriodEnd,
+    }).from(tenantApplicationSubscriptions)
+      .where(eq(tenantApplicationSubscriptions.tenantId, ctx.tenantId))
+      .limit(1);
+    const legacyResult = await db.execute(sql`
+      SELECT sp.slug AS plan_slug, sp.name AS plan_name, s.status,
+             s.cancel_at_period_end, s.current_period_end
+      FROM subscriptions s
+      JOIN subscription_plans sp ON sp.id=s.plan_id
+      JOIN tenants t ON t.id=${ctx.tenantId} AND t.owner_user_id=s.user_id
+      WHERE s.tenant_id=${ctx.tenantId}
+        AND s.legacy_access_grandfathered_at IS NOT NULL
+      ORDER BY s.created_at DESC
+      LIMIT 1
+    `);
+    const legacy = legacyResult.rows[0] as Record<string, unknown> | undefined;
+    const legacyAddonContracts = await db.select({
+      moduleSlug: modules.slug,
+      status: addonSubscriptions.status,
+      cancelAtPeriodEnd: addonSubscriptions.cancelAtPeriodEnd,
+      currentPeriodEnd: addonSubscriptions.currentPeriodEnd,
+    }).from(addonSubscriptions)
+      .innerJoin(modules, eq(modules.id, addonSubscriptions.moduleId))
+      .where(and(
+        eq(addonSubscriptions.tenantId, ctx.tenantId),
+        sql`${addonSubscriptions.status} IN ('active','trialing','past_due')`,
+      ));
+    return {
+      tenantId: ctx.tenantId,
+      seatLimit: tenant?.seatLimit ?? 0,
+      entitlements,
+      applicationSubscription: applicationSubscription ?? null,
+      legacyContract: {
+        grandfathered: !!legacy,
+        planSlug: typeof legacy?.plan_slug === 'string' ? legacy.plan_slug : null,
+        planName: typeof legacy?.plan_name === 'string' ? legacy.plan_name : null,
+        status: typeof legacy?.status === 'string' ? legacy.status : null,
+        cancelAtPeriodEnd: legacy?.cancel_at_period_end === true,
+        currentPeriodEnd: legacy?.current_period_end ?? null,
+      },
+      legacyAddonContracts,
+    };
   });
 
   app.post('/v1/billing/stack/checkout', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const ctx = await resolveTenantContext(request);
     if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-    if (!ctx.viaPlatformRole && ctx.role !== 'owner' && ctx.role !== 'admin') {
-      return reply.code(403).send({ error: 'Tenant owner or admin access required', code: 'TENANT_ROLE_INSUFFICIENT' });
-    }
+    if (ownerRequired(ctx, reply)) return;
     if (!isStripeEnabled()) {
       return reply.code(409).send({ error: 'Stripe checkout is not configured', code: 'STRIPE_NOT_CONFIGURED' });
     }
@@ -97,6 +167,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         freeCompanionModule: body.freeCompanionModule,
         additionalModules: body.additionalModules,
         additionalSeats: body.additionalSeats,
+        interval: body.interval,
       });
       await writeAudit({
         actorUserId: user.id,
@@ -114,9 +185,10 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }, request);
       return result;
     } catch (error) {
-      return reply.code(400).send({
+      const policy = error instanceof CommercePolicyError || error instanceof ProductEntitlementConflictError;
+      return reply.code(policy ? error.httpStatus : 400).send({
         error: error instanceof Error ? error.message : 'Could not create checkout',
-        code: 'STACK_CHECKOUT_INVALID',
+        code: policy ? error.code : 'STACK_CHECKOUT_INVALID',
       });
     }
   });
@@ -125,12 +197,10 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     const user = (request as any).user;
     const ctx = await resolveTenantContext(request);
     if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-    if (!ctx.viaPlatformRole && ctx.role !== 'owner' && ctx.role !== 'admin') {
-      return reply.code(403).send({ error: 'Tenant owner or admin access required', code: 'TENANT_ROLE_INSUFFICIENT' });
-    }
+    if (ownerRequired(ctx, reply)) return;
     try {
       const moduleKey = (request.body as any)?.moduleKey;
-      await changeFreeCompanionModule(ctx.tenantId, moduleKey);
+      await changeStackFreeCompanion(ctx.tenantId, moduleKey);
       await writeAudit({
         actorUserId: user.id,
         tenantId: ctx.tenantId,
@@ -142,29 +212,78 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }, request);
       return { ok: true, moduleKey };
     } catch (error) {
-      return reply.code(400).send({
+      const policy = error instanceof CommercePolicyError;
+      return reply.code(policy ? error.httpStatus : 400).send({
         error: error instanceof Error ? error.message : 'Could not change companion module',
-        code: 'FREE_COMPANION_INVALID',
+        code: policy ? error.code : 'FREE_COMPANION_INVALID',
       });
     }
   });
 
-  app.get('/v1/billing/subscription', { preHandler: [authenticate] }, async (request) => {
+  app.get('/v1/billing/subscription', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
-    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (billingReadRequired(ctx, reply)) return;
+    const result = await db.execute(sql`
+      SELECT s.id FROM subscriptions s
+      JOIN tenants t ON t.id=${ctx.tenantId} AND t.owner_user_id=s.user_id
+      WHERE s.tenant_id=${ctx.tenantId}
+        AND s.legacy_access_grandfathered_at IS NOT NULL
+      ORDER BY s.created_at DESC
+      LIMIT 1
+    `);
+    const legacyId = result.rows[0]?.id;
+    const [sub] = typeof legacyId === 'string'
+      ? await db.select().from(subscriptions).where(eq(subscriptions.id, legacyId)).limit(1)
+      : [];
     let plan = null;
     if (sub) {
       [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
     }
-    const limits = await getUserPlanLimits(user.id);
-    return { subscription: sub || null, plan, limits };
+    const [tenantOwner] = await db.select({ ownerUserId: tenants.ownerUserId })
+      .from(tenants).where(eq(tenants.id, ctx.tenantId)).limit(1);
+    const limits = await getUserPlanLimits(tenantOwner?.ownerUserId ?? user.id, ctx.tenantId);
+    return {
+      subscription: sub ? {
+        id: sub.id,
+        status: sub.status,
+        cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+        currentPeriodStart: sub.currentPeriodStart,
+        currentPeriodEnd: sub.currentPeriodEnd,
+        trialEnd: sub.trialEnd,
+      } : null,
+      plan: plan ? {
+        id: plan.id,
+        slug: plan.slug,
+        name: plan.name,
+        price: plan.price,
+        interval: plan.interval,
+        limits: {
+          maxWorkspaces: plan.maxWorkspaces,
+          maxProjects: plan.maxProjects,
+          maxTasks: plan.maxTasks,
+          maxTeamMembers: plan.maxTeamMembers,
+          maxAiActionsPerMonth: plan.maxAiActionsPerMonth,
+        },
+        features: {
+          exports: plan.hasExports,
+          automation: plan.hasAutomation,
+          templates: plan.hasTemplates,
+          advancedAnalytics: plan.hasAdvancedAnalytics,
+        },
+      } : null,
+      limits,
+    };
   });
 
   app.get('/v1/billing/usage', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const ctx = await resolveTenantContext(request);
     if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-    const { config, subscription } = await getUserPlanConfig(user.id);
+    const [tenantOwner] = await db.select({ ownerUserId: tenants.ownerUserId })
+      .from(tenants).where(eq(tenants.id, ctx.tenantId)).limit(1);
+    const { config, subscription } = await getUserPlanConfig(tenantOwner?.ownerUserId ?? user.id, ctx.tenantId);
     const usage = await getUserUsageSummary(user.id, ctx.tenantId);
     return {
       plan: {
@@ -198,7 +317,10 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       metadata: modules.metadata,
     })
       .from(modules)
-      .where(isNull(modules.archivedAt))
+      .where(and(
+        isNull(modules.archivedAt),
+        inArray(modules.slug, COMPANION_MODULES.map(module => module.key)),
+      ))
       .orderBy(asc(modules.ord), asc(modules.slug));
     const addons = addonRows.map(row => {
       const cents = (row.metadata as Record<string, unknown> | null)?.addonPriceCents;
@@ -210,6 +332,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     });
 
     return {
+      legacyPlansSalesStatus: 'grandfathered_only',
       plans: PLAN_CONFIGS.map(p => {
         // Task #66 round 3: thread shared display pricing through to the
         // BillingPage so the UI never re-derives annual cost from monthly.
@@ -223,6 +346,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
           limits: p.limits, features: p.features,
           displayMonthlyPriceCents: cat?.monthlyPriceCents ?? p.price,
           displayAnnualPriceCents: cat?.annualPriceCents ?? null,
+          salesStatus: 'grandfathered_only',
         };
       }),
       addons,
@@ -251,48 +375,30 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/billing/subscribe', { preHandler: [authenticate] }, async (request, reply) => {
-    const user = (request as any).user;
-    const body = (request.body ?? {}) as { planSlug?: string; interval?: string };
-    const planSlug = body.planSlug;
-    // Task #66: monthly | annual selector. Defaults to monthly so legacy
-    // clients keep working. Anything other than the two known values is
-    // rejected to avoid accidentally mapping to a wrong Stripe price.
-    const interval: 'month' | 'year' =
-      body.interval === 'year' || body.interval === 'annual' ? 'year' : 'month';
-
     try {
       const ctx = await resolveTenantContext(request);
       if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-      if (!planSlug) return reply.code(400).send({ error: 'planSlug is required', code: 'PLAN_SLUG_REQUIRED' });
-      const result = await subscribeToPlan(user.id, ctx.tenantId, planSlug, interval);
-      return result;
+      if (ownerRequired(ctx, reply)) return;
+      return legacyPlanSalesClosed();
     } catch (err: unknown) {
+      if (err instanceof CommercePolicyError) {
+        return reply.code(err.httpStatus).send({ error: err.message, code: err.code });
+      }
       const message = err instanceof Error ? err.message : 'Subscription failed';
       return reply.code(400).send({ error: message });
     }
   });
 
   app.post('/v1/billing/create-checkout-session', { preHandler: [authenticate] }, async (request, reply) => {
-    const user = (request as any).user;
-    const body = (request.body ?? {}) as { planSlug?: string; interval?: string };
-    const planSlug = body.planSlug;
-    const interval: 'month' | 'year' =
-      body.interval === 'year' || body.interval === 'annual' ? 'year' : 'month';
-
-    if (!planSlug) {
-      return reply.code(400).send({ error: 'planSlug is required', code: 'PLAN_SLUG_REQUIRED' });
-    }
-    if (!isStripeEnabled()) {
-      return reply.code(400).send({
-        error: 'Stripe is not configured. Subscriptions are managed locally.',
-        mode: 'local',
-      });
-    }
-
     try {
-      const result = await createCheckoutSession(user.id, planSlug, interval);
-      return result;
+      const ctx = await resolveTenantContext(request);
+      if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      if (ownerRequired(ctx, reply)) return;
+      return legacyPlanSalesClosed();
     } catch (err: unknown) {
+      if (err instanceof CommercePolicyError) {
+        return reply.code(err.httpStatus).send({ error: err.message, code: err.code });
+      }
       const errCode = (err as { code?: string })?.code;
       const message = err instanceof Error ? err.message : 'Checkout failed';
       const httpCode = errCode === 'NO_STRIPE_PRICE_FOR_INTERVAL' ? 409 : 400;
@@ -302,6 +408,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
 
   app.post('/v1/billing/create-portal-session', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (ownerRequired(ctx, reply)) return;
 
     if (!isStripeEnabled()) {
       return reply.code(400).send({
@@ -311,9 +420,10 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = await createPortalSession(user.id);
+      const result = await createPortalSession(user.id, ctx.tenantId);
       await writeAudit({
         actorUserId: user.id,
+        tenantId: ctx.tenantId,
         targetType: 'user',
         targetId: user.id,
         action: 'billing_portal_opened',
@@ -321,102 +431,81 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }, request);
       return result;
     } catch (err: any) {
+      if (err instanceof CommercePolicyError) {
+        return reply.code(err.httpStatus).send({ error: err.message, code: err.code });
+      }
       return reply.code(400).send({ error: err.message });
     }
   });
 
-  app.post('/v1/billing/cancel', { preHandler: [authenticate] }, async (request) => {
+  app.post('/v1/billing/cancel', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
-    return await cancelSubscription(user.id);
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (ownerRequired(ctx, reply)) return;
+    try {
+      return await cancelSubscription(user.id, ctx.tenantId);
+    } catch (error) {
+      if (error instanceof CommercePolicyError) {
+        return reply.code(error.httpStatus).send({ error: error.message, code: error.code });
+      }
+      throw error;
+    }
   });
 
-  app.post('/v1/billing/reactivate', { preHandler: [authenticate] }, async (request) => {
+  app.post('/v1/billing/reactivate', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
-    return await reactivateSubscription(user.id);
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (ownerRequired(ctx, reply)) return;
+    try {
+      return await reactivateSubscription(user.id, ctx.tenantId);
+    } catch (error) {
+      if (error instanceof CommercePolicyError) {
+        return reply.code(error.httpStatus).send({ error: error.message, code: error.code });
+      }
+      throw error;
+    }
   });
 
-  app.get('/v1/billing/history', { preHandler: [authenticate] }, async (request) => {
-    const user = (request as any).user;
+  app.get('/v1/billing/history', { preHandler: [authenticate] }, async (request, reply) => {
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (billingReadRequired(ctx, reply)) return;
     const events = await db.select().from(billingEvents)
-      .where(eq(billingEvents.userId, user.id))
+      .where(eq(billingEvents.tenantId, ctx.tenantId))
       .orderBy(desc(billingEvents.createdAt))
       .limit(50);
-    return { events };
+    return {
+      events: events.map(event => {
+        const metadata = (event.metadata ?? {}) as Record<string, unknown>;
+        return {
+          id: event.id,
+          eventType: event.eventType,
+          amount: event.amount,
+          currency: event.currency,
+          createdAt: event.createdAt,
+          metadata: {
+            coreProduct: typeof metadata.coreProduct === 'string' ? metadata.coreProduct : null,
+            planSlug: typeof metadata.planSlug === 'string' ? metadata.planSlug : null,
+            moduleSlug: typeof metadata.moduleSlug === 'string' ? metadata.moduleSlug : null,
+          },
+        };
+      }),
+    };
   });
 
   // -------------------------------------------------------------------------
   // Add-on subscriptions (per-module)
   // -------------------------------------------------------------------------
   app.post('/v1/billing/addons/subscribe', { preHandler: [authenticate] }, async (request, reply) => {
-    const user = (request as any).user;
-    const { moduleSlug } = request.body as any;
-    if (!moduleSlug) return reply.code(400).send({ error: 'moduleSlug is required' });
     try {
-      // Gate 2: thread tenant scope into Stripe metadata so the webhook
-      // can promote the right pending row and the right tenant gets the
-      // entitlement. Precedence matches resolveTenantContext: explicit
-      // body > X-Tenant-Id header > user.currentTenantId.
-      const headerVal = request.headers['x-tenant-id'];
-      const headerTenantId = Array.isArray(headerVal) ? headerVal[0] : headerVal;
-      const bodyTenantId = (request.body as any)?.tenantId;
-      const tenantId: string | null =
-        (typeof bodyTenantId === 'string' && bodyTenantId) ||
-        (typeof headerTenantId === 'string' && headerTenantId) ||
-        user.currentTenantId || null;
-
-      // Gate 2 — broken-access-control fix: a tenantId from any source must
-      // be authorized for this user. Super admins bypass via platformRole.
-      // Without this, a member of tenant A could open a checkout that gets
-      // billed to tenant B (whose entitlement they'd then receive via the
-      // webhook). canPurchaseAddon also enforces module existence,
-      // purchasability, and the no-double-buy invariant in one shot.
-      if (tenantId && !hasPlatformAdminAuthority(user)) {
-        const check = await canPurchaseAddon(user.id, tenantId, moduleSlug);
-        if (!check.allowed) {
-          // Mirror the documented HTTP code policy:
-          //   TENANT_NOT_FOUND      -> 404 (anti-enumeration)
-          //   MODULE_NOT_FOUND      -> 404
-          //   TENANT_ROLE_INSUFFICIENT -> 403
-          //   ADDON_NOT_PURCHASABLE -> 409
-          //   ADDON_ALREADY_ACTIVE  -> 409
-          const status =
-            check.code === 'TENANT_NOT_FOUND' || check.code === 'MODULE_NOT_FOUND' ? 404 :
-            check.code === 'TENANT_ROLE_INSUFFICIENT' ? 403 : 409;
-          return reply.code(status).send({ error: check.reason, code: check.code });
-        }
-      }
-
-      const result = await subscribeToAddon(user.id, moduleSlug, {
-        tenantId,
-        initiatedByUserId: user.id,
-      });
-
-      // Audit: a checkout intent was created. The webhook handler will
-      // log the eventual settlement; this row marks the click.
-      try {
-        await writeAudit({
-          actorUserId: user.id,
-          tenantId,
-          targetType: 'addon_subscription',
-          targetId: null,
-          action: 'addon_checkout_initiated',
-          extra: {
-            moduleSlug,
-            mode: result.action,
-            hasCheckoutUrl: !!result.checkoutUrl,
-          },
-          ipAddress: request.ip,
-        }, request);
-      } catch (auditErr) {
-        request.log.warn({ err: auditErr }, 'addon checkout audit failed');
-      }
-
-      return result;
+      const ctx = await resolveTenantContext(request);
+      if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      if (ownerRequired(ctx, reply)) return;
+      return legacyAddonSalesClosed();
     } catch (err: any) {
-      // Distinguish billing-not-configured (409 + code) from generic
-      // 400s (e.g. unknown module slug) so clients can react correctly
-      // and audit consumers can identify config-bypass attempts.
-      if (err instanceof AddonNotPurchasableError) {
+      if (err instanceof CommercePolicyError) {
         return reply.code(err.httpStatus).send({ error: err.message, code: err.code });
       }
       return reply.code(400).send({ error: err.message });
@@ -428,7 +517,10 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     const { moduleSlug } = request.body as any;
     if (!moduleSlug) return reply.code(400).send({ error: 'moduleSlug is required' });
     try {
-      const result = await cancelAddon(user.id, moduleSlug);
+      const ctx = await resolveTenantContext(request);
+      if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      if (ownerRequired(ctx, reply)) return;
+      const result = await cancelAddon(user.id, ctx.tenantId, moduleSlug);
       if (!result.ok) return reply.code(400).send(result);
       return result;
     } catch (err: any) {
@@ -496,10 +588,31 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       // running side effects. Handler outcome updates the claim row with
       // processed_at or error_message so admin DLQ retry can see it.
       const classification = classifyWebhookEvent(event);
-      const { claimedRowId, isDuplicate } = await claimStripeEvent(event, classification);
+      const { claimedRowId, isDuplicate, duplicateState } = await claimStripeEvent(event, classification);
 
       if (isDuplicate) {
         const kind = classification.isFeatureAddon ? 'feature_addon' : classification.isAddon ? 'addon' : 'plan';
+        if (duplicateState === 'payload_mismatch') {
+          return reply.code(400).send({
+            received: false,
+            kind,
+            handled: false,
+            code: 'STRIPE_EVENT_ID_PAYLOAD_MISMATCH',
+          });
+        }
+        if (duplicateState === 'in_flight') {
+          // The first worker may still succeed, but a 2xx here would tell
+          // Stripe to discard its retry schedule even if that worker crashes
+          // before committing the side effect. Keep provider retry alive; a
+          // later redelivery either observes `processed` or reclaims the
+          // expired processing lease on the same immutable event row.
+          return reply.code(503).send({
+            received: true,
+            kind,
+            handled: false,
+            code: 'WEBHOOK_PROCESSING_IN_PROGRESS',
+          });
+        }
         console.log(`[billing webhook] ${event.type} (${kind}): duplicate event, no-op`);
         return { received: true, kind, handled: true, action: 'duplicate_ignored' };
       }
@@ -515,7 +628,11 @@ export async function registerBillingRoutes(app: FastifyInstance) {
             : await processWebhookEvent(event);
       } catch (err: any) {
         if (claimedRowId) await markStripeEventFailed(claimedRowId, err.message ?? String(err));
-        throw err;
+        return reply.code(503).send({
+          received: true,
+          handled: false,
+          code: 'WEBHOOK_PROCESSING_RETRY_REQUIRED',
+        });
       }
 
       if (claimedRowId) {
@@ -523,6 +640,11 @@ export async function registerBillingRoutes(app: FastifyInstance) {
           await markStripeEventProcessed(claimedRowId, result.action);
         } else {
           await markStripeEventFailed(claimedRowId, result.error ?? 'not_handled');
+          return reply.code(503).send({
+            received: true,
+            handled: false,
+            code: 'WEBHOOK_PROCESSING_RETRY_REQUIRED',
+          });
         }
       }
 

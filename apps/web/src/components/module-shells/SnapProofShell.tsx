@@ -8,6 +8,7 @@ import { Activity, BriefcaseBusiness, ExternalLink, Fingerprint, Grid2X2, LifeBu
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { SNAPPROOF_NAVIGATION, SNAPPROOF_THEME, resolveSnapProofRoute } from './SnapProofRoute.contract';
@@ -36,15 +37,22 @@ export default function SnapProofShell({ routePath }: SnapProofShellProps) {
     items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })),
   })), [hrefFor]);
   const platformAdmin = user?.platformRole === 'super_admin';
+  const moduleAccessLevel = useModuleAccessLevel();
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin');
   const roleLabel = platformAdmin
     ? 'Platform administrator'
-    : activeRole === 'owner'
-      ? 'Organization owner'
-      : activeRole === 'admin'
-        ? 'Organization administrator'
-        : activeRole === 'viewer'
-          ? 'Read-only observer'
-          : 'Field operator';
+    : !canWriteModule
+      ? 'Read-only access'
+      : activeRole === 'owner'
+        ? 'Organization owner'
+        : activeRole === 'admin'
+          ? 'Organization administrator'
+          : moduleAccessLevel === 'manager'
+            ? 'Proof manager'
+            : 'Field operator';
   const pageAction = route.area === 'jobs'
     ? null
     : route.area === 'settings' && platformAdmin
@@ -59,7 +67,7 @@ export default function SnapProofShell({ routePath }: SnapProofShellProps) {
       currentPath={hrefFor(route.canonicalPath)}
       navigation={navigation}
       brand={<Link href={hrefFor('/')} className="snapproof-brand"><span><Fingerprint size={20} /></span><strong>SnapProofOS</strong></Link>}
-      organization={{ label: 'Organization', value: activeTenant?.name ?? tenantId ?? 'No organization selected', testId: 'snapproofos-tenant-badge' }}
+      organization={{ label: 'Organization', value: activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected'), testId: 'snapproofos-tenant-badge' }}
       accessContext={{ label: 'Access', value: roleLabel, testId: 'snapproofos-role-badge' }}
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'snapproofos-return-command-center' },
@@ -68,14 +76,14 @@ export default function SnapProofShell({ routePath }: SnapProofShellProps) {
       ]}
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
       state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}
-      stateMessage={!tenantId ? 'Choose an organization in My Apps before opening tenant-scoped proof work.' : undefined}
+      stateMessage={!tenantId ? 'Choose an organization in My Apps before opening its field-proof work.' : undefined}
       pageHeaderTestId="snapproofos-module-header"
       mobileNavigation="drawer"
       testId="snapproofos-module-shell"
       dataAttributes={{ 'data-snapproofos-route': route.area }}
     >
       <style>{routeCss}</style>
-      {tenantId && <SnapProofWorkspace key={`${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} hrefFor={hrefFor} />}
+      {tenantId && <SnapProofWorkspace key={`${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} tenantKey={tenantId} hrefFor={hrefFor} canWrite={canWriteModule} canManage={canManageModule} />}
     </ModuleApplicationShell>
   );
 }

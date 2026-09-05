@@ -408,6 +408,12 @@ export async function registerNinjaLaunchKitRoutes(app: FastifyInstance) {
             readiness: evidence,
           });
         }
+        if (input.externalLaunchConfirmed !== true || String(input.externalLaunchEvidence ?? '').trim().length < 8) {
+          return reply.code(409).send({
+            error: 'Confirm the external release and record where it was verified before completing this release record',
+            code: 'LAUNCHKIT_EXTERNAL_CONFIRMATION_REQUIRED',
+          });
+        }
       }
       const updated = await db.execute(sql`
         UPDATE launchkit_launches SET
@@ -423,6 +429,9 @@ export async function registerNinjaLaunchKitRoutes(app: FastifyInstance) {
       if (!updated.rows[0]) return conflict(reply, 'launch');
       await activity(request, 'launch.updated', 'launchkit_launch', id, 'Launch workspace updated.', {
         status: merged.status,
+        externalLaunchConfirmed: merged.status === 'launched' ? input.externalLaunchConfirmed === true : undefined,
+        externalLaunchEvidence: merged.status === 'launched' ? input.externalLaunchEvidence : undefined,
+        externalActionPerformedByOperatorOS: false,
       });
       return reply.send({ launch: camel(updated.rows[0] as Row), readiness: await readiness(tenantId, updated.rows[0] as Row) });
     } catch (error) {

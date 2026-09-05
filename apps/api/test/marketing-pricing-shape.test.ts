@@ -93,12 +93,12 @@ test('duplicate/free companion selections cannot be billed as additional modules
 
 test('pricing surface contains required product and configurator labels', () => {
   for (const copy of [
-    'OperatorOS command layer',
-    'Fully Unlocked',
+    'OperatorOS home base',
+    'All current features included',
     '5 Seats Included',
-    'Build Your Stack',
-    'Included Companion Module',
-    'Additional Modules',
+    'Build Your Application Stack',
+    'Included Organization-wide Companion',
+    'Additional Organization-wide Companions',
     'Additional Seats',
     'no credit card required',
   ]) {
@@ -125,12 +125,13 @@ test('pricing FAQ contains all finalized questions', () => {
   for (const question of [
     'What is OperatorOS?',
     'Do I pay for OperatorOS?',
-    'What comes with a main module?',
+    'What comes with a flagship application?',
     'How many seats are included?',
     'Can I buy more seats?',
     'Which apps are free with any account?',
-    'How does the included companion application work?',
-    'What do additional companion applications cost?',
+    'How does the included companion work?',
+    'What do additional companions cost?',
+    'Can I pay annually?',
     'Is PulseDesk only for healthcare?',
     'What happens if I cancel?',
   ]) {
@@ -155,15 +156,18 @@ test('public pricing files do not contain retired packaging copy', () => {
 
 test('signed-in billing separates the app stack from workspace capacity', () => {
   for (const copy of [
-    'Workspace plan and billing',
-    'Your tools and team access',
-    'Compare OperatorOS plans',
-    'Review tool packages',
+    'Organization billing',
+    'Application Stack is the forward offer',
+    'Grandfathered legacy contract',
+    'No paid subscription',
   ]) {
     assert.match(billingPage, new RegExp(copy));
   }
-  assert.match(upgradeModal, /Compare OperatorOS plans/);
-  assert.match(upgradeModal, /Compare tool packages/);
-  assert.match(appsPage, /View plan options/);
+  assert.match(upgradeModal, /Build an Application Stack/);
+  assert.match(upgradeModal, /Only the organization owner/);
+  assert.match(appsPage, /Configure Application Stack/);
+  assert.doesNotMatch(billingPage, /billingApi\.subscribe\s*\(/);
+  assert.doesNotMatch(upgradeModal, /billingApi\.subscribe\s*\(/);
+  assert.doesNotMatch(appsPage, /modulesApi\.subscribeAddon\s*\(/);
   assert.doesNotMatch(appsPage, /Min plan:/);
 });

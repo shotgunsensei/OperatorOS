@@ -90,7 +90,7 @@ test('Phase 35 shell supersedes the Phase 11E boundary with persisted live-call 
   assert.match(shell, /Versioned call flows/);
   assert.match(shell, /Live switchboard/);
   assert.match(shell, /Rules and action dispatch/);
-  assert.match(shell, /Twilio voice provider unavailable/);
-  assert.match(shell, /fail honestly/);
+  assert.match(shell, /Twilio setup needed/);
+  assert.match(shell, /remain unavailable until an administrator connects Twilio/);
   assert.doesNotMatch(shell, /simulated with a stub|recordingUrl|openExternal\(.*recording/i);
 });

@@ -79,10 +79,11 @@ test('Torque Assist UI/API routes and release verification are registered withou
   assert.match(billingRoutes, /\/v1\/billing\/webhook/);
   assert.doesNotMatch(routes, /body\.tenantId|input\.tenantId|body\.userId|input\.userId/);
   assert.match(web, /data-testid="torqueshed-torque-assist"/);
-  assert.match(web, /Retry same request without duplicate charge/);
-  assert.match(web, /ledger units/);
-  assert.match(web, /Facts and assumptions/);
-  assert.match(web, /Ranked hypotheses/);
+  assert.match(web, /Retry without another charge/);
+  assert.match(web, /Your previous result was restored; you were not charged again/);
+  assert.match(web, /Total credits/);
+  assert.match(web, /What we know and what we are assuming/);
+  assert.match(web, /Most likely causes/);
   assert.match(web, /Safety warnings/);
   assert.match(web, /Recommended tests/);
   assert.match(web, /Verifying payment/);

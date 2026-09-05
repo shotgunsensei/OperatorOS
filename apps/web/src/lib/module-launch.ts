@@ -53,17 +53,17 @@ function launchUrlFromResponse(data: ModuleLaunchResponse): string | null {
 
 export function friendlyModuleLaunchError(err: unknown): string {
   const e = err as { status?: number; code?: string; message?: string } | null;
-  if (!e) return 'Module launch failed.';
-  if (e.code === 'MODULE_ACCESS_DENIED') return 'Access denied for the selected tenant.';
-  if (e.code === 'MODULE_DISABLED') return 'This module is currently disabled.';
-  if (e.code === 'MODULE_UNAVAILABLE') return 'This module is not available yet.';
-  if (e.code === 'TENANT_REQUIRED') return 'Select a tenant before launching this module.';
-  if (e.code === 'TENANT_NOT_FOUND') return 'The selected tenant is not available.';
-  if (e.code === 'TENANT_SUSPENDED') return 'This tenant is suspended.';
-  if (e.code === 'SSO_SECRET_NOT_CONFIGURED') return 'SSO is not configured for launches.';
-  if (e.code === 'RATE_LIMITED') return 'Too many launch attempts. Try again shortly.';
-  if (e.status === 0 || e.code === 'NETWORK_ERROR') return 'Network failure while issuing SSO handoff.';
-  return e.message || 'Module launch failed.';
+  if (!e) return 'The application could not be opened. Try again.';
+  if (e.code === 'MODULE_ACCESS_DENIED') return 'You do not have access to this application for the selected organization.';
+  if (e.code === 'MODULE_DISABLED') return 'This application is currently unavailable.';
+  if (e.code === 'MODULE_UNAVAILABLE') return 'This application is not available yet.';
+  if (e.code === 'TENANT_REQUIRED') return 'Choose an organization before opening this application.';
+  if (e.code === 'TENANT_NOT_FOUND') return 'The selected organization is no longer available.';
+  if (e.code === 'TENANT_SUSPENDED') return 'This organization is currently paused. Ask an owner or administrator for help.';
+  if (e.code === 'SSO_SECRET_NOT_CONFIGURED') return 'Secure sign-in for this application is not ready. Ask an administrator for help.';
+  if (e.code === 'RATE_LIMITED') return 'Too many attempts. Wait a moment, then try opening the application again.';
+  if (e.status === 0 || e.code === 'NETWORK_ERROR') return 'The connection was interrupted while opening the application. Try again.';
+  return 'The application could not be opened. Try again or contact support.';
 }
 
 export async function issueModuleLaunch(

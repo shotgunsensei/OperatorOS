@@ -16,7 +16,6 @@ import {
 import {
   findHelpGuide,
   findHelpPage,
-  HELP_CONTENT_VERSION,
   HELP_GUIDES,
   helpSearchText,
   type HelpGuide,
@@ -31,9 +30,9 @@ function pageAnchor(guide: HelpGuide, page: HelpPageGuide): string {
 }
 
 function kindLabel(kind: HelpGuide['kind']): string {
-  if (kind === 'main-module') return 'Main Module';
-  if (kind === 'companion-application') return 'Companion Application';
-  return 'Platform';
+  if (kind === 'main-module') return 'Main business app';
+  if (kind === 'companion-application') return 'Specialized app';
+  return 'OperatorOS';
 }
 
 function GuideCard({
@@ -58,7 +57,6 @@ function GuideCard({
         <span className={styles.summaryIcon}><ChevronRight size={18} aria-hidden="true" /></span>
         <span className={styles.pageIdentity}>
           <span className={styles.pageTitle}>{page.title}</span>
-          <code>{page.path}</code>
         </span>
         <span className={styles.guideBadge} style={{ borderColor: `${guide.accent}80`, color: guide.accent }}>
           {guide.name}
@@ -68,18 +66,18 @@ function GuideCard({
         <p className={styles.pageDescription}>{page.summary}</p>
         <div className={styles.guideColumns}>
           <section>
-            <h3><CheckCircle2 size={17} aria-hidden="true" /> What you can do</h3>
+            <h3><CheckCircle2 size={17} aria-hidden="true" /> What you will accomplish</h3>
             <ul>{page.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
           </section>
           <section>
-            <h3><BookOpenText size={17} aria-hidden="true" /> Normal workflow</h3>
+            <h3><BookOpenText size={17} aria-hidden="true" /> How to do it</h3>
             <ol>{page.workflow.map(step => <li key={step}>{step}</li>)}</ol>
           </section>
         </div>
         {page.access && (
           <div className={styles.boundary}>
             <CircleAlert size={17} aria-hidden="true" />
-            <div><strong>Access</strong><span>{page.access}</span></div>
+            <div><strong>Who can do this</strong><span>{page.access}</span></div>
           </div>
         )}
         {page.notes?.map(note => (
@@ -87,7 +85,7 @@ function GuideCard({
         ))}
         <div className={styles.cardActions}>
           <a href={page.href} className={styles.primaryAction}>
-            Open this page <ArrowUpRight size={15} aria-hidden="true" />
+            Go to {page.title} <ArrowUpRight size={15} aria-hidden="true" />
           </a>
           <button
             type="button"
@@ -170,9 +168,9 @@ export default function HelpCenter({
   }
 
   const guideGroups = [
-    { label: 'Platform', guides: HELP_GUIDES.filter(guide => guide.kind === 'platform') },
-    { label: 'Main Modules', guides: HELP_GUIDES.filter(guide => guide.kind === 'main-module') },
-    { label: 'Companion Applications', guides: HELP_GUIDES.filter(guide => guide.kind === 'companion-application') },
+    { label: 'OperatorOS', guides: HELP_GUIDES.filter(guide => guide.kind === 'platform') },
+    { label: 'Main business apps', guides: HELP_GUIDES.filter(guide => guide.kind === 'main-module') },
+    { label: 'Specialized apps', guides: HELP_GUIDES.filter(guide => guide.kind === 'companion-application') },
   ];
 
   return (
@@ -181,8 +179,8 @@ export default function HelpCenter({
         <div className={styles.heroEyebrow}><LifeBuoy size={16} aria-hidden="true" /> OperatorOS Help Center</div>
         <h1>Find the exact page or function you need.</h1>
         <p>
-          Search the complete customer-facing guide for OperatorOS, Platform Command, every Main Module,
-          and every Companion Application. Each page explains its functions, normal workflow, and access boundary.
+          Search OperatorOS and every included app. Each guide explains what you can finish, how to do it,
+          and when an owner or administrator needs to help.
         </p>
         <div className={styles.searchWrap}>
           <label htmlFor="help-search">Search all help</label>
@@ -193,7 +191,7 @@ export default function HelpCenter({
               type="search"
               value={query}
               onChange={event => setQuery(event.target.value)}
-              placeholder="Try “invite a member”, “invoice”, “Torque Assist”, or “SSO replay”"
+              placeholder="Try “invite a team member”, “send an invoice”, “Torque Assist”, or “connect email”"
               autoComplete="off"
             />
             {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear help search"><X size={18} /></button>}
@@ -201,7 +199,7 @@ export default function HelpCenter({
           <div className={styles.stats} aria-label="Help Center coverage">
             <span><strong>{totals.guides}</strong> product guides</span>
             <span><strong>{totals.pages}</strong> page guides</span>
-            <span>Updated with guide contract {HELP_CONTENT_VERSION}</span>
+            <span>Step-by-step help for everyday work</span>
           </div>
         </div>
       </header>
@@ -238,7 +236,7 @@ export default function HelpCenter({
                 <div>
                   <span className={styles.contentKicker}>Search results</span>
                   <h2>{searchResults.length} {searchResults.length === 1 ? 'page matches' : 'pages match'} “{query.trim()}”</h2>
-                  <p>Results match page names, features, workflows, paths, access notes, and product descriptions.</p>
+                  <p>Results match page names, tasks, workflows, team permissions, and product descriptions.</p>
                 </div>
               </div>
               {searchResults.length > 0 ? (
@@ -252,7 +250,7 @@ export default function HelpCenter({
                     >
                       <span className={styles.productDot} style={{ background: result.guide.accent }} />
                       <span>
-                        <small>{result.guide.name} · {result.page.path}</small>
+                        <small>{result.guide.name}</small>
                         <strong>{result.page.title}</strong>
                         <span>{result.page.summary}</span>
                       </span>
@@ -264,7 +262,7 @@ export default function HelpCenter({
                 <div className={styles.emptyState} role="status">
                   <Search size={28} aria-hidden="true" />
                   <h3>No page guide matched that search.</h3>
-                  <p>Try a shorter action, product name, page title, role, or error concept.</p>
+                  <p>Try a shorter task, product name, page title, or team role.</p>
                   <button type="button" onClick={() => setQuery('')}>Clear search</button>
                 </div>
               )}
@@ -302,7 +300,7 @@ export default function HelpCenter({
           <section className={styles.supportCard}>
             <div>
               <Mail size={22} aria-hidden="true" />
-              <span><strong>Still need a person?</strong><small>Include the module, page path, organization name, and any safe error reference. Never email passwords, tokens, or secret values.</small></span>
+              <span><strong>Still need a person?</strong><small>Include the app, page name, organization name, and any support reference shown with the error. Never email passwords, tokens, or secret values.</small></span>
             </div>
             <a href="mailto:john@shotgunninjas.com?subject=OperatorOS%20support%20request">Email OperatorOS support</a>
           </section>

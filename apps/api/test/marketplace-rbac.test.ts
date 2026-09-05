@@ -6,7 +6,7 @@
  * locked-out users see *why* they're locked.
  *
  *   - Module they already have access to     -> cta=open
- *   - Module purchasable as add-on            -> cta=buy_addon
+ *   - Legacy module add-on metadata            -> no individual purchase CTA
  *   - Module reachable only by upgrading plan -> cta=upgrade
  *   - Module status=coming_soon                -> cta=coming_soon
  *
@@ -51,8 +51,9 @@ before(async () => {
     .where(eq(modules.id, upgradeMod.id));
   await db.insert(planModules).values({ planId: elitePlan.id, moduleId: upgradeMod.id });
 
-  // 3. Add-on purchasable module: high planMin but with addonPriceCents set
-  //    in metadata so entitlement-service offers the buy_addon CTA.
+  // 3. Legacy add-on metadata: individual application sales are closed by the
+  //    forward commerce model, so old metadata must not reopen a purchase CTA
+  //    or expose a retired per-module price.
   addonMod = await createTestModule();
   await db.update(modules).set({
     planMin: 'elite',
@@ -106,11 +107,11 @@ test('plan-locked modules with no addon surface cta=upgrade', async () => {
   assert.ok(row.upgrade_target_plan, 'upgrade CTA must include target plan');
 });
 
-test('plan-locked modules with addon price surface cta=buy_addon', async () => {
+test('legacy addon metadata cannot reopen individual module sales', async () => {
   const list = await fetchModules();
   const row = list.find(m => m.module.slug === addonMod.slug);
   assert.ok(row, 'addon-purchasable module must appear in catalog');
   assert.equal(row.unlocked, false);
-  assert.equal(row.cta, 'buy_addon');
-  assert.equal(row.addon_price_cents, 1500);
+  assert.equal(row.cta, 'upgrade');
+  assert.equal(row.addon_price_cents, null);
 });

@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { resolveEntitlements } from './entitlement-resolver.js';
+import { tenantHasActiveApplicationStackCompanion } from './product-entitlements.js';
 import { STUDYFORGE_PLAN_LIMITS, type StudyForgePlan } from './studyforge-phase33.js';
 
 type Executor = Pick<typeof db, 'execute'>;
@@ -18,12 +19,19 @@ export interface StudyForgeAccess {
     spacedRepetition: boolean;
     tutorGroups: boolean;
   };
-  source: 'module_feature' | 'tenant_entitlement' | 'default';
+  source: 'application_stack' | 'module_feature' | 'tenant_entitlement' | 'default';
 }
 
 export async function resolveStudyForgeAccess(userId: string, tenantId: string): Promise<StudyForgeAccess> {
   const snapshot = await resolveEntitlements(userId, tenantId);
   const module = snapshot?.modules.find((entry) => entry.slug === 'studyforge-ai');
+  if (module?.enabled && await tenantHasActiveApplicationStackCompanion(tenantId, 'studyforge-ai')) {
+    return {
+      plan: 'tutor',
+      limits: STUDYFORGE_PLAN_LIMITS.tutor,
+      source: 'application_stack',
+    };
+  }
   const configured = module?.features.studyforgePlan;
   let plan: StudyForgePlan = configured === 'tutor' || configured === 'pro' || configured === 'free'
     ? configured

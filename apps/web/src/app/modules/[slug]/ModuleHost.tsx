@@ -23,12 +23,12 @@ export default function ModuleHost({
     return (
       <ModuleState
         testId="module-host-unknown"
-        eyebrow="Unknown module host"
-        title="This OperatorOS module route is not registered."
+        eyebrow="Application unavailable"
+        title="We could not find this OperatorOS application."
         body={
           requestedHost
-            ? `${requestedHost} is not mapped to an active OperatorOS module.`
-            : 'The requested module slug is not mapped to the OperatorOS registry.'
+            ? 'This application address is not available. Return to My Apps or open Help.'
+            : 'Return to My Apps or open Help to choose an available application.'
         }
       />
     );
@@ -38,9 +38,9 @@ export default function ModuleHost({
     return (
       <ModuleState
         testId="module-host-unavailable"
-        eyebrow="Module unavailable"
+        eyebrow="Application unavailable"
         title={`${module.name} is not available right now.`}
-        body={`OperatorOS knows this module, but its registry status is ${module.status}.`}
+        body="Choose another application or contact support if you believe you should have access."
       />
     );
   }

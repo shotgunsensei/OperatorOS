@@ -88,11 +88,13 @@ test('catalog and billing surfaces provide specific actions and safe recovery', 
   assert.match(catalog, /Open \$\{m\.name\}/);
   assert.doesNotMatch(catalog, /STRIPE_PRICE_/);
 
-  assert.match(billing, /Workspace plan and billing/);
+  assert.match(billing, /Organization billing/);
   assert.match(billing, /Billing details could not be loaded/);
-  assert.match(billing, /Keep current plan/);
-  assert.match(billing, /Cancel plan at renewal/);
+  assert.match(billing, /Application Stack is the forward offer/);
+  assert.match(billing, /Manage payment method, invoices, or cancellation/);
   assert.match(billing, /No billing activity yet/);
+  assert.doesNotMatch(billing, /billingApi\.subscribe\s*\(/);
+  assert.doesNotMatch(billing, /billingApi\.(?:cancel|reactivate)\s*\(/);
   assert.doesNotMatch(billing, />Downgrade Warning</);
   assert.doesNotMatch(billing, />Are you sure\?</);
 });
@@ -142,8 +144,9 @@ test('six representative customer workflows expose a plain first action and trus
   assert.match(techDeck, /OperatorOS manages sign-in, subscription access, roles, and workspace membership/);
 
   assert.match(catalog, /How to get access/);
-  assert.match(catalog, /Purchase temporarily unavailable/);
-  assert.match(billing, /Nothing was charged and your current plan is unchanged/);
+  assert.match(catalog, /Configure Application Stack/);
+  assert.match(billing, /Only the organization owner can make billing changes/);
+  assert.match(billing, /nothing can be charged|Nothing changed|unchanged/i);
 });
 
 test('customer surfaces do not expose provider or migration implementation language', () => {

@@ -332,8 +332,12 @@ export async function registerTechDeckLiteralRoutes(app: FastifyInstance): Promi
         FROM shared_api_tokens token JOIN shared_service_identities identity ON identity.tenant_id=token.tenant_id AND identity.id=token.service_identity_id
         WHERE token.tenant_id=${tenantId} AND identity.module_id=${moduleId} ORDER BY token.created_at DESC LIMIT 200`),
       listOutboundWebhookEndpoints({ tenantId, moduleId }),
-      db.execute(sql`SELECT id,export_type,format,status,result_attachment_id,last_error_code,created_at,completed_at,expires_at
-        FROM shared_exports WHERE tenant_id=${tenantId} AND module_id=${moduleId} ORDER BY created_at DESC LIMIT 200`),
+      db.execute(sql`SELECT job_export.id,job_export.export_type,job_export.format,job_export.status,job_export.result_attachment_id,
+        job_export.last_error_code,job_export.created_at,job_export.completed_at,job_export.expires_at,attachment.scan_status AS attachment_scan_status
+        FROM shared_exports job_export LEFT JOIN shared_attachments attachment
+          ON attachment.tenant_id=job_export.tenant_id AND attachment.module_id=job_export.module_id AND attachment.id=job_export.result_attachment_id AND attachment.deleted_at IS NULL
+        WHERE job_export.tenant_id=${tenantId} AND job_export.module_id=${moduleId} AND job_export.export_type=${TECHDECK_COMPLIANCE_EXPORT_TYPE}
+        ORDER BY job_export.created_at DESC LIMIT 200`),
     ]);
     return {
       appointments: publicRows(appointments), schedules: publicRows(schedules), portalAssignments: publicRows(portal),
@@ -537,7 +541,66 @@ export async function registerTechDeckLiteralRoutes(app: FastifyInstance): Promi
   app.get('/v1/modules/techdeck/evidence/:evidenceId/files/:attachmentId/content',{preHandler:[...readGuards]},async(request,reply)=>{const{evidenceId,attachmentId}=request.params as{evidenceId:string;attachmentId:string};const link=await db.execute(sql`SELECT 1 FROM techdeck_evidence_file_links WHERE tenant_id=${tenant(request)} AND evidence_id=${evidenceId} AND shared_attachment_id=${attachmentId} AND deleted_at IS NULL LIMIT 1`);if(!link.rows[0])return reply.code(404).send({error:'Evidence file not found',code:'EVIDENCE_FILE_NOT_FOUND'});const result=await getAttachmentContent({tenantId:tenant(request),moduleId:await techDeckModuleId(),attachmentId});if(!result)return reply.code(404).send({error:'Evidence file not found',code:'EVIDENCE_FILE_NOT_FOUND'});return reply.type(String(result.metadata.detected_mime_type)).header('Content-Disposition',`inline; filename="${String(result.metadata.original_name).replace(/["\r\n]/g,'')}"`).send(result.content);});
 
   app.post('/v1/modules/techdeck/compliance-packets',{preHandler:[...writeGuards]},async(request,reply)=>{try{const input=body(request.body);const idempotencyKey=textValue(request.headers['idempotency-key'],'Idempotency-Key',200,true)!;const result=await requestSharedExport({tenantId:tenant(request),moduleId:await techDeckModuleId(),requestedByUserId:actor(request),exportType:TECHDECK_COMPLIANCE_EXPORT_TYPE,format:'zip',filters:objectValue(input.filters,'filters'),idempotencyKey,correlationId:request.id});return reply.code(result.duplicate?200:202).send(result);}catch(error){if(sendInputError(reply,error))return;throw error;}});
-  app.get('/v1/modules/techdeck/compliance-packets',{preHandler:[...readGuards]},async request=>({exports:publicRows(await db.execute(sql`SELECT id,status,result_attachment_id,last_error_code,created_at,completed_at,expires_at FROM shared_exports WHERE tenant_id=${tenant(request)} AND module_id=${await techDeckModuleId()} AND export_type=${TECHDECK_COMPLIANCE_EXPORT_TYPE} ORDER BY created_at DESC LIMIT 200`))}));
+  app.get('/v1/modules/techdeck/compliance-packets',{preHandler:[...readGuards]},async request=>({exports:publicRows(await db.execute(sql`
+    SELECT job_export.id,job_export.status,job_export.result_attachment_id,job_export.last_error_code,job_export.created_at,
+      job_export.completed_at,job_export.expires_at,attachment.scan_status AS attachment_scan_status
+    FROM shared_exports job_export LEFT JOIN shared_attachments attachment
+      ON attachment.tenant_id=job_export.tenant_id AND attachment.module_id=job_export.module_id AND attachment.id=job_export.result_attachment_id AND attachment.deleted_at IS NULL
+    WHERE job_export.tenant_id=${tenant(request)} AND job_export.module_id=${await techDeckModuleId()} AND job_export.export_type=${TECHDECK_COMPLIANCE_EXPORT_TYPE}
+    ORDER BY job_export.created_at DESC LIMIT 200
+  `))}));
+  app.get('/v1/modules/techdeck/compliance-packets/:id/download', { preHandler: [...readGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const tenantId = tenant(request);
+    const moduleId = await techDeckModuleId();
+    const exportResult = await db.execute(sql`
+      SELECT id, status, result_attachment_id, expires_at
+      FROM shared_exports
+      WHERE tenant_id=${tenantId} AND module_id=${moduleId} AND id=${id}
+        AND export_type=${TECHDECK_COMPLIANCE_EXPORT_TYPE}
+      LIMIT 1
+    `);
+    const exportRow = exportResult.rows[0] as Dict | undefined;
+    if (!exportRow) return reply.code(404).send({ error: 'Compliance package not found', code: 'TECHDECK_COMPLIANCE_PACKET_NOT_FOUND' });
+    if (String(exportRow.status) !== 'completed' || !exportRow.result_attachment_id) {
+      return reply.code(409).send({ error: 'This compliance package is still being prepared', code: 'TECHDECK_COMPLIANCE_PACKET_NOT_READY' });
+    }
+    if (exportRow.expires_at && new Date(String(exportRow.expires_at)).getTime() <= Date.now()) {
+      return reply.code(410).send({ error: 'This compliance package has expired. Build a new package to download current records.', code: 'TECHDECK_COMPLIANCE_PACKET_EXPIRED' });
+    }
+    try {
+      const attachment = await getAttachmentContent({
+        tenantId,
+        moduleId,
+        attachmentId: String(exportRow.result_attachment_id),
+        objectType: 'shared_export',
+        objectId: id,
+      });
+      if (!attachment) {
+        return reply.code(409).send({ error: 'The compliance package file is not available. Build a new package.', code: 'TECHDECK_COMPLIANCE_PACKET_FILE_UNAVAILABLE' });
+      }
+      await recordActivity({
+        tenantId,
+        actorUserId: actor(request),
+        objectType: 'techdeck_compliance_packet',
+        objectId: id,
+        eventType: 'compliance_packet_downloaded',
+        summary: 'Downloaded a TechDeck compliance package',
+        metadata: { attachmentId: String(exportRow.result_attachment_id) },
+        correlationId: request.id,
+      });
+      return reply
+        .type(String(attachment.metadata.detected_mime_type))
+        .header('Content-Disposition', `attachment; filename="${String(attachment.metadata.original_name).replace(/["\r\n]/g, '')}"`)
+        .header('Cache-Control', 'private, no-store')
+        .send(attachment.content);
+    } catch (error) {
+      const code = String((error as { code?: unknown })?.code ?? '');
+      if (code === 'ATTACHMENT_QUARANTINED') return reply.code(403).send({ error: 'The package did not pass file safety checks', code });
+      if (code.startsWith('ATTACHMENT_')) return reply.code(409).send({ error: 'The package is not ready to download', code });
+      throw error;
+    }
+  });
 
   app.get('/v1/modules/techdeck/intake/policies',{preHandler:[...adminGuards]},async request=>({policy:(await db.execute(sql`SELECT * FROM techdeck_intake_policies WHERE tenant_id=${tenant(request)} LIMIT 1`)).rows[0]??null}));
   app.put('/v1/modules/techdeck/intake/policies',{preHandler:[...adminGuards]},async(request,reply)=>{try{const input=body(request.body);const types=listValue(input.allowedFileTypes,'allowedFileTypes',20);const result=await db.execute(sql`INSERT INTO techdeck_intake_policies(tenant_id,allowed_file_types,max_file_size_bytes,default_expiration_hours,default_retention_days,require_password,compliance_notice,updated_by_user_id) VALUES (${tenant(request)},${JSON.stringify(types)}::jsonb,${integer(input.maxFileSizeBytes,'maxFileSizeBytes',1024,10485760,10485760)},${integer(input.defaultExpirationHours,'defaultExpirationHours',1,720,72)},${integer(input.defaultRetentionDays,'defaultRetentionDays',1,3650,30)},${booleanValue(input.requirePassword,'requirePassword',true)},${textValue(input.complianceNotice,'complianceNotice',8000)},${actor(request)}) ON CONFLICT(tenant_id) DO UPDATE SET allowed_file_types=EXCLUDED.allowed_file_types,max_file_size_bytes=EXCLUDED.max_file_size_bytes,default_expiration_hours=EXCLUDED.default_expiration_hours,default_retention_days=EXCLUDED.default_retention_days,require_password=EXCLUDED.require_password,compliance_notice=EXCLUDED.compliance_notice,updated_by_user_id=EXCLUDED.updated_by_user_id,version=techdeck_intake_policies.version+1,updated_at=NOW() RETURNING *`);return result.rows[0];}catch(error){if(sendInputError(reply,error))return;throw error;}});

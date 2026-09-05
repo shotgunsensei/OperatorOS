@@ -104,7 +104,7 @@ function ensurePatch(changes: ObjectValue) {
 
 export function parseBrandInput(input: unknown, mode: 'create' | 'patch') {
   const body = record(input);
-  knownFields(body, ['name', 'description', 'primaryColor', 'secondaryColor', 'accentColor', 'headingFont', 'bodyFont', 'voiceTone', 'guidelines', 'logoAttachmentId', 'assetSummary', 'expectedVersion']);
+  knownFields(body, ['name', 'description', 'primaryColor', 'secondaryColor', 'accentColor', 'headingFont', 'bodyFont', 'voiceTone', 'guidelines', 'assetSummary', 'expectedVersion']);
   const color = (value: unknown, field: string) => {
     const result = optionalText(value, field, 7);
     if (result && !HEX_COLOR.test(result)) throw new BrandForgeValidationError(`${field} must be a six-digit hex color`, field);
@@ -120,7 +120,6 @@ export function parseBrandInput(input: unknown, mode: 'create' | 'patch') {
     bodyFont: optionalText(body.bodyFont, 'bodyFont', 80),
     voiceTone: optionalText(body.voiceTone, 'voiceTone', 2_000),
     guidelines: optionalText(body.guidelines, 'guidelines', 12_000),
-    logoAttachmentId: uuid(body.logoAttachmentId, 'logoAttachmentId'),
     assetSummary: body.assetSummary === undefined ? undefined : strings(body.assetSummary, 'assetSummary', 30, 300),
   };
   if (mode === 'patch') ensurePatch(changes);

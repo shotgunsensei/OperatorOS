@@ -58,6 +58,7 @@ import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
 import { ensureCoreSuiteTrialTables } from './core-suite-trial-db-init.js';
+import { ensureForwardCommerceContract } from './application-stack-billing-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -129,6 +130,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   callcommand_commercial_runtime: ensureCallCommandCommercialTables,
   callcommand_managed_number_provisioning: ensureCallCommandManagedNumberTables,
   core_suite_trial_tables: ensureCoreSuiteTrialTables,
+  forward_commerce_contract: ensureForwardCommerceContract,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -299,6 +301,232 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       ,to_regclass('public.shared_event_inbox') IS NOT NULL AS shared_event_inbox
       ,to_regclass('public.shared_resource_links') IS NOT NULL AS shared_resource_links
       ,to_regclass('public.shared_workflow_compensations') IS NOT NULL AS shared_workflow_compensations
+      ,EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema='public'
+          AND table_name='shared_workflow_runs'
+          AND column_name='idempotency_scope'
+          AND data_type='character varying'
+          AND character_maximum_length=16
+          AND is_nullable='NO'
+          AND column_default IN ('''actor''::character varying','''actor''::text')
+      ) AS shared_workflow_runs_idempotency_scope_v2
+      ,EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema='public'
+          AND table_name='shared_domain_events'
+          AND column_name='signature_envelope_version'
+          AND data_type='integer'
+          AND is_nullable='NO'
+          AND regexp_replace(COALESCE(column_default,''), '[()[:space:]]', '', 'g')
+              IN ('1','1::integer')
+      ) AS shared_domain_events_signature_envelope_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_constraint constraint_row
+        WHERE constraint_row.conname='shared_workflow_run_idempotency_scope_check'
+          AND constraint_row.conrelid=to_regclass('public.shared_workflow_runs')
+          AND constraint_row.contype='c'
+          AND lower(regexp_replace(
+            replace(replace(replace(
+              pg_get_constraintdef(constraint_row.oid,TRUE),
+              '::character varying',''
+            ),'::text[]',''),'::text',''),
+            '[[:space:]()]','','g'
+          )) IN (
+            'checkidempotency_scope=anyarray[''tenant'',''actor'']',
+            'checkidempotency_scope=anyarray[''actor'',''tenant'']',
+            'checkidempotency_scope=anyarray[''tenant'',''actor'']notvalid',
+            'checkidempotency_scope=anyarray[''actor'',''tenant'']notvalid'
+          )
+      ) AS shared_workflow_run_idempotency_scope_check_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_constraint constraint_row
+        WHERE constraint_row.conname='shared_domain_event_signature_envelope_check'
+          AND constraint_row.conrelid=to_regclass('public.shared_domain_events')
+          AND constraint_row.contype='c'
+          AND lower(regexp_replace(
+            pg_get_constraintdef(constraint_row.oid,TRUE),
+            '[[:space:]()]','','g'
+          )) IN (
+            'checksignature_envelope_version>=1',
+            'checksignature_envelope_version>=1notvalid'
+          )
+      ) AS shared_domain_event_signature_envelope_check_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_class index_relation
+        JOIN pg_namespace index_namespace ON index_namespace.oid=index_relation.relnamespace
+        JOIN pg_index index_row ON index_row.indexrelid=index_relation.oid
+        WHERE index_namespace.nspname='public'
+          AND index_relation.relname='uq_shared_workflow_run_source_route'
+          AND index_relation.relkind='i'
+          AND index_row.indrelid=to_regclass('public.shared_workflow_runs')
+          AND index_row.indisunique
+          AND index_row.indisvalid
+          AND index_row.indisready
+          AND index_row.indpred IS NULL
+          AND index_row.indexprs IS NULL
+          AND index_row.indnatts=index_row.indnkeyatts
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(index_row.indkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=index_row.indrelid
+             AND attribute_row.attnum=key_column.attnum
+            WHERE key_column.position<=index_row.indnkeyatts
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','id','source_module_id']::text[]
+      ) AS shared_workflow_run_source_route_unique_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_class index_relation
+        JOIN pg_namespace index_namespace ON index_namespace.oid=index_relation.relnamespace
+        JOIN pg_index index_row ON index_row.indexrelid=index_relation.oid
+        WHERE index_namespace.nspname='public'
+          AND index_relation.relname='uq_shared_workflow_run_destination_route'
+          AND index_relation.relkind='i'
+          AND index_row.indrelid=to_regclass('public.shared_workflow_runs')
+          AND index_row.indisunique
+          AND index_row.indisvalid
+          AND index_row.indisready
+          AND index_row.indpred IS NULL
+          AND index_row.indexprs IS NULL
+          AND index_row.indnatts=index_row.indnkeyatts
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(index_row.indkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=index_row.indrelid
+             AND attribute_row.attnum=key_column.attnum
+            WHERE key_column.position<=index_row.indnkeyatts
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','id','destination_module_id','workflow_key']::text[]
+      ) AS shared_workflow_run_destination_route_unique_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_class index_relation
+        JOIN pg_namespace index_namespace ON index_namespace.oid=index_relation.relnamespace
+        JOIN pg_index index_row ON index_row.indexrelid=index_relation.oid
+        WHERE index_namespace.nspname='public'
+          AND index_relation.relname='uq_shared_domain_event_run_route'
+          AND index_relation.relkind='i'
+          AND index_row.indrelid=to_regclass('public.shared_domain_events')
+          AND index_row.indisunique
+          AND index_row.indisvalid
+          AND index_row.indisready
+          AND index_row.indpred IS NULL
+          AND index_row.indexprs IS NULL
+          AND index_row.indnatts=index_row.indnkeyatts
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(index_row.indkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=index_row.indrelid
+             AND attribute_row.attnum=key_column.attnum
+            WHERE key_column.position<=index_row.indnkeyatts
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','id','workflow_run_id']::text[]
+      ) AS shared_domain_event_run_route_unique_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_constraint constraint_row
+        WHERE constraint_row.conname='shared_domain_event_source_run_route_fk'
+          AND constraint_row.contype='f'
+          AND constraint_row.conrelid=to_regclass('public.shared_domain_events')
+          AND constraint_row.confrelid=to_regclass('public.shared_workflow_runs')
+          AND constraint_row.confmatchtype='s'
+          AND constraint_row.confupdtype='a'
+          AND constraint_row.confdeltype='c'
+          AND NOT constraint_row.condeferrable
+          AND NOT constraint_row.condeferred
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(constraint_row.conkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=constraint_row.conrelid
+             AND attribute_row.attnum=key_column.attnum
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','workflow_run_id','source_module_id']::text[]
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(constraint_row.confkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=constraint_row.confrelid
+             AND attribute_row.attnum=key_column.attnum
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','id','source_module_id']::text[]
+      ) AS shared_domain_event_source_run_route_fk_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_constraint constraint_row
+        WHERE constraint_row.conname='shared_event_inbox_event_run_route_fk'
+          AND constraint_row.contype='f'
+          AND constraint_row.conrelid=to_regclass('public.shared_event_inbox')
+          AND constraint_row.confrelid=to_regclass('public.shared_domain_events')
+          AND constraint_row.confmatchtype='s'
+          AND constraint_row.confupdtype='a'
+          AND constraint_row.confdeltype='c'
+          AND NOT constraint_row.condeferrable
+          AND NOT constraint_row.condeferred
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(constraint_row.conkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=constraint_row.conrelid
+             AND attribute_row.attnum=key_column.attnum
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','event_id','workflow_run_id']::text[]
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(constraint_row.confkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=constraint_row.confrelid
+             AND attribute_row.attnum=key_column.attnum
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','id','workflow_run_id']::text[]
+      ) AS shared_event_inbox_event_run_route_fk_v2
+      ,EXISTS (
+        SELECT 1
+        FROM pg_constraint constraint_row
+        WHERE constraint_row.conname='shared_event_inbox_destination_run_route_fk'
+          AND constraint_row.contype='f'
+          AND constraint_row.conrelid=to_regclass('public.shared_event_inbox')
+          AND constraint_row.confrelid=to_regclass('public.shared_workflow_runs')
+          AND constraint_row.confmatchtype='s'
+          AND constraint_row.confupdtype='a'
+          AND constraint_row.confdeltype='c'
+          AND NOT constraint_row.condeferrable
+          AND NOT constraint_row.condeferred
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(constraint_row.conkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=constraint_row.conrelid
+             AND attribute_row.attnum=key_column.attnum
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','workflow_run_id','destination_module_id','consumer_key']::text[]
+          AND ARRAY(
+            SELECT attribute_row.attname::text
+            FROM unnest(constraint_row.confkey::smallint[]) WITH ORDINALITY
+              AS key_column(attnum,position)
+            JOIN pg_attribute attribute_row
+              ON attribute_row.attrelid=constraint_row.confrelid
+             AND attribute_row.attnum=key_column.attnum
+            ORDER BY key_column.position
+          )=ARRAY['tenant_id','id','destination_module_id','workflow_key']::text[]
+      ) AS shared_event_inbox_destination_run_route_fk_v2
       ,to_regclass('public.torqueshed_stripe_credit_catalog') IS NOT NULL AS torqueshed_stripe_credit_catalog
       ,(
         SELECT COUNT(*) = 9
@@ -376,6 +604,70 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       AND to_regclass('public.uq_account_trials_identity_offer') IS NOT NULL
       AND to_regclass('public.uq_account_trials_user_offer') IS NOT NULL
       AS core_suite_trial_tables
+      ,EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='subscriptions'
+          AND column_name='legacy_access_grandfathered_at'
+      )
+      AND to_regclass('public.idx_subscriptions_legacy_access') IS NOT NULL
+      AND to_regclass('public.tenant_application_subscriptions') IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM (VALUES
+          ('id','NO'),('tenant_id','NO'),('initiated_by_user_id','YES'),
+          ('core_product','NO'),('included_companion_key','NO'),
+          ('additional_module_keys','NO'),('additional_seats','NO'),('status','NO'),
+          ('stripe_customer_id','NO'),('stripe_checkout_session_id','YES'),
+          ('stripe_subscription_id','YES'),('core_price_id','NO'),
+          ('companion_price_id','YES'),('additional_seat_price_id','YES'),
+          ('current_period_start','YES'),('current_period_end','YES'),
+          ('cancel_at_period_end','NO'),('metadata','NO'),('created_at','NO'),('updated_at','NO')
+        ) AS required(column_name,is_nullable)
+        LEFT JOIN information_schema.columns actual
+          ON actual.table_schema='public'
+         AND actual.table_name='tenant_application_subscriptions'
+         AND actual.column_name=required.column_name
+        WHERE actual.column_name IS NULL OR actual.is_nullable<>required.is_nullable
+      )
+      AND to_regclass('public.idx_tenant_application_subscriptions_status') IS NOT NULL
+      AND to_regclass('public.uq_tenant_application_subscriptions_customer') IS NOT NULL
+      AND to_regclass('public.uq_tenant_application_subscriptions_stripe_subscription') IS NOT NULL
+      AND to_regclass('public.uq_tenant_application_subscriptions_checkout_session') IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid='public.tenant_application_subscriptions'::regclass
+          AND conname='tenant_application_subscriptions_tenant_unique'
+          AND contype='u'
+      )
+      AND NOT EXISTS (
+        SELECT required.name
+        FROM (VALUES
+          ('tenant_application_subscriptions_pkey','p'),
+          ('tenant_application_subscriptions_tenant_id_fkey','f'),
+          ('tenant_application_subscriptions_initiated_by_user_id_fkey','f')
+        ) AS required(name,kind)
+        LEFT JOIN pg_constraint actual
+          ON actual.conrelid='public.tenant_application_subscriptions'::regclass
+         AND actual.conname=required.name
+         AND actual.contype=required.kind::"char"
+        WHERE actual.oid IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT required.name
+        FROM (VALUES
+          ('tenant_application_subscriptions_core_check'),
+          ('tenant_application_subscriptions_companion_check'),
+          ('tenant_application_subscriptions_modules_check'),
+          ('tenant_application_subscriptions_seats_check'),
+          ('tenant_application_subscriptions_status_check')
+        ) AS required(name)
+        LEFT JOIN pg_constraint actual
+          ON actual.conrelid='public.tenant_application_subscriptions'::regclass
+         AND actual.conname=required.name
+         AND actual.contype='c'
+        WHERE actual.oid IS NULL
+      )
+      AS forward_commerce_contract
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

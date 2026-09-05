@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import { authenticate } from '../lib/auth.js';
 import { requireTenantMember } from '../lib/tenant-auth.js';
 import {
   executeAiTool,
@@ -18,10 +17,12 @@ import { getUserPlanConfig } from '../lib/plans.js';
 import { getProviderInfo } from '../lib/ai-provider.js';
 
 export async function registerAiRoutes(app: FastifyInstance) {
-  // Read-only catalog: tool list + plan slug. No tenant scope needed.
-  app.get('/v1/ai/tools', { preHandler: [authenticate] }, async (request, reply) => {
+  // Tool availability is tenant-scoped because grandfathered plan authority is
+  // tenant-owned, even though the returned catalog itself is read-only.
+  app.get('/v1/ai/tools', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
-    const { config } = await getUserPlanConfig(user.id);
+    const ctx = (request as any).tenantContext;
+    const { config } = await getUserPlanConfig(user.id, ctx.tenantId);
     const tools = getToolsForPlan(config.slug);
     return { tools, plan: config.slug, provider: getProviderInfo() };
   });
@@ -94,7 +95,7 @@ export async function registerAiRoutes(app: FastifyInstance) {
   app.get('/v1/ai/templates', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
     const ctx = (request as any).tenantContext;
-    const { config } = await getUserPlanConfig(user.id);
+    const { config } = await getUserPlanConfig(user.id, ctx.tenantId);
     if (!config.features.templates) {
       return reply.status(403).send({
         error: 'Prompt templates require the Pro plan or higher.',
@@ -109,7 +110,7 @@ export async function registerAiRoutes(app: FastifyInstance) {
   app.post('/v1/ai/templates', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
     const ctx = (request as any).tenantContext;
-    const { config } = await getUserPlanConfig(user.id);
+    const { config } = await getUserPlanConfig(user.id, ctx.tenantId);
     if (!config.features.templates) {
       return reply.status(403).send({
         error: 'Prompt templates require the Pro plan or higher.',
@@ -136,7 +137,7 @@ export async function registerAiRoutes(app: FastifyInstance) {
   app.put('/v1/ai/templates/:id', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
     const ctx = (request as any).tenantContext;
-    const { config } = await getUserPlanConfig(user.id);
+    const { config } = await getUserPlanConfig(user.id, ctx.tenantId);
     if (!config.features.templates) {
       return reply.status(403).send({ error: 'Prompt templates require the Pro plan or higher.', code: 'FEATURE_LOCKED' });
     }
@@ -155,7 +156,7 @@ export async function registerAiRoutes(app: FastifyInstance) {
   app.delete('/v1/ai/templates/:id', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
     const ctx = (request as any).tenantContext;
-    const { config } = await getUserPlanConfig(user.id);
+    const { config } = await getUserPlanConfig(user.id, ctx.tenantId);
     if (!config.features.templates) {
       return reply.status(403).send({ error: 'Prompt templates require the Pro plan or higher.', code: 'FEATURE_LOCKED' });
     }

@@ -26,7 +26,7 @@ import {
   modules, planModules,
 } from '../schema.js';
 import {
-  getActiveSubscription, getUserModules,
+  getActiveSubscriptionForTenant, getUserModules,
 } from './entitlement-service.js';
 import { getUserPlanConfig } from './plans.js';
 import {
@@ -36,6 +36,7 @@ import {
   type StoredModuleAccessLevel, type PublicModuleRole,
 } from './role-aliases.js';
 import { hasPlatformAdminAuthority } from './rbac.js';
+import { subscriptionHasLegacyApplicationAccess } from './application-stack-billing-db-init.js';
 
 export const ENTITLEMENT_SNAPSHOT_VERSION = 1 as const;
 
@@ -128,14 +129,16 @@ export async function resolveEntitlements(
   // irrelevant here — they could be on Starter while their employer is
   // on Elite, and they get Elite-tier access through that tenant.
   const subscriptionOwnerId = tenant.ownerUserId || userId;
-  const sub = await getActiveSubscription(subscriptionOwnerId);
+  const sub = await getActiveSubscriptionForTenant(subscriptionOwnerId, tenantId);
   let subBlock: EntitlementSnapshot['subscription'] = null;
   let activePlanId: string | null = null;
   if (sub) {
     const [planRow] = await db.select().from(subscriptionPlans)
       .where(eq(subscriptionPlans.id, sub.planId)).limit(1);
     if (planRow) {
-      activePlanId = planRow.id;
+      // Legacy plan feature defaults are application entitlements. New plan
+      // assignments retain capacity behavior but do not unlock applications.
+      activePlanId = await subscriptionHasLegacyApplicationAccess(sub.id) ? planRow.id : null;
       subBlock = {
         status: sub.status,
         planSlug: planRow.slug,
@@ -214,7 +217,7 @@ export async function resolveEntitlements(
 
   // Tenant-authoritative limits + capabilities: derived from the OWNER's
   // plan config, not the calling user's. Same rationale as subscription.
-  const { config } = await getUserPlanConfig(subscriptionOwnerId);
+  const { config } = await getUserPlanConfig(subscriptionOwnerId, tenantId);
   const limits: Record<string, number | boolean> = { ...config.limits };
   const capabilities: Record<string, boolean> = { ...config.features };
 

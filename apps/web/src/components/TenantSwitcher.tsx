@@ -93,14 +93,14 @@ export default function TenantSwitcher() {
           minWidth: 0,
           maxWidth: 260,
         }}
-        title={activeTenant?.name || 'No tenant'}
+        title={activeTenant?.name || 'No organization'}
       >
         <Building2 size={14} style={{ color: colors.accent, flexShrink: 0 }} />
         <span
           data-testid="text-active-tenant"
           style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
         >
-          {loading ? 'Loading…' : (activeTenant?.name ?? 'No tenant')}
+          {loading ? 'Loading…' : (activeTenant?.name ?? 'No organization')}
         </span>
         {activeTenant?.role && (
           <span
@@ -143,7 +143,7 @@ export default function TenantSwitcher() {
           <SectionLabel>Your tenants</SectionLabel>
           {memberList.length === 0 && (
             <div style={{ padding: '8px 12px', fontSize: 12, color: colors.textMuted }}>
-              You are not a member of any tenant.
+              You are not a member of any organization.
             </div>
           )}
           {memberList.map((t) => (
@@ -215,15 +215,15 @@ function friendlySwitchError(err: unknown): string {
   const e = (err ?? {}) as { status?: number; code?: string; error?: string; message?: string };
   const serverMsg = e.error || e.message;
   if (e.code === 'TENANT_SUSPENDED') {
-    return serverMsg || 'That tenant is suspended. Contact your platform administrator.';
+    return serverMsg || 'That organization is suspended. Contact your platform administrator.';
   }
   if (e.code === 'TENANT_NOT_FOUND' || e.status === 404) {
-    return serverMsg || "That tenant isn't available. It may have been archived or removed.";
+    return serverMsg || "That organization isn't available. It may have been archived or removed.";
   }
   if (e.status === 403) {
-    return serverMsg || "You don't have access to that tenant.";
+    return serverMsg || "You don't have access to that organization.";
   }
-  return serverMsg || 'Could not switch tenant. Please try again.';
+  return serverMsg || 'Could not switch organizations. Please try again.';
 }
 
 // True when the failure indicates the tenant is no longer reachable for this
@@ -266,7 +266,7 @@ function TenantRow({
       data-testid={`button-pick-tenant-${tenant.id}`}
       onClick={onPick}
       disabled={busy}
-      title={inactive ? `Tenant is ${status}` : undefined}
+      title={inactive ? `Organization is ${status}` : undefined}
       style={{
         width: '100%',
         display: 'flex',

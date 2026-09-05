@@ -102,10 +102,10 @@ function AppsHero() {
           maxWidth: 680,
         }}
       >
-        OperatorOS is the central command layer for your product ecosystem — one
-        sign-on, one bill, one console. Pick an application below: if you already
-        have access it opens straight away, otherwise you can subscribe in a
-        couple of clicks.
+        OperatorOS is the home base for your product suite—one sign-in, one team,
+        one bill, and one place to open the work. Pick an application below: if
+        you already have access it opens straight away; otherwise you can review
+        the monthly Application Stack. Planned applications remain non-launching.
       </p>
     </header>
   );
@@ -155,8 +155,8 @@ function AppsCatalog() {
         </h2>
         <p style={{ fontSize: 15, color: brand.textSecondary, margin: 0, maxWidth: 640 }}>
           {user
-            ? 'Apps you have access to open in the console. Locked apps take you to pricing to unlock them.'
-            : 'Sign in or subscribe to launch any application from your OperatorOS console.'}
+            ? 'Applications available to your organization open from My Apps. Other live applications lead to the Application Stack; planned applications stay marked coming soon.'
+            : 'Sign in or review the Application Stack to open a live application from OperatorOS.'}
         </p>
       </div>
       <div
@@ -185,6 +185,7 @@ interface CardTarget {
   label: string;
   locked: boolean;
   pending: boolean;
+  disabled: boolean;
 }
 
 /**
@@ -194,24 +195,28 @@ interface CardTarget {
  */
 function resolveTarget(
   slug: string,
+  status: EcosystemModuleStatus,
   signedIn: boolean,
   authLoading: boolean,
   entitled: ReadonlySet<string> | null,
 ): CardTarget {
+  if (status === 'planned') {
+    return { href: '', label: 'Coming soon', locked: true, pending: false, disabled: true };
+  }
   if (authLoading) {
-    return { href: '/pricing', label: 'Checking access…', locked: false, pending: true };
+    return { href: '/pricing', label: 'Checking access…', locked: false, pending: true, disabled: false };
   }
   if (!signedIn) {
-    return { href: '/pricing', label: 'View plans', locked: true, pending: false };
+    return { href: '/pricing#build-stack', label: 'Review Application Stack', locked: true, pending: false, disabled: false };
   }
   // Signed in but entitlements still loading.
   if (entitled === null) {
-    return { href: '/pricing', label: 'Checking access…', locked: false, pending: true };
+    return { href: '/pricing', label: 'Checking access…', locked: false, pending: true, disabled: false };
   }
   if (entitled.has(slug)) {
-    return { href: `/app/apps/${slug}`, label: 'Open app', locked: false, pending: false };
+    return { href: `/app/apps/${slug}`, label: 'Open app', locked: false, pending: false, disabled: false };
   }
-  return { href: '/pricing', label: 'Get access', locked: true, pending: false };
+  return { href: '/pricing#build-stack', label: 'Review Application Stack', locked: true, pending: false, disabled: false };
 }
 
 function statusBadge(status: EcosystemModuleStatus): {
@@ -238,7 +243,7 @@ function statusBadge(status: EcosystemModuleStatus): {
     case 'planned':
     default:
       return {
-        label: 'Planned',
+        label: 'Coming soon',
         text: brand.statusComingSoonText,
         bg: brand.statusComingSoonBg,
         border: brand.statusComingSoonBorder,
@@ -270,7 +275,7 @@ function AppCard({
   entitled: ReadonlySet<string> | null;
 }) {
   const badge = statusBadge(m.status);
-  const target = resolveTarget(m.slug, signedIn, authLoading, entitled);
+  const target = resolveTarget(m.slug, m.status, signedIn, authLoading, entitled);
 
   const inner = (
     <>
@@ -333,7 +338,11 @@ function AppCard({
           letterSpacing: '0.04em',
         }}
       >
-        {m.category}
+        {m.category === 'ai'
+          ? 'AI-assisted work'
+          : m.category === 'support'
+            ? 'Service operations'
+            : 'Business operations'}
       </span>
 
       <p
@@ -382,6 +391,19 @@ function AppCard({
         aria-busy="true"
         aria-disabled="true"
         style={{ ...cardStyle, cursor: 'default', opacity: 0.85 }}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  if (target.disabled) {
+    return (
+      <div
+        data-testid={`card-app-${m.slug}`}
+        aria-disabled="true"
+        aria-label={`${m.name} — Coming soon`}
+        style={{ ...cardStyle, cursor: 'not-allowed', opacity: 0.72 }}
       >
         {inner}
       </div>

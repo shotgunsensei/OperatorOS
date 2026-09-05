@@ -22,7 +22,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import NinjaLaunchKitShell from './NinjaLaunchKitShell';
-import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import { ShellWorkspaceBadge, ShellLaunchButton } from './ShellChrome';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildDeployOpsWorkflowFocus, type DeployOpsExecutionSummary } from '@/lib/companion-workflow';
 
@@ -98,8 +98,25 @@ function message(error: unknown, fallback: string) {
   return (error as any)?.error || (error as any)?.message || fallback;
 }
 
+const READ_ONLY_MESSAGE = 'Your Deploy Ops access is read-only. Ask an organization owner or administrator for edit access.';
+const SHARED_REVIEW_MESSAGE = 'This package belongs to another teammate. You can review its saved deliverables and history, but only its owner can change it or create a new export.';
+
 function slugId() {
   return `ui-${crypto.randomUUID()}`;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+function kitRoute(path?: string): { requested: boolean; id: string | null } {
+  const raw = path || '';
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(raw) || raw.startsWith('//') || /[\u0000-\u001f\u007f]/u.test(raw)) {
+    return { requested: false, id: null };
+  }
+  const clean = raw.split(/[?#]/u, 1)[0].replace(/^\/modules\/ninja-launch-kit\/?/u, '/');
+  const segments = clean.split('/').filter(Boolean);
+  if (segments[0] !== 'kits') return { requested: false, id: null };
+  const candidate = segments.length === 2 ? segments[1] : '';
+  return { requested: true, id: UUID_PATTERN.test(candidate) ? candidate : null };
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -144,12 +161,14 @@ export default function NinjaLaunchKitCompleteWorkspace({
   embedded = false,
   view = 'overview',
   hrefFor = path => path,
+  canWrite = true,
 }: {
   baseUrl?: string;
   routePath?: string;
   embedded?: boolean;
   view?: string;
   hrefFor?: (path: string) => string;
+  canWrite?: boolean;
 }) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [executionSummary, setExecutionSummary] = useState<DeployOpsExecutionSummary | null>(null);
@@ -170,13 +189,18 @@ export default function NinjaLaunchKitCompleteWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [admin, setAdmin] = useState<Row | null>(null);
+  const requestedKit = useMemo(() => kitRoute(routePath), [routePath]);
+  const resolvedView = requestedKit.requested && requestedKit.id ? 'deliverables' : view;
+  const ownedByCurrentUser = detail?.capabilities?.ownedByCurrentUser === true;
+  const canManageSelected = canWrite && detail?.capabilities?.canManage === true;
+  const reviewingSharedKit = Boolean(selected && detail?.capabilities?.ownedByCurrentUser === false);
   const deepLinkExecution = Boolean(
     routePath && /(?:launches|plan|artifacts|readiness|tasks|milestones|phases)/.test(routePath),
   );
   const [executionOpen, setExecutionOpen] = useState(deepLinkExecution);
 
   const load = useCallback(
-    async (preferredId?: string | null) => {
+    async (preferredId?: string | null, exact = false) => {
       setError(null);
       try {
         const [root, catalog, execution] = await Promise.all([
@@ -189,7 +213,9 @@ export default function NinjaLaunchKitCompleteWorkspace({
         setOverview(root);
         setTemplates(catalog.templates ?? []);
         setExecutionSummary(execution?.summary ?? null);
-        const id = preferredId ?? selected?.id ?? root.kits?.[0]?.id;
+        const id = preferredId === null
+          ? root.kits?.[0]?.id
+          : preferredId ?? (exact ? undefined : selected?.id ?? root.kits?.[0]?.id);
         if (id) {
           const next = (await moduleShellApi.launchkit.productKit(id)) as Row;
           setSelected(next.kit);
@@ -199,7 +225,11 @@ export default function NinjaLaunchKitCompleteWorkspace({
           setDetail(null);
         }
       } catch (caught) {
-        setError(message(caught, 'Could not load the launch-generation workspace.'));
+        if (exact) {
+          setSelected(null);
+          setDetail(null);
+        }
+        setError(message(caught, 'Could not load the campaign workspace.'));
       } finally {
         setLoading(false);
       }
@@ -208,8 +238,16 @@ export default function NinjaLaunchKitCompleteWorkspace({
   );
 
   useEffect(() => {
-    void load();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (requestedKit.requested && !requestedKit.id) {
+      setSelected(null);
+      setDetail(null);
+      setError('This campaign-package link is invalid. Open Campaign packages and choose a saved package.');
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    void load(requestedKit.id ?? undefined, requestedKit.requested);
+  }, [routePath]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (deepLinkExecution) setExecutionOpen(true);
   }, [deepLinkExecution]);
@@ -260,9 +298,9 @@ export default function NinjaLaunchKitCompleteWorkspace({
         input: formInput,
       })) as Row;
       setPreview(result);
-      setNotice('Deterministic preview created without consuming monthly generation capacity.');
+      setNotice('Preview created without using your monthly generation allowance.');
     } catch (caught) {
-      setError(message(caught, 'Could not preview the release package.'));
+      setError(message(caught, 'Could not preview the campaign package.'));
     } finally {
       setBusy(null);
     }
@@ -270,6 +308,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
 
   async function createKit(event: React.FormEvent) {
     event.preventDefault();
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     setBusy('create');
     setError(null);
     setNotice(null);
@@ -285,7 +327,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
       setNotice(`Created ${result.kit.title}.`);
       await load(result.kit.id);
     } catch (caught) {
-      setError(message(caught, 'Could not create the release package.'));
+      setError(message(caught, 'Could not create the campaign package.'));
     } finally {
       setBusy(null);
     }
@@ -293,6 +335,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
 
   async function kitAction(action: 'duplicate' | 'regenerate' | 'archive' | 'restore' | 'delete') {
     if (!selected) return;
+    if (!canManageSelected) {
+      setError(reviewingSharedKit ? SHARED_REVIEW_MESSAGE : READ_ONLY_MESSAGE);
+      return;
+    }
     setBusy(action);
     setError(null);
     try {
@@ -321,10 +367,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
         await load(result.kit.id);
       }
       setNotice(
-        `Release package ${action === 'delete' ? 'moved to undo-safe deleted items' : `${action} complete`}.`,
+        `Campaign package ${action === 'delete' ? 'moved to undo-safe deleted items' : `${action} complete`}.`,
       );
     } catch (caught) {
-      setError(message(caught, `Could not ${action} the release package.`));
+      setError(message(caught, `Could not ${action} the campaign package.`));
     } finally {
       setBusy(null);
     }
@@ -332,6 +378,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
 
   async function createBrand(event: React.FormEvent) {
     event.preventDefault();
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     setBusy('brand');
     setError(null);
     try {
@@ -354,6 +404,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
 
   async function exportKit(format: 'txt' | 'markdown' | 'json') {
     if (!selected) return;
+    if (!canManageSelected) {
+      setError(reviewingSharedKit ? SHARED_REVIEW_MESSAGE : READ_ONLY_MESSAGE);
+      return;
+    }
     setBusy(`export:${format}`);
     setError(null);
     try {
@@ -362,9 +416,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
         idempotencyKey: slugId(),
       })) as Row;
       download(result.content, result.export.fileName, result.export.mimeType);
-      setNotice(
-        `${format.toUpperCase()} export generated and recorded with checksum ${result.export.contentSha256}.`,
-      );
+      setNotice(`${format.toUpperCase()} campaign package created, checked, and downloaded.`);
       await load(selected.id);
     } catch (caught) {
       setError(message(caught, `Could not create the ${format} export.`));
@@ -374,12 +426,18 @@ export default function NinjaLaunchKitCompleteWorkspace({
   }
 
   const plan = overview?.access.plan ?? 'free';
+  const applicationStack = overview?.access.source === 'application_stack';
+  const accessLabel = applicationStack ? 'APPLICATION STACK' : `${plan.toUpperCase()} plan`;
   const lockedVisuals = selected?.visualPromos?.filter((item: Row) => item.locked).length ?? 0;
 
   return (
     <div
       data-testid="shell-ninja-launch-kit-complete"
-      data-launchkit-view={view}
+      data-launchkit-view={resolvedView}
+      data-requested-kit-id={requestedKit.id ?? undefined}
+      data-can-write={canWrite ? 'true' : 'false'}
+      data-selected-owned={selected ? (ownedByCurrentUser ? 'true' : 'false') : undefined}
+      data-selected-can-manage={selected ? (canManageSelected ? 'true' : 'false') : undefined}
       style={{
         minHeight: '100vh',
         overflowX: 'hidden',
@@ -388,7 +446,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
         colorScheme: 'dark',
       }}
     >
-      <style>{`.nlk-workday-slot{min-width:0;min-height:382px}.nlk-workday-loading{min-height:382px;display:flex;align-items:center;justify-content:center;gap:8px;color:#a1a1aa}@media(max-width:1023px){.nlk-grid{grid-template-columns:1fr!important}.nlk-pad{padding:18px!important}.nlk-nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;flex-wrap:nowrap!important}.nlk-workday-slot,.nlk-workday-loading{min-height:820px}} .nlk-button:focus-visible,.nlk-input:focus-visible{outline:3px solid #67e8f9;outline-offset:2px}[data-launchkit-view] #launchkit-dashboard,[data-launchkit-view] #launchkit-builder,[data-launchkit-view] #launchkit-templates,[data-launchkit-view] #launchkit-kits,[data-launchkit-view] #launchkit-visual-promos,[data-launchkit-view] #launchkit-outputs,[data-launchkit-view] #launchkit-brands,[data-launchkit-view] #launchkit-exports,[data-launchkit-view] #launchkit-account,[data-launchkit-view] #launchkit-execution{display:none}[data-launchkit-view="overview"] #launchkit-dashboard,[data-launchkit-view="projects"] #launchkit-builder,[data-launchkit-view="projects"] #launchkit-kits,[data-launchkit-view="templates"] #launchkit-templates,[data-launchkit-view="brief"] #launchkit-builder,[data-launchkit-view="brief"] #launchkit-brands,[data-launchkit-view="deliverables"] #launchkit-visual-promos,[data-launchkit-view="deliverables"] #launchkit-outputs,[data-launchkit-view="exports"] #launchkit-exports,[data-launchkit-view="settings"] #launchkit-account{display:block}`}</style>
+      <style>{`.nlk-workday-slot{min-width:0;min-height:382px}.nlk-workday-loading{min-height:382px;display:flex;align-items:center;justify-content:center;gap:8px;color:#a1a1aa}@media(max-width:1023px){.nlk-grid{grid-template-columns:1fr!important}.nlk-pad{padding:18px!important}.nlk-nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;flex-wrap:nowrap!important}.nlk-workday-slot,.nlk-workday-loading{min-height:820px}} .nlk-button:focus-visible,.nlk-input:focus-visible{outline:3px solid #67e8f9;outline-offset:2px}[data-launchkit-view] #launchkit-dashboard,[data-launchkit-view] #launchkit-builder,[data-launchkit-view] #launchkit-templates,[data-launchkit-view] #launchkit-kits,[data-launchkit-view] #launchkit-visual-promos,[data-launchkit-view] #launchkit-outputs,[data-launchkit-view] #launchkit-brands,[data-launchkit-view] #launchkit-exports,[data-launchkit-view] #launchkit-account,[data-launchkit-view] #launchkit-execution{display:none}[data-launchkit-view="overview"] #launchkit-dashboard,[data-launchkit-view="projects"] #launchkit-builder,[data-launchkit-view="projects"] #launchkit-kits,[data-launchkit-view="templates"] #launchkit-templates,[data-launchkit-view="brief"] #launchkit-builder,[data-launchkit-view="brief"] #launchkit-brands,[data-launchkit-view="deliverables"] #launchkit-visual-promos,[data-launchkit-view="deliverables"] #launchkit-outputs,[data-launchkit-view="review"] #launchkit-execution,[data-launchkit-view="exports"] #launchkit-exports,[data-launchkit-view="settings"] #launchkit-account{display:block}`}</style>
       <div
         className="nlk-pad"
         style={{ maxWidth: 1380, margin: '0 auto', padding: '30px clamp(18px,4vw,52px) 72px' }}
@@ -427,16 +485,16 @@ export default function NinjaLaunchKitCompleteWorkspace({
                     fontWeight: 900,
                   }}
                 >
-                  TACTICAL LAUNCH GENERATION
+                  CAMPAIGN PRODUCTION
                 </span>
-                <ShellLiveBadge />
+                <ShellWorkspaceBadge />
               </div>
               <h1 style={{ fontSize: 'clamp(28px,5vw,46px)', margin: '4px 0', lineHeight: 1 }}>
                 Deploy Ops
               </h1>
               <p style={{ margin: 0, color: '#a1a1aa', maxWidth: 780 }}>
-                Build the complete campaign, generate nine production briefs, enforce the plan, and
-                export a client-ready launch package from one controlled workspace.
+                Build the complete campaign, create nine visual briefs, and keep campaign tasks,
+                reviews, files, and approvals together in one workspace.
               </p>
             </div>
             <ShellLaunchButton
@@ -456,7 +514,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
             {[
               ['dashboard', 'Dashboard'],
               ['builder', 'Builder'],
-              ['templates', '20 templates'],
+              ['templates', 'Templates'],
               ['kits', 'Kits'],
               ['visual-promos', 'Visual promos'],
               ['brands', 'Brands'],
@@ -512,6 +570,24 @@ export default function NinjaLaunchKitCompleteWorkspace({
             {notice}
           </div>
         )}
+        {!canWrite && (
+          <div
+            role="status"
+            data-testid="deployops-read-only"
+            style={{ ...panel, padding: 14, borderColor: '#fbbf24', color: '#fde68a', marginBottom: 16 }}
+          >
+            Read-only access: you can review campaign packages, previews, launch checks, and saved files, but changes and new exports are disabled.
+          </div>
+        )}
+        {reviewingSharedKit && (
+          <div
+            role="status"
+            data-testid="deployops-shared-kit-read-only"
+            style={{ ...panel, padding: 14, borderColor: '#fbbf24', color: '#fde68a', marginBottom: 16 }}
+          >
+            {SHARED_REVIEW_MESSAGE}
+          </div>
+        )}
 
         <section id="launchkit-dashboard" tabIndex={-1} aria-labelledby="launchkit-dashboard-title">
           <div
@@ -527,28 +603,62 @@ export default function NinjaLaunchKitCompleteWorkspace({
               <span
                 style={{ color: '#67e8f9', fontWeight: 900, letterSpacing: '.14em', fontSize: 11 }}
               >
-                MISSION CONTROL
+                CAMPAIGN OVERVIEW
               </span>
               <h2 id="launchkit-dashboard-title" style={{ margin: '5px 0 16px' }}>
-                Launch command dashboard
+                Campaign launch dashboard
               </h2>
             </div>
             <span style={{ color: '#a1a1aa' }}>
               {loading
-                ? 'Loading verified product records…'
-                : `${plan.toUpperCase()} · entitlement from ${overview?.access.source.replaceAll('_', ' ')}`}
+                ? 'Loading your saved campaign work…'
+                : `${accessLabel} · ${overview?.usage.generationCount ?? 0} campaign packages created this month`}
             </span>
           </div>
           <div className="nlk-workday-slot" aria-busy={loading} style={{ marginBottom: 18 }}>
             {overview
               ? <CoreSuiteWorkdayBrief
                   moduleId="ninja-launch-kit"
-                  eyebrow="Next best release actions"
+                  eyebrow="Next best campaign actions"
                   brief={buildDeployOpsWorkflowFocus(overview, executionSummary)}
                   hrefFor={hrefFor}
                 />
-              : <div className="nlk-workday-loading" role="status"><Loader2 size={18} /> Preparing the next release actions…</div>}
+              : <div className="nlk-workday-loading" role="status"><Loader2 size={18} /> Preparing your next campaign actions…</div>}
           </div>
+          {overview && (
+            <article
+              data-testid="deployops-release-handoff"
+              style={{ ...panel, padding: 20, marginBottom: 18, borderColor: 'rgba(103,232,249,.55)' }}
+            >
+              <div style={{ color: '#67e8f9', fontWeight: 900, letterSpacing: '.13em', fontSize: 11 }}>
+                {overview.kits[0] ? 'NEXT CAMPAIGN PACKAGE TO FINISH' : 'FIRST CAMPAIGN PACKAGE TO FINISH'}
+              </div>
+              <h3 style={{ margin: '7px 0 5px', fontSize: 20 }}>
+                {overview.kits[0]
+                  ? `Finish the campaign package for “${overview.kits[0].title}”`
+                  : 'Create one review-ready campaign package'}
+              </h3>
+              <p style={{ color: '#a1a1aa', lineHeight: 1.55, margin: '0 0 12px', maxWidth: 900 }}>
+                {overview.kits[0]
+                  ? 'Review the saved copy and nine visual-production briefs, then export the package your team or client can carry into their publishing tools.'
+                  : 'A short business brief becomes landing copy, ads, email and SMS copy, social posts, FAQ, calls to action, flyer copy, a checklist, and nine visual-production briefs.'}
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <a href={hrefFor(overview.kits[0] ? '/deliverables' : '/projects')} style={{ ...primary, textDecoration: 'none' }}>
+                  {overview.kits[0] ? <Check size={16} /> : <Rocket size={16} />}
+                  {overview.kits[0] ? 'Review campaign deliverables' : 'Build the first campaign package'}
+                </a>
+                {overview.kits[0] && (
+                  <a href={hrefFor('/exports')} style={{ ...secondary, textDecoration: 'none' }}>
+                    <Download size={16} /> Export campaign package
+                  </a>
+                )}
+              </div>
+              <p style={{ color: '#bae6fd', fontSize: 12, margin: '12px 0 0' }}>
+                Deploy Ops creates and exports the campaign materials. It does not publish ads, send campaigns, purchase media, or deploy a website.
+              </p>
+            </article>
+          )}
           <div
             className="nlk-grid"
             style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', gap: 12 }}
@@ -564,13 +674,13 @@ export default function NinjaLaunchKitCompleteWorkspace({
               Icon={Sparkles}
             />
             <Metric
-              label="Compiler-derived templates"
-              value={overview?.sourceCounts.templates ?? 20}
+              label="Ready-to-use templates"
+              value={overview?.sourceCounts.templates ?? '\u2014'}
               Icon={Layers3}
             />
             <Metric
-              label="Visual promo contracts"
-              value={overview?.sourceCounts.visualPromos ?? 9}
+              label="Visual-production briefs"
+              value={overview?.sourceCounts.visualPromos ?? '\u2014'}
               Icon={Palette}
             />
             <Metric
@@ -592,7 +702,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
               <h2 style={{ margin: 0 }}>Complete launch builder</h2>
               <p style={{ margin: '5px 0 0', color: '#a1a1aa' }}>
                 A short business brief becomes landing copy, ads, email/SMS, social, FAQ, CTAs,
-                flyer copy, checklist, and nine visual-promo contracts.
+                flyer copy, checklist, and nine visual-production briefs.
               </p>
             </div>
           </div>
@@ -720,8 +830,8 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 onChange={(e) => setForm({ ...form, generationMode: e.target.value })}
                 style={input}
               >
-                <option value="auto">Shared AI with validated fallback</option>
-                <option value="deterministic">Deterministic only</option>
+                <option value="auto">Use AI when available, with reliable built-in creation</option>
+                <option value="deterministic">Built-in generator only</option>
                 {plan !== 'free' && <option value="ai">Request AI refinement</option>}
               </select>
             </Field>
@@ -762,7 +872,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 {busy === 'preview' ? <Loader2 size={16} /> : <FileText size={16} />} Preview
                 without usage
               </button>
-              <button className="nlk-button" type="submit" disabled={!!busy} style={primary}>
+              <button className="nlk-button" type="submit" disabled={!!busy || !canWrite} style={{ ...primary, opacity: !canWrite ? 0.5 : 1 }}>
                 {busy === 'create' ? <Loader2 size={16} /> : <Rocket size={16} />} Generate and
                 persist full kit
               </button>
@@ -786,12 +896,13 @@ export default function NinjaLaunchKitCompleteWorkspace({
             <span
               style={{ color: '#67e8f9', fontWeight: 900, fontSize: 11, letterSpacing: '.14em' }}
             >
-              PINNED SOURCE CATALOG
+              CAMPAIGN TEMPLATE LIBRARY
             </span>
             <h2 style={{ margin: '5px 0' }}>All 20 niche templates</h2>
             <p style={{ color: '#a1a1aa', marginTop: 4 }}>
-              Search and category metadata remain visible; locked template prefills never cross the
-              API boundary.
+              {applicationStack
+                ? 'Find a proven starting point by business type. Application Stack unlocks the complete template library for this organization.'
+                : 'Find a proven starting point by business type. Your grandfathered plan shows which templates are ready to use and which require different legacy access.'}
             </p>
           </div>
           <div
@@ -852,6 +963,9 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 <button
                   className="nlk-button"
                   key={kit.id}
+                  id={`launchkit-kit-${kit.id}`}
+                  data-highlighted={selected?.id === kit.id ? 'true' : undefined}
+                  aria-current={selected?.id === kit.id ? 'true' : undefined}
                   onClick={() => void load(kit.id)}
                   style={{
                     ...panel,
@@ -880,7 +994,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
             <section
               id="launchkit-visual-promos"
               tabIndex={-1}
-              style={{ ...panel, padding: 22, marginTop: 28 }}
+              data-selected-kit-id={selected.id}
+              data-highlighted={selected.id === requestedKit.id ? 'true' : undefined}
+              data-can-manage={canManageSelected ? 'true' : 'false'}
+              style={{ ...panel, padding: 22, marginTop: 28, borderColor: selected.id === requestedKit.id ? '#67e8f9' : panel.borderColor, boxShadow: selected.id === requestedKit.id ? '0 0 0 3px rgba(103,232,249,.13),0 18px 44px rgba(0,0,0,.28)' : panel.boxShadow }}
             >
               <div
                 style={{
@@ -903,7 +1020,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 <button
                   className="nlk-button"
                   onClick={() => void kitAction('regenerate')}
-                  disabled={!!busy}
+                  disabled={!!busy || !canManageSelected}
                   style={primary}
                 >
                   <RefreshCw size={15} /> Regenerate
@@ -911,7 +1028,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 <button
                   className="nlk-button"
                   onClick={() => void kitAction('duplicate')}
-                  disabled={!!busy}
+                  disabled={!!busy || !canManageSelected}
                   style={secondary}
                 >
                   <Copy size={15} /> Duplicate
@@ -921,7 +1038,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
                   onClick={() =>
                     void kitAction(selected.status === 'archived' ? 'restore' : 'archive')
                   }
-                  disabled={!!busy}
+                  disabled={!!busy || !canManageSelected}
                   style={secondary}
                 >
                   {selected.status === 'archived' ? <RotateCcw size={15} /> : <Archive size={15} />}{' '}
@@ -930,7 +1047,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 <button
                   className="nlk-button"
                   onClick={() => void kitAction('delete')}
-                  disabled={!!busy}
+                  disabled={!!busy || !canManageSelected}
                   style={{ ...secondary, color: '#fca5a5' }}
                 >
                   <Trash2 size={15} /> Soft delete
@@ -991,7 +1108,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
             </section>
 
             <section id="launchkit-outputs" tabIndex={-1} style={{ marginTop: 28 }}>
-              <h2>Generated campaign assets</h2>
+              <h2>Campaign copy and production briefs</h2>
               <div
                 className="nlk-grid"
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}
@@ -1015,7 +1132,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
                   [
                     'Social sequence',
                     selected.content.socialPosts.join('\n'),
-                    `${selected.content.socialPosts.length} persisted posts`,
+                    `${selected.content.socialPosts.length} saved posts`,
                   ],
                   [
                     'FAQ + CTAs',
@@ -1056,8 +1173,9 @@ export default function NinjaLaunchKitCompleteWorkspace({
         >
           <h2>Reusable brand profiles</h2>
           <p style={{ color: '#a1a1aa' }}>
-            Free supports 0, Pro supports 5, and Agency supports unlimited profiles. The server
-            enforces the cap.
+            {applicationStack
+              ? 'Application Stack includes the complete brand-profile workspace for this organization.'
+              : 'Grandfathered Free supports 0, Pro supports 5, and Agency supports unlimited profiles. OperatorOS applies the retained limit automatically.'}
           </p>
           <form
             onSubmit={createBrand}
@@ -1067,6 +1185,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
             <Field label="Brand name">
               <input
                 required
+                disabled={!canWrite}
                 value={brand.name}
                 onChange={(e) => setBrand({ ...brand, name: e.target.value })}
                 style={input}
@@ -1074,6 +1193,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
             </Field>
             <Field label="Logo text">
               <input
+                disabled={!canWrite}
                 value={brand.logoText}
                 onChange={(e) => setBrand({ ...brand, logoText: e.target.value })}
                 style={input}
@@ -1082,6 +1202,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
             <Field label="Primary">
               <input
                 type="color"
+                disabled={!canWrite}
                 value={brand.primaryColor}
                 onChange={(e) => setBrand({ ...brand, primaryColor: e.target.value })}
                 style={input}
@@ -1090,6 +1211,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
             <Field label="Accent">
               <input
                 type="color"
+                disabled={!canWrite}
                 value={brand.accentColor}
                 onChange={(e) => setBrand({ ...brand, accentColor: e.target.value })}
                 style={input}
@@ -1098,8 +1220,8 @@ export default function NinjaLaunchKitCompleteWorkspace({
             <div style={{ display: 'flex', alignItems: 'end' }}>
               <button
                 className="nlk-button"
-                disabled={plan === 'free' || !!busy}
-                style={{ ...primary, width: '100%', opacity: plan === 'free' ? 0.45 : 1 }}
+                disabled={!canWrite || plan === 'free' || !!busy}
+                style={{ ...primary, width: '100%', opacity: !canWrite || plan === 'free' ? 0.45 : 1 }}
               >
                 <Palette size={15} /> Add brand
               </button>
@@ -1136,10 +1258,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
           tabIndex={-1}
           style={{ ...panel, padding: 22, marginTop: 28 }}
         >
-          <h2>Audited export vault</h2>
+          <h2>Campaign downloads</h2>
           <p style={{ color: '#a1a1aa' }}>
-            Every download is persisted with its exact bytes, checksum, watermark state, white-label
-            state, and source kit.
+            Every download keeps its file check, watermark, branding choice, and original campaign
+            reference so the team can review it later.
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {(['txt', 'markdown', 'json'] as const).map((format) => (
@@ -1147,6 +1269,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 key={format}
                 className="nlk-button"
                 disabled={
+                  !canManageSelected ||
                   !selected ||
                   !(overview?.access.limits.exportFormats ?? []).includes(format) ||
                   !!busy
@@ -1172,7 +1295,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
               >
                 <span>
                   {item.fileName}
-                  <small style={{ display: 'block', color: '#a1a1aa' }}>{item.contentSha256}</small>
+                  <small style={{ display: 'block', color: '#86efac' }}>File verified</small>
                 </span>
                 <span>{item.sizeBytes} bytes</span>
               </div>
@@ -1187,10 +1310,9 @@ export default function NinjaLaunchKitCompleteWorkspace({
           style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginTop: 28 }}
         >
           <article style={{ ...panel, padding: 22 }}>
-            <h2>Plan and usage</h2>
+            <h2>Access and usage</h2>
             <p>
-              <strong>{plan.toUpperCase()}</strong> is resolved from OperatorOS, not a child billing
-              record. OperatorOS remains the billing source of truth.
+              {applicationStack ? <><strong>Application Stack</strong> fully unlocks Deploy Ops for this organization. Subscription and team-access changes remain in OperatorOS.</> : <>Your grandfathered <strong>{plan.toUpperCase()}</strong> plan retains its original package limits and export options. Access changes remain in OperatorOS.</>}
             </p>
             <ul style={{ color: '#d4d4d8', lineHeight: 1.9 }}>
               <li>
@@ -1210,10 +1332,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
             </ul>
           </article>
           <article id="launchkit-admin" tabIndex={-1} style={{ ...panel, padding: 22 }}>
-            <h2>Administration</h2>
+            <h2>Organization activity</h2>
             <p style={{ color: '#a1a1aa' }}>
-              Tenant and platform statistics require OperatorOS admin authority. Billing and
-              entitlement mutation stays in the parent.
+              Organization administrators can review package activity here. Use OperatorOS for
+              membership, subscription, billing, or application-access changes.
             </p>
             <button
               className="nlk-button"
@@ -1226,10 +1348,23 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 }
               }}
             >
-              <ShieldCheck size={15} /> Load authorized stats
+              <ShieldCheck size={15} /> Load organization summary
             </button>
             {admin && (
-              <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(admin, null, 2)}</pre>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 8, marginTop: 14 }}>
+                {[
+                  ['Campaign packages', admin.kits],
+                  ['Package creators', admin.creators],
+                  ['AI-refined packages', admin.aiRefined],
+                  ['Brand profiles', admin.brands],
+                  ['Prepared exports', admin.exports],
+                ].map(([label, value]) => (
+                  <div key={String(label)} style={{ padding: 10, borderRadius: 10, background: 'rgba(30,41,59,.72)' }}>
+                    <strong style={{ display: 'block', fontSize: 22 }}>{String(value ?? 0)}</strong>
+                    <span style={{ color: '#a1a1aa', fontSize: 12 }}>{label}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </article>
         </section>
@@ -1241,13 +1376,13 @@ export default function NinjaLaunchKitCompleteWorkspace({
           style={{ ...panel, padding: 18, marginTop: 28 }}
         >
           <summary style={{ cursor: 'pointer', fontWeight: 900 }}>
-            Launch execution, review, readiness, tasks, assets, and release proof
+            Campaign tasks, files, launch checks, and approvals
           </summary>
           <p style={{ color: '#a1a1aa' }}>
-            The restored generation product remains connected to the existing OperatorOS
-            launch-execution console instead of erasing it.
+            Review the campaign package, finish its checklist, and export the approved files for
+            your publishing tools.
           </p>
-          <NinjaLaunchKitShell baseUrl={baseUrl} idPrefix="launchkit-execution" />
+          <NinjaLaunchKitShell baseUrl={baseUrl} idPrefix="launchkit-execution" canWrite={canWrite} />
         </details>
       </div>
     </div>

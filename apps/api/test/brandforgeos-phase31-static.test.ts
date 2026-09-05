@@ -61,3 +61,21 @@ test('Phase 31 enforces integration features, export-row idempotency, and brand-
   assert.match(routes, /campaign\.brand_id=\$\{report\.brand_id\}/);
   assert.match(ddl, /uq_brandforge_exports_tenant_idempotency/);
 });
+
+test('BrandForge saves real image assets for locally generated logo concepts', () => {
+  const routes = read('apps/api/src/routes/brandforgeos-routes.ts');
+  const client = read('apps/web/src/lib/auth.ts');
+  assert.match(routes, /brands\/:id\/logo/);
+  assert.match(routes, /createAttachment\(/);
+  assert.match(routes, /brandLogoBodyLimit\s*=\s*Math\.ceil\(getMaxAttachmentBytes\(\)\s*\*\s*1\.38\)\s*\+\s*16_384/);
+  assert.match(routes, /brands\/:id\/logo`,\s*\{\s*preHandler:\s*writeGuards,\s*bodyLimit:\s*brandLogoBodyLimit\s*\}/);
+  assert.match(routes, /objectType:\s*'brandforge_brand_logo_candidate'/);
+  assert.match(routes, /object_type='brandforge_brand_logo_candidate'[\s\S]{0,180}scan_status='clean'/);
+  assert.match(routes, /SET object_type='brandforge_brand_logo'/);
+  assert.match(routes, /\['image\/png', 'image\/jpeg', 'image\/webp'\]/);
+  assert.match(routes, /FOR UPDATE/);
+  assert.match(routes, /logo_attachment_id/);
+  assert.match(client, /saveLogo:/);
+  assert.match(client, /contentBase64/);
+  assert.doesNotMatch(routes, /image\/svg\+xml/);
+});

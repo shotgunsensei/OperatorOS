@@ -105,7 +105,7 @@ test.describe('Phase 50 SnapProofOS route application', () => {
     await expect(page.getByText(/Client Field Report/u).first()).toBeVisible({ timeout: 30_000 });
 
     const routes: Array<[string, string, string]> = [
-      ['/', 'snapproofos-overview-route', 'Evidence operations overview'],
+      ['/', 'snapproofos-overview-route', 'Proof operations overview'],
       ['/customers', 'snapproofos-customers-route', 'Customers'],
       ['/projects', 'snapproofos-projects-route', 'Projects'],
       [jobPath, 'snapproofos-jobs-route', 'Jobs'],
@@ -116,7 +116,7 @@ test.describe('Phase 50 SnapProofOS route application', () => {
       ['/team', 'snapproofos-team-route', 'Team'],
       ['/activity', 'snapproofos-activity-route', 'Activity'],
       ['/cases', 'snapproofos-cases-route', 'Evidence cases'],
-      ['/evidence', 'snapproofos-evidence-route', 'Evidence integrity'],
+      ['/evidence', 'snapproofos-evidence-route', 'File verification'],
       ['/review', 'snapproofos-review-route', 'Review'],
       ['/findings', 'snapproofos-findings-route', 'Case findings'],
       ['/reports', 'snapproofos-reports-route', 'Reports'],

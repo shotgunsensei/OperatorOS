@@ -45,9 +45,9 @@ export default async function ModuleDeepLinkPage({ params }: ModuleDeepLinkPageP
   return (
     <ModuleState
       testId="module-deep-link-not-found"
-      eyebrow={`${module.name} / 404`}
-      title="That module route is not available."
-      body={`That ${module.name} page is not available. Return to the module home and choose an available section.`}
+      eyebrow={`${module.name} page unavailable`}
+      title="That page is not available."
+      body={`Open ${module.name} to choose an available section.`}
       actionHref="/"
       actionLabel={`Open ${module.name}`}
     />

@@ -10,7 +10,7 @@ test.describe('Phase 35 CallCommand complete product', () => {
   test('creates receptionist, channel, flow, rule, complete call intelligence, work item, and source deep links', async ({ page }) => {
     await page.goto(`${WEB}/modules/callcommand-ai/dashboard`, { waitUntil: 'networkidle' });
     await expect(page.getByTestId('shell-callcommand-ai')).toBeVisible();
-    await expect(page.getByText('Twilio voice provider unavailable')).toBeVisible();
+    await expect(page.getByText('Twilio connection unavailable')).toBeVisible();
     await page.getByTestId('button-callcommand-create-profile').click();
     await expect(page.locator('#callcommand-receptionists')).toContainText('Operations receptionist');
     await page.getByTestId('input-callcommand-channel-phone').fill(`+1555${String(Date.now()).slice(-7)}`);

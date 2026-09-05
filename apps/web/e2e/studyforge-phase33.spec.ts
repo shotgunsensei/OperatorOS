@@ -65,7 +65,7 @@ test.describe('Phase 33 StudyForge complete learning product', () => {
     await page.getByLabel('Course', { exact: true }).fill('BIO-201');
     await page.getByLabel('Raw study notes').fill('Mitochondria generate ATP through oxidative phosphorylation. Cells use ATP as an energy carrier. Glycolysis occurs in the cytoplasm and produces pyruvate. Oxygen accepts electrons at the end of the transport chain.');
     await page.getByLabel('Generator').selectOption('deterministic');
-    await page.getByRole('button', { name: 'Generate every artifact' }).click();
+    await page.getByRole('button', { name: 'Build complete study pack' }).click();
     await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible();
     await page.getByRole('button', { name: new RegExp(title) }).click();
     await expect(page.getByText('Key terms', { exact: true })).toBeVisible();

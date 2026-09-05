@@ -46,6 +46,14 @@ function errorText(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function friendlyConnectionStatus(status: string): string {
+  const normalized = status.trim().toLowerCase();
+  if (['validated', 'success', 'ready', 'active', 'completed'].includes(normalized)) return 'Connection checked';
+  if (['failed', 'error', 'invalid'].includes(normalized)) return 'Needs attention';
+  if (['pending', 'queued', 'processing'].includes(normalized)) return 'Check in progress';
+  return 'Settings updated';
+}
+
 export default function TradeFlowKitLeadOperations({
   tenantKey,
   canManage,
@@ -209,7 +217,7 @@ export default function TradeFlowKitLeadOperations({
     setBusy('test-email'); setError(null); setNotice(null);
     try {
       const result = await moduleShellApi.tradeflowkit.testLeadOperationsEmail(state.settings.version, `lead-test-email-${crypto.randomUUID()}`);
-      setNotice(`Test email ${result.duplicate ? 'was already' : 'is'} queued to your authenticated OperatorOS email.`);
+      setNotice(`Test email ${result.duplicate ? 'was already' : 'is'} queued to your signed-in email.`);
     } catch (requestError) { setError(errorText(requestError, 'Could not queue the test email.')); }
     finally { setBusy(null); }
   }
@@ -269,7 +277,7 @@ export default function TradeFlowKitLeadOperations({
     <section className="tfk-lead-ops" data-testid="tradeflowkit-lead-operations">
       <style>{leadOperationsCss}</style>
       <header>
-        <div><span>Conversion playbook</span><h3>Lead Operations</h3><p>Configure new-lead follow-ups, privacy-aware public capture, and verified lead-source integrations.</p></div>
+        <div><span>Conversion playbook</span><h3>Lead Operations</h3><p>Choose how new leads enter TradeFlowKit and what follow-up should happen next.</p></div>
         <button type="button" onClick={() => void loadWorkspace()} disabled={!!busy}><RefreshCw size={14} /> Refresh</button>
       </header>
       {error && <div className="tfk-lead-ops-error" role="alert">{error}</div>}
@@ -283,10 +291,10 @@ export default function TradeFlowKitLeadOperations({
             {state.templates.map(template => <option key={template.key} value={template.key}>{template.label}</option>)}
           </select></label>
           <label>Service area<input value={form.serviceArea} maxLength={500} disabled={!canManage} onChange={event => setForm(current => ({ ...current, serviceArea: event.target.value }))} /></label>
-          <label>Lead sources<input value={form.leadSources} maxLength={800} disabled={!canManage} onChange={event => setForm(current => ({ ...current, leadSources: event.target.value }))} /></label>
+          <label>Where leads come from<input value={form.leadSources} maxLength={800} disabled={!canManage} onChange={event => setForm(current => ({ ...current, leadSources: event.target.value }))} /></label>
           <div className="tfk-lead-capture-grid">
-            <label>Capture profile<input value={form.captureName} maxLength={160} disabled={!canManage} onChange={event => setForm(current => ({ ...current, captureName: event.target.value }))} /></label>
-            <label>Source label<input value={form.sourceLabel} maxLength={160} disabled={!canManage} onChange={event => setForm(current => ({ ...current, sourceLabel: event.target.value }))} /></label>
+            <label>Intake form name<input value={form.captureName} maxLength={160} disabled={!canManage} onChange={event => setForm(current => ({ ...current, captureName: event.target.value }))} /></label>
+            <label>Lead source shown to your team<input value={form.sourceLabel} maxLength={160} disabled={!canManage} onChange={event => setForm(current => ({ ...current, sourceLabel: event.target.value }))} /></label>
             <label>Default service<input value={form.defaultService} maxLength={160} disabled={!canManage} onChange={event => setForm(current => ({ ...current, defaultService: event.target.value }))} /></label>
             <label>Success copy<input value={form.successMessage} maxLength={500} disabled={!canManage} onChange={event => setForm(current => ({ ...current, successMessage: event.target.value }))} /></label>
           </div>
@@ -304,17 +312,17 @@ export default function TradeFlowKitLeadOperations({
           <div className="tfk-lead-ops-title"><ShieldCheck size={17} /><div><strong>Public lead intake</strong><span>Secure link, recorded consent, abuse protection, and optional verified integrations.</span></div></div>
           <div className="tfk-lead-capture-grid">
             <label>Privacy notice URL<input type="url" placeholder="https://example.com/privacy" value={form.privacyNoticeUrl} maxLength={500} disabled={!canManage} onChange={event => setForm(current => ({ ...current, privacyNoticeUrl: event.target.value }))} /></label>
-            <label>Consent version<input placeholder="privacy-2026-08" value={form.consentVersion} maxLength={40} disabled={!canManage} onChange={event => setForm(current => ({ ...current, consentVersion: event.target.value }))} /></label>
-            <label>Allowed integrations<input placeholder="n8n, generic-json" value={form.allowedAdapterKeys} maxLength={100} disabled={!canManage} onChange={event => setForm(current => ({ ...current, allowedAdapterKeys: event.target.value }))} /></label>
+            <label>Consent notice version<input placeholder="privacy-2026-08" value={form.consentVersion} maxLength={40} disabled={!canManage} onChange={event => setForm(current => ({ ...current, consentVersion: event.target.value }))} /></label>
+            <label>Allowed connection tools<input placeholder="n8n, generic-json" value={form.allowedAdapterKeys} maxLength={100} disabled={!canManage} onChange={event => setForm(current => ({ ...current, allowedAdapterKeys: event.target.value }))} /></label>
             <label className="tfk-lead-ops-toggle"><input type="checkbox" checked={form.publicIntakeEnabled} disabled={!canManage} onChange={event => setForm(current => ({ ...current, publicIntakeEnabled: event.target.checked }))} /> Enable public intake</label>
           </div>
           <label>Consent text<textarea rows={2} value={form.consentText} maxLength={1000} disabled={!canManage} onChange={event => setForm(current => ({ ...current, consentText: event.target.value }))} /></label>
           <div className="tfk-lead-ops-actions">
             <button type="button" className="tfk-lead-ops-primary" disabled={!canManage || !!busy} onClick={() => void updatePublicIntake('save')}>Save intake</button>
-            <button type="button" disabled={!canManage || !!busy} onClick={() => void updatePublicIntake('rotate')}>Rotate public link</button>
-            <button type="button" disabled={!canManage || !!busy || state.captureForm.allowedAdapterKeys.length === 0} onClick={() => void updatePublicIntake('reveal')}>Reveal integration keys</button>
+            <button type="button" disabled={!canManage || !!busy} onClick={() => void updatePublicIntake('rotate')}>Replace public intake link</button>
+            <button type="button" disabled={!canManage || !!busy || state.captureForm.allowedAdapterKeys.length === 0} onClick={() => void updatePublicIntake('reveal')}>Show one-time connection keys</button>
           </div>
-          {secretOutput && <div className="tfk-lead-secret"><strong>One-time secret disclosure</strong><span>Copy these values now. Do not paste them into tickets or client-side code.</span><textarea readOnly rows={5} value={secretOutput} onFocus={event => event.currentTarget.select()} /></div>}
+          {secretOutput && <div className="tfk-lead-secret"><strong>Copy these connection keys now</strong><span>Store them in the connection tool now. They will not be shown again, and should not be pasted into tickets or browser code.</span><textarea readOnly rows={5} value={secretOutput} onFocus={event => event.currentTarget.select()} /></div>}
         </article>
 
         <article className="tfk-lead-ops-card">
@@ -322,15 +330,15 @@ export default function TradeFlowKitLeadOperations({
           <label>Lead<select value={selectedLeadId} onChange={event => setSelectedLeadId(event.target.value)} disabled={leads.length === 0} data-testid="tradeflowkit-followup-lead-select"><option value="">Select a lead</option>{leads.map(lead => <option key={lead.id} value={lead.id}>{lead.name}</option>)}</select></label>
           {selectedLeadId && followups.length > 0 ? <div className="tfk-lead-followups">{followups.map(item => <div key={item.id} data-testid={`tradeflowkit-followup-${item.id}`}><div><strong>Step {item.stepNumber} · {item.channel.toUpperCase()}</strong><span>{new Date(item.dueAt).toLocaleString()} · {item.status}</span></div>{canManage && ['pending', 'failed'].includes(item.status) ? <div><button type="button" disabled={!!busy} onClick={() => void actionFollowup(item, 'queue')}><Send size={13} /> Queue</button><button type="button" disabled={!!busy} onClick={() => void actionFollowup(item, 'complete')}>Complete</button></div> : canManage && item.status === 'queued' ? <button type="button" disabled={!!busy} onClick={() => void actionFollowup(item, 'complete')}>Mark handled</button> : null}</div>)}</div> : <div className="tfk-lead-ops-empty">{selectedLeadId ? 'No follow-ups are scheduled for this lead. Templates apply to newly created leads.' : 'Create or select a lead to inspect its follow-up plan.'}</div>}
           <div className="tfk-lead-ops-divider" />
-          <div className="tfk-lead-ops-title"><Send size={17} /><div><strong>Delivery check</strong><span>Destination is your authenticated OperatorOS email.</span></div></div>
+          <div className="tfk-lead-ops-title"><Send size={17} /><div><strong>Delivery check</strong><span>The test will go to your signed-in email.</span></div></div>
           <button type="button" disabled={!canManage || !!busy || !state.settings.emailEnabled} onClick={() => void testEmail()} data-testid="tradeflowkit-lead-test-email">{busy === 'test-email' ? <Loader2 className="tfk-spin" size={14} /> : <Send size={14} />} Send test email</button>
           <p className="tfk-lead-ops-note">{state.delivery.note}</p>
         </article>
 
         <article className="tfk-lead-ops-card tfk-lead-ops-wide">
-          <div className="tfk-lead-ops-title"><Cable size={17} /><div><strong>Lead source connection check</strong><span>Confirm an integration&apos;s field mapping before turning it on. This check does not create a lead.</span></div></div>
-          <div className="tfk-lead-adapters">{adapters.map(adapter => <div key={adapter.key} data-testid={`tradeflowkit-adapter-${adapter.key}`}><div><strong>{adapter.name}</strong><span>{adapter.description}</span></div><button type="button" disabled={!canManage || !!busy} onClick={() => void validateAdapter(adapter.key)}>{busy === `adapter:${adapter.key}` ? <Loader2 className="tfk-spin" size={13} /> : <ShieldCheck size={13} />} Validate</button></div>)}</div>
-          <div className="tfk-lead-events"><strong>Recent integration activity</strong>{events.length === 0 ? <span>No connection checks or settings changes yet.</span> : events.slice(0, 8).map(event => <div key={event.id}><span>{event.adapterKey.replaceAll('-', ' ')} · {event.status}</span><time>{new Date(event.createdAt).toLocaleString()}</time></div>)}</div>
+          <div className="tfk-lead-ops-title"><Cable size={17} /><div><strong>Lead source connection check</strong><span>Check that incoming lead details land in the right fields before turning a connection on. This check does not create a lead.</span></div></div>
+          <div className="tfk-lead-adapters">{adapters.map(adapter => <div key={adapter.key} data-testid={`tradeflowkit-adapter-${adapter.key}`}><div><strong>{adapter.name}</strong><span>{adapter.description}</span></div><button type="button" disabled={!canManage || !!busy} onClick={() => void validateAdapter(adapter.key)}>{busy === `adapter:${adapter.key}` ? <Loader2 className="tfk-spin" size={13} /> : <ShieldCheck size={13} />} Check connection</button></div>)}</div>
+          <div className="tfk-lead-events"><strong>Recent connection activity</strong>{events.length === 0 ? <span>No connection checks or settings changes yet.</span> : events.slice(0, 8).map(event => <div key={event.id}><span>{adapters.find(adapter => adapter.key === event.adapterKey)?.name ?? 'Lead connection'} · {friendlyConnectionStatus(event.status)}<details><summary>Technical details</summary><code>{event.adapterKey} · {event.eventType} · {event.status}</code></details></span><time>{new Date(event.createdAt).toLocaleString()}</time></div>)}</div>
         </article>
       </div>
     </section>

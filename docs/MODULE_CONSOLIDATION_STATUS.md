@@ -2,7 +2,24 @@
 
 Baseline refreshed: 2026-08-08
 
-## Current Autoscale startup/readiness overlay — 2026-09-02
+## Current module outcome and release-v60 candidate overlay — 2026-09-05
+
+All 13 canonical applications now carry the approved customer-outcome language
+and differentiated workflow contracts. Fresh final source/local verification
+reported **1,440 API tests: 1,434 passed, 0 failed, 6 intentional Next-server
+HTTP-only skips, and 0 todos** in **713,438.7749 ms**; root typecheck and lint
+passed; PostgreSQL 16 planned v60 in 798 ms, clean-applied it in 18,916 ms,
+reapplied it idempotently in 2,907 ms, and independently verified it in 1,860
+ms; and the Next 15.5.23 production build generated all 35 of 35 pages.
+
+No module consolidation state changes. This is source/local release-candidate
+evidence, while live production remains the accepted v59 release. Source
+publication, production backup, separate manual v60 apply/verify, Replit
+redeploy, deployed identity, provider/billing, authenticated browser,
+monitoring, restore, and rollback acceptance remain separate gates. The routine
+production supervisor remains verify-only.
+
+## Autoscale startup/readiness source overlay — 2026-09-02 (historical; live acceptance recorded 2026-09-03)
 
 The single public OperatorOS runtime now keeps all module routes at HTTP 503
 until current-release verification and both private services are ready. It no
@@ -16,7 +33,7 @@ Source/local focused, database integration, typecheck, build, and real
 supervisor probes pass. No production publish or authenticated exact-host
 acceptance occurred, and no module consolidation state changes.
 
-## Current companion workflow automation overlay — 2026-09-02
+## Companion workflow automation source overlay — 2026-09-02 (historical)
 
 The six paid Companion Applications now place a tenant-scoped next-best-action
 brief above their existing advanced surfaces. BrandForgeOS, SnapProofOS,
@@ -399,13 +416,13 @@ ms. Its dry-run importer resolved 34/34 references with zero missing/privacy
 findings. These remain source/local results, not a public deployment or data
 cutover claim.
 
-The Replit deployment path is Corepack-free. The checked-in build uses `npm
-exec` with exact pnpm `10.34.5`, runs the mandatory workspace typecheck, and
-builds the API, runner gateway, and Next application. The production supervisor
-uses compiled artifacts only: it applies or verifies the current 21-step database
-release, starts the compiled API, waits for readiness, and starts compiled
-Next. The Phase 6 release adds `pulsedesk_tables` after TechDeck and before
-shared services and applied cleanly/idempotently on disposable PostgreSQL 16.
+The then-current Phase 6 Replit path used compiled artifacts and could apply or
+verify its historical 21-step release. That statement describes the historical
+phase only. The current serving supervisor no longer has database-apply
+authority and performs `--verify-current` only; approved applies are separate
+backup-gated operator actions. The Phase 6 release added `pulsedesk_tables`
+after TechDeck and before shared services and applied cleanly/idempotently on
+disposable PostgreSQL 16.
 The Phase 7 plan adds `torqueshed_tables` after PulseDesk and before shared
 services; Phase 8 extends that same ordered operation with Assist, purchase,
 rate/circuit and append-only ledger tables, and Phase 9 adds Marketplace,

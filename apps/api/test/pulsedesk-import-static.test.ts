@@ -328,6 +328,6 @@ test('PulseDesk Phase 13 removes duplicate local login and checkout ownership fr
   assert.doesNotMatch(email, /PULSEDESK_LOCAL_AUTH_ENABLED/);
   assert.match(email, /const eligible = snapshotAllowsFeature\(snapshot, "emailToTicket"\);/);
 
-  assert.match(shell, /Identity and access.*OperatorOS manages sign-in/);
+  assert.match(shell, /Team access.*Use OperatorOS to manage sign-in/);
   assert.doesNotMatch(shell, /Standalone login|shared runtime|module entitlement state/i);
 });

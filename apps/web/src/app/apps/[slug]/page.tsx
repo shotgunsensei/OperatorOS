@@ -30,6 +30,7 @@ import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcos
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
+import { ModuleAccessProvider, type ModuleAccessLevel } from '@/components/ModuleAccessContext';
 
 // Mirrors the server's UserModuleSummary shape returned by
 // GET /v1/modules/:slug. Defined inline (rather than imported from the
@@ -46,6 +47,7 @@ interface UserModuleSummary {
   unlocked: boolean;
   cta: 'open' | 'launch' | 'upgrade' | 'buy_addon' | 'coming_soon' | string;
   reason?: string;
+  module_access_level: ModuleAccessLevel;
 }
 
 const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; routePath?: string }>> = {
@@ -77,6 +79,7 @@ function InternalAppContent() {
   const deepLinkTarget = useModuleDeepLinkTarget();
   const initialSectionId = deepLinkTarget.sectionId;
   const [mod, setMod] = useState<UserModuleSummary['module'] | null>(null);
+  const [moduleAccessLevel, setModuleAccessLevel] = useState<ModuleAccessLevel>('none');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -105,6 +108,7 @@ function InternalAppContent() {
           setMod(null);
         } else {
           setMod(summary.module);
+          setModuleAccessLevel(summary.module_access_level);
         }
       } catch (e) {
         const errObj = e as { status?: number; error?: string; code?: string; message?: string };
@@ -215,7 +219,9 @@ function InternalAppContent() {
     return (
       <div>
         <OperatorOSEcosystemHeader moduleName={mod.name} moduleSlug={mod.slug} />
-        <Shell baseUrl={mod.baseUrl ?? undefined} routePath={deepLinkTarget.routePath} />
+        <ModuleAccessProvider accessLevel={moduleAccessLevel}>
+          <Shell baseUrl={mod.baseUrl ?? undefined} routePath={deepLinkTarget.routePath} />
+        </ModuleAccessProvider>
       </div>
     );
   }
@@ -251,7 +257,7 @@ function InternalAppContent() {
               data-testid={`text-no-baseurl-${mod.slug}`}
               style={{ color: semantic.textMuted, fontSize: fontSize.sm }}
             >
-              This module is enabled but cannot be opened right now. Ask a platform administrator to review its launch settings.
+              This application is available to your organization but cannot be opened right now. Ask a platform administrator to review its launch settings.
             </span>
           )}
         </div>

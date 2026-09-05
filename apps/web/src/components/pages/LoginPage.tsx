@@ -12,8 +12,8 @@ interface LoginPageProps {
 
 const BENEFITS = [
   { icon: KeyRound, title: 'Sign in once', body: 'Your account and organization access follow you into every unlocked app.' },
-  { icon: Layers3, title: 'Keep the stack connected', body: 'Apps, billing, roles, and access stay synchronized from one command layer.' },
-  { icon: ShieldCheck, title: 'Operate with confidence', body: 'Server-verified access and auditable handoffs protect every module launch.' },
+  { icon: Layers3, title: 'Keep your work connected', body: 'Applications, billing, team roles, and access stay together in one business home base.' },
+  { icon: ShieldCheck, title: 'Operate with confidence', body: 'Protected access and a clear activity history safeguard every application and connected workflow.' },
 ];
 
 export default function LoginPage({ onSwitch }: LoginPageProps) {
@@ -138,7 +138,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
       `}</style>
 
       <section className="operatoros-auth-story" aria-label="OperatorOS ecosystem overview">
-        <OperatorLogo href="/" size={36} wordmarkSize={18} tagline="One command layer" />
+        <OperatorLogo href="/" size={36} wordmarkSize={18} tagline="Your business application home base" />
 
         <div className="operatoros-auth-story-copy" style={{ marginTop: 'auto', maxWidth: 760 }}>
           <span style={{
@@ -305,7 +305,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
               data-testid="link-register"
               onClick={() => onSwitch('register')}
               style={{ background: 'none', border: 'none', color: brand.accentCyan, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
-            >Create your free command layer</button>
+            >Create your free home base</button>
           </div>}
         </div>
       </section>

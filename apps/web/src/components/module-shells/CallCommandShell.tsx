@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import React, { useCallback, useMemo } from 'react';
 import { Activity, Grid2X2, Headphones, LifeBuoy, PhoneCall, UserRound } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
@@ -32,7 +33,12 @@ export default function CallCommandShell({ routePath }: CallCommandShellProps) {
     ...group, items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })),
   })), [hrefFor]);
   const platformAdmin = user?.platformRole === 'super_admin';
-  const roleLabel = platformAdmin ? 'Platform administrator' : activeRole === 'owner' ? 'Organization owner' : activeRole === 'admin' ? 'Organization administrator' : activeRole === 'viewer' ? 'Read-only observer' : 'Call operator';
+  const moduleAccessLevel = useModuleAccessLevel();
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin');
+  const roleLabel = platformAdmin ? 'Platform administrator' : !canWriteModule ? 'Read-only access' : activeRole === 'owner' ? 'Organization owner' : activeRole === 'admin' ? 'Organization administrator' : moduleAccessLevel === 'manager' ? 'CallCommand manager' : 'Call operator';
   return <ModuleApplicationShell
     moduleId="callcommand"
     moduleName="CallCommand AI"
@@ -40,7 +46,7 @@ export default function CallCommandShell({ routePath }: CallCommandShellProps) {
     currentPath={hrefFor(route.canonicalPath)}
     navigation={navigation}
     brand={<Link href={hrefFor('/')} className="callcommand-brand"><span><Headphones size={20}/></span><strong>CallCommand AI</strong></Link>}
-    organization={{ label: 'Organization', value: activeTenant?.name ?? tenantId ?? 'No organization selected', testId: 'callcommand-tenant-badge' }}
+    organization={{ label: 'Organization', value: activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected'), testId: 'callcommand-tenant-badge' }}
     accessContext={{ label: 'Access', value: roleLabel, testId: 'callcommand-role-badge' }}
     utilityActions={[
       { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'callcommand-return-command-center' },
@@ -49,14 +55,14 @@ export default function CallCommandShell({ routePath }: CallCommandShellProps) {
     ]}
     page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: route.area === 'calls' ? null : <Link className="callcommand-action" href={hrefFor('/calls')}><PhoneCall size={15}/>Review calls</Link>, detailLabel: route.recordId }}
     state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}
-    stateMessage={!tenantId ? 'Choose an organization in My Apps before opening tenant-scoped call operations.' : undefined}
+    stateMessage={!tenantId ? 'Choose an organization in My Apps before opening its call operations.' : undefined}
     pageHeaderTestId="callcommand-module-header"
     mobileNavigation="drawer"
     testId="callcommand-module-shell"
     dataAttributes={{ 'data-callcommand-route': route.area }}
   >
     <style>{routeCss}</style>
-    {tenantId && <CallCommandWorkspace key={`${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} hrefFor={hrefFor}/>}
+    {tenantId && <CallCommandWorkspace key={`${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} hrefFor={hrefFor} canWriteModule={canWriteModule} canManageModule={canManageModule}/>}
   </ModuleApplicationShell>;
 }
 

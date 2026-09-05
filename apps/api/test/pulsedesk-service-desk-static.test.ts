@@ -74,7 +74,8 @@ test('PulseDesk UI exposes real persisted workflows, privacy guidance, responsiv
     assert.match(routeContract, new RegExp(`canonicalPath: '/${path}'`));
   }
   assert.match(routeContract, /service-desk-admin/);
-  assert.match(workspace, /Reporting an issue for the equipment selected by this deep link/);
+  assert.match(workspace, /Reporting an issue for the selected equipment/);
+  assert.match(workspace, /Confirm the equipment and enter only PHI-minimized operational details/);
   assert.match(read('apps/web/src/components/module-shells/BusinessDirectory.tsx'), /organizationMatch/);
   assert.doesNotMatch(workspace, /Math\.random|mock ticket|fake CRUD|TODO/);
 });

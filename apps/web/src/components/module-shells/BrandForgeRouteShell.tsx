@@ -8,11 +8,12 @@ import { Activity, BarChart3, CalendarDays, CheckCircle2, FileText, Grid2X2, Lay
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell, type ModuleRouteManifestGroup, type ModuleThemeTokens } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const BrandForgeWorkspace = dynamic(() => import('./BrandForgeWorkspace'), {
-  loading: () => <div role="status" aria-busy="true"><Activity size={18}/> Loading this creative route…</div>,
+  loading: () => <div role="status" aria-busy="true"><Activity size={18}/> Opening your creative workspace…</div>,
 });
 
 const theme: ModuleThemeTokens = {
@@ -43,18 +44,18 @@ const nav: readonly ModuleRouteManifestGroup[] = [
 ];
 
 const copy: Record<string, { eyebrow: string; title: string; subtitle: string }> = {
-  dashboard: { eyebrow: 'Creative command', title: 'BrandForgeOS dashboard', subtitle: 'Coordinate real brands, campaigns, assets, approvals, and measurable launch work.' },
-  brands: { eyebrow: 'Reusable identity systems', title: 'Brands and audiences', subtitle: 'Manage durable brand kits, voice, visual rules, assets, and audience evidence.' },
-  personas: { eyebrow: 'Audience evidence', title: 'Personas', subtitle: 'Maintain durable audience profiles that campaigns can select and measure.' },
-  campaigns: { eyebrow: 'Campaign production', title: 'Campaigns', subtitle: 'Move briefs, offers, content, and approval state through a durable campaign workflow.' },
-  content: { eyebrow: 'Content production', title: 'Content and assets', subtitle: 'Create reviewable copy and generation artifacts without presenting provider-disabled output as complete.' },
-  calendar: { eyebrow: 'Publishing rhythm', title: 'Content calendar', subtitle: 'Schedule persisted campaign deliverables and review upcoming work.' },
-  approvals: { eyebrow: 'Human review', title: 'Approvals', subtitle: 'Review campaign and deliverable state before release or export.' },
-  'ai-workflows': { eyebrow: 'Provider-aware creation', title: 'AI workflows', subtitle: 'Generate review-ready drafts with recorded provenance and honest provider state.' },
-  analytics: { eyebrow: 'Measured creative work', title: 'Analytics', subtitle: 'Review persisted campaign performance and recommendations.' },
-  reports: { eyebrow: 'Portable evidence', title: 'Reports and exports', subtitle: 'Create and retrieve authorized creative-operation reports and exports.' },
-  integrations: { eyebrow: 'Controlled connections', title: 'Integrations', subtitle: 'Configure provider connections without weakening OperatorOS authority or secret handling.' },
-  settings: { eyebrow: 'Workspace control', title: 'BrandForgeOS settings', subtitle: 'Review onboarding, plan usage, security, and creative workspace preferences.' },
+  dashboard: { eyebrow: 'Move ideas toward launch', title: 'BrandForgeOS dashboard', subtitle: 'See active brands, campaigns, content deadlines, approvals, and performance in one creative workspace.' },
+  brands: { eyebrow: 'Create once and stay consistent', title: 'Brands and audiences', subtitle: 'Build reusable brand kits with voice, colors, visual rules, approved assets, and audience guidance.' },
+  personas: { eyebrow: 'Create for a real audience', title: 'Personas', subtitle: 'Describe the people each offer serves so campaigns start with a focused message.' },
+  campaigns: { eyebrow: 'Take a campaign from brief to approval', title: 'Campaigns', subtitle: 'Keep the offer, audience, content, tasks, and review decisions together through launch preparation.' },
+  content: { eyebrow: 'Prepare assets people can review', title: 'Content and assets', subtitle: 'Create and compare copy, landing-page drafts, and campaign assets before they are approved for use.' },
+  calendar: { eyebrow: 'Keep production on schedule', title: 'Content calendar', subtitle: 'Plan campaign deliverables, spot late work, and see what needs review next.' },
+  approvals: { eyebrow: 'Approve before anything leaves the team', title: 'Approvals', subtitle: 'Review campaigns and deliverables before they are exported or recorded as released.' },
+  'ai-workflows': { eyebrow: 'Turn the brief into a strong first draft', title: 'AI workflows', subtitle: 'Use your saved brand, audience, offer, and channels to prepare drafts for human review.' },
+  analytics: { eyebrow: 'Learn what is working', title: 'Analytics', subtitle: 'Review recorded campaign results and decide what to continue, change, or stop.' },
+  reports: { eyebrow: 'Package work for your team or client', title: 'Reports and exports', subtitle: 'Create and download campaign reports and files your team or client can review.' },
+  integrations: { eyebrow: 'Move approved work into the tools your team uses', title: 'Connections and exports', subtitle: 'Download logos and campaign files for Canva or Figma, or send an approved campaign to Deploy Ops. Direct publishing connections are not available yet.' },
+  settings: { eyebrow: 'Give every campaign the right context', title: 'Workspace profile', subtitle: 'Maintain the business profile, goals, and preferred channels that guide campaign work. OperatorOS owns membership, access, and billing.' },
 };
 
 function area(path?: string): string {
@@ -74,16 +75,29 @@ function area(path?: string): string {
   return root;
 }
 
+function workspaceRoute(path?: string): string {
+  const raw = path || '/';
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(raw) || raw.startsWith('//') || /[\u0000-\u001f\u007f]/u.test(raw)) return '/';
+  const clean = raw.split(/[?#]/u, 1)[0].replace(/^\/modules\/brandforgeos\/?/u, '');
+  return `/${clean.split('/').filter(Boolean).join('/')}`;
+}
+
 export default function BrandForgeRouteShell({ routePath }: { baseUrl?: string; routePath?: string }) {
   const pathname = usePathname(); const { user, loading: authLoading } = useAuth(); const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
-  const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId(); const currentArea = area(routePath || pathname); const page = copy[currentArea] ?? copy.dashboard;
+  const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId(); const currentRoute = workspaceRoute(routePath || pathname); const currentArea = area(currentRoute); const page = copy[currentArea] ?? copy.dashboard;
+  const moduleAccessLevel = useModuleAccessLevel();
+  const platformAdmin = user?.platformRole === 'super_admin';
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canAdminModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin');
   const source = pathname.startsWith('/app/') || pathname.startsWith('/modules/'); const hrefFor = useCallback((path: string) => source ? `/modules/brandforgeos${path === '/' ? '/dashboard' : path}` : path, [source]);
   const navigation = useMemo(() => nav.map(group => ({ ...group, items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })) })), [hrefFor]);
   return <ModuleApplicationShell moduleId="brandforgeos" moduleName="BrandForgeOS" theme={theme} currentPath={hrefFor(currentArea === 'dashboard' ? '/' : `/${currentArea}`)} navigation={navigation}
     brand={<Link href={hrefFor('/')} style={{ color:'#fff7ff', textDecoration:'none', fontWeight:900 }}>BrandForge<span style={{color:'#f0abfc'}}>OS</span></Link>}
-    organization={{ label:'Organization', value:activeTenant?.name ?? tenantId ?? 'No organization selected' }} accessContext={{label:'Access',value:user?.platformRole==='super_admin'?'Platform administrator':activeRole ?? 'member'}}
+    organization={{ label:'Organization', value:activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected') }} accessContext={{label:'Access',value:platformAdmin?'Platform administrator':!canWriteModule?'Read-only access':activeRole === 'owner'?'Organization owner':activeRole === 'admin'?'Organization administrator':moduleAccessLevel === 'manager'?'Brand manager':'Brand contributor'}}
     utilityActions={[{label:'My Apps',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,icon:Grid2X2},{label:'Profile',href:DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl,icon:UserRound},{label:'Help',href:buildOperatorOSHelpUrl({module:'brandforgeos',page:currentArea==='dashboard'?'/':`/${currentArea}`}),icon:LifeBuoy}]}
     page={{...page}} state={authLoading||tenantLoading?'loading':!tenantId?'empty':'ready'} stateMessage={!tenantId?'Choose an organization before opening BrandForgeOS.':undefined} mobileNavigation="drawer" testId="brandforgeos-module-shell" pageHeaderTestId="brandforgeos-module-header">
-    {tenantId && <BrandForgeWorkspace key={`${tenantId}-${currentArea}`} routePath={currentArea === 'dashboard' ? '/' : `/${currentArea}`} embedded hrefFor={hrefFor} />}
+    {tenantId && <BrandForgeWorkspace key={`${tenantId}-${currentArea}-${currentRoute}`} routePath={currentRoute} tenantKey={tenantId} embedded hrefFor={hrefFor} canWrite={canWriteModule} canAdmin={canAdminModule} />}
   </ModuleApplicationShell>;
 }

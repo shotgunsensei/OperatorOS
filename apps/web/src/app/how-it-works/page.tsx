@@ -52,7 +52,7 @@ export default function MarketingHowItWorksPage() {
             maxWidth: 840,
           }}
         >
-          Pick a plan, light up your modules, run your business from one console.
+          Choose a plan, add the applications your team needs, and run the work from one place.
         </h1>
         <p style={{ fontSize: 17, color: brand.textSecondary, margin: '0 auto', maxWidth: 620 }}>
           Sign-in, billing, organizations, and access are already connected.

@@ -1,11 +1,12 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { requireTenantMember, requireTenantModuleAccess, requireTenantModuleWriteAccess } from '../lib/tenant-auth.js';
-import { storeEncryptedSecretReference, resolveEncryptedSecretReference } from '../lib/shared-secret-vault.js';
+import { storeEncryptedSecretReference } from '../lib/shared-secret-vault.js';
 import { enqueueSharedJob, registerSharedJobHandler } from '../lib/shared-background-jobs.js';
 import { saveProviderConfiguration } from '../lib/shared-platform-control-plane.js';
+import { isOperatorOSTestEnvironment } from '../lib/shared-service-safety.js';
 
 const readGuards = [requireTenantMember, requireTenantModuleAccess('pulsedesk')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -59,24 +60,6 @@ async function createTicket(input: { tenantId: string; userId: string; summary: 
   });
 }
 
-function canonicalInbound(body: any) {
-  return [
-    bounded(body.messageId, 512),
-    bounded(body.from, 254).toLowerCase(),
-    bounded(body.subject, 160),
-    String(Math.min(20, Math.max(0, Number(body.attachmentCount) || 0))),
-    body.attachmentsClean === true ? 'clean' : 'unverified',
-  ].join('\n');
-}
-
-function validSignature(secret: string, body: any, supplied: unknown) {
-  const expected = createHmac('sha256', secret).update(canonicalInbound(body)).digest();
-  const normalized = bounded(supplied, 256).replace(/^sha256=/i, '');
-  if (!/^[a-f0-9]{64}$/i.test(normalized)) return false;
-  const actual = Buffer.from(normalized, 'hex');
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
-
 async function ingestMessage(input: { connector: any; body: any; eventUserId: string | null }) {
   const { connector, body, eventUserId } = input;
   const tenantId = String(connector.tenant_id);
@@ -111,9 +94,10 @@ async function ingestMessage(input: { connector: any; body: any; eventUserId: st
 registerSharedJobHandler(POLL_HANDLER, async context => {
   const connector = await connectorById(context.tenantId, String(context.payload.connectorId ?? ''));
   if (!connector) return;
-  if (connector.mode !== 'test') {
-    await db.execute(sql`UPDATE pulsedesk_mail_connectors SET status='degraded',last_error_code='LIVE_PROVIDER_POLL_UNAVAILABLE',consecutive_failures=consecutive_failures+1,last_polled_at=NOW(),updated_at=NOW() WHERE tenant_id=${context.tenantId} AND id=${connector.id}`);
-    await event(context.tenantId, connector.id, 'failed', context.requestedByUserId, { provider: connector.provider }, 'LIVE_PROVIDER_POLL_UNAVAILABLE');
+  if (connector.mode !== 'test' || !isOperatorOSTestEnvironment()) {
+    const failureCode = connector.mode === 'test' ? 'DETERMINISTIC_TEST_DISABLED' : 'LIVE_PROVIDER_POLL_UNAVAILABLE';
+    await db.execute(sql`UPDATE pulsedesk_mail_connectors SET status='degraded',last_error_code=${failureCode},consecutive_failures=consecutive_failures+1,last_polled_at=NOW(),updated_at=NOW() WHERE tenant_id=${context.tenantId} AND id=${connector.id}`);
+    await event(context.tenantId, connector.id, 'failed', context.requestedByUserId, { provider: connector.provider }, failureCode);
     return;
   }
   await db.execute(sql`UPDATE pulsedesk_mail_connectors SET status='active',last_error_code=NULL,consecutive_failures=0,last_polled_at=NOW(),last_success_at=NOW(),updated_at=NOW() WHERE tenant_id=${context.tenantId} AND id=${connector.id}`);
@@ -123,13 +107,26 @@ registerSharedJobHandler(POLL_HANDLER, async context => {
 export async function registerPulseDeskLiteralRoutes(app: FastifyInstance) {
   app.get('/v1/modules/pulsedesk/connectors', { preHandler: readGuards }, async request => {
     const result = await db.execute(sql`SELECT id,provider,label,inbound_alias,mailbox_address,mode,status,public_config,last_polled_at,last_success_at,last_error_code,consecutive_failures,version,created_at,updated_at FROM pulsedesk_mail_connectors WHERE tenant_id=${tenant(request)} AND revoked_at IS NULL ORDER BY created_at DESC`);
-    return { connectors: result.rows };
+    return {
+      connectors: result.rows,
+      capabilities: {
+        deterministicTestAdapter: isOperatorOSTestEnvironment(),
+        liveMailboxAdapters: false,
+        liveMailboxSetupReason: 'Provider OAuth, polling, and delivery adapters are not available in this release.',
+      },
+    };
   });
   app.post('/v1/modules/pulsedesk/connectors', { preHandler: [...writeGuards, manager] }, async (request, reply) => {
     const body = (request.body ?? {}) as any;
     const provider = bounded(body.provider, 20);
     const mode = (bounded(body.mode, 20) || 'disabled') as 'disabled' | 'test' | 'live';
     if (!PROVIDERS.has(provider) || !['disabled','test','live'].includes(mode)) return reply.code(400).send({ error: 'Invalid connector provider or mode', code: 'PULSEDESK_CONNECTOR_INVALID' });
+    if (mode === 'live' || (mode === 'test' && !isOperatorOSTestEnvironment())) {
+      return reply.code(503).send({
+        error: 'Live mailbox adapters are not available in this release. No external provider was connected.',
+        code: 'PULSEDESK_LIVE_CONNECTOR_UNAVAILABLE',
+      });
+    }
     const label = bounded(body.label, 120);
     if (label.length < 2) return reply.code(400).send({ error: 'Connector label is required', code: 'PULSEDESK_CONNECTOR_INVALID' });
     let secretId: string | null = null;
@@ -149,25 +146,26 @@ export async function registerPulseDeskLiteralRoutes(app: FastifyInstance) {
   app.post('/v1/modules/pulsedesk/connectors/:id/oauth/start', { preHandler: [...writeGuards, manager] }, async (request, reply) => {
     const connector = await connectorById(tenant(request), (request.params as any).id); if (!connector) return reply.code(404).send({ error: 'Connector not found', code: 'PULSEDESK_CONNECTOR_NOT_FOUND' });
     if (!['google','microsoft'].includes(connector.provider)) return reply.code(409).send({ error: 'OAuth is not supported for this connector', code: 'PULSEDESK_OAUTH_UNSUPPORTED' });
+    if (connector.mode !== 'test' || !isOperatorOSTestEnvironment()) return reply.code(503).send({ error: 'Mailbox authorization is unavailable until a supported live connection is released', code: 'PULSEDESK_LIVE_OAUTH_UNAVAILABLE' });
     const state = randomBytes(32).toString('base64url'); await db.execute(sql`UPDATE pulsedesk_mail_connectors SET oauth_state_hash=${hash(state)},oauth_state_expires_at=NOW()+INTERVAL '10 minutes',updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${connector.id}`); await event(tenant(request), connector.id, 'oauth_started', actor(request), { provider: connector.provider });
-    if (connector.mode !== 'test') return reply.code(503).send({ error: 'Live OAuth authorization is unavailable until the provider application and callback are verified', code: 'PULSEDESK_LIVE_OAUTH_UNAVAILABLE', stateIssued: true });
     return { state, callbackPath: `/v1/modules/pulsedesk/connectors/${connector.id}/oauth/callback` };
   });
   app.post('/v1/modules/pulsedesk/connectors/:id/oauth/callback', { preHandler: [...writeGuards, manager] }, async (request, reply) => {
     const connector = await connectorById(tenant(request), (request.params as any).id); const body = (request.body ?? {}) as any; if (!connector) return reply.code(404).send({ error: 'Connector not found', code: 'PULSEDESK_CONNECTOR_NOT_FOUND' });
     const stateHash = hash(bounded(body.state, 512)); if (!connector.oauth_state_hash || connector.oauth_state_hash !== stateHash || new Date(connector.oauth_state_expires_at).getTime() < Date.now()) return reply.code(400).send({ error: 'OAuth state is invalid or expired', code: 'PULSEDESK_OAUTH_STATE_INVALID' });
-    if (connector.mode !== 'test') return reply.code(503).send({ error: 'Live token exchange is unavailable until provider verification succeeds', code: 'PULSEDESK_LIVE_OAUTH_UNAVAILABLE' });
+    if (connector.mode !== 'test' || !isOperatorOSTestEnvironment()) return reply.code(503).send({ error: 'Mailbox authorization is unavailable until a supported live connection is released', code: 'PULSEDESK_LIVE_OAUTH_UNAVAILABLE' });
     await db.execute(sql`UPDATE pulsedesk_mail_connectors SET status='active',oauth_state_hash=NULL,oauth_state_expires_at=NULL,last_success_at=NOW(),updated_at=NOW(),version=version+1 WHERE tenant_id=${tenant(request)} AND id=${connector.id}`); await event(tenant(request), connector.id, 'oauth_completed', actor(request), { provider: connector.provider, adapter: 'deterministic' }); return { connected: true, provider: connector.provider };
   });
   app.post('/v1/modules/pulsedesk/connectors/:id/poll', { preHandler: [...writeGuards, manager] }, async (request, reply) => {
     const connector = await connectorById(tenant(request), (request.params as any).id); if (!connector) return reply.code(404).send({ error: 'Connector not found', code: 'PULSEDESK_CONNECTOR_NOT_FOUND' });
+    if (connector.mode !== 'test' || !isOperatorOSTestEnvironment()) return reply.code(503).send({ error: 'Mailbox import is not connected yet', code: 'PULSEDESK_MAILBOX_IMPORT_UNAVAILABLE' });
     const queued = await enqueueSharedJob({ tenantId: tenant(request), moduleId: 'pulsedesk', requestedByUserId: actor(request), handlerKey: POLL_HANDLER, payload: { connectorId: connector.id }, idempotencyKey: `${connector.id}:${new Date().toISOString().slice(0,16)}` }); await event(tenant(request), connector.id, 'poll_queued', actor(request), { duplicate: queued.duplicate }); return reply.code(202).send(queued);
   });
   app.delete('/v1/modules/pulsedesk/connectors/:id', { preHandler: [...writeGuards, manager] }, async (request, reply) => {
     const result = await db.execute(sql`UPDATE pulsedesk_mail_connectors SET status='revoked',revoked_at=NOW(),oauth_state_hash=NULL,updated_at=NOW(),version=version+1 WHERE tenant_id=${tenant(request)} AND id=${(request.params as any).id} AND revoked_at IS NULL RETURNING id`); if (!result.rows[0]) return reply.code(404).send({ error: 'Connector not found', code: 'PULSEDESK_CONNECTOR_NOT_FOUND' }); await event(tenant(request), String((result.rows[0] as any).id), 'revoked', actor(request)); return reply.code(204).send();
   });
   app.post('/v1/modules/pulsedesk/connectors/:id/test-ingest', { preHandler: [...writeGuards, manager] }, async (request, reply) => {
-    const connector = await connectorById(tenant(request), (request.params as any).id); const body=(request.body??{}) as any; if (!connector) return reply.code(404).send({error:'Connector not found',code:'PULSEDESK_CONNECTOR_NOT_FOUND'}); if (connector.mode !== 'test') return reply.code(403).send({error:'Deterministic ingestion is test-mode only',code:'PULSEDESK_TEST_ADAPTER_REQUIRED'});
+    const connector = await connectorById(tenant(request), (request.params as any).id); const body=(request.body??{}) as any; if (!connector) return reply.code(404).send({error:'Connector not found',code:'PULSEDESK_CONNECTOR_NOT_FOUND'}); if (connector.mode !== 'test' || !isOperatorOSTestEnvironment()) return reply.code(403).send({error:'Sample mailbox ingestion is available only in the isolated test environment',code:'PULSEDESK_TEST_ADAPTER_REQUIRED'});
     try { const result = await ingestMessage({ connector, body, eventUserId: actor(request) }); return reply.code(result.statusCode).send(result.payload); }
     catch(error:any) { return reply.code(error.code === 'PULSEDESK_SENSITIVE_CONTENT_REJECTED' ? 422 : 400).send({ error: error.message, code: error.code ?? 'PULSEDESK_MESSAGE_INVALID' }); }
   });
@@ -178,11 +176,7 @@ export async function registerPulseDeskLiteralRoutes(app: FastifyInstance) {
     const connector = await connectorByAlias(provider, alias);
     if (!connector || connector.status !== 'active') return reply.code(404).send({ error: 'Inbound connector not found', code: 'PULSEDESK_CONNECTOR_NOT_FOUND' });
     const body = (request.body ?? {}) as any;
-    let authenticated = request.headers['x-pulsedesk-test-adapter'] === 'deterministic' && connector.mode === 'test' && process.env.APP_ENV !== 'production';
-    if (connector.mode === 'live' && connector.secret_reference_id) {
-      const secret = await resolveEncryptedSecretReference({ tenantId: String(connector.tenant_id), id: String(connector.secret_reference_id) });
-      authenticated = Boolean(secret && validSignature(secret, body, request.headers['x-pulsedesk-signature']));
-    }
+    const authenticated = request.headers['x-pulsedesk-test-adapter'] === 'deterministic' && connector.mode === 'test' && isOperatorOSTestEnvironment();
     if (!authenticated) {
       await event(String(connector.tenant_id), connector.id, 'failed', null, { provider }, 'INBOUND_AUTHENTICITY_FAILED');
       return reply.code(401).send({ error: 'Inbound authenticity verification failed', code: 'PULSEDESK_INBOUND_AUTH_FAILED' });

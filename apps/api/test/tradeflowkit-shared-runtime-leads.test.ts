@@ -163,7 +163,7 @@ test('TradeFlowKit shell exposes the live lead API with loading, empty, error, a
   assert.match(leadCenter, /tradeflowkit-lead-empty/);
   assert.match(leadCenter, /tradeflowkit-lead-error/);
   assert.match(leadCenter, /@media \(max-width: 700px\)/);
-  assert.match(leadCenter, /convert organization leads into shared-directory customers and numbered jobs/);
+  assert.match(leadCenter, /Capture, qualify, and convert leads into shared customer records and numbered jobs/);
   assert.match(leadCenter, /moduleShellApi\.tradeflowkit\.convertLead/);
   assert.match(client, /\/modules\/tradeflowkit\/leads/);
 });

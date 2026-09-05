@@ -27,7 +27,7 @@ async function login(browser: Browser, email: string, password: string, viewport
 async function openMessenger(page: Page) {
   await page.getByTestId('tenant-messenger-toggle').click();
   await expect(page.getByTestId('tenant-messenger-panel')).toBeVisible();
-  await expect(page.getByText(/Live and tenant-private|Connecting securely/)).toBeVisible();
+  await expect(page.getByText(/Live and organization-only|Connecting securely/)).toBeVisible();
 }
 
 test('P53-E2E-001: two same-tenant users message, receive presence/alerts, edit, and delete durable history', async ({ browser }) => {
@@ -46,7 +46,7 @@ test('P53-E2E-001: two same-tenant users message, receive presence/alerts, edit,
   try {
     await openMessenger(owner.page);
     await owner.page.getByRole('button', { name: 'Start a conversation' }).click();
-    await owner.page.getByLabel('Find a tenant member').fill(memberEmail);
+    await owner.page.getByLabel('Find a teammate').fill(memberEmail);
     await owner.page.getByRole('button', { name: new RegExp(memberEmail, 'i') }).click();
     await owner.page.getByRole('button', { name: 'Start conversation' }).click();
     await expect(owner.page.getByText(/Online · same organization only/)).toBeVisible();

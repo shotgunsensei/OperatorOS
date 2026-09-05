@@ -9,9 +9,9 @@ import { marketingPricingFaqs } from '@/lib/marketing-pricing';
 import { buildPublicMetadata, serializeJsonLd } from '@/lib/seo';
 
 export const metadata: Metadata = buildPublicMetadata({
-  title: 'OperatorOS Pricing | Plans, Seats, and Modules',
+  title: 'OperatorOS Application Stack Pricing',
   description:
-    'Review OperatorOS main modules, included seats, free account apps, companion applications, and configuration-driven monthly pricing.',
+    'Build one monthly Application Stack with a flagship application, five included seats, one organization-wide companion, and clearly priced additional capacity.',
   path: '/pricing',
 });
 

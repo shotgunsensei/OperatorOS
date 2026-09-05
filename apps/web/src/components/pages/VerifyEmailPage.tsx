@@ -33,7 +33,7 @@ export default function VerifyEmailPage({ onSwitch }: { onSwitch: (page: 'login'
   const detail = state === 'working'
     ? 'Checking the single-use link with OperatorOS…'
     : state === 'verified'
-      ? 'Your account is now eligible for verified-account features, including the seven-day Main Module trial.'
+      ? 'Your account is now eligible for verified-account features, including the seven-day flagship application trial.'
       : 'The link may have expired or already been used. Sign in to request a new one.';
 
   return (

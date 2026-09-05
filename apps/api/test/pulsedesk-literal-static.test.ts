@@ -15,9 +15,11 @@ test('Phase 27 connector routes preserve tenant authority, encrypted credentials
   assert.match(routes,/enqueueSharedJob/);
   assert.match(routes,/test-ingest/);
   assert.match(routes,/PULSEDESK_TEST_ADAPTER_REQUIRED/);
-  assert.match(routes,/timingSafeEqual/);
+  assert.match(routes,/x-pulsedesk-test-adapter/);
+  assert.match(routes,/connector\.mode === 'test' && isOperatorOSTestEnvironment\(\)/);
   assert.match(routes,/PULSEDESK_INBOUND_AUTH_FAILED/);
-  assert.match(routes,/connector\.mode === 'test' && process\.env\.APP_ENV !== 'production'/);
+  assert.match(routes,/connector\.mode !== 'test' \|\| !isOperatorOSTestEnvironment\(\)/);
+  assert.match(routes,/mode === 'live' \|\| \(mode === 'test' && !isOperatorOSTestEnvironment\(\)\)/);
   assert.match(routes,/PULSEDESK_ATTACHMENT_SCAN_REJECTED/);
   assert.ok(routes.indexOf("status='processed'")>routes.indexOf('if (!scanClean)'));
   assert.doesNotMatch(routes,/console\.log|request\.body.*log/);
@@ -46,7 +48,7 @@ test('Phase 27 UI exposes connector management and PHI-minimized public intake',
   const intake=read('apps/web/src/app/public/pulsedesk/intake/[slug]/page.tsx');
   const worker=read('apps/web/public/pulsedesk-sw.js');
   assert.match(shell,/PulseDeskConnectorConsole/);
-  for(const provider of ['SendGrid','IMAP','Google Workspace','Microsoft 365']) assert.match(consoleSource,new RegExp(provider));
+  for(const provider of ['SendGrid','Standard email mailbox','Google Workspace','Microsoft 365']) assert.match(consoleSource,new RegExp(provider));
   assert.match(intake,/Do not include patient names/);
   assert.match(intake,/navigator\.onLine/);
   assert.match(intake,/serviceWorker\.register/);

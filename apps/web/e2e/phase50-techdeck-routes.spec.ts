@@ -87,7 +87,7 @@ test.describe('Phase 50 TechDeck route application', () => {
       ['/documentation', 'techdeck-documentation', 'Documentation'],
       ['/runbooks', 'techdeck-runbooks', 'Runbooks'],
       ['/evidence', 'techdeck-evidence', 'Evidence register'],
-      ['/reports', 'techdeck-reports', 'Snapshot reports'],
+      ['/reports', 'techdeck-reports', 'Operations reports'],
       ['/time', 'techdeck-time', 'Technician time'],
       ['/calendar', 'techdeck-calendar', 'Calendar and recurrence'],
       ['/portal', 'techdeck-portal', 'Client portal'],

@@ -25,13 +25,14 @@ import {
   type ModuleThemeTokens,
 } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const Workspace = dynamic(() => import('./NinjamationShell'), {
   loading: () => (
     <div role="status" aria-busy="true">
-      <Activity size={18} /> Loading script operations…
+      <Activity size={18} /> Opening your script workspace…
     </div>
   ),
 });
@@ -88,7 +89,7 @@ const nav: readonly ModuleRouteManifestGroup[] = [
       {
         id: 'sources',
         canonicalPath: '/sources',
-        label: 'Sources & sync',
+        label: 'Library updates',
         icon: GitBranch,
         activeMatch: { kind: 'prefix' },
       },
@@ -146,52 +147,52 @@ const nav: readonly ModuleRouteManifestGroup[] = [
 
 const copy: Record<string, { eyebrow: string; title: string; subtitle: string }> = {
   overview: {
-    eyebrow: 'Automation operations',
+    eyebrow: 'Find, review, and deliver scripts',
     title: 'Script Ops dashboard',
     subtitle:
-      'See reviewed scripts, catalog provenance, drafting, synchronization, and usage posture.',
+      'See approved scripts, drafts awaiting review, library update issues, and recent downloads.',
   },
   library: {
-    eyebrow: 'Inert reviewed source',
+    eyebrow: 'Start with work that has already been reviewed',
     title: 'Script library',
-    subtitle: 'Search, inspect, favorite, and download approved immutable script versions.',
+    subtitle: 'Search, inspect, save, and download the exact approved script version your technician needs.',
   },
   sources: {
-    eyebrow: 'Pinned provenance',
-    title: 'Sources and synchronization',
+    eyebrow: 'Keep the approved library current',
+    title: 'Library updates',
     subtitle:
-      'Synchronize only the allowlisted catalog and preserve commit, blob, checksum, and retry evidence.',
+      'Import changes from approved catalogs, review update problems, and keep missing entries from being deleted by mistake.',
   },
   generate: {
-    eyebrow: 'Human-reviewed drafting',
+    eyebrow: 'Draft what the library does not have',
     title: 'AI drafting',
     subtitle:
-      'Create unapproved defensive drafts with provider, safety, usage, and hash provenance.',
+      'Create a defensive script draft, check it for risk, and send it through human review before download.',
   },
   review: {
-    eyebrow: 'Approval boundary',
+    eyebrow: 'Approve the version people will use',
     title: 'Review queue',
-    subtitle: 'Submit, approve, reject, or retire scripts without executing their source.',
+    subtitle: 'Review, approve, reject, or retire scripts. Script Ops does not run them from the web app.',
   },
   runs: {
-    eyebrow: 'Controlled delivery',
-    title: 'Download audit',
-    subtitle: 'Review durable download evidence; web and API execution remain prohibited.',
+    eyebrow: 'Know which version was delivered',
+    title: 'Download history',
+    subtitle: 'Review who downloaded each approved version and when. Execution happens outside Script Ops.',
   },
   versions: {
-    eyebrow: 'Immutable evidence',
+    eyebrow: 'Follow every approved change',
     title: 'Versions',
-    subtitle: 'Inspect script version, synchronization, checksum, and safety history.',
+    subtitle: 'Compare script versions, safety findings, library updates, and the file-verification details for each download.',
   },
   settings: {
-    eyebrow: 'OperatorOS authority',
+    eyebrow: 'Shape the review workflow',
     title: 'Script Ops settings',
-    subtitle: 'Review account, plan usage, administration, and shared synchronization policy.',
+    subtitle: 'Manage usage, team access, approval preferences, and library update rules.',
   },
   admin: {
-    eyebrow: 'Tenant administration',
+    eyebrow: 'Manage the organization library',
     title: 'Script Ops administration',
-    subtitle: 'Create inert drafts and manage synchronization policy without executing imported source.',
+    subtitle: 'Create drafts, choose approved script catalogs, and control review policy without running imported scripts.',
   },
 };
 
@@ -224,6 +225,15 @@ export default function NinjamationRouteShell({
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
+  const moduleAccessLevel = useModuleAccessLevel();
+  const canWriteModule = user?.platformRole === 'super_admin' || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (
+    user?.platformRole === 'super_admin'
+    || activeRole === 'owner'
+    || activeRole === 'admin'
+  );
   const current = area(routePath || pathname);
   const localRoute = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
   const hrefFor = useCallback(
@@ -256,14 +266,18 @@ export default function NinjamationRouteShell({
       }
       organization={{
         label: 'Organization',
-        value: activeTenant?.name ?? tenantId ?? 'No organization selected',
+        value: activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected'),
       }}
       accessContext={{
         label: 'Access',
         value:
           user?.platformRole === 'super_admin'
             ? 'Platform administrator'
-            : (activeRole ?? 'member'),
+            : !canWriteModule
+              ? 'Read-only library access'
+              : canManageModule
+                ? 'Script Ops administrator'
+                : 'Script contributor',
       }}
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2 },
@@ -301,6 +315,8 @@ export default function NinjamationRouteShell({
           embedded
           view={current}
           hrefFor={hrefFor}
+          canWrite={canWriteModule}
+          canManage={canManageModule}
         />
       )}
     </ModuleApplicationShell>

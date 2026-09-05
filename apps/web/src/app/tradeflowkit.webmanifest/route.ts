@@ -5,7 +5,7 @@ export function GET(request: NextRequest) {
   return NextResponse.json({
     name: 'TradeFlowKit — Business Operations for Trades',
     short_name: 'TradeFlowKit',
-    description: 'Tenant-scoped leads, customers, jobs, quotes, invoices, payments, and team operations.',
+    description: 'Move service work from the first inquiry through the job, invoice, and payment follow-up.',
     id: exactHost ? '/' : '/modules/tradeflowkit',
     start_url: exactHost ? '/' : '/modules/tradeflowkit',
     scope: exactHost ? '/' : '/modules/tradeflowkit/',

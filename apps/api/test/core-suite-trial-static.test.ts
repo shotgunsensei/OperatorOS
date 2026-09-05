@@ -28,7 +28,7 @@ test('Core Suite trial remains server-owned and does not impersonate billing or 
   assert.match(schema, /ON DELETE SET NULL/);
   assert.match(schema, /uq_account_trials_identity_offer/);
   assert.match(schema, /ends_at > started_at/);
-  assert.match(ui, /Companion applications remain separately gated/);
+  assert.match(ui, /Business add-ons follow their own plan or add-on access/);
   assert.match(ui, /Your records are preserved/);
   assert.match(authRoutes, /\/v1\/auth\/email-verification\/request/);
   assert.match(authRoutes, /\/v1\/auth\/email-verification\/confirm/);

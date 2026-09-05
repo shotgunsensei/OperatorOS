@@ -25,12 +25,14 @@ export default function NinjaLaunchKitProductShell({
   embedded = false,
   view,
   hrefFor = path => path,
+  canWrite = true,
 }: {
   baseUrl?: string;
   routePath?: string;
   embedded?: boolean;
   view?: string;
   hrefFor?: (path: string) => string;
+  canWrite?: boolean;
 }) {
   const [mode, setMode] = useState<ProductMode>(() =>
     view === 'review' ? 'execution' : initialMode(routePath),
@@ -64,7 +66,7 @@ export default function NinjaLaunchKitProductShell({
             onClick={() => setMode('kits')}
             style={modeButton(mode === 'kits')}
           >
-          <Rocket size={15} /> Release packages
+          <Rocket size={15} /> Campaign packages
           </button>
           <button
             type="button"
@@ -72,7 +74,7 @@ export default function NinjaLaunchKitProductShell({
             onClick={() => setMode('execution')}
             style={modeButton(mode === 'execution')}
           >
-          <ClipboardCheck size={15} /> Readiness workspaces
+          <ClipboardCheck size={15} /> Launch workspaces
           </button>
         </nav>
       )}
@@ -83,9 +85,10 @@ export default function NinjaLaunchKitProductShell({
           embedded={embedded}
           view={view}
           hrefFor={hrefFor}
+          canWrite={canWrite}
         />
       ) : (
-        <NinjaLaunchKitShell baseUrl={baseUrl} />
+        <NinjaLaunchKitShell baseUrl={baseUrl} canWrite={canWrite} />
       )}
     </div>
   );

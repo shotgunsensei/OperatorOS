@@ -5,7 +5,7 @@ export function GET(request: NextRequest) {
   return NextResponse.json({
     name: 'Operator Pool Hall',
     short_name: 'Pool Hall',
-    description: 'Operator-themed digital pool hall with mobile-first deterministic 8-ball practice, CPU, local, and protected online play.',
+    description: 'Operator-themed digital pool hall with mobile-first 8-ball practice, CPU, local two-player, and protected online matches.',
     id: '/modules/ninja-pool-hall',
     start_url: exactHost ? '/online' : '/modules/ninja-pool-hall/online',
     scope: exactHost ? '/' : '/modules/ninja-pool-hall/',

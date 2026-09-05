@@ -3,9 +3,9 @@ import type { ReactNode } from 'react';
 import { buildPublicMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = buildPublicMetadata({
-  title: 'OperatorOS Ecosystem | Connected Business Modules',
+  title: 'OperatorOS Ecosystem | Connected Business Applications',
   description:
-    'Explore the active and planned business modules connected through OperatorOS shared sign-on, billing, administration, and access.',
+    'Explore available and upcoming business applications that share secure sign-in, billing, administration, and team access through OperatorOS.',
   path: '/ecosystem',
 });
 

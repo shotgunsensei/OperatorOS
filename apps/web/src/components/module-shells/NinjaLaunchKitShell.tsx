@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
-import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import { ShellWorkspaceBadge, ShellLaunchButton } from './ShellChrome';
 
 type Row = Record<string, any>;
 type Workspace = {
@@ -64,12 +64,16 @@ function errorMessage(error: unknown, fallback: string) {
   return (error as any)?.message || fallback;
 }
 
+const READ_ONLY_MESSAGE = 'Your Deploy Ops access is read-only. Ask an organization owner or administrator for edit access.';
+
 export default function NinjaLaunchKitShell({
   baseUrl,
   idPrefix,
+  canWrite = true,
 }: {
   baseUrl?: string;
   idPrefix?: string;
+  canWrite?: boolean;
 }) {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [templates, setTemplates] = useState<Row[]>([]);
@@ -78,6 +82,8 @@ export default function NinjaLaunchKitShell({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportResult, setExportResult] = useState<Row | null>(null);
+  const [externalLaunchConfirmed, setExternalLaunchConfirmed] = useState(false);
+  const [externalLaunchEvidence, setExternalLaunchEvidence] = useState('');
   const [form, setForm] = useState({
     title: '',
     productType: 'service',
@@ -110,7 +116,7 @@ export default function NinjaLaunchKitShell({
           setSelectedId(null);
         }
       } catch (caught) {
-        setError(errorMessage(caught, 'Could not load release workspaces'));
+        setError(errorMessage(caught, 'Could not load campaign launch workspaces'));
       } finally {
         setLoading(false);
       }
@@ -124,6 +130,7 @@ export default function NinjaLaunchKitShell({
 
   const readiness = workspace?.readiness;
   const selected = workspace?.selected;
+  const draftingAvailable = workspace?.ai?.configured === true && workspace.ai.name !== 'disabled';
   const channels = useMemo(
     () =>
       form.channels
@@ -136,6 +143,10 @@ export default function NinjaLaunchKitShell({
 
   async function createLaunch(event: React.FormEvent) {
     event.preventDefault();
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     if (busy) return;
     setBusy('create');
     setError(null);
@@ -163,13 +174,17 @@ export default function NinjaLaunchKitShell({
       }));
       await load(response.launch.id);
     } catch (caught) {
-      setError(errorMessage(caught, 'Could not create release workspace'));
+      setError(errorMessage(caught, 'Could not create campaign launch workspace'));
     } finally {
       setBusy(null);
     }
   }
 
   async function toggleTask(task: Row) {
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     if (busy) return;
     setBusy(`task:${task.id}`);
     setError(null);
@@ -187,6 +202,10 @@ export default function NinjaLaunchKitShell({
   }
 
   async function advanceArtifact(artifact: Row) {
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     if (busy) return;
     const next =
       artifact.status === 'draft' ? 'review' : artifact.status === 'review' ? 'approved' : 'draft';
@@ -199,13 +218,21 @@ export default function NinjaLaunchKitShell({
       });
       await load(selectedId);
     } catch (caught) {
-      setError(errorMessage(caught, 'Could not update artifact review state'));
+      setError(errorMessage(caught, 'Could not update the campaign item'));
     } finally {
       setBusy(null);
     }
   }
 
   async function generate() {
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
+    if (!draftingAvailable) {
+      setError('AI-assisted drafting is not set up. Use the complete campaign builder or ask an administrator to enable the drafting service.');
+      return;
+    }
     if (!selectedId || busy) return;
     setBusy('generate');
     setError(null);
@@ -219,13 +246,17 @@ export default function NinjaLaunchKitShell({
         .getElementById(sectionId('launchkit-artifacts'))
         ?.scrollIntoView({ behavior: 'smooth' });
     } catch (caught) {
-      setError(errorMessage(caught, 'Could not generate launch artifacts'));
+      setError(errorMessage(caught, 'Could not generate the campaign materials'));
     } finally {
       setBusy(null);
     }
   }
 
   async function exportLaunch(format: 'json' | 'markdown' | 'csv') {
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     if (!selectedId || busy) return;
     setBusy(`export:${format}`);
     setError(null);
@@ -248,6 +279,10 @@ export default function NinjaLaunchKitShell({
   }
 
   async function markLaunched() {
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     if (!selected || busy) return;
     setBusy('launch');
     setError(null);
@@ -255,10 +290,14 @@ export default function NinjaLaunchKitShell({
       await moduleShellApi.launchkit.update(selected.id, {
         status: 'launched',
         expectedVersion: selected.version,
+        externalLaunchConfirmed,
+        externalLaunchEvidence: externalLaunchEvidence.trim(),
       });
+      setExternalLaunchConfirmed(false);
+      setExternalLaunchEvidence('');
       await load(selected.id);
     } catch (caught) {
-      setError(errorMessage(caught, 'Launch readiness requirements are not complete'));
+      setError(errorMessage(caught, 'The required launch checks are not complete'));
     } finally {
       setBusy(null);
     }
@@ -267,6 +306,7 @@ export default function NinjaLaunchKitShell({
   return (
     <div
       data-testid="shell-ninja-launch-kit"
+      data-can-write={canWrite ? 'true' : 'false'}
       style={{ padding: space.xl, maxWidth: 1240, margin: '0 auto' }}
     >
       <header
@@ -282,16 +322,16 @@ export default function NinjaLaunchKitShell({
         <div style={{ flex: 1, minWidth: 240 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h1 style={{ color: '#fff', fontSize: 28, margin: 0 }}>Deploy Ops</h1>
-            <ShellLiveBadge />
+            <ShellWorkspaceBadge />
           </div>
           <p style={{ color: semantic.textMuted, margin: '4px 0 0' }}>
-            Plan, produce, review, and prove a launch is ready.
+            Plan, produce, review, and confirm that a campaign is ready.
           </p>
         </div>
         <ShellLaunchButton
           baseUrl={baseUrl}
           testId="link-launch-ninja-launch-kit"
-          label="Open release workspace"
+          label="Open launch workspace"
         />
       </header>
 
@@ -310,6 +350,15 @@ export default function NinjaLaunchKitShell({
           {error}
         </div>
       )}
+      {!canWrite && (
+        <div
+          data-testid="deployops-execution-read-only"
+          role="status"
+          style={{ ...cardStyle, borderColor: '#fbbf24', color: '#fde68a', marginBottom: space.lg }}
+        >
+          Read-only access: you can review campaign plans, launch checks, materials, and saved exports, but changes and new exports are disabled.
+        </div>
+      )}
 
       <section
         id={sectionId('launchkit-dashboard')}
@@ -324,7 +373,7 @@ export default function NinjaLaunchKitShell({
           ['Launches', workspace?.summary?.launches ?? 0, Rocket],
           ['Launched', workspace?.summary?.launched ?? 0, CheckCircle2],
           ['Overdue', workspace?.summary?.overdue ?? 0, CalendarDays],
-          ['Current readiness', readiness ? `${readiness.score}%` : '—', Target],
+          ['Launch checks complete', readiness ? `${readiness.score}%` : '—', Target],
         ].map(([label, value, Icon]: any) => (
           <article key={label} style={cardStyle}>
             <Icon size={18} color="#67e8f9" />
@@ -337,7 +386,7 @@ export default function NinjaLaunchKitShell({
       </section>
 
       <section id={sectionId('launchkit-builder')} style={{ ...cardStyle, marginBottom: space.xl }}>
-        <h2 style={{ color: '#fff', marginTop: 0 }}>Create a real release workspace</h2>
+        <h2 style={{ color: '#fff', marginTop: 0 }}>Create a campaign launch workspace</h2>
         <form
           onSubmit={createLaunch}
           style={{
@@ -346,6 +395,7 @@ export default function NinjaLaunchKitShell({
             gap: space.md,
           }}
         >
+          <fieldset disabled={!canWrite} style={{ border: 0, padding: 0, margin: 0, display: 'contents' }}>
           <label style={{ color: semantic.textMuted }}>
             Launch name
             <input
@@ -450,8 +500,8 @@ export default function NinjaLaunchKitShell({
           <div style={{ display: 'flex', alignItems: 'end' }}>
             <button
               data-testid="button-launchkit-create"
-              disabled={busy === 'create'}
-              style={{ ...buttonStyle, width: '100%', opacity: busy === 'create' ? 0.6 : 1 }}
+              disabled={busy === 'create' || !canWrite}
+              style={{ ...buttonStyle, width: '100%', opacity: busy === 'create' || !canWrite ? 0.6 : 1 }}
             >
               {busy === 'create' ? (
                 <Loader2 className="animate-spin" size={15} />
@@ -461,11 +511,12 @@ export default function NinjaLaunchKitShell({
               Create launch
             </button>
           </div>
+          </fieldset>
         </form>
       </section>
 
       <section id={sectionId('launchkit-launches')} style={{ marginBottom: space.xl }}>
-        <h2 style={{ color: '#fff' }}>Release workspaces</h2>
+        <h2 style={{ color: '#fff' }}>Campaign launch workspaces</h2>
         {loading ? (
           <div
             data-testid="text-launchkit-loading"
@@ -522,10 +573,9 @@ export default function NinjaLaunchKitShell({
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               <Target size={25} color="#67e8f9" />
               <div style={{ flex: 1 }}>
-                <h2 style={{ color: '#fff', margin: 0 }}>{selected.title}: readiness</h2>
+                <h2 style={{ color: '#fff', margin: 0 }}>{selected.title}: launch checks</h2>
                 <p style={{ color: semantic.textMuted, margin: '4px 0 0' }}>
-                  {readiness?.complete ?? 0} of {readiness?.total ?? 0} required rules pass. The
-                  server computes this score.
+                  {readiness?.complete ?? 0} of {readiness?.total ?? 0} required items are complete.
                 </p>
               </div>
               <strong
@@ -539,13 +589,38 @@ export default function NinjaLaunchKitShell({
               </strong>
               <button
                 data-testid="button-launchkit-mark-launched"
-                disabled={readiness?.score !== 100 || !!busy}
+                disabled={!canWrite || readiness?.score !== 100 || !!busy || !externalLaunchConfirmed || externalLaunchEvidence.trim().length < 8}
                 onClick={markLaunched}
-                style={{ ...buttonStyle, opacity: readiness?.score === 100 ? 1 : 0.45 }}
+                style={{ ...buttonStyle, opacity: readiness?.score === 100 && externalLaunchConfirmed && externalLaunchEvidence.trim().length >= 8 ? 1 : 0.45 }}
               >
-                Mark launched
+                Record externally confirmed launch
               </button>
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px,1fr) auto', gap: 12, alignItems: 'end', marginTop: 16 }}>
+              <label style={{ display: 'grid', gap: 5, color: semantic.textMuted, fontSize: fontSize.sm }}>
+                External confirmation reference
+                <input
+                  data-testid="input-launchkit-external-evidence"
+                  disabled={!canWrite}
+                  value={externalLaunchEvidence}
+                  onChange={event => setExternalLaunchEvidence(event.target.value)}
+                  placeholder="Publishing receipt, campaign URL or post ID, or reviewer and timestamp"
+                  maxLength={500}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: semantic.textMuted, paddingBottom: 10 }}>
+                <input
+                  data-testid="checkbox-launchkit-external-confirmed"
+                  type="checkbox"
+                  disabled={!canWrite}
+                  checked={externalLaunchConfirmed}
+                  onChange={event => setExternalLaunchConfirmed(event.target.checked)}
+                />
+                I verified the launch outside Deploy Ops
+              </label>
+            </div>
+            <p style={{ color: semantic.textDim, fontSize: fontSize.sm, margin: '8px 0 0' }}>Deploy Ops prepares the campaign materials; it does not publish them or change another service.</p>
             <div
               style={{
                 height: 8,
@@ -612,7 +687,7 @@ export default function NinjaLaunchKitShell({
                         key={task.id}
                         data-testid={`button-launchkit-task-${task.id}`}
                         onClick={() => void toggleTask(task)}
-                        disabled={busy === `task:${task.id}`}
+                        disabled={!canWrite || busy === `task:${task.id}`}
                         aria-pressed={task.status === 'complete'}
                         style={{
                           display: 'flex',
@@ -643,16 +718,17 @@ export default function NinjaLaunchKitShell({
           <section id={sectionId('launchkit-artifacts')} style={{ marginBottom: space.xl }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: 1 }}>
-                <h2 style={{ color: '#fff', marginBottom: 4 }}>Campaign artifacts</h2>
+                <h2 style={{ color: '#fff', marginBottom: 4 }}>Campaign materials</h2>
                 <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-                  Generated content stays draft until review and approval. Provider:{' '}
-                  {workspace.ai?.name ?? 'disabled'}.
+                  Generated content stays draft until review and approval. AI-assisted drafting is{' '}
+                  {draftingAvailable ? 'ready' : 'not set up'}.
                 </div>
               </div>
               <button
                 data-testid="button-launchkit-generate"
                 onClick={generate}
-                disabled={!!busy}
+                disabled={!canWrite || !draftingAvailable || !!busy}
+                title={!draftingAvailable ? 'AI-assisted drafting is not set up. Use the complete campaign builder or ask an administrator for help.' : undefined}
                 style={buttonStyle}
               >
                 {busy === 'generate' ? <Loader2 size={15} /> : <Sparkles size={15} />} Generate
@@ -700,7 +776,7 @@ export default function NinjaLaunchKitShell({
                   <button
                     data-testid={`button-launchkit-artifact-${artifact.id}`}
                     onClick={() => void advanceArtifact(artifact)}
-                    disabled={artifact.status === 'archived' || !!busy}
+                    disabled={!canWrite || artifact.status === 'archived' || !!busy}
                     style={{
                       ...buttonStyle,
                       background: artifact.status === 'approved' ? semantic.bgPanel : '#0284c7',
@@ -721,13 +797,13 @@ export default function NinjaLaunchKitShell({
             id={sectionId('launchkit-exports')}
             style={{ ...cardStyle, marginBottom: space.xl }}
           >
-            <h2 style={{ color: '#fff', marginTop: 0 }}>Audited exports</h2>
+            <h2 style={{ color: '#fff', marginTop: 0 }}>Campaign downloads</h2>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {(['markdown', 'json', 'csv'] as const).map((format) => (
                 <button
                   key={format}
                   data-testid={`button-launchkit-export-${format}`}
-                  disabled={!!busy}
+                  disabled={!canWrite || !!busy}
                   onClick={() => void exportLaunch(format)}
                   style={buttonStyle}
                 >
@@ -736,16 +812,17 @@ export default function NinjaLaunchKitShell({
               ))}
             </div>
             {exportResult && (
-              <p
+              <details
                 data-testid="text-launchkit-export-hash"
                 style={{ color: semantic.textMuted, overflowWrap: 'anywhere' }}
               >
-                Latest checksum: {exportResult.export?.contentSha256}
-              </p>
+                <summary>Technical file details</summary>
+                <code>SHA-256 {exportResult.export?.contentSha256}</code>
+              </details>
             )}
             {!!workspace.exports?.length && (
               <p style={{ color: semantic.textMuted, marginBottom: 0 }}>
-                {workspace.exports.length} export(s) ready for this launch.
+                {workspace.exports.length} download(s) ready for this campaign.
               </p>
             )}
           </section>

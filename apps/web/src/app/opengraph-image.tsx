@@ -71,7 +71,7 @@ export default function OpenGraphImage() {
               letterSpacing: '-0.04em',
             }}
           >
-            One command layer for modern operations.
+            One home base for modern business operations.
           </div>
           <div
             style={{

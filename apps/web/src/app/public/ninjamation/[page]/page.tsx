@@ -26,35 +26,11 @@ const card: React.CSSProperties = {
   padding: 22,
   boxShadow: '0 20px 60px rgba(0,0,0,.26)',
 };
-const plans = [
-  {
-    name: 'Starter',
-    detail:
-      'The reviewed library, exact-version checksums, favorites, and 10 downloads each month.',
-    features: [
-      'Tenant-scoped script library',
-      'Version and source history',
-      'Static safety metadata',
-    ],
-  },
-  {
-    name: 'Pro',
-    detail: 'Unlimited downloads plus 50 validated AI script drafts each month.',
-    features: [
-      'PowerShell, Python, Batch, Bash',
-      'Shared AI provider',
-      'Draft review and approval',
-    ],
-  },
-  {
-    name: 'Enterprise',
-    detail: 'Unlimited generation and team-scale OperatorOS administration.',
-    features: [
-      'Unlimited AI generations',
-      'OperatorOS API entitlement',
-      'Team and sync administration',
-    ],
-  },
+const applicationStackFeatures = [
+  'Private reviewed PowerShell, Python, Batch, and Bash library',
+  'Unlimited downloads and AI-assisted defensive drafts',
+  'Exact versions, safety findings, approval, and download history',
+  'Team administration and OperatorOS API access',
 ];
 
 export async function generateMetadata({
@@ -64,9 +40,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { page } = await params;
   const title =
-    page === 'pricing' ? 'Script Ops Plans | OperatorOS' : 'Script Ops | Governed Automation';
+    page === 'pricing' ? 'Script Ops Application Stack Access | OperatorOS' : 'Script Ops | Reviewed IT Automation';
   const description =
-    'Reviewed infrastructure and endpoint automation scripts with provenance, approval, integrity checks, and governed AI drafting.';
+    'Find, review, version, approve, and download reusable IT automation without running scripts from the web application.';
   const path = page === 'home' ? '/' : `/${page}`;
   return {
     title,
@@ -124,7 +100,7 @@ function Chrome({ children }: { children: React.ReactNode }) {
           SCRIPT OPS
         </Link>
         <span style={{ color: '#a78bfa', fontSize: 11, fontWeight: 900, letterSpacing: '.16em' }}>
-          GOVERNED AUTOMATION
+          REVIEWED SCRIPT LIBRARY
         </span>
         <nav
           aria-label="Script Ops public navigation"
@@ -137,7 +113,7 @@ function Chrome({ children }: { children: React.ReactNode }) {
           }}
         >
           <Link href="/pricing" style={{ color: '#bfdbfe' }}>
-            Pricing
+            Application Stack
           </Link>
           <Link
             href="/login"
@@ -169,7 +145,7 @@ function Chrome({ children }: { children: React.ReactNode }) {
         <a href="https://shotgunninjas.com" style={{ color: '#a8bed6' }}>
           Shotgun Ninjas Productions
         </a>
-        <span>OperatorOS identity, entitlement, billing, and audit authority</span>
+        <span>One OperatorOS account for sign-in, team access, subscriptions, and activity history</span>
       </footer>
     </div>
   );
@@ -179,23 +155,23 @@ function Home() {
   const capabilities = [
     [
       Code2,
-      'Library intelligence',
-      'Search, formats, categories, tags, favorites, versions, deprecation, and source provenance.',
+      'Find the right script',
+      'Search by platform, task, category, risk, approval, or team favorite instead of starting from scratch.',
     ],
     [
       Bot,
-      'AI drafts with boundaries',
-      'Validated structured output, metering, provenance, safety metadata, and mandatory review.',
+      'Draft and review safely',
+      'Create a defensive first draft, inspect safety findings, and require a person to approve the exact version.',
     ],
     [
       Download,
-      'Integrity-bound delivery',
-      'Displayed content, version, filename, download bytes, and SHA-256 stay aligned.',
+      'Download the version you approved',
+      'Every download stays tied to the reviewed script version, filename, and file-verification record.',
     ],
     [
       ShieldCheck,
-      'Execution stays isolated',
-      'Script Ops never interpolates script source into a shell command or executes it inside the product process.',
+      'Execution stays in your tools',
+      'Script Ops prepares and delivers scripts; it never runs them in the browser, web server, or customer environment.',
     ],
   ] as const;
   return (
@@ -216,7 +192,7 @@ function Home() {
             <span
               style={{ color: '#7dd3fc', letterSpacing: '.2em', fontWeight: 900, fontSize: 12 }}
             >
-              REVIEW FIRST. AUTOMATE WITH EVIDENCE.
+              FIND IT. REVIEW IT. USE IT DELIBERATELY.
             </span>
             <h1
               style={{
@@ -226,13 +202,13 @@ function Home() {
                 letterSpacing: '-.055em',
               }}
             >
-              A governed script library for{' '}
-              <span style={{ color: '#60a5fa' }}>real operators.</span>
+              Reusable IT automation your team can{' '}
+              <span style={{ color: '#60a5fa' }}>trust before it runs.</span>
             </h1>
             <p style={{ color: '#b7c8dc', fontSize: 19, lineHeight: 1.65, maxWidth: 760 }}>
-              Synchronize reviewed automation with exact commit provenance, inspect every version
-              and safety finding, draft defensive scripts, and download only approved content with a
-              verified SHA-256.
+              Search reviewed PowerShell, Python, Batch, and Bash automation, create what is missing,
+              inspect the risks, approve an exact version, and give technicians the context they need
+              to run it through your normal authorized tools.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 28 }}>
               <Link
@@ -260,20 +236,20 @@ function Home() {
                   borderRadius: 11,
                 }}
               >
-                Compare plans
+                See Application Stack
               </Link>
             </div>
           </div>
           <aside style={{ ...card, transform: 'rotate(.6deg)' }}>
             <GitBranch color="#38bdf8" />
-            <h2>Every script carries evidence.</h2>
+            <h2>Every script arrives with context.</h2>
             {[
-              'Allowlisted repository + branch',
-              'Commit, path, blob SHA, content SHA-256',
-              'Immutable versions and update trace',
-              'Static findings plus human approval',
-              'Exact approved download audit',
-              'No execution in the web/API process',
+              'Purpose, prerequisites, inputs, and expected result',
+              'Exact saved versions and change history',
+              'Risk level and safety findings',
+              'Validation and rollback guidance',
+              'Human approval and download history',
+              'No automatic execution in your environment',
             ].map((item) => (
               <p key={item} style={{ display: 'flex', gap: 8, color: '#cbdaf0' }}>
                 <Check size={17} color="#4ade80" />
@@ -311,14 +287,14 @@ function Pricing() {
     <Chrome>
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: '70px clamp(18px,4vw,44px)' }}>
         <span style={{ color: '#7dd3fc', letterSpacing: '.2em', fontWeight: 900 }}>
-          OPERATOROS ENTITLEMENTS
+          SCRIPT OPS ACCESS
         </span>
         <h1 style={{ fontSize: 'clamp(40px,6vw,68px)', margin: '10px 0', letterSpacing: '-.04em' }}>
-          Choose your automation power level.
+          Complete Script Ops access through Application Stack.
         </h1>
         <p style={{ color: '#91a8c2', fontSize: 18 }}>
-          OperatorOS remains the source of truth for plans, billing, entitlements, and usage. Script
-          Ops never runs a second checkout authority.
+          Choose Script Ops as the included companion in your organization’s Application Stack, or
+          add it as an additional companion for $29 per month. Either path unlocks the complete application.
         </p>
         <div
           style={{
@@ -328,17 +304,12 @@ function Pricing() {
             marginTop: 30,
           }}
         >
-          {plans.map((plan) => (
-            <article
-              key={plan.name}
-              style={{
-                ...card,
-                borderColor: plan.name === 'Pro' ? '#2997ff' : 'rgba(56,189,248,.19)',
-              }}
-            >
-              <h2 style={{ fontSize: 30 }}>{plan.name}</h2>
-              <p style={{ color: '#cbdaf0', minHeight: 72 }}>{plan.detail}</p>
-              {plan.features.map((feature) => (
+          <article style={{ ...card, borderColor: '#2997ff', maxWidth: 620 }}>
+              <h2 style={{ fontSize: 30 }}>Complete application access</h2>
+              <p style={{ color: '#cbdaf0', minHeight: 72 }}>
+                One eligible companion is included with Application Stack. Additional companions are $29 per month for the organization—not per user.
+              </p>
+              {applicationStackFeatures.map((feature) => (
                 <p key={feature} style={{ display: 'flex', gap: 8 }}>
                   <Check size={16} color="#4ade80" />
                   {feature}
@@ -358,10 +329,9 @@ function Pricing() {
                   marginTop: 20,
                 }}
               >
-                Continue in OperatorOS
+                Configure Application Stack
               </Link>
             </article>
-          ))}
         </div>
       </main>
     </Chrome>

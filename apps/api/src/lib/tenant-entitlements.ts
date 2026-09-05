@@ -1,10 +1,11 @@
 import type { FastifyRequest } from 'fastify';
-import { and, desc, eq, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   modules,
   planModules,
   subscriptions,
+  tenantApplicationSubscriptions,
   tenantEntitlements,
   tenantModules,
   tenantUserModuleAccess,
@@ -32,6 +33,12 @@ import {
 import { hasPlatformAdminAuthority } from './rbac.js';
 import { moduleAccessLevelToEffective, tenantRoleToEffective } from './role-aliases.js';
 import { resolveCoreSuiteTrialAccess } from './core-suite-trial.js';
+import { FREE_WITH_ANY_ACCOUNT } from '@operatoros/sdk';
+
+const FREE_ACCOUNT_MODULE_KEYS = new Set(FREE_WITH_ANY_ACCOUNT.map(app => app.key));
+const APPLICATION_STACK_SEAT_STATUSES = ['trialing', 'active', 'past_due', 'canceling'] as const;
+const APPLICATION_STACK_SEAT_ENTITLEMENT_TYPES = ['core_product', 'companion_module'] as const;
+const APPLICATION_STACK_SEAT_SOURCES = ['stripe', 'selected_free_companion'] as const;
 
 const LAUNCHABLE_TENANT_MODULE_STATUSES = ['enabled', 'trial', 'purchased', 'beta'] as const;
 const LAUNCHABLE_GLOBAL_MODULE_STATUSES = new Set(['live', 'active', 'beta']);
@@ -185,20 +192,73 @@ async function getUserModuleAccessRow(
 }
 
 async function ownerPlanGrantsModule(tenant: TenantRow, moduleId: string): Promise<boolean> {
-  const [grant] = await db.select({ planId: subscriptions.planId })
-    .from(subscriptions)
-    .innerJoin(planModules, eq(planModules.planId, subscriptions.planId))
-    .where(and(
-      eq(subscriptions.userId, tenant.ownerUserId),
-      sql`${subscriptions.status} IN ('active','trialing')`,
-      eq(planModules.moduleId, moduleId),
-    ))
-    .orderBy(
-      sql`CASE WHEN ${subscriptions.status} IN ('active','trialing') THEN 0 ELSE 1 END`,
-      desc(subscriptions.createdAt),
-    )
-    .limit(1);
-  return !!grant;
+  try {
+    const [grant] = await db.select({ planId: subscriptions.planId })
+      .from(subscriptions)
+      .innerJoin(planModules, eq(planModules.planId, subscriptions.planId))
+      .where(and(
+        eq(subscriptions.userId, tenant.ownerUserId),
+        eq(subscriptions.tenantId, tenant.id),
+        sql`${subscriptions.status} IN ('active','trialing')`,
+        sql`subscriptions.legacy_access_grandfathered_at IS NOT NULL`,
+        eq(planModules.moduleId, moduleId),
+      ))
+      .orderBy(
+        sql`CASE WHEN ${subscriptions.status} IN ('active','trialing') THEN 0 ELSE 1 END`,
+        desc(subscriptions.createdAt),
+      )
+      .limit(1);
+    return !!grant;
+  } catch (error) {
+    const candidate = error as { code?: unknown; cause?: { code?: unknown } } | null;
+    // Before v60 introduces the grandfather marker there is no frozen legacy
+    // application grant. Deny only that exact pre-release column case.
+    if (candidate?.code === '42703' || candidate?.cause?.code === '42703') return false;
+    throw error;
+  }
+}
+
+/**
+ * Identify modules whose current tenant grant comes from the forward-sale
+ * Application Stack. Only the paid flagship and companion rows consume a
+ * seat; the three free-account applications use `included_app` rows and are
+ * deliberately excluded even when those rows share the same Stripe
+ * subscription linkage.
+ *
+ * Requiring an exact tenant + Stripe-subscription join prevents a stale,
+ * canceled, manual, or legacy entitlement row from introducing a seat gate.
+ */
+async function moduleConsumesApplicationStackSeat(
+  tenantId: string,
+  moduleSlug: string,
+): Promise<boolean> {
+  if (FREE_ACCOUNT_MODULE_KEYS.has(moduleSlug as any)) return false;
+  try {
+    const [row] = await db.select({ id: tenantEntitlements.id })
+      .from(tenantEntitlements)
+      .innerJoin(
+        tenantApplicationSubscriptions,
+        and(
+          eq(tenantApplicationSubscriptions.tenantId, tenantEntitlements.tenantId),
+          eq(tenantApplicationSubscriptions.stripeSubscriptionId, tenantEntitlements.stripeSubscriptionId),
+        ),
+      )
+      .where(and(
+        eq(tenantEntitlements.tenantId, tenantId),
+        eq(tenantEntitlements.entitlementKey, moduleSlug),
+        eq(tenantEntitlements.active, true),
+        inArray(tenantEntitlements.entitlementType, APPLICATION_STACK_SEAT_ENTITLEMENT_TYPES),
+        inArray(tenantEntitlements.source, APPLICATION_STACK_SEAT_SOURCES),
+        inArray(tenantApplicationSubscriptions.status, APPLICATION_STACK_SEAT_STATUSES),
+      ))
+      .limit(1);
+
+    return !!row;
+  } catch (error) {
+    const candidate = error as { code?: unknown; cause?: { code?: unknown } } | null;
+    if (candidate?.code === '42P01' || candidate?.cause?.code === '42P01') return false;
+    throw error;
+  }
 }
 
 export async function getUserTenants(userId: string): Promise<UserTenantMembership[]> {
@@ -415,6 +475,29 @@ export async function resolveTenantModuleAccess(
     };
   }
 
+  // Application Stack seats are a tenant-level commercial boundary, not a
+  // module-assignment preference. Enforce that boundary before any positive
+  // explicit grant or `allowAllMembers` branch can return. Platform support
+  // authority was handled above, while free-account apps and grandfathered
+  // legacy-plan-only grants never enter this branch.
+  if (await moduleConsumesApplicationStackSeat(tenantId, module.slug)) {
+    const withinSeatLimit = await isUserWithinTenantSeatLimit(tenantId, userId);
+    if (!withinSeatLimit) {
+      return {
+        tenantId,
+        moduleSlug: module.slug,
+        moduleId: module.id,
+        hasAccess: false,
+        source: null,
+        reason: 'seat_limit_exceeded',
+        accessLevel: 'none',
+        tenantModule,
+        userModuleAccess,
+        viaPlatformRole: false,
+      };
+    }
+  }
+
   if (explicitAccessLevel === 'viewer'
     || explicitAccessLevel === 'user'
     || explicitAccessLevel === 'manager') {
@@ -460,6 +543,19 @@ export async function resolveTenantModuleAccess(
   }
 
   if (await tenantHasActiveEntitlement(tenantId, module.slug)) {
+    if (FREE_ACCOUNT_MODULE_KEYS.has(module.slug as any)) {
+      return {
+        tenantId,
+        moduleSlug: module.slug,
+        moduleId: module.id,
+        hasAccess: true,
+        source: 'plan',
+        accessLevel: tenantViewer ? 'viewer' : 'user',
+        tenantModule: null,
+        userModuleAccess,
+        viaPlatformRole: false,
+      };
+    }
     const withinSeatLimit = await isUserWithinTenantSeatLimit(tenantId, userId);
     return withinSeatLimit
       ? {

@@ -127,6 +127,11 @@ test('verified-email Core Suite trial is one-time, personal, exact, expiring, an
     scopeType: 'tenant',
     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
+  await db.execute(sql`
+    UPDATE subscriptions
+    SET legacy_access_grandfathered_at=clock_timestamp()
+    WHERE user_id=${user.id} AND tenant_id=${user.currentTenantId!}
+  `);
   const paidPlan = await resolveTenantModuleAccess(user.id, user.currentTenantId, 'techdeck');
   assert.equal(paidPlan.source, 'plan', 'server-persisted plan access takes precedence over trial');
 

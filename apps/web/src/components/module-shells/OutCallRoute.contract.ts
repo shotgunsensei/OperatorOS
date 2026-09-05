@@ -54,17 +54,17 @@ export const OUTCALL_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
 ] as const;
 
 const copy: Record<OutCallRouteArea, Pick<OutCallRouteState, 'eyebrow' | 'title' | 'subtitle'>> = {
-  overview: { eyebrow: 'Discreet assistance', title: 'OutCall overview', subtitle: 'Check safety acknowledgement, verified destination, rescue profile, and provider readiness.' },
-  contacts: { eyebrow: 'Single verified destination', title: 'Verified destination and rescue profiles', subtitle: 'Configure neutral assistance messages without adding arbitrary recipients or a bulk contact list.' },
-  schedules: { eyebrow: 'Bounded outbound request', title: 'Schedules', subtitle: 'Request an immediate or future call only to your independently verified number.' },
-  campaigns: { eyebrow: 'Private exact-match activation', title: 'Private triggers', subtitle: 'Configure private SMS phrases for one bounded assistance call; bulk campaigns are intentionally unsupported.' },
-  calls: { eyebrow: 'Durable request state', title: 'Calls', subtitle: 'Review requested, scheduled, attempted, provider-confirmed, failed, or canceled call records.' },
-  reminders: { eyebrow: 'Planned assistance', title: 'Reminders', subtitle: 'Schedule a future exit-assistance call without recurring marketing or audience targeting.' },
-  verification: { eyebrow: 'Destination ownership', title: 'Verification', subtitle: 'Independently confirm the only mobile number OutCall is allowed to call.' },
-  delivery: { eyebrow: 'Provider truth', title: 'Delivery readiness', subtitle: 'Distinguish configured request handling from provider-confirmed call delivery.' },
-  history: { eyebrow: 'Attempt history', title: 'History', subtitle: 'Review durable call requests and outcomes without converting unknown provider state into success.' },
-  compliance: { eyebrow: 'Privacy and emergency boundary', title: 'Privacy and safety', subtitle: 'Export or delete private data and review the explicit non-emergency-service boundary.' },
-  settings: { eyebrow: 'Safety configuration', title: 'OutCall settings', subtitle: 'Review readiness and safety limits under OperatorOS identity and entitlement authority.' },
+  overview: { eyebrow: 'Set up discreet exit assistance', title: 'OutCall overview', subtitle: 'Check your safety acknowledgement, verified number, call profile, and whether the calling service is ready.' },
+  contacts: { eyebrow: 'Choose one trusted destination', title: 'Verified destination and rescue profiles', subtitle: 'Prepare neutral assistance messages for your verified number. OutCall does not maintain a bulk contact list.' },
+  schedules: { eyebrow: 'Plan an assistance call', title: 'Schedules', subtitle: 'Request an immediate or future call to the mobile number you verified.' },
+  campaigns: { eyebrow: 'Use a private trigger phrase', title: 'Private triggers', subtitle: 'Choose private SMS phrases that request one assistance call. OutCall does not send bulk campaigns.' },
+  calls: { eyebrow: 'Know what happened with each request', title: 'Calls', subtitle: 'See whether a call was requested, scheduled, attempted, confirmed by the calling service, failed, or canceled.' },
+  reminders: { eyebrow: 'Plan assistance ahead of time', title: 'Reminders', subtitle: 'Schedule a future exit-assistance call without marketing messages or audience targeting.' },
+  verification: { eyebrow: 'Confirm your mobile number', title: 'Verification', subtitle: 'Prove ownership of the only number OutCall is allowed to call.' },
+  delivery: { eyebrow: 'Check whether calls can be delivered', title: 'Delivery readiness', subtitle: 'See whether setup is complete and whether the calling service has confirmed delivery.' },
+  history: { eyebrow: 'Review prior requests', title: 'History', subtitle: 'See call requests and outcomes, including requests whose delivery could not be confirmed.' },
+  compliance: { eyebrow: 'Protect privacy and understand the limits', title: 'Privacy and safety', subtitle: 'Export or delete private data and review why OutCall is not an emergency service.' },
+  settings: { eyebrow: 'Set the safety limits', title: 'OutCall settings', subtitle: 'Review setup, privacy, approved access, and the boundaries that keep OutCall focused on personal exit assistance.' },
 };
 
 const state = (area: OutCallRouteArea, canonicalPath: string, recordId?: string): OutCallRouteState => ({ area, canonicalPath, recordId, ...copy[area] });

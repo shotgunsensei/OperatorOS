@@ -47,7 +47,7 @@ const CARDS: PositioningCard[] = [
   {
     icon: Stethoscope,
     title: 'Healthcare Workflow Coordination',
-    outcome: 'Coordinate patient touchpoints across the team without losing the thread.',
+    outcome: 'Coordinate facility, equipment, supply, vendor, and department work before it delays operations.',
     accent: brand.accentGreen,
   },
   {
@@ -59,7 +59,7 @@ const CARDS: PositioningCard[] = [
   {
     icon: Bot,
     title: 'AI Automation',
-    outcome: 'Automate repetitive handoffs without separating them from organizations, roles, and access.',
+    outcome: 'Automate repetitive work while keeping it connected to the right organization, team, and permissions.',
     accent: brand.accentRed,
   },
 ];
@@ -67,38 +67,38 @@ const CARDS: PositioningCard[] = [
 const CAPABILITIES: PositioningCard[] = [
   {
     icon: KeyRound,
-    title: 'Parent authentication',
-    outcome: 'Central login, account security, and role-aware access paths stay in OperatorOS.',
+    title: 'One secure sign-in',
+    outcome: 'Your team signs in once, then opens every approved business app from the same account.',
     accent: brand.accentCyan,
   },
   {
     icon: Building2,
-    title: 'Tenant management',
-    outcome: 'Teams, roles, memberships, and organization context stay explicit across the platform.',
+    title: 'Organizations and teams',
+    outcome: 'Keep each organization, team member, and responsibility clear across the platform.',
     accent: brand.accentGreen,
   },
   {
     icon: BadgeDollarSign,
     title: 'Purchases and subscriptions',
-    outcome: 'Stripe checkout maps to module access without fake client-side unlocks.',
+    outcome: 'See what each plan includes and give the right organization access after checkout.',
     accent: brand.accentAmber,
   },
   {
     icon: LogIn,
-    title: 'SSO and app handoff',
-    outcome: 'Child apps launch through the parent command layer instead of separate passwords.',
+    title: 'One account across every app',
+    outcome: 'Move between OperatorOS applications without managing a separate password for each one.',
     accent: brand.accentBlue,
   },
   {
     icon: LayoutDashboard,
-    title: 'Unified dashboard',
-    outcome: 'Operators see account, module, billing, and workflow state in one place.',
+    title: 'Unified business dashboard',
+    outcome: 'See your account, applications, billing, and work in one place.',
     accent: brand.accentViolet,
   },
   {
     icon: ChartNoAxesCombined,
-    title: 'Operator analytics',
-    outcome: 'Usage and audit signals create the foundation for admin control and growth.',
+    title: 'Usage and operations insights',
+    outcome: 'Understand which applications your team uses and where business work needs attention.',
     accent: brand.accentRed,
   },
 ];
@@ -236,11 +236,11 @@ export default function PlatformPositioning() {
             </h2>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: brand.textSecondary, margin: '0 0 26px', maxWidth: 620 }}>
               Pick the operations you actually run. OperatorOS gives each one a focused
-              module while the parent platform keeps identity, billing, organizations, and
-              access under command.
+              application while your sign-in, billing, organizations, and team access stay
+              together.
             </p>
             <div style={{ display: 'grid', gap: 10 }}>
-              {['Identity enters once', 'Billing activates access', 'Tenant scope follows the user', 'Modules launch with SSO'].map((step, index) => (
+              {['Sign in once', 'Choose the organization', 'Open the approved applications', 'Keep work connected'].map((step, index) => (
                 <div
                   key={step}
                   style={{
@@ -315,7 +315,7 @@ export default function PlatformPositioning() {
                   letterSpacing: '-0.03em',
                 }}
               >
-                The command layer behind every module.
+                The home base behind every application.
               </h3>
             </div>
             <div className="operatoros-capability-grid">

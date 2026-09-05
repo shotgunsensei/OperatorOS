@@ -168,6 +168,10 @@ function Select({
 function Empty({ children }: { children: React.ReactNode }) {
   return <div style={{ ...panel, color: semantic.textMuted }}>{children}</div>;
 }
+function ReadOnlyNotice({ canWrite }: { canWrite: boolean }) {
+  if (canWrite) return null;
+  return <div role="note" style={{ ...panel, color: '#fde68a', marginBottom: 14 }}>Your access is read-only. Ask an organization administrator for edit access to create or change this content.</div>;
+}
 
 export function BrandForgeCompletePanel({
   tab,
@@ -175,25 +179,29 @@ export function BrandForgeCompletePanel({
   campaigns,
   saving,
   mutate,
+  canWrite,
+  canAdmin,
 }: {
   tab: BrandForgeCompleteTab;
   data: Data;
   campaigns: BrandForgeCampaign[];
   saving: boolean;
   mutate: Mutate;
+  canWrite: boolean;
+  canAdmin: boolean;
 }) {
-  if (tab === 'offers') return <Offers data={data} saving={saving} mutate={mutate} />;
+  if (tab === 'offers') return <Offers data={data} saving={saving} mutate={mutate} canWrite={canWrite} />;
   if (tab === 'strategy')
-    return <Workflows data={data} campaigns={campaigns} saving={saving} mutate={mutate} />;
-  if (tab === 'templates') return <Templates data={data} saving={saving} mutate={mutate} />;
-  if (tab === 'integrations') return <Integrations data={data} saving={saving} mutate={mutate} />;
+    return <Workflows data={data} campaigns={campaigns} saving={saving} mutate={mutate} canWrite={canWrite} />;
+  if (tab === 'templates') return <Templates data={data} saving={saving} mutate={mutate} canWrite={canWrite} />;
+  if (tab === 'integrations') return <Integrations data={data} saving={saving} mutate={mutate} canAdmin={canAdmin} />;
   if (tab === 'reports')
-    return <Reports data={data} campaigns={campaigns} saving={saving} mutate={mutate} />;
+    return <Reports data={data} campaigns={campaigns} saving={saving} mutate={mutate} canWrite={canWrite} />;
   if (tab === 'activity') return <ActivityPanel data={data} />;
   return <AdminProjection data={data} />;
 }
 
-function Offers({ data, saving, mutate }: { data: Data; saving: boolean; mutate: Mutate }) {
+function Offers({ data, saving, mutate, canWrite }: { data: Data; saving: boolean; mutate: Mutate; canWrite: boolean }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [cta, setCta] = useState('');
@@ -218,6 +226,7 @@ function Offers({ data, saving, mutate }: { data: Data; saving: boolean; mutate:
         title="Offers and positioning"
         description="Turn pricing, audience, urgency, and calls to action into reusable campaign inputs."
       />
+      <ReadOnlyNotice canWrite={canWrite} />
       <form
         onSubmit={submit}
         style={{
@@ -232,7 +241,7 @@ function Offers({ data, saving, mutate }: { data: Data; saving: boolean; mutate:
         <Field label="Offer name" value={name} setValue={setName} required />
         <Field label="Positioning" value={description} setValue={setDescription} />
         <Field label="Call to action" value={cta} setValue={setCta} />
-        <button style={button} disabled={saving}>
+        <button style={button} disabled={saving || !canWrite}>
           Save offer
         </button>
       </form>
@@ -262,11 +271,13 @@ function Workflows({
   campaigns,
   saving,
   mutate,
+  canWrite,
 }: {
   data: Data;
   campaigns: BrandForgeCampaign[];
   saving: boolean;
   mutate: Mutate;
+  canWrite: boolean;
 }) {
   const [workflowType, setWorkflowType] = useState('product_launch');
   const [name, setName] = useState('');
@@ -308,8 +319,9 @@ function Workflows({
       <Heading
         icon={Workflow}
         title="Guided strategy workflows"
-        description="Six source workflows persist their inputs, validated generation, usage, and recoverable result."
+        description="Six guided workflows turn your saved brand and campaign details into editable drafts you can review and reuse."
       />
+      <ReadOnlyNotice canWrite={canWrite} />
       <form onSubmit={submit} style={{ ...panel, display: 'grid', gap: 12, marginBottom: 14 }}>
         <Grid>
           <Select
@@ -334,7 +346,7 @@ function Workflows({
           required
           textarea
         />
-        <button style={button} disabled={saving}>
+        <button style={button} disabled={saving || !canWrite}>
           Run guided workflow
         </button>
       </form>
@@ -359,7 +371,7 @@ function Workflows({
   );
 }
 
-function Templates({ data, saving, mutate }: { data: Data; saving: boolean; mutate: Mutate }) {
+function Templates({ data, saving, mutate, canWrite }: { data: Data; saving: boolean; mutate: Mutate; canWrite: boolean }) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('campaign');
   const [content, setContent] = useState('');
@@ -382,8 +394,9 @@ function Templates({ data, saving, mutate }: { data: Data; saving: boolean; muta
       <Heading
         icon={Sparkles}
         title="Template marketplace"
-        description="Preview global and workspace templates. Premium use is enforced by OperatorOS entitlement, not a child checkout."
+        description="Preview built-in and team templates. Application Stack access includes every BrandForgeOS software template; grandfathered access keeps its recorded template permissions."
       />
+      <ReadOnlyNotice canWrite={canWrite} />
       <form
         onSubmit={submit}
         style={{
@@ -398,7 +411,7 @@ function Templates({ data, saving, mutate }: { data: Data; saving: boolean; muta
         <Field label="Template name" value={name} setValue={setName} required />
         <Field label="Category" value={category} setValue={setCategory} required />
         <Field label="Reusable brief" value={content} setValue={setContent} required />
-        <button style={button} disabled={saving}>
+        <button style={button} disabled={saving || !canWrite}>
           Create template
         </button>
       </form>
@@ -433,10 +446,10 @@ function Templates({ data, saving, mutate }: { data: Data; saving: boolean; muta
               </details>
               <button
                 style={item.usable ? button : quiet}
-                disabled={saving || !item.usable}
+                disabled={saving || !canWrite || !item.usable}
                 onClick={() => void mutate(() => moduleShellApi.brandforgeos.useTemplate(item.id))}
               >
-                {item.usable ? 'Use template' : 'Upgrade in OperatorOS'}
+                {item.usable ? 'Use template' : 'Not included with this access'}
               </button>
             </article>
           ))
@@ -448,17 +461,20 @@ function Templates({ data, saving, mutate }: { data: Data; saving: boolean; muta
   );
 }
 
-function Integrations({ data, saving, mutate }: { data: Data; saving: boolean; mutate: Mutate }) {
+function Integrations({ data, saving, mutate, canAdmin }: { data: Data; saving: boolean; mutate: Mutate; canAdmin: boolean }) {
   const [mode, setMode] = useState('disabled');
   const [secretReference, setSecretReference] = useState('');
+  const runtimeAvailable = data.integrations?.some((item: Data) => item.runtimeAvailable === true) === true;
   return (
     <section id="brandforgeos-integrations" data-testid="brandforge-integrations">
       <Heading
         icon={PlugZap}
-        title="Integration control room"
-        description="Credentials are encrypted shared references. Health is explicit; a secret alone never marks an adapter ready."
+        title="Connections and exports"
+        description="Download approved campaign packages for the tools your team uses. Direct connections appear only when they are ready to use."
       />
-      <div
+      {!canAdmin && <div role="note" style={{ ...panel, color: '#fde68a', marginBottom: 14 }}>Only organization owners and administrators can change connection settings.</div>}
+      {!runtimeAvailable && <div role="status" style={{ ...panel, marginBottom: 14 }}><strong>Direct publishing connections are not available yet.</strong><p style={{ color: semantic.textMuted, marginBottom: 0 }}>Use Reports and Exports to download the approved package. No credential entered here can publish an ad, send a campaign, or change an external account.</p></div>}
+      {runtimeAvailable && <div
         style={{
           ...panel,
           display: 'grid',
@@ -473,19 +489,18 @@ function Integrations({ data, saving, mutate }: { data: Data; saving: boolean; m
           setValue={setMode}
           options={[
             ['disabled', 'Disabled'],
-            ['test', 'Deterministic test'],
-            ['live', 'Live provider'],
+            ['test', 'Safe local test'],
           ]}
         />
         <Field
-          label="Shared secret reference"
+          label="Saved connection credential name"
           value={secretReference}
           setValue={setSecretReference}
         />
         <div style={{ color: semantic.textMuted, fontSize: 12, alignSelf: 'end' }}>
-          Live OAuth and webhook providers also require reviewed callback readiness.
+          This checks the saved connection setup and does not send or publish anything.
         </div>
-      </div>
+      </div>}
       <Grid>
         {data.integrations?.map((item: Data) => {
           const state = item.connection?.status || 'disconnected';
@@ -496,7 +511,7 @@ function Integrations({ data, saving, mutate }: { data: Data; saving: boolean; m
                 <CloudCog size={17} />
               </div>
               <p style={{ color: semantic.textMuted }}>
-                {item.category} · {item.requiredFeature}
+                Export approved files now; use a direct connection when one is available.
               </p>
               <div
                 style={{
@@ -506,13 +521,21 @@ function Integrations({ data, saving, mutate }: { data: Data; saving: boolean; m
                   marginBottom: 10,
                 }}
               >
-                {state}
+                {item.runtimeAvailable === true
+                  ? !item.entitled
+                    ? 'Not included with this grandfathered access'
+                    : state === 'ready' ? 'Ready to use' : state === 'degraded' ? 'Needs attention' : 'Eligible · setup required'
+                  : 'File export available · direct connection planned'}
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {!item.connection || state === 'revoked' ? (
+                {item.runtimeAvailable !== true ? (
+                  <a href="/modules/brandforgeos/reports" style={{ ...quiet, textDecoration: 'none' }}>Open exports</a>
+                ) : !item.entitled ? (
+                  <button style={quiet} disabled>Not included with this access</button>
+                ) : !item.connection || state === 'revoked' ? (
                   <button
                     style={button}
-                    disabled={saving}
+                    disabled={saving || !canAdmin}
                     onClick={() =>
                       void mutate(() =>
                         moduleShellApi.brandforgeos.connectIntegration(item.provider, {
@@ -530,7 +553,7 @@ function Integrations({ data, saving, mutate }: { data: Data; saving: boolean; m
                   <>
                     <button
                       style={button}
-                      disabled={saving || !['ready', 'degraded'].includes(state)}
+                      disabled={saving || !canAdmin || !['ready', 'degraded'].includes(state)}
                       onClick={() =>
                         void mutate(() =>
                           moduleShellApi.brandforgeos.syncIntegration(
@@ -540,11 +563,11 @@ function Integrations({ data, saving, mutate }: { data: Data; saving: boolean; m
                         )
                       }
                     >
-                      Sync
+                      Check connection
                     </button>
                     <button
                       style={quiet}
-                      disabled={saving}
+                      disabled={saving || !canAdmin}
                       onClick={() =>
                         void mutate(() =>
                           moduleShellApi.brandforgeos.disconnectIntegration(item.provider),
@@ -569,11 +592,13 @@ function Reports({
   campaigns,
   saving,
   mutate,
+  canWrite,
 }: {
   data: Data;
   campaigns: BrandForgeCampaign[];
   saving: boolean;
   mutate: Mutate;
+  canWrite: boolean;
 }) {
   const [name, setName] = useState('');
   const [reportType, setReportType] = useState('campaign_summary');
@@ -599,8 +624,9 @@ function Reports({
       <Heading
         icon={FileText}
         title="Reports and export jobs"
-        description="KPI previews and white-label reports are snapshots of persisted facts with a SHA-256 integrity hash."
+        description="Create a review-ready snapshot of the campaign results recorded at that moment, with verification details included."
       />
+      <ReadOnlyNotice canWrite={canWrite} />
       <form
         onSubmit={submit}
         style={{
@@ -642,7 +668,7 @@ function Reports({
           />{' '}
           White-label branding
         </label>
-        <button style={button} disabled={saving}>
+        <button style={button} disabled={saving || !canWrite}>
           Generate report
         </button>
       </form>
@@ -655,9 +681,12 @@ function Reports({
                 {item.report_type.replaceAll('_', ' ')} · {item.status}
               </p>
               {item.snapshot_sha256 && (
-                <code style={{ fontSize: 10, color: '#c4b5fd' }}>
-                  {item.snapshot_sha256.slice(0, 18)}…
-                </code>
+                <details style={{ marginTop: 7, color: semantic.textMuted, fontSize: 11 }}>
+                  <summary>File verification details</summary>
+                  <code style={{ display: 'block', marginTop: 5, fontSize: 10, color: '#c4b5fd' }}>
+                    {item.snapshot_sha256.slice(0, 18)}…
+                  </code>
+                </details>
               )}
               {item.snapshot?.metrics && (
                 <div
@@ -694,7 +723,7 @@ function Reports({
               <div style={{ marginTop: 12 }}>
                 <button
                   style={quiet}
-                  disabled={saving || item.status !== 'generated'}
+                  disabled={saving || !canWrite || item.status !== 'generated'}
                   onClick={() =>
                     void mutate(() =>
                       moduleShellApi.brandforgeos.createExport({
@@ -753,7 +782,7 @@ function ActivityPanel({ data }: { data: Data }) {
       <Heading
         icon={Activity}
         title="Activity and notifications"
-        description="Collaboration and generation history are sourced from shared OperatorOS activity and notification services."
+        description="See recent creative work, team decisions, and alerts in one timeline."
       />
       <Grid>
         <div style={panel}>
@@ -795,19 +824,20 @@ function ActivityPanel({ data }: { data: Data }) {
 
 function AdminProjection({ data }: { data: Data }) {
   const entitlement = data.plan?.credits || {};
+  const applicationStack = data.plan?.accessModel === 'application_stack';
   return (
     <section id="brandforgeos-admin" data-testid="brandforge-admin">
       <Heading
         icon={CheckCircle2}
-        title="Team, security, plan, and usage"
-        description="This screen is a read-only projection. Membership, roles, plan changes, feature flags, and credit adjustment stay in OperatorOS."
+        title="Access, usage, and protection"
+        description="Review BrandForgeOS access and creative usage here. Use OperatorOS to manage the Application Stack, members, roles, or any explicitly configured allowance."
       />
       <Grid>
         <article style={panel}>
-          <h3>Module entitlement</h3>
-          <strong>{data.plan?.module?.status || 'Unavailable'}</strong>
+          <h3>BrandForgeOS access</h3>
+          <strong>{applicationStack ? 'Application Stack · complete software access' : data.plan?.module?.status === 'enabled' ? 'Ready to use' : data.plan?.module?.status === 'disabled' ? 'Not included' : 'Unavailable'}</strong>
           <p style={{ color: semantic.textMuted }}>
-            Authority: {data.plan?.authority || 'operatoros'}
+            Managed by {data.plan?.authority === 'operatoros' ? 'OperatorOS' : 'your organization'}
           </p>
           <a href="/app" style={{ color: '#f0abfc' }}>
             Open OperatorOS control center
@@ -821,15 +851,17 @@ function AdminProjection({ data }: { data: Data }) {
           </strong>
           <p style={{ color: semantic.textMuted }}>
             {entitlement.unmetered
-              ? 'Metered for audit; no numeric cap is assigned.'
-              : 'Monthly limit enforced atomically across concurrent requests.'}
+              ? applicationStack
+                ? 'Application Stack currently has no numeric BrandForgeOS generation limit.'
+                : 'No numeric generation limit is recorded for this grandfathered or manually managed access.'
+              : 'Used from this organization’s monthly creative allowance.'}
           </p>
         </article>
         <article style={panel}>
-          <h3>Security boundary</h3>
+          <h3>How your work is protected</h3>
           <p style={{ color: semantic.textMuted }}>
-            Tenant/module-sealed session, role-gated writes, encrypted provider references,
-            validated AI output, append-only usage and activity.
+            Only approved team members can make changes. Connection details stay protected, AI
+            drafts are checked before saving, and usage history remains available for review.
           </p>
         </article>
       </Grid>

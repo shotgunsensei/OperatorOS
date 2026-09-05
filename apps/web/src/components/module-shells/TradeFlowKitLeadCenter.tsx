@@ -67,12 +67,16 @@ function money(cents: number | null): string {
 
 export default function TradeFlowKitLeadCenter({
   tenantKey,
+  canWrite,
   canManage,
+  recordId,
   view = 'leads',
   routePrefix = '',
 }: {
   tenantKey: string;
+  canWrite: boolean;
   canManage: boolean;
+  recordId?: string;
   view?: 'leads' | 'settings';
   routePrefix?: string;
 }) {
@@ -87,15 +91,29 @@ export default function TradeFlowKitLeadCenter({
   const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
-  const deepLeadId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/leads\/([a-z0-9-]+)$/i)?.[1] || '';
+  const deepLeadId = recordId ?? (typeof window === 'undefined' ? '' : window.location.pathname.match(/\/leads\/([a-z0-9-]+)$/i)?.[1] || '');
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    moduleShellApi.tradeflowkit.list()
-      .then((response: any) => {
-        if (!cancelled) setLeads(Array.isArray(response?.leads) ? response.leads : []);
+    Promise.all([
+      moduleShellApi.tradeflowkit.list(),
+      deepLeadId
+        ? moduleShellApi.tradeflowkit.get(deepLeadId)
+          .then((lead) => ({ lead: lead as TradeFlowKitLead, unavailable: false }))
+          .catch(() => ({ lead: null, unavailable: true }))
+        : Promise.resolve({ lead: null, unavailable: false }),
+    ])
+      .then(([response, requested]) => {
+        if (cancelled) return;
+        const listed = Array.isArray((response as any)?.leads) ? (response as any).leads as TradeFlowKitLead[] : [];
+        setLeads(requested.lead && !listed.some((lead) => lead.id === requested.lead?.id)
+          ? [requested.lead, ...listed]
+          : listed);
+        if (requested.unavailable) {
+          setError('The requested lead is not available in this organization. It may have been removed, or your role may not allow access.');
+        }
       })
       .catch((requestError) => {
         if (!cancelled) setError(errorMessage(requestError, 'Could not load organization leads.'));
@@ -104,7 +122,7 @@ export default function TradeFlowKitLeadCenter({
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [tenantKey]);
+  }, [deepLeadId, tenantKey]);
 
   const visibleLeads = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -127,7 +145,7 @@ export default function TradeFlowKitLeadCenter({
 
   async function createLead(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canManage || submitting || !form.name.trim()) return;
+    if (!canWrite || submitting || !form.name.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -158,7 +176,7 @@ export default function TradeFlowKitLeadCenter({
   }
 
   async function updateStatus(lead: TradeFlowKitLead, status: LeadStatus) {
-    if (!canManage || lead.status === status || updatingId) return;
+    if (!canWrite || lead.status === status || updatingId) return;
     setUpdatingId(lead.id);
     setError(null);
     try {
@@ -172,7 +190,7 @@ export default function TradeFlowKitLeadCenter({
   }
 
   async function deleteLead(id: string) {
-    if (!canManage || updatingId) return;
+    if (!canWrite || updatingId) return;
     setUpdatingId(id);
     setError(null);
     try {
@@ -187,7 +205,7 @@ export default function TradeFlowKitLeadCenter({
   }
 
   async function convertLead(lead: TradeFlowKitLead) {
-    if (!canManage || updatingId || lead.status === 'converted' || lead.status === 'lost') return;
+    if (!canWrite || updatingId || lead.status === 'converted' || lead.status === 'lost') return;
     setUpdatingId(lead.id); setError(null);
     try {
       const result = await moduleShellApi.tradeflowkit.convertLead(lead.id) as { lead: TradeFlowKitLead };
@@ -198,12 +216,12 @@ export default function TradeFlowKitLeadCenter({
   }
 
   async function messageLead(lead: TradeFlowKitLead, channel: 'email' | 'sms') {
-    if (!canManage || messagingId || (channel === 'email' ? !lead.email : !lead.phone || !lead.consentToSms)) return;
+    if (!canWrite || messagingId || (channel === 'email' ? !lead.email : !lead.phone || !lead.consentToSms)) return;
     setMessagingId(`${channel}:${lead.id}`); setError(null); setNotice(null);
     try {
       const key = `lead-${channel}-${lead.id}-${crypto.randomUUID()}`;
       const result = await moduleShellApi.tradeflowkit.messageLead(lead.id, channel, key);
-      setNotice(`${channel === 'email' ? 'Email' : 'SMS'} ${result.duplicate ? 'was already' : 'is'} queued for ${lead.name}. Provider delivery is tracked by OperatorOS.`);
+      setNotice(`${channel === 'email' ? 'Email' : 'SMS'} ${result.duplicate ? 'was already' : 'is'} queued for ${lead.name}. OperatorOS will show whether the connected service delivers it.`);
     } catch (requestError) {
       setError(errorMessage(requestError, `Could not queue the ${channel}.`));
     } finally { setMessagingId(null); }
@@ -214,7 +232,7 @@ export default function TradeFlowKitLeadCenter({
       <section id="tradeflowkit-leads" className="tfk-panel tfk-lead-center" data-testid="tradeflowkit-lead-settings">
         <style>{leadCenterCss}</style>
         <div className="tfk-lead-heading">
-          <div><div className="tfk-lead-eyebrow">Lead intake and follow-up</div><h2>Lead operations settings</h2><p>Configure privacy-aware capture, follow-up scheduling, and provider readiness for persisted leads.</p></div>
+          <div><div className="tfk-lead-eyebrow">Lead intake and follow-up</div><h2>Lead operations settings</h2><p>Control privacy-aware lead capture, follow-up timing, and whether each connected messaging service is ready.</p></div>
         </div>
         {error && <div className="tfk-lead-error" role="alert"><AlertTriangle size={17} />{error}</div>}
         <TradeFlowKitLeadOperations tenantKey={tenantKey} canManage={canManage} leads={leads} />
@@ -230,7 +248,7 @@ export default function TradeFlowKitLeadCenter({
           <div className="tfk-lead-eyebrow">Active sales workflow</div>
           <h2>Lead Conversion Center</h2>
           <p>
-            Capture, qualify, and convert organization leads into shared-directory customers and numbered jobs. Provider delivery uses the shared notification outbox.
+            Capture, qualify, and convert leads into shared customer records and numbered jobs. Messages enter one delivery queue where the team can review failures and retries.
           </p>
         </div>
         <div className="tfk-lead-metrics" aria-label="Lead pipeline summary">
@@ -250,7 +268,7 @@ export default function TradeFlowKitLeadCenter({
       )}
       {notice && <div className="tfk-lead-notice" role="status" data-testid="tradeflowkit-lead-message-status">{notice}</div>}
 
-      {canManage ? <form className="tfk-lead-form" onSubmit={createLead} data-testid="tradeflowkit-lead-form">
+      {canWrite ? <form className="tfk-lead-form" onSubmit={createLead} data-testid="tradeflowkit-lead-form">
         <div className="tfk-lead-form-title">
           <Plus size={17} aria-hidden="true" />
           <strong>Add a manual lead</strong>
@@ -392,7 +410,7 @@ export default function TradeFlowKitLeadCenter({
               <div className="tfk-lead-contact">
                 <span>{lead.phone || 'No phone'}</span>
                 <span>{lead.email || 'No email'}</span>
-                {canManage && <div className="tfk-lead-message-actions">
+                {canWrite && <div className="tfk-lead-message-actions">
                   <button
                     type="button"
                     disabled={!lead.email || !!messagingId}
@@ -416,7 +434,7 @@ export default function TradeFlowKitLeadCenter({
                 <span className="sr-only">Status for {lead.name}</span>
                 <select
                   value={lead.status}
-                  disabled={!canManage || updatingId === lead.id || lead.status === 'converted'}
+                  disabled={!canWrite || updatingId === lead.id || lead.status === 'converted'}
                   onChange={(event) => updateStatus(lead, event.target.value as LeadStatus)}
                   data-testid={`tradeflowkit-lead-status-${lead.id}`}
                 >
@@ -426,7 +444,7 @@ export default function TradeFlowKitLeadCenter({
               <div className="tfk-lead-delete">
                 {lead.status === 'converted' && lead.jobId ? (
                   <a className="tfk-converted-link" href={`${routePrefix}/jobs/${lead.jobId}`}>Job <ArrowRight size={14} /></a>
-                ) : !canManage ? (
+                ) : !canWrite ? (
                   <span className="tfk-lead-read-only-label">Read only</span>
                 ) : pendingDeleteId === lead.id ? (
                   <>

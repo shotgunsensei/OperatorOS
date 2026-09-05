@@ -19,6 +19,10 @@ import { useAuth } from '../AuthProvider';
 import { platformApiCall as apiCall } from '@/lib/platform-api';
 import { adminApiCall } from '@/lib/admin-api';
 import type { PlatformView } from '@/lib/platform-routes';
+import { COMPANION_MODULES, COMPANION_MODULE_PRICE_CENTS, ELIGIBLE_COMPANION_MODULE_KEYS } from '@operatoros/sdk';
+
+const FORWARD_COMPANION_KEYS = new Set<string>(ELIGIBLE_COMPANION_MODULE_KEYS);
+const FORWARD_COMPANION_NAMES = new Map(COMPANION_MODULES.map((module) => [module.key, module.name]));
 
 export type { PlatformView } from '@/lib/platform-routes';
 
@@ -1071,23 +1075,6 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
         <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
           <code>{data.slug}</code> · status={data.archivedAt ? 'archived' : data.status} · planMin={data.planMin} · ord={data.ord}
         </div>
-        {pricing && (
-          <div style={{ marginTop: 12, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }} data-testid="block-module-stripe">
-            <div style={{ color: colors.textMuted, marginBottom: 4 }}>Stripe add-on price binding (read-only)</div>
-            <div data-testid={`text-binding-source-${pricing.slug}`}>
-              binding:{' '}
-              {pricing.priceSource === 'override' && <Pill tone="green">via override</Pill>}
-              {pricing.priceSource === 'env' && <Pill tone="green">via env</Pill>}
-              {pricing.priceSource === 'none' && <Pill tone="muted">not configured</Pill>}
-              {pricing.priceId && <> <code>{pricing.priceId}</code></>}
-            </div>
-            <div>
-              override: {pricing.overridePriceId ? <code>{pricing.overridePriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
-              {' · '}env <code>{pricing.envKey}</code>: {pricing.envPriceId ? <code>{pricing.envPriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
-            </div>
-            <div>declared: {pricing.declaredAddonPriceCents ?? '—'}¢ · stripe: {pricing.stripeUnitAmountCents ?? '—'}¢ {pricing.stripeCurrency ? `(${pricing.stripeCurrency})` : ''} {pricing.mismatch && <Pill tone="red">mismatch</Pill>}</div>
-          </div>
-        )}
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           {!data.archivedAt && <Btn data-testid="button-archive-module" variant="danger" disabled={busy} onClick={() => archive(false)}>Archive</Btn>}
           {!data.archivedAt && err?.code === 'MODULE_HAS_ACTIVE_SUBS' && <Btn data-testid="button-archive-module-confirm" variant="danger" onClick={() => archive(true)}>Confirm archive ({err.body?.activeSubscriptionCount} active)</Btn>}
@@ -1095,403 +1082,66 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
       </Card>
       {!data.archivedAt && <ModuleEditForm module={data} onSaved={load} />}
       {!data.archivedAt && <ModuleComponentEditor module={data} onSaved={load} />}
-      {!data.archivedAt && <ModulePlanMapping moduleSlug={slug} onSaved={load} />}
-      {!data.archivedAt && <ModuleAddonPriceEditor module={data} onSaved={load} />}
+      {!data.archivedAt && <ModulePlanMapping module={data} />}
+      {!data.archivedAt && <ModuleStackCommerceReadiness module={data} pricing={pricing} />}
       <ModuleMembers moduleSlug={slug} />
     </div>
   );
 }
 
-function ModulePlanMapping({ moduleSlug, onSaved }: { moduleSlug: string; onSaved: () => void }) {
-  // Loads the catalog (which now includes `includedInPlans`) and the plan
-  // list, lets a super_admin toggle plan inclusion, and POSTs the full set
-  // back. The endpoint replaces all mappings for the module in one call.
-  const [allPlans, setAllPlans] = useState<any[] | null>(null);
-  const [included, setIncluded] = useState<Set<string> | null>(null);
-  const [err, setErr] = useState<any>(null);
-  const [busy, setBusy] = useState(false);
-  const load = () => {
-    setErr(null);
-    return Promise.all([
-      apiCall('/platform/plans'),
-      apiCall('/platform/modules?includeArchived=1'),
-    ]).then(([p, m]) => {
-      setAllPlans(p.plans ?? []);
-      const mod = m.modules.find((x: any) => x.slug === moduleSlug);
-      setIncluded(new Set(mod?.includedInPlans ?? []));
-    }).catch(setErr);
-  };
-  useEffect(() => {
-    load(); /* eslint-disable-next-line */
-  }, [moduleSlug]);
-  const toggle = (slug: string) => {
-    if (!included) return;
-    const next = new Set(included);
-    if (next.has(slug)) next.delete(slug); else next.add(slug);
-    setIncluded(next);
-  };
-  const save = async () => {
-    if (!included) return;
-    setErr(null); setBusy(true);
-    try {
-      await apiCall(`/platform/modules/${moduleSlug}/plan-mapping`, {
-        method: 'POST', body: JSON.stringify({ planSlugs: Array.from(included) }),
-      });
-      onSaved();
-    } catch (e) { setErr(e); } finally { setBusy(false); }
-  };
-  if (err && (!allPlans || !included)) {
-    return (
-      <Card style={{ marginTop: 12 }} data-testid="form-module-plan-mapping">
-        <h3 style={{ marginTop: 0, fontSize: 14 }}>Plan mapping</h3>
-        <ErrorBlock err={err} onRetry={load} />
-      </Card>
-    );
-  }
-  if (!allPlans || !included) return null;
+function ModulePlanMapping({ module }: { module: any }) {
+  const included = new Set<string>(Array.isArray(module.includedInPlans) ? module.includedInPlans : []);
+  const legacyPlans = ['starter', 'pro', 'elite'];
   return (
     <Card style={{ marginTop: 12 }} data-testid="form-module-plan-mapping">
-      <h3 style={{ marginTop: 0, fontSize: 14 }}>Plan mapping</h3>
-      <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
-        Plans that bundle this module out of the box. Leaving all unchecked makes the module add-on-only.
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Legacy plan mapping — read-only</h3>
+      <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 10, lineHeight: 1.5 }}>
+        These mappings explain grandfathered access only. Starter, Pro, and Elite are closed to new sales, and this screen cannot create or expand legacy application access.
       </div>
-      <ErrorBlock err={err} onRetry={load} />
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 8 }}>
-        {allPlans.map(p => (
-          <label key={p.slug} data-testid={`check-plan-${p.slug}`} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="checkbox"
-              checked={included.has(p.slug)}
-              onChange={() => toggle(p.slug)}
-            />
-            <code>{p.slug}</code>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        {legacyPlans.map(planSlug => (
+          <label key={planSlug} data-testid={`check-plan-${planSlug}`} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, color: colors.textMuted }}>
+            <input type="checkbox" checked={included.has(planSlug)} disabled readOnly />
+            <code>{planSlug}</code>
           </label>
         ))}
       </div>
-      <Btn data-testid="button-save-plan-mapping" variant="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save plan mapping'}</Btn>
     </Card>
   );
 }
 
-interface AddonPriceHistoryEntry {
-  id: string;
-  createdAt: string;
-  adminId: string;
-  adminEmail: string | null;
-  adminName: string | null;
-  previousCents: number | null;
-  nextCents: number | null;
-}
+function ModuleStackCommerceReadiness({ module, pricing }: { module: any; pricing: any | null }) {
+  const eligible = FORWARD_COMPANION_KEYS.has(module.slug);
+  if (!eligible) {
+    const message = module.slug === 'outcall'
+      ? 'OutCall is coming soon and is not eligible for purchase or price administration.'
+      : 'This application is a flagship, free/core service, or otherwise outside the paid companion catalog. No per-application purchase or price control is available.';
+    return (
+      <Card style={{ marginTop: 12 }} data-testid="module-stack-commerce-excluded">
+        <h3 style={{ marginTop: 0, fontSize: 14 }}>Application Stack commerce</h3>
+        <Pill tone="muted">not a paid companion</Pill>
+        <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>{message}</div>
+      </Card>
+    );
+  }
 
-function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: () => void }) {
-  const meta = (m.metadata ?? {}) as any;
-  const current: number | null = typeof meta.addonPriceCents === 'number' ? meta.addonPriceCents : null;
-  const currentPriceId: string = typeof meta.stripePriceId === 'string' ? meta.stripePriceId : '';
-  const [cents, setCents] = useState<string>(current != null ? String(current) : '');
-  const [priceId, setPriceId] = useState<string>(currentPriceId);
-  const [err, setErr] = useState<any>(null);
-  const [busy, setBusy] = useState(false);
-  const [priceIdBusy, setPriceIdBusy] = useState(false);
-  const [priceIdResult, setPriceIdResult] = useState<any>(null);
-  const [drift, setDrift] = useState<any>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [history, setHistory] = useState<AddonPriceHistoryEntry[] | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyErr, setHistoryErr] = useState<any>(null);
-  const [restoringId, setRestoringId] = useState<string | null>(null);
-  const [compareIds, setCompareIds] = useState<string[]>([]);
-
-  const checkStripe = async () => {
-    setErr(null);
-    try { setDrift(await apiCall(`/platform/modules/${m.slug}/stripe-price`)); }
-    catch (e) { setErr(e); }
-  };
-  const writePrice = async (n: number) => {
-    await apiCall(`/platform/modules/${m.slug}/addon-price`, {
-      method: 'PUT', body: JSON.stringify({ addonPriceCents: n }),
-    });
-  };
-  const save = async () => {
-    setErr(null); setBusy(true);
-    try {
-      const n = parseInt(cents, 10);
-      if (!Number.isFinite(n) || n < 0) throw Object.assign(new Error('Enter a non-negative integer (cents)'), { code: 'BAD_INPUT' });
-      await writePrice(n);
-      if (historyOpen) await loadHistory();
-      onSaved();
-    } catch (e) { setErr(e); } finally { setBusy(false); }
-  };
-  const loadHistory = async () => {
-    setHistoryLoading(true); setHistoryErr(null);
-    try {
-      const d = await apiCall(`/platform/modules/${m.slug}/addon-price-history`);
-      const next = d.history as AddonPriceHistoryEntry[];
-      setHistory(next);
-      setCompareIds(prev => prev.filter(id => next.some(h => h.id === id)));
-    } catch (e) { setHistoryErr(e); } finally { setHistoryLoading(false); }
-  };
-  const toggleHistory = () => {
-    const next = !historyOpen;
-    setHistoryOpen(next);
-    if (next && history === null && !historyLoading) loadHistory();
-  };
-  const restore = async (entry: AddonPriceHistoryEntry) => {
-    if (entry.previousCents == null) return;
-    setRestoringId(entry.id);
-    setErr(null);
-    try {
-      await writePrice(entry.previousCents);
-      setCents(String(entry.previousCents));
-      await loadHistory();
-      onSaved();
-    } catch (e) { setErr(e); } finally { setRestoringId(null); }
-  };
-  const savePriceId = async (clear = false) => {
-    setErr(null); setPriceIdResult(null); setPriceIdBusy(true);
-    try {
-      const r = await apiCall(`/platform/modules/${m.slug}/stripe-price-id`, {
-        method: 'PUT',
-        body: JSON.stringify({ stripePriceId: clear ? null : priceId.trim() }),
-      });
-      setPriceIdResult(r?.validation ?? { ok: true, cleared: clear });
-      if (clear) setPriceId('');
-      onSaved();
-    } catch (e) { setErr(e); } finally { setPriceIdBusy(false); }
-  };
-  const lookup = drift?.lookup;
-  const fmt = (c: number | null) => c == null ? '—' : `${c}¢`;
-  const toggleCompare = (id: string) => {
-    setCompareIds(prev => {
-      if (prev.includes(id)) return prev.filter(x => x !== id);
-      if (prev.length >= 2) return [prev[1], id];
-      return [...prev, id];
-    });
-  };
-  const compareRows = history && compareIds.length === 2
-    ? compareIds.map(id => history.find(h => h.id === id)).filter(Boolean) as AddonPriceHistoryEntry[]
-    : [];
-  const diff = compareRows.length === 2 ? (() => {
-    const sorted = [...compareRows].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    const [older, newer] = sorted;
-    const a = older.nextCents;
-    const b = newer.nextCents;
-    const deltaCents = (a != null && b != null) ? b - a : null;
-    const pct = (a != null && b != null && a !== 0) ? ((b - a) / a) * 100 : null;
-    const ms = new Date(newer.createdAt).getTime() - new Date(older.createdAt).getTime();
-    return { older, newer, a, b, deltaCents, pct, ms };
-  })() : null;
-  const formatDuration = (ms: number) => {
-    const s = Math.floor(ms / 1000);
-    const d = Math.floor(s / 86400);
-    const h = Math.floor((s % 86400) / 3600);
-    const m2 = Math.floor((s % 3600) / 60);
-    if (d > 0) return `${d}d ${h}h`;
-    if (h > 0) return `${h}h ${m2}m`;
-    return `${m2}m`;
-  };
-  const exportCompareCsv = () => {
-    if (!diff) return;
-    const rows = [
-      ['field', 'older', 'newer'],
-      ['id', diff.older.id, diff.newer.id],
-      ['createdAt', diff.older.createdAt, diff.newer.createdAt],
-      ['previousCents', String(diff.older.previousCents ?? ''), String(diff.newer.previousCents ?? '')],
-      ['nextCents', String(diff.older.nextCents ?? ''), String(diff.newer.nextCents ?? '')],
-      ['adminEmail', diff.older.adminEmail ?? '', diff.newer.adminEmail ?? ''],
-      [],
-      ['summary', '', ''],
-      ['deltaCents', diff.deltaCents != null ? String(diff.deltaCents) : '', ''],
-      ['deltaPercent', diff.pct != null ? diff.pct.toFixed(4) : '', ''],
-      ['timeBetweenMs', String(diff.ms), ''],
-      ['timeBetween', formatDuration(diff.ms), ''],
-    ];
-    const csv = rows.map(r => r.map(v => {
-      const s = String(v ?? '');
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    }).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `addon-price-compare-${m.slug}-${Date.now()}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const configured = Boolean(pricing?.envKeyConfigured && pricing?.priceId);
   return (
-    <Card style={{ marginTop: 12 }} data-testid="form-module-addon-price">
-      <h3 style={{ marginTop: 0, fontSize: 14 }}>Add-on price</h3>
-      <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
-        Stored on the module under <code>metadata.addonPriceCents</code>. Used by add-on subscription flows.
+    <Card style={{ marginTop: 12 }} data-testid="module-stack-commerce-readiness">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Shared companion price — read-only</h3>
+      <div style={{ color: colors.textMuted, fontSize: 12, lineHeight: 1.5 }}>
+        This is one of exactly six eligible organization-wide companions. Every paid companion uses the same shared {`$${COMPANION_MODULE_PRICE_CENTS / 100}/month`} Application Stack price; per-module amount and Price-ID changes are closed.
       </div>
-      <ErrorBlock err={err} />
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
-        <div style={{ flex: '0 0 220px' }}>
-          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Price (cents, e.g. 9900 = $99)</label>
-          <input data-testid="input-addon-price" value={cents} onChange={e => setCents(e.target.value)} style={{ ...inp, width: '100%' }} />
+      <div style={{ marginTop: 10, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
+        <div><strong>{`$${COMPANION_MODULE_PRICE_CENTS / 100}/month`}</strong> · USD · monthly only</div>
+        <div style={{ marginTop: 5 }}>
+          Shared binding: {configured ? <Pill tone="green">configured</Pill> : <Pill tone="yellow">not configured</Pill>}
         </div>
-        <Btn data-testid="button-save-addon-price" variant="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save price'}</Btn>
-        <Btn data-testid="button-check-stripe-price" onClick={checkStripe}>Check Stripe drift</Btn>
-        <Btn data-testid="button-toggle-price-history" onClick={toggleHistory}>{historyOpen ? 'Hide price history' : 'Price history'}</Btn>
+        <div style={{ color: colors.textMuted, marginTop: 5 }}>
+          env <code>{pricing?.envKey ?? 'STRIPE_PRICE_COMPANION_MODULE_MONTHLY'}</code>
+          {pricing?.priceId ? <> · <code>{pricing.priceId}</code></> : null}
+        </div>
       </div>
-      <div style={{ borderTop: `1px solid ${colors.border}`, marginTop: 12, paddingTop: 12 }}>
-        <h3 style={{ marginTop: 0, fontSize: 14 }}>Stripe Price ID override</h3>
-        <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
-          Stored at <code>metadata.stripePriceId</code>. Preferred over the
-          legacy <code>STRIPE_PRICE_ADDON_{m.slug.toUpperCase().replace(/-/g, '_')}</code> env binding.
-          The id is validated against Stripe before it is saved.
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 320px', minWidth: 220 }}>
-            <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Stripe Price ID (e.g. price_1A2b…)</label>
-            <input
-              data-testid="input-stripe-price-id"
-              value={priceId}
-              onChange={e => setPriceId(e.target.value)}
-              placeholder="price_…"
-              style={{ ...inp, width: '100%' }}
-            />
-          </div>
-          <Btn data-testid="button-save-stripe-price-id" variant="primary" disabled={priceIdBusy || !priceId.trim()} onClick={() => savePriceId(false)}>
-            {priceIdBusy ? 'Validating…' : 'Save price id'}
-          </Btn>
-          <Btn data-testid="button-clear-stripe-price-id" disabled={priceIdBusy || !currentPriceId} onClick={() => savePriceId(true)}>
-            Clear override
-          </Btn>
-        </div>
-        {currentPriceId && (
-          <div style={{ marginTop: 6, fontSize: 12, color: colors.textMuted }}>
-            current override: <code data-testid="text-current-stripe-price-id">{currentPriceId}</code>
-          </div>
-        )}
-        {priceIdResult && (
-          <div data-testid="block-stripe-price-id-result" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
-            {priceIdResult.cleared
-              ? <Pill tone="green">override cleared</Pill>
-              : (
-                <>
-                  <Pill tone={priceIdResult.ok ? 'green' : 'red'}>{priceIdResult.ok ? 'validated' : 'invalid'}</Pill>{' '}
-                  {priceIdResult.unitAmountCents != null && <>{priceIdResult.unitAmountCents}¢ </>}
-                  {priceIdResult.currency && <>({priceIdResult.currency}) </>}
-                  {priceIdResult.active === false && <Pill tone="yellow">inactive</Pill>}
-                </>
-              )
-            }
-          </div>
-        )}
-      </div>
-      {lookup && (
-        <div data-testid="block-stripe-drift" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
-          <div>
-            binding:{' '}
-            {lookup.source === 'override' && <Pill tone="green">via override</Pill>}
-            {lookup.source === 'env' && <Pill tone="green">via env</Pill>}
-            {lookup.source === 'none' && <Pill tone="muted">not configured</Pill>}
-            {lookup.priceId && <> <code>{lookup.priceId}</code></>}
-          </div>
-          <div>
-            override: {lookup.overridePriceId ? <code>{lookup.overridePriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
-            {' · '}env <code>{lookup.envKey ?? '—'}</code>: {lookup.envPriceId ? <code>{lookup.envPriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
-          </div>
-          <div>declared: {lookup.declaredAddonPriceCents ?? '—'}¢ · stripe: {lookup.stripeUnitAmountCents ?? '—'}¢ {lookup.stripeCurrency ? `(${lookup.stripeCurrency})` : ''}</div>
-          {lookup.mismatch && <Pill tone="red">mismatch</Pill>}
-          {lookup.error && <Pill tone="yellow">{lookup.error}</Pill>}
-        </div>
-      )}
-      {historyOpen && (
-        <div data-testid="block-addon-price-history" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontWeight: 600 }}>Price history</div>
-            <div style={{ color: colors.textMuted, fontSize: 11 }} data-testid="text-compare-hint">
-              {compareIds.length === 0 && 'Tick two rows to compare'}
-              {compareIds.length === 1 && 'Tick one more row to compare'}
-              {compareIds.length === 2 && (
-                <button
-                  type="button"
-                  data-testid="button-clear-compare"
-                  onClick={() => setCompareIds([])}
-                  style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', textDecoration: 'underline', fontSize: 11, padding: 0 }}
-                >Clear comparison</button>
-              )}
-            </div>
-          </div>
-          {historyLoading && <div data-testid="addon-price-history-loading" style={{ color: colors.textMuted }}>Loading…</div>}
-          {historyErr && <ErrorBlock err={historyErr} />}
-          {!historyLoading && !historyErr && history && history.length === 0 && (
-            <div data-testid="addon-price-history-empty" style={{ color: colors.textMuted }}>No price changes recorded yet.</div>
-          )}
-          {diff && (
-            <div
-              data-testid="block-addon-price-compare"
-              style={{ marginBottom: 8, padding: 8, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 6 }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <div style={{ fontWeight: 600 }}>Comparison</div>
-                <Btn data-testid="button-export-compare-csv" onClick={exportCompareCsv}>Export CSV</Btn>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div data-testid="block-compare-older">
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>Older</div>
-                  <div style={{ fontFamily: 'monospace' }} data-testid="text-compare-older-price">{fmt(diff.older.nextCents)}</div>
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{new Date(diff.older.createdAt).toLocaleString()}</div>
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{diff.older.adminEmail ?? diff.older.adminId}</div>
-                </div>
-                <div data-testid="block-compare-newer">
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>Newer</div>
-                  <div style={{ fontFamily: 'monospace' }} data-testid="text-compare-newer-price">{fmt(diff.newer.nextCents)}</div>
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{new Date(diff.newer.createdAt).toLocaleString()}</div>
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{diff.newer.adminEmail ?? diff.newer.adminId}</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.border}`, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <span data-testid="text-compare-delta-cents">
-                  Δ {diff.deltaCents == null ? '—' : `${diff.deltaCents > 0 ? '+' : ''}${diff.deltaCents}¢`}
-                </span>
-                <span data-testid="text-compare-delta-percent">
-                  Δ% {diff.pct == null ? '—' : `${diff.pct > 0 ? '+' : ''}${diff.pct.toFixed(2)}%`}
-                </span>
-                <span data-testid="text-compare-time-between">
-                  time between: {formatDuration(diff.ms)}
-                </span>
-              </div>
-            </div>
-          )}
-          {!historyLoading && !historyErr && history && history.map(entry => {
-            const canRestore = entry.previousCents != null && entry.previousCents !== current;
-            const when = new Date(entry.createdAt);
-            const checked = compareIds.includes(entry.id);
-            return (
-              <div
-                key={entry.id}
-                data-testid={`addon-price-history-row-${entry.id}`}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', padding: '4px 0', borderTop: `1px solid ${colors.border}` }}
-              >
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    data-testid={`checkbox-compare-${entry.id}`}
-                    checked={checked}
-                    onChange={() => toggleCompare(entry.id)}
-                  />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: 'monospace' }}>{fmt(entry.previousCents)} → {fmt(entry.nextCents)}</div>
-                    <div style={{ color: colors.textMuted, fontSize: 11 }}>
-                      {when.toLocaleString()} · {entry.adminEmail ?? entry.adminId}
-                    </div>
-                  </div>
-                </label>
-                <Btn
-                  data-testid={`button-restore-addon-price-${entry.id}`}
-                  onClick={() => restore(entry)}
-                  disabled={!canRestore || restoringId === entry.id}
-                  title={canRestore ? `Restore to ${fmt(entry.previousCents)}` : entry.previousCents == null ? 'No prior value' : 'Already at this price'}
-                >{restoringId === entry.id ? '…' : 'Restore'}</Btn>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </Card>
   );
 }
@@ -1727,7 +1377,7 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
               <option key={p.slug} value={p.slug}>{p.slug}</option>
             ))}
           </select>
-          <select aria-label="Change tenant role" data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
+          <select aria-label="Change organization role" data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
             <option value="user">user</option>
             <option value="admin">admin</option>
           </select>
@@ -1976,8 +1626,6 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
   const [supportUrl, setSupportUrl] = useState(meta.supportUrl ?? '');
   const [isCore, setIsCore] = useState(!!meta.isCore);
   const [isPaidAddon, setIsPaidAddon] = useState(!!meta.isPaidAddon);
-  const addonAnnualPriceCents = meta.addonAnnualPriceCents;
-  const stripePriceEnvKey = meta.stripePriceEnvKey ?? '';
   const [featureTagsCsv, setFeatureTagsCsv] = useState(Array.isArray(meta.featureTags) ? meta.featureTags.join(', ') : '');
 
   const [err, setErr] = useState<any>(null);
@@ -2061,18 +1709,6 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
         <Input label="Marketing URL"      value={marketingUrl} onChange={setMarketingUrl}   testid="input-mod-edit-marketing" />
         <Input label="Docs URL"           value={docsUrl}      onChange={setDocsUrl}        testid="input-mod-edit-docs" />
         <Input label="Support URL"        value={supportUrl}   onChange={setSupportUrl}     testid="input-mod-edit-support" />
-        <div data-testid="badge-mod-annualprice">
-          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Addon annual price (read-only)</label>
-          <div style={{ ...inp, width: '100%', background: '#0d1117', color: colors.textMuted }}>
-            {addonAnnualPriceCents != null ? `${addonAnnualPriceCents} cents` : '—'}
-          </div>
-        </div>
-        <div data-testid="badge-mod-stripekey">
-          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Stripe price env key (read-only)</label>
-          <div style={{ ...inp, width: '100%', background: '#0d1117', color: colors.textMuted, fontFamily: 'monospace' }}>
-            {stripePriceEnvKey || '—'}
-          </div>
-        </div>
         <Input label="Feature tags (comma-separated)" value={featureTagsCsv} onChange={setFeatureTagsCsv} testid="input-mod-edit-tags" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 16 }}>
           <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -2256,139 +1892,89 @@ function BillingEvents() {
 
 function Pricing() {
   const [rows, setRows] = useState<any[] | null>(null);
-  const [stripeMode, setStripeMode] = useState<string>('off');
-  const [busy, setBusy] = useState<string | null>(null);
+  const [stripeMode, setStripeMode] = useState('off');
   const [err, setErr] = useState<any>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const reload = () => {
     setErr(null);
     return apiCall('/platform/pricing')
-    .then(d => { setRows(d.pricing); setStripeMode(d.stripeMode || 'off'); })
-    .catch(setErr);
+      .then(data => {
+        const approvedRows = (data.pricing ?? []).filter((row: any) => FORWARD_COMPANION_KEYS.has(row.slug));
+        const bySlug = new Map<string, any>(approvedRows.map((row: any) => [row.slug, row]));
+        setRows(ELIGIBLE_COMPANION_MODULE_KEYS.map(slug => bySlug.get(slug) ?? {
+          slug,
+          name: FORWARD_COMPANION_NAMES.get(slug) ?? slug,
+          declaredAddonPriceCents: COMPANION_MODULE_PRICE_CENTS,
+          envKey: 'STRIPE_PRICE_COMPANION_MODULE_MONTHLY',
+          envKeyConfigured: false,
+          priceId: null,
+          priceSource: 'none',
+          commerceModel: 'application_stack',
+          mutable: false,
+          error: 'catalog row missing',
+        }));
+        setStripeMode(data.stripeMode || 'off');
+      })
+      .catch(setErr);
   };
-  useEffect(() => { reload(); }, []);
-
-  const sync = async (slug: string) => {
-    setErr(null); setNotice(null); setBusy(`sync:${slug}`);
-    try {
-      const r = await apiCall(`/platform/pricing/${encodeURIComponent(slug)}/sync-from-stripe`, { method: 'POST' });
-      setNotice(`Synced ${slug}: declared price is now ${r.nextCents}¢ (was ${r.previousCents ?? '—'}¢).`);
-      await reload();
-    } catch (e) { setErr(e); } finally { setBusy(null); }
-  };
-
-  const createPrice = async (slug: string, declaredCents: number | null) => {
-    setErr(null); setNotice(null);
-    const def = String(declaredCents ?? '');
-    const input = window.prompt(
-      `Create a NEW Stripe Price for "${slug}" (recurring monthly).\n\nEnter the new unit_amount in CENTS.\nThis will create a fresh Stripe Price, persist it to modules.metadata.stripePriceId (survives restart), point the in-process env binding at it, and align the declared price.\n\nThe previous priceId is preserved in the audit log so you can restore it from the module's "Stripe Price ID override" field if needed.`,
-      def,
-    );
-    if (input == null) return;
-    const cents = parseInt(input, 10);
-    if (!Number.isFinite(cents) || cents <= 0) { setErr(new Error('Invalid cents value')); return; }
-    setBusy(`create:${slug}`);
-    try {
-      const r = await apiCall(`/platform/pricing/${encodeURIComponent(slug)}/create-stripe-price`, {
-        method: 'POST',
-        body: JSON.stringify({ unitAmountCents: cents }),
-      });
-      const persistedNote = r.persistedToMetadata
-        ? ' Persisted to modules.metadata.stripePriceId — survives restart.'
-        : '';
-      setNotice(
-        `Created Stripe price ${r.newPriceId} for ${slug} at ${r.nextCents}¢ ${r.currency?.toUpperCase?.() || ''}.` +
-        persistedNote +
-        (r.requiresSecretRotation ? ` IMPORTANT: ${r.secretRotationHint}` : ''),
-      );
-      await reload();
-    } catch (e) { setErr(e); } finally { setBusy(null); }
-  };
+  useEffect(() => { void reload(); }, []);
 
   if (err && !rows) return <ErrorBlock err={err} onRetry={reload} />;
-  if (!rows) return <div style={{ color: colors.textMuted }}>Loading…</div>;
+  if (!rows) return <div style={{ color: colors.textMuted }}>Loading shared companion price readiness…</div>;
 
-  const mismatchCount = rows.filter(r => r.mismatch).length;
-  const isLive = stripeMode === 'live';
+  const allReady = rows.every(row =>
+    row.commerceModel === 'application_stack'
+    && row.mutable === false
+    && row.declaredAddonPriceCents === COMPANION_MODULE_PRICE_CENTS
+    && row.envKeyConfigured
+    && row.priceId,
+  );
 
   return (
-    <div>
-      <ErrorBlock err={err} />
-      {notice && (
-        <div data-testid="pricing-notice" style={{
-          padding: 12, marginBottom: 12, borderRadius: 6,
-          border: `1px solid ${colors.accentGreen}`, color: colors.text,
-          background: colors.bgSecondary, fontSize: 13,
-        }}>{notice}</div>
-      )}
+    <div data-testid="application-stack-pricing-readiness">
+      <ErrorBlock err={err} onRetry={reload} />
       <div data-testid="pricing-banner" style={{
         padding: 12, marginBottom: 12, borderRadius: 6,
-        border: `1px solid ${mismatchCount > 0 ? colors.accentRed : colors.border}`,
+        border: `1px solid ${allReady ? colors.accentGreen : colors.accentYellow}`,
         background: colors.bgSecondary, color: colors.text, fontSize: 13, lineHeight: 1.5,
       }}>
         <div style={{ marginBottom: 6 }}>
-          <strong>Pricing drift inspector</strong>{' '}
-          <Pill tone={isLive ? 'green' : 'yellow'}>STRIPE_MODE={stripeMode}</Pill>{' '}
-          {mismatchCount > 0
-            ? <Pill tone="red">{mismatchCount} mismatch{mismatchCount === 1 ? '' : 'es'}</Pill>
-            : <Pill tone="green">all aligned</Pill>}
+          <strong>Application Stack companion readiness</strong>{' '}
+          <Pill tone={stripeMode === 'live' ? 'green' : 'yellow'}>STRIPE_MODE={stripeMode}</Pill>{' '}
+          <Pill tone={allReady ? 'green' : 'yellow'}>{allReady ? 'shared price configured' : 'checkout binding incomplete'}</Pill>
         </div>
         <div style={{ color: colors.textMuted }}>
-          When the declared price (modules.metadata.addonPriceCents) differs from what Stripe will actually charge, customers can be silently over- or undercharged.
-          {' '}<strong>Sync from Stripe</strong> trusts Stripe and rewrites the declared price to match the live unit_amount.
-          {' '}<strong>Create new Stripe price</strong> provisions a fresh Stripe Price at the amount you choose, points the in-process env binding at it, and aligns the declared price — use this when Stripe is wrong (e.g. you priced incorrectly there) or no price is bound yet.
-          {isLive ? '' : ' (Create is disabled because STRIPE_MODE is not "live".)'}
+          Exactly six companions are eligible. They all use one shared <strong>$29/month</strong> Stripe Price through <code>STRIPE_PRICE_COMPANION_MODULE_MONTHLY</code>.
+          This surface is read-only: per-module amount changes, Price-ID overrides, Stripe price creation, and sync actions are closed.
+          Core applications, free applications, and OutCall never appear in this paid-companion catalog.
         </div>
       </div>
-      <Card style={{ padding: 0 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
-            <Th>Module</Th><Th>Declared (¢)</Th><Th>Stripe (¢)</Th><Th>Currency</Th><Th>Binding</Th><Th>Status</Th><Th>Actions</Th>
-          </tr></thead>
+
+      <Card style={{ padding: 0, overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+          <thead>
+            <tr style={{ background: colors.bgHover, color: colors.textMuted }}>
+              <Th>Eligible companion</Th><Th>Shared monthly price</Th><Th>Shared binding</Th><Th>Commerce model</Th><Th>Readiness</Th>
+            </tr>
+          </thead>
           <tbody>
-            {rows.map(p => {
-              const canSync = p.envKeyConfigured && p.stripeFetched && p.mismatch;
-              const createDisabled = !isLive || busy != null;
+            {rows.map(row => {
+              const ready = row.commerceModel === 'application_stack'
+                && row.mutable === false
+                && row.declaredAddonPriceCents === COMPANION_MODULE_PRICE_CENTS
+                && row.envKeyConfigured
+                && row.priceId;
               return (
-                <tr key={p.slug} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-pricing-${p.slug}`}>
-                  <Td>{p.name} <span style={{ color: colors.textMuted, fontSize: 11 }}>{p.slug}</span></Td>
-                  <Td data-testid={`text-declared-${p.slug}`}>{p.declaredAddonPriceCents ?? '—'}</Td>
-                  <Td data-testid={`text-stripe-${p.slug}`}>{p.stripeUnitAmountCents ?? '—'}</Td>
-                  <Td>{p.stripeCurrency ?? '—'}</Td>
-                  <Td data-testid={`text-binding-source-row-${p.slug}`}>
-                    {p.priceSource === 'override' && <Pill tone="green">via override</Pill>}
-                    {p.priceSource === 'env' && <Pill tone="green">via env</Pill>}
-                    {p.priceSource === 'none' && <Pill tone="muted">not configured</Pill>}
-                    <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
-                      {p.priceId ? <code>{p.priceId}</code> : '—'}
-                    </div>
-                    <div style={{ color: colors.textMuted, fontSize: 11 }}>
-                      env <code>{p.envKey}</code>{p.envPriceId ? <> = <code>{p.envPriceId}</code></> : ' (unset)'}
-                    </div>
+                <tr key={row.slug} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-pricing-${row.slug}`}>
+                  <Td><strong>{row.name}</strong><div style={{ color: colors.textMuted, fontSize: 11 }}>{row.slug}</div></Td>
+                  <Td data-testid={`text-declared-${row.slug}`}>$29/month</Td>
+                  <Td data-testid={`text-binding-source-row-${row.slug}`}>
+                    {row.envKeyConfigured ? <Pill tone="green">shared env configured</Pill> : <Pill tone="yellow">shared env missing</Pill>}
+                    <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 3 }}><code>{row.envKey ?? 'STRIPE_PRICE_COMPANION_MODULE_MONTHLY'}</code></div>
+                    {row.priceId && <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}><code>{row.priceId}</code></div>}
                   </Td>
-                  <Td>{p.mismatch ? <Pill tone="red">mismatch</Pill> : (p.error ? <Pill tone="yellow">{p.error}</Pill> : <Pill tone="green">ok</Pill>)}</Td>
-                  <Td>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <Btn
-                        data-testid={`button-sync-${p.slug}`}
-                        variant={canSync ? 'primary' : 'default'}
-                        disabled={!canSync || busy != null}
-                        title={canSync
-                          ? 'Overwrite the declared price with the live Stripe unit_amount'
-                          : 'No mismatch to sync (or Stripe price not fetched).'}
-                        onClick={() => sync(p.slug)}
-                      >{busy === `sync:${p.slug}` ? 'Syncing…' : 'Sync from Stripe'}</Btn>
-                      <Btn
-                        data-testid={`button-create-${p.slug}`}
-                        disabled={createDisabled}
-                        title={isLive
-                          ? 'Create a NEW Stripe price and rotate the env binding'
-                          : 'Disabled: STRIPE_MODE is not "live".'}
-                        onClick={() => createPrice(p.slug, p.declaredAddonPriceCents)}
-                      >{busy === `create:${p.slug}` ? 'Creating…' : 'Create new Stripe price'}</Btn>
-                    </div>
-                  </Td>
+                  <Td><Pill tone={row.mutable === false ? 'green' : 'red'}>{row.mutable === false ? 'shared, read-only' : 'unexpected mutable row'}</Pill></Td>
+                  <Td>{ready ? <Pill tone="green">ready</Pill> : <Pill tone="yellow">{row.error ?? 'configuration required'}</Pill>}</Td>
                 </tr>
               );
             })}

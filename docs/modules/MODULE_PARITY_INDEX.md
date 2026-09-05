@@ -1,5 +1,134 @@
 # OperatorOS module parity index
 
+## Module outcome/value release-candidate overlay (2026-09-05)
+
+Status: **FINAL SOURCE/LOCAL V60 RELEASE GATES PASS — PARITY STATES UNCHANGED /
+CANDIDATE UNPUBLISHED / DEPLOYED ACCEPTANCE OPEN**.
+
+The current release candidate gives every canonical application a
+customer-result contract and replaces prominent engineering-first copy with
+the work a buyer can complete. This is product, workflow, and source/local
+release evidence, not new deployed-parity evidence. No row is promoted. Dated
+sections below retain evidence only for the exact commits, deployments, and
+scopes they name.
+
+| Application | Customer result now expressed in the product | Parity effect |
+| --- | --- | --- |
+| TradeFlowKit | Move an inquiry through scheduled work, quote, invoice, and payment | Prior state retained |
+| PulseDesk | Own, escalate, and resolve non-clinical healthcare operations work | Prior state retained |
+| TechDeck | Move a support concern through technician action to a reusable resolution | Prior state retained |
+| TorqueShed | Turn a vehicle concern, tests, findings, and repair into a shareable history | Prior state retained |
+| FaultlineLab | Complete realistic diagnostic practice, receive scored coaching, and get the next assignment | Prior state retained |
+| Operator Pool Hall | Play a complete rules-based practice or team rack as a free account benefit | Prior state retained; still free |
+| BrandForgeOS | Turn a brand brief into reviewable campaign copy, design files, and follow-up work | Prior state retained |
+| SnapProofOS | Turn field findings into an approved proof package with controlled sharing | Prior state retained |
+| StudyForge AI | Turn trusted material into a study pack, practice loop, and next-session plan | Prior state retained |
+| Deploy Ops | Turn a business brief into a reviewable campaign-launch package for external publishing tools | Prior state retained |
+| CallCommand AI | Turn a completed business call into an owned sales, service, or operations follow-up | Prior state retained |
+| Script Ops | Turn a one-off fix into reviewed, versioned automation and technician-ready draft documentation | Prior state retained |
+| OutCall | Prepare a private call to the user's own verified phone for a planned exit from an uncomfortable situation | Prior state retained; still coming soon |
+
+The source also registers ten explicit-confirmation handoffs: TradeFlowKit job
+to SnapProofOS proof work; approved SnapProofOS PDF back to the exact
+TradeFlowKit job; a completed provider-originated CallCommand call to
+TradeFlowKit, PulseDesk, or TechDeck; resolved TechDeck or PulseDesk work to an
+unpublished FaultlineLab draft; TorqueShed diagnostic to SnapProofOS; verified
+or resolved TorqueShed diagnostic to an unpublished FaultlineLab draft;
+BrandForgeOS campaign to a Deploy Ops launch package with up to nine visual-
+production briefs; and an approved Script Ops version to a non-executing
+TechDeck draft runbook. These are the ten contracts; the resolved-support
+contract accepts either TechDeck or PulseDesk as its reviewed source.
+
+Current-source integrity boundaries include server-checked source and
+destination access at queue and delivery, manager review on training
+transfers, required source-version comparison, safe same-operation requeue
+after an eligible dead letter, and restricted run-detail reads. Workflow
+activity lists are limited to tenant/platform administrators who also have
+access to both applications. Exact-run visibility is complete for the creator,
+a tenant/platform administrator, or a person with manager access in both
+applications. A non-creator writer in both applications receives only the
+redacted result of a tenant-owned run; actor-scoped runs return `404` to an
+ordinary non-creator, and viewers, unauthorized users, and cross-tenant callers
+receive `404` where applicable. The TorqueShed-to-SnapProofOS path additionally
+rechecks access to the exact diagnostic at both stages, preventing a module
+member from copying another member's private diagnostic by identifier alone.
+
+New events use an HMAC-SHA-256 signature-envelope v2 that binds tenant, run,
+workflow contract, source, destination, consumer, actor, source reference,
+event and aggregate identity, idempotency identity, payload, source deep link,
+and correlation/causation data. Version-1 reads remain only for the controlled
+current/previous-signing-material compatibility window and are not the forward
+event format.
+
+FaultlineLab adds seven-stage guided authoring with readiness checks, validation
+feedback, learner preview, evidence links, and safe simulation. Its two incoming
+training workflows now turn actual recorded issues, observations, tests, likely
+causes, progressive hints, and remediation into an editable private first draft;
+that imported revision cannot publish until a trainer saves a reviewed revision.
+
+BrandForgeOS creates local wordmark, lockup, badge, and monogram concepts across
+four styles, three palettes, and three backgrounds; previews them responsively;
+downloads escaped SVG plus standard/2x PNG; and can save the reviewed PNG through
+the private scanned-attachment path with a 30-day replacement recovery window.
+The existing logo remains active until that explicit save. Canva and Figma
+remain manual import destinations; no authenticated provider connection or
+provider-side design result is claimed.
+
+The final aggregate on a new disposable PostgreSQL 16 database reported
+**1,440 tests: 1,434 passed, 0 failed, 6 intentional HTTP-only skips, and 0
+todos** in **713,438.7749 ms**. The six skips require a separately running Next
+server; no failure was converted to a skip. The registered aggregate covers the
+ten destination writes, authorization and tenant isolation, source freshness,
+tenant-wide versus actor-scoped deduplication, event-signature tamper rejection,
+run-detail redaction, commerce, billing, and release drift.
+
+All four workspaces (`apps/api`, `apps/runner-gateway`, `apps/web`, and
+`apps/torqueshed-native`) pass typecheck, and repository lint passes with zero
+warnings. Release v60 plans 60 steps with `forward_commerce_contract` last; a
+clean disposable apply completed in 18,916 ms, idempotent reapply in 2,907 ms,
+and independent read-only verify in 1,860 ms. The production build passes
+deployment-scope verification, FaultlineLab's 56-case catalog and four compiler
+tests, API/runner compilation, and all 35 generated Next 15.5.23 pages.
+Production preflight correctly fails closed because the
+local worktree does not contain real production values. This evidence does not
+promote a parity row without current exact-host browser, deployment identity,
+live-provider, production-database, monitoring, backup/restore, and rollback
+acceptance.
+
+This overlay records no live provider, production deployment, Stripe/billing,
+production-database, DNS, customer-data, or authenticated browser result. The
+owner has, however, approved one forward-sale contract and the source candidate
+now carries it consistently through catalog, customer screens, checkout,
+tenant-owned subscription persistence, signed webhook entitlements, portal,
+permissions, and administrator readiness. OperatorOS and the three free apps
+remain $0; one monthly $149 TradeFlowKit, $149 PulseDesk, or $99 TechDeck
+flagship includes five tenant seats and one of exactly six eligible companions;
+additional companions are $29 and additional seats are $15. OutCall is
+excluded.
+
+Starter, Pro, Elite, annual, plan-change, reactivation, and individual-app
+sales are closed for new business. Existing contract data and access remain
+grandfathered through a one-shot v60 marker; later legacy-shaped plan rows do
+not grant application access. Billing mutation is owner-only unless exercised
+through server-validated audited platform authority, and per-module Stripe
+Price mutation is closed in favor of the shared companion Price.
+
+The commerce change is an additive shared-platform release and does not alter
+any module's feature-parity state. Production still requires source publication,
+a verified backup, one-shot release-v60 apply/verify, Replit redeployment, exact
+release identity,
+live or sandbox Stripe checkout/webhook/portal acceptance, reconciliation,
+monitoring, and rollback readiness. See
+`docs/modules/MODULE_PRODUCT_OUTCOME_UPGRADE.md`.
+
+---
+
+**Historical scope delimiter:** The dated overlays and parity records below
+retain their original evidence and are not reinterpreted as part of the
+2026-09-05 release-v60 candidate. They do not supply current deployed identity,
+live-provider results, production-database proof, billing acceptance, or
+authenticated browser acceptance.
+
 ## Autoscale startup/readiness overlay (2026-09-03)
 
 This is a shared deployment-boundary repair, not a module capability change.

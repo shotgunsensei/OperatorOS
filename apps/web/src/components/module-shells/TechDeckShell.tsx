@@ -27,6 +27,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
@@ -54,14 +55,14 @@ const TechDeckWorkdayBrief = dynamic(() => import('./TechDeckWorkdayBrief'), { l
 const BusinessDirectory = dynamic(() => import('./BusinessDirectory'), { loading: RouteLoading });
 
 const overviewRoutes: Array<{ area: TechDeckRouteArea; label: string; summary: string; path: string; Icon: LucideIcon }> = [
-  { area: 'tickets', label: 'Ticket queue', summary: 'Triage assignment, SLA pressure, and technician ownership.', path: '/tickets', Icon: TicketCheck },
-  { area: 'inventory', label: 'Managed assets', summary: 'Review client-linked configuration and health posture.', path: '/assets', Icon: ServerCog },
+  { area: 'tickets', label: 'Ticket queue', summary: 'Triage assignment, response deadlines, and technician ownership.', path: '/tickets', Icon: TicketCheck },
+  { area: 'inventory', label: 'Managed assets', summary: 'Review client-linked configuration and current health.', path: '/assets', Icon: ServerCog },
   { area: 'network', label: 'Network / IPAM', summary: 'Map addresses, subnets, VLANs, and system relationships.', path: '/network', Icon: Network },
-  { area: 'documentation', label: 'Documentation', summary: 'Maintain versioned procedures and managed knowledge.', path: '/documentation', Icon: FileCheck2 },
+  { area: 'documentation', label: 'Documentation', summary: 'Maintain reviewed procedures and managed knowledge.', path: '/documentation', Icon: FileCheck2 },
   { area: 'evidence', label: 'Evidence', summary: 'Capture observations, snapshots, and test results.', path: '/evidence', Icon: FileLock2 },
-  { area: 'reports', label: 'Reports', summary: 'Generate checksummed operational snapshots.', path: '/reports', Icon: BarChart3 },
+  { area: 'reports', label: 'Reports', summary: 'Generate downloadable operations reports with recorded file checks.', path: '/reports', Icon: BarChart3 },
   { area: 'calendar', label: 'Service calendar', summary: 'Coordinate appointments and recurring work.', path: '/calendar', Icon: CalendarClock },
-  { area: 'compliance', label: 'Compliance', summary: 'Run secure intake and deterministic evidence exports.', path: '/compliance', Icon: ShieldCheck },
+  { area: 'compliance', label: 'Compliance', summary: 'Run secure intake and create customer-ready compliance packages.', path: '/compliance', Icon: ShieldCheck },
 ];
 
 const operationsAreas = new Set<TechDeckRouteArea>(['inventory', 'network', 'lifecycle', 'documentation', 'runbooks', 'evidence', 'reports', 'time']);
@@ -74,6 +75,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
   const tenantId = activeTenant?.id ?? fallbackTenantId;
   const platformAdmin = hasPlatformAdminAuthority(user);
+  const moduleAccessLevel = useModuleAccessLevel();
   const adapterRole = platformAdmin ? 'admin' : activeRole ?? 'member';
   const route = resolveTechDeckRoute(routePath || pathname);
   const sourceRouted = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
@@ -101,18 +103,22 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
 
   const isLoading = authLoading || tenantLoading;
   const hasTenantContext = !!adapter.tenantId;
+  const tenantLabel = activeTenant?.name ?? (adapter.tenantId ? 'Selected organization' : 'No organization selected');
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin');
   const roleLabel = platformAdmin
     ? 'Platform administrator'
-    : activeRole === 'owner'
-      ? 'Organization owner'
-      : activeRole === 'admin'
-        ? 'Organization administrator'
-        : activeRole === 'viewer'
-          ? 'Read-only access'
-          : 'Technician';
-  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
-  const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
-  const canWriteModule = platformAdmin || activeRole !== 'viewer';
+    : !canWriteModule
+      ? 'Read-only access'
+      : activeRole === 'owner'
+        ? 'Organization owner'
+        : activeRole === 'admin'
+          ? 'Organization administrator'
+          : moduleAccessLevel === 'manager'
+            ? 'TechDeck manager'
+            : 'Technician';
 
   const pageAction = route.area === 'tickets'
     ? null
@@ -141,7 +147,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
       ]}
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
       state={isLoading ? 'loading' : !hasTenantContext ? 'empty' : 'ready'}
-      stateMessage={!hasTenantContext ? 'Choose an organization in My Apps before opening tenant-scoped TechDeck work.' : undefined}
+      stateMessage={!hasTenantContext ? 'Choose an organization in My Apps before opening its TechDeck service work.' : undefined}
       pageHeaderTestId="techdeck-module-header"
       mobileNavigation="drawer"
       testId="techdeck-module-shell"
@@ -171,13 +177,13 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
 
           {route.area === 'tickets' && user && (
             <section id="techdeck-ticket-queue" data-testid="techdeck-ticket-queue-panel">
-              <TechDeckTicketQueue key={adapter.tenantId} currentUserId={user.id} canManageTickets={canManageModule} tenantKey={adapter.tenantId} />
+              <TechDeckTicketQueue key={adapter.tenantId} currentUserId={user.id} canWriteTickets={canWriteModule} canManageTickets={canManageModule} tenantKey={adapter.tenantId} recordId={route.recordId} />
             </section>
           )}
 
           {route.area === 'directory' && (
             <section id="techdeck-directory" data-testid="techdeck-directory-route">
-              <BusinessDirectory moduleSlug="techdeck" tenantKey={adapter.tenantId} canArchive={canManageModule} />
+              <BusinessDirectory moduleSlug="techdeck" tenantKey={adapter.tenantId} canWrite={canWriteModule} canArchive={canManageModule} />
             </section>
           )}
 
@@ -188,6 +194,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
               canWrite={canWriteModule}
               canApprove={canManageModule}
               area={route.area as 'inventory' | 'network' | 'lifecycle' | 'documentation' | 'runbooks' | 'evidence' | 'reports' | 'time'}
+              recordId={route.recordId}
             />
           )}
 
@@ -206,7 +213,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
               <h2><Settings size={19} />Access and settings</h2>
               <p>{canManageModule ? 'You can manage this workspace because you are an organization administrator.' : 'Your organization administrator controls team access and workspace settings.'}</p>
               <SettingsRow label="Identity and access" value="OperatorOS manages sign-in, subscription access, roles, and workspace membership." />
-              <SettingsRow label="Managed operations" value="TechDeck keeps technical documentation, infrastructure records, evidence, and support work in this tenant." />
+              <SettingsRow label="Managed operations" value="TechDeck keeps technical documentation, infrastructure records, service evidence, and support work with the correct organization." />
               <SettingsRow label="Command boundary" value="Runbooks remain documentation-only. The public TechDeck application does not execute arbitrary commands." />
             </section>
           )}

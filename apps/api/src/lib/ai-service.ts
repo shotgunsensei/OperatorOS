@@ -104,7 +104,7 @@ export async function checkAiToolAccess(
   const tool = AI_TOOLS.find(t => t.type === toolType);
   if (!tool) return { allowed: false, reason: 'Unknown AI tool' };
 
-  const { config } = await getUserPlanConfig(userId);
+  const { config } = await getUserPlanConfig(userId, tenantId);
   const currentPlanIdx = PLAN_ORDER.indexOf(config.slug);
   const requiredPlanIdx = PLAN_ORDER.indexOf(tool.minPlan);
 
@@ -242,7 +242,7 @@ export async function executeAiTool(
 }
 
 export async function getAiUsageStats(userId: string, tenantId: string) {
-  const { config } = await getUserPlanConfig(userId);
+  const { config } = await getUserPlanConfig(userId, tenantId);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

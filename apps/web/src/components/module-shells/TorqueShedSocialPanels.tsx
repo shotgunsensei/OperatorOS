@@ -88,7 +88,7 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
   );
 }
 
-export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }) {
+export function TorqueShedMarketplacePanel({ listingId, canWrite }: { listingId?: string; canWrite: boolean }) {
   const [listings, setListings] = useState<TorqueShedMarketplaceListing[]>([]);
   const [categories, setCategories] = useState<Array<{ slug: string; name: string }>>([]);
   const [conversations, setConversations] = useState<Array<Record<string, any>>>([]);
@@ -144,6 +144,7 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
   }, [listingId]);
 
   async function run(name: string, operation: () => Promise<unknown>, success: string) {
+    if (!canWrite) return false;
     setBusy(name);
     setError('');
     setNotice('');
@@ -163,6 +164,7 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
 
   function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canWrite) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const amount = String(data.get('price') ?? '').trim();
@@ -194,12 +196,13 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
       <div style={{ ...cardStyle, borderColor: '#f59e0b55', background: '#f59e0b0b' }}>
         <h2 style={{ marginTop: 0, color: semantic.text }}>Marketplace</h2>
         <p style={{ color: semantic.textMuted, marginBottom: 0 }}>
-          Authenticated tenant members can list automotive parts, tools, manuals, fabrication items,
+          Signed-in organization members can list automotive parts, tools, manuals, fabrication items,
           and wanted/trade items. Prices are informational. Contact stays in-app; payment and
           fulfillment happen off-platform with no escrow, shipping, inspection, title, tax, or
           payment protection from TorqueShed.
         </p>
       </div>
+      {!canWrite && <div role="status" data-testid="torqueshed-marketplace-read-only" style={{ ...cardStyle, color: '#fde68a', borderColor: '#fbbf24' }}>You can browse listings and read existing conversations. Saving listings, publishing, messaging sellers, uploading photos, and reporting content require edit access.</div>}
       <Feedback error={error} notice={notice} />
       <div style={{ ...cardStyle, display: 'grid', gap: space.md }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -299,7 +302,7 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
             </p>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
               {[row.locality, row.region].filter(Boolean).join(', ') || 'Location not provided'} /
-              Seller: {row.sellerDisplayName || 'Tenant member'}
+              Seller: {row.sellerDisplayName || 'Organization member'}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
               <button
@@ -318,9 +321,9 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
                   }
                 }}
               >
-                Details & actions
+                {canWrite ? 'Details & actions' : 'View details'}
               </button>
-              {scope !== 'mine' && row.status === 'published' && (
+              {canWrite && scope !== 'mine' && row.status === 'published' && (
                 <button
                   style={{ ...button, background: semantic.bgPanel, color: semantic.text }}
                   onClick={() =>
@@ -335,7 +338,7 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
                   {row.favorited ? 'Unsave' : 'Save'}
                 </button>
               )}
-              {scope === 'mine' && row.status === 'draft' && (
+              {canWrite && scope === 'mine' && row.status === 'draft' && (
                 <button
                   style={{ ...button, background: '#16a34a', color: 'white' }}
                   onClick={() =>
@@ -350,7 +353,7 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
                   Publish
                 </button>
               )}
-              {scope === 'mine' && row.status === 'expired' && (
+              {canWrite && scope === 'mine' && row.status === 'expired' && (
                 <button
                   style={{ ...button, background: '#16a34a', color: 'white' }}
                   onClick={() =>
@@ -398,11 +401,12 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
           mine={scope === 'mine'}
           busy={busy}
           run={run}
+          canWrite={canWrite}
           onClose={() => setSelected(null)}
         />
       )}
 
-      <form onSubmit={create} style={{ ...cardStyle, display: 'grid', gap: space.md }}>
+      {canWrite && <form onSubmit={create} style={{ ...cardStyle, display: 'grid', gap: space.md }}>
         <h3 style={{ margin: 0, color: semantic.text }}>Create a draft listing</h3>
         <div
           style={{
@@ -473,9 +477,9 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
         <button style={button} disabled={busy === 'create'}>
           {busy === 'create' ? 'Creating...' : 'Create draft'}
         </button>
-      </form>
+      </form>}
 
-      <MarketplaceConversations conversations={conversations} refresh={load} />
+      <MarketplaceConversations conversations={conversations} refresh={load} canWrite={canWrite} />
     </section>
   );
 }
@@ -483,9 +487,11 @@ export function TorqueShedMarketplacePanel({ listingId }: { listingId?: string }
 function MarketplaceConversations({
   conversations,
   refresh,
+  canWrite,
 }: {
   conversations: Array<Record<string, any>>;
   refresh: () => Promise<void>;
+  canWrite: boolean;
 }) {
   const [detail, setDetail] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState('');
@@ -534,7 +540,7 @@ function MarketplaceConversations({
               </div>
             </div>
           ))}
-          <form
+          {canWrite && <form
             onSubmit={(event) => {
               event.preventDefault();
               const form = event.currentTarget;
@@ -557,7 +563,7 @@ function MarketplaceConversations({
             <button style={button} disabled={busy}>
               Send reply
             </button>
-          </form>
+          </form>}
         </div>
       )}
     </div>
@@ -570,6 +576,7 @@ function ListingActions({
   mine,
   busy,
   run,
+  canWrite,
   onClose,
 }: {
   listing: TorqueShedMarketplaceListing;
@@ -577,6 +584,7 @@ function ListingActions({
   mine: boolean;
   busy: string;
   run: (name: string, operation: () => Promise<unknown>, success: string) => Promise<boolean>;
+  canWrite: boolean;
   onClose: () => void;
 }) {
   return (
@@ -613,7 +621,7 @@ function ListingActions({
           )}
         </div>
       )}
-      {mine ? (
+      {canWrite && (mine ? (
         <>
           <form
             onSubmit={(event) => {
@@ -724,7 +732,7 @@ function ListingActions({
                     reasonCode: data.get('reasonCode'),
                     details: data.get('details'),
                   }),
-                'Report submitted to tenant moderators.',
+                'Report submitted to the organization’s moderators.',
               );
             }}
             style={{ display: 'grid', gap: 8 }}
@@ -749,12 +757,12 @@ function ListingActions({
             </button>
           </form>
         </>
-      )}
+      ))}
     </div>
   );
 }
 
-export function TorqueShedCommunityPanel() {
+export function TorqueShedCommunityPanel({ canWrite, canManage }: { canWrite: boolean; canManage: boolean }) {
   const [posts, setPosts] = useState<TorqueShedCommunityPost[]>([]);
   const [topics, setTopics] = useState<Array<{ slug: string; name: string }>>([]);
   const [profile, setProfile] = useState<Record<string, any> | null>(null);
@@ -816,6 +824,7 @@ export function TorqueShedCommunityPanel() {
     success: string,
     refreshDetail?: string,
   ) {
+    if (!canWrite) return false;
     setBusy(name);
     setError('');
     setNotice('');
@@ -834,6 +843,7 @@ export function TorqueShedCommunityPanel() {
   }
 
   async function loadModeration() {
+    if (!canManage) return;
     setBusy('moderation');
     setError('');
     try {
@@ -852,11 +862,12 @@ export function TorqueShedCommunityPanel() {
       <div style={{ ...cardStyle, borderColor: '#f59e0b55', background: '#f59e0b0b' }}>
         <h2 style={{ marginTop: 0, color: semantic.text }}>Community</h2>
         <p style={{ color: semantic.textMuted, marginBottom: 0 }}>
-          Share automotive knowledge with authenticated members of this tenant. "Public" means
-          same-tenant visibility, never anonymous internet publication. Keep exact addresses, VINs,
+          Share automotive knowledge with signed-in members of this organization. "Organization" means
+          visible to those members, never published anonymously on the internet. Keep exact addresses, VINs,
           private diagnostics, credentials, and personal contact details out of posts.
         </p>
       </div>
+      {!canWrite && <div role="status" data-testid="torqueshed-community-read-only" style={{ ...cardStyle, color: '#fde68a', borderColor: '#fbbf24' }}>You can read organization discussions and profiles. Posting, reacting, following, commenting, reporting, messaging, and profile changes require edit access.</div>}
       <Feedback error={error} notice={notice} />
       <div style={{ ...cardStyle, display: 'grid', gap: 8 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -928,7 +939,7 @@ export function TorqueShedCommunityPanel() {
               {post.body.length > 240 ? '...' : ''}
             </p>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-              {post.authorDisplayName || 'Tenant member'} / {post.commentCount ?? 0} comments /{' '}
+              {post.authorDisplayName || 'Organization member'} / {post.commentCount ?? 0} comments /{' '}
               {post.reactionCount ?? 0} reactions
             </div>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
@@ -947,7 +958,7 @@ export function TorqueShedCommunityPanel() {
               >
                 Open discussion
               </button>
-              {scope === 'mine' && post.status === 'draft' && (
+              {canWrite && scope === 'mine' && post.status === 'draft' && (
                 <button
                   style={{ ...button, background: '#16a34a', color: 'white' }}
                   onClick={() =>
@@ -991,10 +1002,11 @@ export function TorqueShedCommunityPanel() {
           mine={String(detail.post.authorUserId) === viewerUserId}
           busy={busy}
           run={run}
+          canWrite={canWrite}
           close={() => setDetail(null)}
         />
       )}
-      <form
+      {canWrite && <form
         onSubmit={(event) => {
           event.preventDefault();
           const form = event.currentTarget;
@@ -1045,7 +1057,7 @@ export function TorqueShedCommunityPanel() {
           <label style={label}>
             Visibility
             <select name="visibility" style={input}>
-              <option value="public">Same-tenant members</option>
+              <option value="public">Organization members</option>
               <option value="followers">Followers</option>
               <option value="private">Private draft/view</option>
             </select>
@@ -1060,8 +1072,8 @@ export function TorqueShedCommunityPanel() {
           <textarea required minLength={2} maxLength={20000} name="body" rows={6} style={input} />
         </label>
         <button type="submit" style={button}>Create draft</button>
-      </form>
-      <form
+      </form>}
+      {canWrite && <form
         onSubmit={(event) => {
           event.preventDefault();
           const form = event.currentTarget;
@@ -1115,7 +1127,7 @@ export function TorqueShedCommunityPanel() {
           <label style={label}>
             Visibility
             <select name="visibility" defaultValue={profile?.visibility ?? 'tenant'} style={input}>
-              <option value="tenant">Tenant members</option>
+              <option value="tenant">Organization members</option>
               <option value="private">Private</option>
             </select>
           </label>
@@ -1125,8 +1137,8 @@ export function TorqueShedCommunityPanel() {
           <textarea name="bio" defaultValue={profile?.bio ?? ''} rows={3} style={input} />
         </label>
         <button type="submit" style={button}>Save profile</button>
-      </form>
-      <form
+      </form>}
+      {canWrite && <form
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
@@ -1163,13 +1175,13 @@ export function TorqueShedCommunityPanel() {
           </label>
         ))}
         <button type="submit" style={button}>Save preferences</button>
-      </form>
-      <div style={{ ...cardStyle, display: 'grid', gap: 8 }}>
+      </form>}
+      {canManage && <div style={{ ...cardStyle, display: 'grid', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <div>
-            <h3 style={{ margin: 0, color: semantic.text }}>Tenant moderation</h3>
+            <h3 style={{ margin: 0, color: semantic.text }}>Organization moderation</h3>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-              Available to tenant owners, admins, and TorqueShed managers.
+              Available to organization owners, administrators, and TorqueShed managers.
             </div>
           </div>
           <button
@@ -1226,7 +1238,7 @@ export function TorqueShedCommunityPanel() {
             </div>
           </form>
         ))}
-      </div>
+      </div>}
     </section>
   );
 }
@@ -1236,6 +1248,7 @@ function CommunityDiscussion({
   mine,
   busy,
   run,
+  canWrite,
   close,
 }: {
   detail: Record<string, any>;
@@ -1247,6 +1260,7 @@ function CommunityDiscussion({
     success: string,
     refreshDetail?: string,
   ) => Promise<boolean>;
+  canWrite: boolean;
   close: () => void;
 }) {
   const post = detail.post as TorqueShedCommunityPost;
@@ -1290,7 +1304,7 @@ function CommunityDiscussion({
           )}
         </div>
       )}
-      {!mine && (
+      {canWrite && !mine && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button
             style={{ ...button, background: semantic.bgPanel, color: semantic.text }}
@@ -1319,7 +1333,7 @@ function CommunityDiscussion({
           </button>
         </div>
       )}
-      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+      {canWrite && <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
         {(['like', 'helpful', 'insightful'] as const).map((reaction) => (
           <button
             key={reaction}
@@ -1340,8 +1354,8 @@ function CommunityDiscussion({
             {reaction}
           </button>
         ))}
-      </div>
-      {mine && (
+      </div>}
+      {canWrite && mine && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -1380,12 +1394,12 @@ function CommunityDiscussion({
         {comments.map((comment) => (
           <article key={comment.id} style={{ ...cardStyle, padding: 12 }}>
             <strong style={{ color: semantic.text }}>
-              {comment.authorDisplayName || 'Tenant member'}
+              {comment.authorDisplayName || 'Organization member'}
             </strong>
             <p style={{ color: semantic.textMuted, marginBottom: 0, whiteSpace: 'pre-wrap' }}>
               {comment.body}
             </p>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            {canWrite && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
               {(['like', 'helpful', 'insightful'] as const).map((reaction) => (
                 <button
                   key={reaction}
@@ -1426,19 +1440,19 @@ function CommunityDiscussion({
                         reasonCode: 'other',
                         details: 'Submitted from the community discussion.',
                       }),
-                    'Comment report submitted to tenant moderators.',
+                    'Comment report submitted to the organization’s moderators.',
                     post.id,
                   )
                 }
               >
                 Report
               </button>
-            </div>
+            </div>}
           </article>
         ))}
         {!comments.length && <div style={{ color: semantic.textMuted }}>No comments yet.</div>}
       </div>
-      {post.status === 'published' && (
+      {canWrite && post.status === 'published' && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -1463,7 +1477,7 @@ function CommunityDiscussion({
           <button type="submit" style={button}>Comment</button>
         </form>
       )}{' '}
-      {!mine && (
+      {canWrite && !mine && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -1475,7 +1489,7 @@ function CommunityDiscussion({
                   reasonCode: data.get('reasonCode'),
                   details: data.get('details'),
                 }),
-              'Report submitted to tenant moderators.',
+              'Report submitted to the organization’s moderators.',
             );
           }}
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}

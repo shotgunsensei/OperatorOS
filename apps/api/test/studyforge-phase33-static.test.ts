@@ -55,7 +55,7 @@ test('Phase 33 web surface includes complete artifacts, touch and keyboard study
   for (const label of [
     'Folders and study sets', 'Turn notes into a full learning system', 'Key terms',
     'flashcards', 'short answers', 'Attempt history', 'Last-minute cram section',
-    'Countdowns that respect your time zone', 'Plan and usage',
+    'Countdowns that respect your time zone', 'Access and usage', 'Application Stack',
   ]) assert.match(shell, new RegExp(label, 'i'));
   assert.match(shell, /event\.key === ' '/);
   assert.match(shell, /event\.key === '1'/);

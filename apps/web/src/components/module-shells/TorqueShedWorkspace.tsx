@@ -26,6 +26,7 @@ import {
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useAuth } from '@/components/AuthProvider';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import {
   moduleShellApi,
   type TorqueShedDashboard,
@@ -39,6 +40,7 @@ import {
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import TorqueShedNativeAuthorizePanel from './TorqueShedNativeAuthorizePanel';
+import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 import {
   TORQUESHED_NAVIGATION,
   TORQUESHED_THEME,
@@ -130,6 +132,12 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { activeTenant, activeRole } = useTenant();
+  const moduleAccessLevel = useModuleAccessLevel();
+  const platformAdmin = user?.platformRole === 'super_admin';
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin' || moduleAccessLevel === 'manager');
   const route = resolveTorqueShedRoute(routePath || pathname);
   const sourceRouted = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
   const hrefFor = useCallback((path: string) => sourceRouted ? `/modules/torqueshed${path === '/' ? '/dashboard' : path}` : path, [sourceRouted]);
@@ -236,6 +244,10 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
     form?: HTMLFormElement,
     refresh?: () => Promise<void>,
   ) {
+    if (!canWriteModule) {
+      setError('Your TorqueShed access is read-only. Ask an organization administrator for edit access.');
+      return;
+    }
     setBusy(name);
     setError('');
     setNotice('');
@@ -264,6 +276,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
 
   function vehicleForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canWriteModule) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     void mutate(
@@ -288,6 +301,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
 
   function serviceForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canWriteModule) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const vehicleId = String(data.get('vehicleId'));
@@ -317,6 +331,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
 
   function diagnosticForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canWriteModule) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     void mutate(
@@ -333,16 +348,16 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
     );
   }
 
-  if (route.kind === 'native-auth') return <TorqueShedNativeAuthorizePanel />;
+  if (route.kind === 'native-auth') return <TorqueShedNativeAuthorizePanel canWrite={canWriteModule} />;
 
   const pageAction = route.kind === 'vehicle-new' ? null
-    : route.area === 'garage' ? (
+    : route.area === 'garage' && canWriteModule ? (
       <Link href={hrefFor('/garage/vehicles/new')} style={{ ...button, textDecoration: 'none' }}><Plus size={16} /> Add vehicle</Link>
     ) : route.kind === 'diagnostic-assist' ? (
       <Link href={hrefFor(`/diagnostics/${route.recordId}`)} style={{ ...button, textDecoration: 'none' }}><ClipboardCheck size={16} /> Diagnostic record</Link>
     ) : route.kind === 'diagnostic-detail' ? (
       <Link href={hrefFor(`/diagnostics/${route.recordId}/assist`)} style={{ ...button, textDecoration: 'none' }}><Bot size={16} /> Open Torque Assist</Link>
-    ) : route.area === 'diagnostics' ? (
+    ) : route.area === 'diagnostics' && canWriteModule ? (
       <Link href={hrefFor('/diagnostics/new')} style={{ ...button, textDecoration: 'none' }}><Plus size={16} /> New diagnostic</Link>
     ) : null;
 
@@ -359,8 +374,8 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
           <span>TorqueShed</span>
         </Link>
       )}
-      organization={{ label: 'Organization', value: activeTenant?.name ?? user?.currentTenantId ?? 'No organization selected', testId: 'torqueshed-organization-context' }}
-      accessContext={{ label: 'Access', value: activeRole ?? (user?.platformRole === 'super_admin' ? 'Platform administrator' : 'Member'), testId: 'torqueshed-access-context' }}
+      organization={{ label: 'Organization', value: activeTenant?.name ?? (user?.currentTenantId ? 'Selected organization' : 'No organization selected'), testId: 'torqueshed-organization-context' }}
+      accessContext={{ label: 'Access', value: platformAdmin ? 'Platform administrator' : !canWriteModule ? 'Read-only access' : activeRole === 'owner' ? 'Organization owner' : activeRole === 'admin' ? 'Organization administrator' : moduleAccessLevel === 'manager' ? 'TorqueShed manager' : 'Garage member', testId: 'torqueshed-access-context' }}
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'torqueshed-my-apps' },
         { label: 'Profile', href: hrefFor('/profile'), icon: UserRound, testId: 'torqueshed-profile' },
@@ -457,17 +472,18 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
         </span>
       </div>
 
-      {route.area === 'marketplace' && <TorqueShedMarketplacePanel listingId={route.recordId} />}
-      {route.area === 'community' && <TorqueShedCommunityPanel />}
-      {route.area === 'journal' && <TorqueShedJournalPanel builds={builds} />}
-      {route.area === 'live' && <TorqueShedLiveBayPanel vehicles={vehicles} builds={builds} diagnostics={diagnostics} initialBayId={route.recordId} />}
+      {!canWriteModule && <div role="status" data-testid="torqueshed-read-only" style={{ ...cardStyle, borderColor: '#fbbf24', color: '#fde68a', marginBottom: space.lg }}>Read-only access: you can review garage records, diagnostics, service history, builds, marketplace listings, community discussions, and reports. Creating, changing, sharing, messaging, purchasing, and AI analysis actions are disabled.</div>}
+      {route.area === 'marketplace' && <TorqueShedMarketplacePanel listingId={route.recordId} canWrite={canWriteModule} />}
+      {route.area === 'community' && <TorqueShedCommunityPanel canWrite={canWriteModule} canManage={canManageModule} />}
+      {route.area === 'journal' && <TorqueShedJournalPanel builds={builds} canWrite={canWriteModule} />}
+      {route.area === 'live' && <TorqueShedLiveBayPanel vehicles={vehicles} builds={builds} diagnostics={diagnostics} initialBayId={route.recordId} canWrite={canWriteModule} />}
       {route.kind === 'profile' && <TorqueProfilePanel email={user?.email ?? 'Signed-in OperatorOS user'} organization={activeTenant?.name ?? 'Current organization'} />}
-      {route.area === 'tools' && route.kind !== 'profile' && <TorqueShedUtilityPanel diagnostics={diagnostics} routeKind={route.kind as 'activity' | 'search' | 'exports' | 'settings'} />}
-      {route.area === 'credits' && <TorqueCreditsPanel diagnostics={diagnostics} />}
+      {route.area === 'tools' && route.kind !== 'profile' && <TorqueShedUtilityPanel diagnostics={diagnostics} routeKind={route.kind as 'activity' | 'search' | 'exports' | 'settings'} canWrite={canWriteModule} />}
+      {route.area === 'credits' && <TorqueCreditsPanel diagnostics={diagnostics} canWrite={canWriteModule} />}
 
       {route.area === 'dashboard' && (
         <section data-testid="torqueshed-dashboard" style={{ display: 'grid', gap: space.lg }}>
-          {(vehicles.length === 0 || diagnostics.length === 0) && (
+          {canWriteModule && (vehicles.length === 0 || diagnostics.length === 0) && (
             <article style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.lg, flexWrap: 'wrap', borderColor: '#f59e0b66', background: '#f59e0b0b' }}>
               <div>
                 <h2 style={{ margin: 0, color: semantic.text, fontSize: 18 }}>{vehicles.length === 0 ? 'Start with the vehicle' : 'Ready to diagnose a concern?'}</h2>
@@ -647,7 +663,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                   <option value="public_build">Public-build eligible</option>
                 </select>
               </label>
-              <button disabled={busy === 'Vehicle'} style={button}>
+              <button disabled={!canWriteModule || busy === 'Vehicle'} style={button}>
                 <Plus size={16} />
                 Save vehicle
               </button>
@@ -802,7 +818,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 ))}
               </select>
             </label>
-            <button disabled={!vehicles.length || busy === 'Service record'} style={button}>
+            <button disabled={!canWriteModule || !vehicles.length || busy === 'Service record'} style={button}>
               <Plus size={16} />
               Save service record
             </button>
@@ -850,7 +866,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
               Due date
               <input name="dueAt" type="date" style={input} />
             </label>
-            <button disabled={!vehicles.length || busy === 'Service reminder'} style={button}>
+            <button disabled={!canWriteModule || !vehicles.length || busy === 'Service reminder'} style={button}>
               <Plus size={16} />
               Save reminder
             </button>
@@ -933,7 +949,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 <option value="public_build">Public-build eligible</option>
               </select>
             </label>
-            <button type="submit" style={button}>
+            <button type="submit" disabled={!canWriteModule} style={button}>
               <Plus size={16} />
               Save build
             </button>
@@ -962,7 +978,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                   style={{ display: 'flex', gap: 8 }}
                 >
                   <input name="title" required aria-label={`Add task to ${row.title}`} placeholder="Add a build task" style={input} />
-                  <button type="submit" style={button}>
+                  <button type="submit" disabled={!canWriteModule} style={button}>
                     <Plus size={15} />
                   </button>
                 </form>
@@ -1016,7 +1032,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 <option value="tenant">Team</option>
               </select>
             </label>
-            <button disabled={!vehicles.length} style={button}>
+            <button disabled={!canWriteModule || !vehicles.length} style={button}>
               <Plus size={16} />
               Start session
             </button>
@@ -1050,9 +1066,9 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 <p style={{ marginBottom: space.md }}>
                   Start an evidence-first diagnostic to record the concern, codes, tests, findings, and verified repair.
                 </p>
-                <Link href={hrefFor('/diagnostics/new')} style={{ ...button, textDecoration: 'none' }}>
+                {canWriteModule && <Link href={hrefFor('/diagnostics/new')} style={{ ...button, textDecoration: 'none' }}>
                   <Plus size={16} /> Start diagnostic
-                </Link>
+                </Link>}
               </article>
             )}
             </>}
@@ -1060,6 +1076,8 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
               <DiagnosticDetail
                 detail={diagnosticDetail}
                 busy={busy}
+                canWrite={canWriteModule}
+                canManageTraining={canManageModule}
                 mutate={mutate}
                 refresh={() => openDiagnostic(diagnosticDetail.diagnostic.id)}
                 showAssist={route.kind === 'diagnostic-assist'}
@@ -1124,7 +1142,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
                 <option value="tenant">Team</option>
               </select>
             </label>
-            <button type="submit" style={button}>
+            <button type="submit" disabled={!canWriteModule} style={button}>
               <Plus size={16} />
               Save template
             </button>
@@ -1178,7 +1196,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
               Email
               <input name="email" type="email" style={input} />
             </label>
-            <button type="submit" style={button}>
+            <button type="submit" disabled={!canWriteModule} style={button}>
               <Plus size={16} />
               Save vendor
             </button>
@@ -1207,14 +1225,14 @@ function TorqueProfilePanel({ email, organization }: { email: string; organizati
   return (
     <section data-testid="torqueshed-profile-route" className="ts28-grid">
       <article style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Operator identity</h2>
-        <p style={{ color: semantic.textMuted }}>TorqueShed uses the validated OperatorOS session. It does not maintain a second login, password, or tenant authority.</p>
+        <h2 style={{ marginTop: 0 }}>Your TorqueShed account</h2>
+        <p style={{ color: semantic.textMuted }}>TorqueShed uses your OperatorOS sign-in, so you do not need a second account or password.</p>
         <div className="ts28-row"><div><strong>{email}</strong><small>Signed-in identity</small></div><ShieldCheck size={18} color="#f59e0b" /></div>
         <div className="ts28-row"><div><strong>{organization}</strong><small>Active organization</small></div><Wrench size={18} color="#f59e0b" /></div>
       </article>
       <article style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Account and security</h2>
-        <p style={{ color: semantic.textMuted }}>Profile, credentials, active organization, memberships, roles, billing, and entitlements remain centrally controlled by OperatorOS.</p>
+        <p style={{ color: semantic.textMuted }}>Manage your profile, password, organization access, roles, plan, and billing in OperatorOS.</p>
         <a href={DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl} style={{ ...button, textDecoration: 'none' }}>Open OperatorOS profile and security</a>
       </article>
     </section>
@@ -1245,7 +1263,7 @@ function TorqueCreditBalanceChip({ href }: { href: string }) {
   );
 }
 
-function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic[] }) {
+function TorqueCreditsPanel({ diagnostics, canWrite }: { diagnostics: TorqueShedDiagnostic[]; canWrite: boolean }) {
   const searchParams = useSearchParams();
   const requestedDiagnostic = searchParams.get('diagnostic') ?? '';
   const [selectedDiagnosticId, setSelectedDiagnosticId] = useState(requestedDiagnostic);
@@ -1281,7 +1299,7 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
       setPurchaseStatus(next);
       setPurchaseReference(purchaseId);
       if (next.state === 'credited' && next.credited) {
-        setNotice(`Credits added. The authoritative balance is ${next.balance.toLocaleString()} units.`);
+        setNotice(`Credits added. Your available balance is ${next.balance.toLocaleString()} units.`);
         await load();
       }
       return next;
@@ -1297,7 +1315,7 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
     const delays = [1_000, 2_000, 3_000, 5_000, 8_000, 13_000];
-    setNotice('Verifying payment. The return URL cannot credit this ledger.');
+    setNotice('Verifying payment. Returning from checkout does not add credits by itself.');
     const poll = async () => {
       const next = await refreshPurchaseStatus(purchaseReference);
       if (stopped || !next || next.terminal) return;
@@ -1311,7 +1329,7 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
   }, [purchaseReference, refreshPurchaseStatus]);
 
   async function purchase(packageKey: string) {
-    if (!selectedDiagnosticId) return;
+    if (!canWrite || !selectedDiagnosticId) return;
     const purchaseKey = purchaseKeys[packageKey] || key(`token-purchase:${packageKey}`);
     setPurchaseKeys((current) => ({ ...current, [packageKey]: purchaseKey }));
     setBusy(packageKey);
@@ -1332,7 +1350,7 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
         setPurchaseReference(purchaseId);
         await refreshPurchaseStatus(purchaseId);
       }
-      setNotice('Checkout was created. Credits appear only after provider-confirmed settlement.');
+      setNotice('Checkout was created. Credits appear only after the payment service confirms payment.');
       await load();
     } catch (next) {
       setError(translateTorqueShedError(next));
@@ -1341,32 +1359,33 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
     }
   }
 
-  const paymentsDisabled = !status?.purchaseReadiness.ready || !selectedDiagnosticId;
+  const paymentsDisabled = !canWrite || !status?.purchaseReadiness.ready || !selectedDiagnosticId;
   return (
     <section data-testid="torqueshed-credits-route" style={{ display: 'grid', gap: space.lg }}>
-      <div className="ts28-stats" aria-label="Authoritative TorqueShed credit balance">
-        <b>{(ledger?.availableBalance ?? status?.availableBalance ?? 0).toLocaleString()}<small>Available units</small></b>
-        <b>{(ledger?.reservedUnits ?? status?.reservedUnits ?? 0).toLocaleString()}<small>Reserved units</small></b>
-        <b>{(ledger?.ledgerBalance ?? status?.ledgerBalance ?? 0).toLocaleString()}<small>Ledger balance</small></b>
+      <div className="ts28-stats" aria-label="TorqueShed credit balance">
+        <b>{(ledger?.availableBalance ?? status?.availableBalance ?? 0).toLocaleString()}<small>Available credits</small></b>
+        <b>{(ledger?.reservedUnits ?? status?.reservedUnits ?? 0).toLocaleString()}<small>Credits currently in use</small></b>
+        <b>{(ledger?.ledgerBalance ?? status?.ledgerBalance ?? 0).toLocaleString()}<small>Total credits</small></b>
       </div>
 
       {error && (
         <div role="alert" data-error-code={error.code} style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger }}>
           <strong>{error.message}</strong>
-          <div style={{ color: semantic.textMuted }}>{error.administratorAction}</div>
+          {error.administratorAction && <details style={{ color: semantic.textMuted, marginTop: 6 }}><summary>Administrator details</summary>{error.administratorAction}</details>}
         </div>
       )}
       {notice && <div role="status" style={{ ...cardStyle, borderColor: '#16a34a77', color: semantic.accentSuccess }}>{notice}</div>}
+      {!canWrite && <div role="status" data-testid="torqueshed-credits-read-only" style={{ ...cardStyle, borderColor: '#fbbf24', color: '#fde68a' }}>You can review your credit balance and purchase history. Edit access is required before TorqueShed can open a checkout or spend credits on a new analysis.</div>}
       {purchaseStatus && (
         <div data-testid="torque-purchase-status" style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span><strong>{purchaseMessage(purchaseStatus)}</strong><br /><small style={{ color: semantic.textMuted }}>{purchaseStatus.packageKey} · {purchaseStatus.units.toLocaleString()} units · {money(purchaseStatus.amountMinor)}</small></span>
+          <span><strong>{purchaseMessage(purchaseStatus)}</strong><br /><small style={{ color: semantic.textMuted }}>{status?.packages.find((item) => item.key === purchaseStatus.packageKey)?.name ?? 'Diagnostic credit package'} · {purchaseStatus.units.toLocaleString()} credits · {money(purchaseStatus.amountMinor)}</small><details style={{ color: semantic.textMuted, marginTop: 4 }}><summary>Technical details</summary><code>{purchaseStatus.packageKey}</code></details></span>
           <button type="button" onClick={() => void refreshPurchaseStatus()} style={{ ...button, minHeight: 36, padding: '7px 10px' }}><RefreshCw size={14} /> Refresh status</button>
         </div>
       )}
 
       <article style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Buy diagnostic credits</h2>
-        <p style={{ color: semantic.textMuted }}>Choose the diagnostic that will receive the checkout context. Payment state is accepted only from the signed provider settlement path.</p>
+        <p style={{ color: semantic.textMuted }}>Choose the diagnostic these credits will support. Credits are added only after the payment service confirms payment.</p>
         <label style={label}>
           Diagnostic session
           <select aria-label="Diagnostic session for credit purchase" value={selectedDiagnosticId} onChange={(event) => setSelectedDiagnosticId(event.target.value)} style={input}>
@@ -1377,15 +1396,16 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 10, marginTop: space.md }}>
           {status?.packages.map((tokenPackage) => (
             <button type="button" key={tokenPackage.key} disabled={paymentsDisabled || busy === tokenPackage.key} onClick={() => void purchase(tokenPackage.key)} style={{ ...button, minHeight: 76, background: semantic.bgPanel, color: semantic.text, border: `1px solid ${semantic.border}`, display: 'grid' }}>
-              <span>{tokenPackage.name}</span><small>{tokenPackage.units.toLocaleString()} units · {money(tokenPackage.amountMinor)}</small>
+              <span>{tokenPackage.name}</span><small>{tokenPackage.units.toLocaleString()} credits · {money(tokenPackage.amountMinor)}</small>
             </button>
           ))}
         </div>
-        {!diagnostics.length && <p style={{ color: semantic.accentWarning }}>Create a diagnostic session before buying credits so checkout remains bound to authorized workshop work.</p>}
+        {!diagnostics.length && <p style={{ color: semantic.accentWarning }}>Start a diagnostic first so the credits are applied to the correct vehicle issue.</p>}
         {!status?.purchaseReadiness.ready && (
           <div style={{ color: semantic.accentDanger, marginTop: space.md }} data-testid="torque-credit-purchase-readiness">
             <strong>{status?.purchaseReadiness.userMessage ?? 'Credit purchase readiness is being checked. Nothing will be charged.'}</strong>
-            {status?.purchaseReadiness.code && <div style={{ color: semantic.textMuted }}>{status.purchaseReadiness.code} · {status.purchaseReadiness.administratorAction}</div>}
+            {status?.purchaseReadiness.administratorAction && <div style={{ color: semantic.textMuted }}>{status.purchaseReadiness.administratorAction}</div>}
+            {status?.purchaseReadiness.code && <details style={{ color: semantic.textMuted, marginTop: 6 }}><summary>Technical details</summary><code>{status.purchaseReadiness.code}</code></details>}
           </div>
         )}
       </article>
@@ -1394,16 +1414,16 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
         <article style={cardStyle}>
           <h2 style={{ marginTop: 0 }}>Recent purchases</h2>
           {ledger?.purchases.slice(0, 10).map((item) => (
-            <div key={item.id} className="ts28-row"><div><strong>{String(item.packageKey)}</strong><small>{new Date(String(item.createdAt)).toLocaleString()}</small></div><button type="button" style={{ ...button, minHeight: 34, padding: '6px 9px' }} onClick={() => void refreshPurchaseStatus(String(item.id))}>{String(item.status).replaceAll('_', ' ')}</button></div>
+            <div key={item.id} className="ts28-row"><div><strong>{status?.packages.find((tokenPackage) => tokenPackage.key === item.packageKey)?.name ?? 'Diagnostic credit package'}</strong><small>{new Date(String(item.createdAt)).toLocaleString()}</small><details><summary>Technical details</summary><code>{String(item.packageKey)}</code></details></div><button type="button" style={{ ...button, minHeight: 34, padding: '6px 9px' }} onClick={() => void refreshPurchaseStatus(String(item.id))}>{String(item.status).replaceAll('_', ' ')}</button></div>
           ))}
           {!ledger?.purchases.length && <p style={{ color: semantic.textMuted }}>No credit purchases yet.</p>}
         </article>
         <article style={cardStyle}>
-          <h2 style={{ marginTop: 0 }}>Ledger activity</h2>
+          <h2 style={{ marginTop: 0 }}>Credit activity</h2>
           {ledger?.entries.slice(0, 10).map((item) => (
-            <div key={item.id} className="ts28-row"><div><strong>{String(item.entryType ?? item.type ?? 'credit activity').replaceAll('_', ' ')}</strong><small>{new Date(String(item.createdAt)).toLocaleString()}</small></div><span>{Number(item.units ?? item.amount ?? 0).toLocaleString()} units</span></div>
+            <div key={item.id} className="ts28-row"><div><strong>{String(item.entryType ?? item.type ?? 'credit activity').replaceAll('_', ' ')}</strong><small>{new Date(String(item.createdAt)).toLocaleString()}</small></div><span>{Number(item.units ?? item.amount ?? 0).toLocaleString()} credits</span></div>
           ))}
-          {!ledger?.entries.length && <p style={{ color: semantic.textMuted }}>No usage or settlement entries yet.</p>}
+          {!ledger?.entries.length && <p style={{ color: semantic.textMuted }}>No usage or purchase activity yet.</p>}
         </article>
       </div>
     </section>
@@ -1413,6 +1433,8 @@ function TorqueCreditsPanel({ diagnostics }: { diagnostics: TorqueShedDiagnostic
 function DiagnosticDetail({
   detail,
   busy,
+  canWrite,
+  canManageTraining,
   mutate,
   refresh,
   showAssist,
@@ -1421,6 +1443,8 @@ function DiagnosticDetail({
 }: {
   detail: Record<string, any>;
   busy: string;
+  canWrite: boolean;
+  canManageTraining: boolean;
   mutate: (
     name: string,
     operation: () => Promise<unknown>,
@@ -1442,7 +1466,7 @@ function DiagnosticDetail({
       <h2 style={{ marginTop: 0, color: semantic.text }}>{diagnostic.title}</h2>
       <p style={{ color: semantic.textMuted }}>{diagnostic.customerConcern}</p>
       {showAssist ? (
-        <TorqueAssistPanel diagnostic={diagnostic} creditsHref={creditsHref} />
+        <TorqueAssistPanel diagnostic={diagnostic} creditsHref={creditsHref} canWrite={canWrite} />
       ) : (
         <Link href={assistHref} style={{ ...button, textDecoration: 'none', marginBottom: space.md }}>
           <Bot size={16} /> Open Torque Assist for this diagnostic
@@ -1464,7 +1488,7 @@ function DiagnosticDetail({
               refresh,
             )
           }
-          disabled={busy === 'Diagnostic status'}
+          disabled={!canWrite || busy === 'Diagnostic status'}
           style={input}
         >
           {['open', 'testing', 'repairing', 'verified', 'resolved', 'archived'].map((status) => (
@@ -1472,6 +1496,50 @@ function DiagnosticDetail({
           ))}
         </select>
       </label>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: space.md, margin: `${space.lg}px 0` }}>
+        <OutcomeWorkflowAction
+          workflowKey="torqueshed.diagnostic_to_snapproof"
+          aggregateId={diagnostic.id}
+          sourceVersion={diagnostic.version}
+          sourceDeepLink={`/modules/torqueshed/diagnostics/${diagnostic.id}`}
+          title="Build a customer proof package"
+          description="Carry this vehicle, concern, diagnostic observations, repair, and verification into a field-ready closeout report without typing the job twice."
+          destinationLabel="SnapProofOS"
+          actionLabel="Preview customer proof"
+          confirmationText="Create a connected diagnostic job and draft report in SnapProofOS. This does not send anything to the customer."
+          disabled={!canWrite}
+          disabledReason={!canWrite ? 'You need diagnostic edit access to create a customer proof package.' : undefined}
+          previewItems={[
+            { label: 'Diagnostic job', detail: 'Vehicle and customer concern connected to the current session' },
+            { label: 'Recorded observations', detail: 'Existing diagnostic entries copied as field evidence notes' },
+            { label: 'Draft closeout report', detail: 'Ready for manager review, branding, and secure delivery' },
+          ]}
+          testId="torqueshed-build-customer-proof"
+        />
+        <OutcomeWorkflowAction
+          workflowKey="torqueshed.diagnostic_to_faultlinelab"
+          aggregateId={diagnostic.id}
+          sourceVersion={diagnostic.version}
+          sourceDeepLink={`/modules/torqueshed/diagnostics/${diagnostic.id}`}
+          title="Teach the team from this diagnosis"
+          description="Turn the finished diagnostic path into a practice draft with common identifiers masked, ready for a trainer's full privacy and accuracy review."
+          destinationLabel="FaultlineLab"
+          actionLabel="Preview training draft"
+          payload={{ authorApproved: true, privacyReviewed: true }}
+          disabled={!canManageTraining || !['verified', 'resolved'].includes(diagnostic.status)}
+          disabledReason={!canManageTraining
+            ? 'An organization owner or administrator must approve this training draft.'
+            : !['verified', 'resolved'].includes(diagnostic.status)
+              ? 'Verify or resolve the diagnosis before turning it into team training.'
+              : undefined}
+          confirmationText="Create an unpublished authoring draft in FaultlineLab with common identifiers masked. I have reviewed this diagnostic for customer-sensitive information; a trainer must still complete a full privacy and accuracy review before publication."
+          previewItems={[
+            { label: 'Masked practice scenario', detail: 'Concern, symptoms, tests, and resolution become a draft with common identifiers masked' },
+            { label: 'Trainer review step', detail: 'The draft remains unpublished until an author validates the cause and learning path' },
+          ]}
+          testId="torqueshed-create-training-draft"
+        />
+      </div>
       <div
         style={{
           display: 'grid',
@@ -1503,7 +1571,7 @@ function DiagnosticDetail({
           <input name="code" required aria-label="Diagnostic trouble code" placeholder="P0171" style={input} />
           <input name="description" aria-label="Trouble code description" placeholder="Description" style={input} />
           <input name="freezeFrame" aria-label="Freeze-frame note" placeholder="Freeze-frame note" style={input} />
-          <button type="submit" style={button}>
+          <button type="submit" disabled={!canWrite} style={button}>
             <Plus size={15} />
             Add code
           </button>
@@ -1566,7 +1634,7 @@ function DiagnosticDetail({
             <input name="referenceMax" type="number" step="any" aria-label="Reference maximum" placeholder="Max" style={input} />
           </div>
           <input name="outcome" aria-label="Evidence outcome" placeholder="Outcome" style={input} />
-          <button type="submit" style={button}>
+          <button type="submit" disabled={!canWrite} style={button}>
             <Plus size={15} />
             Add evidence
           </button>
@@ -1632,7 +1700,7 @@ function DiagnosticDetail({
           required
           style={{ color: semantic.textMuted }}
         />
-        <button type="submit" style={button}>
+        <button type="submit" disabled={!canWrite} style={button}>
           <FileUp size={15} />
           Attach evidence
         </button>
@@ -1641,7 +1709,7 @@ function DiagnosticDetail({
   );
 }
 
-function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShedDiagnostic; creditsHref: string }) {
+function TorqueAssistPanel({ diagnostic, creditsHref, canWrite }: { diagnostic: TorqueShedDiagnostic; creditsHref: string; canWrite: boolean }) {
   const [status, setStatus] = useState<TorqueAssistStatus | null>(null);
   const [context, setContext] = useState<Record<string, any> | null>(null);
   const [history, setHistory] = useState<Array<Record<string, any>>>([]);
@@ -1712,6 +1780,7 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
   const assistUnavailable = providerDisabled || !context || clearlyInsufficient;
 
   async function runAssist() {
+    if (!canWrite) return;
     const requestKey = activeRequestKey || key('torque-assist');
     if (!activeRequestKey) setActiveRequestKey(requestKey);
     setBusy('assist');
@@ -1731,8 +1800,8 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
       try { window.sessionStorage.removeItem(`torqueshed:checkout-form:${diagnostic.id}`); } catch {}
       setNotice(
         next.replayed
-          ? 'The prior accepted result was replayed without another charge.'
-          : `Accepted result recorded. ${next.actualUnits.toLocaleString()} units consumed once; ${next.releasedUnits.toLocaleString()} reserved units released. ${next.remainingBalance.toLocaleString()} units remain.`,
+          ? 'Your previous result was restored; you were not charged again.'
+          : `Diagnostic plan created. ${next.actualUnits.toLocaleString()} credits used; ${next.remainingBalance.toLocaleString()} credits remain.`,
       );
       await load();
     } catch (next) {
@@ -1777,7 +1846,7 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
             <Coins size={17} /> {availableUnits.toLocaleString()} units available
           </strong>
           <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-            {(ledger?.ledgerBalance ?? status?.ledgerBalance ?? status?.balance ?? 0).toLocaleString()} ledger units
+            {(ledger?.ledgerBalance ?? status?.ledgerBalance ?? status?.balance ?? 0).toLocaleString()} total units
             {' · '}{(ledger?.reservedUnits ?? status?.reservedUnits ?? 0).toLocaleString()} reserved
           </span>
         </div>
@@ -1860,16 +1929,16 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
       <button
         type="button"
         onClick={() => void runAssist()}
-        disabled={assistUnavailable || busy === 'assist'}
-        style={{ ...button, opacity: assistUnavailable || busy === 'assist' ? 0.55 : 1 }}
+        disabled={!canWrite || assistUnavailable || busy === 'assist'}
+        style={{ ...button, opacity: !canWrite || assistUnavailable || busy === 'assist' ? 0.55 : 1 }}
       >
         <Activity size={16} />
         {busy === 'assist'
           ? 'Analyzing safely…'
           : activeRequestKey
-            ? 'Retry same request without duplicate charge'
+            ? 'Retry without another charge'
             : result?.status === 'follow_up_required'
-              ? 'Submit follow-up evidence'
+              ? 'Answer follow-up questions'
               : clearlyInsufficient
                 ? 'More credits required'
                 : 'Generate diagnostic plan'}
@@ -1882,7 +1951,7 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
             <p style={{ color: semantic.textMuted }}>{result.summary}</p>
           </div>
           <div>
-            <strong>Facts and assumptions</strong>
+            <strong>What we know and what we are assuming</strong>
             <ul>
               {result.facts.map((fact, index) => (
                 <li key={`${fact.source}-${index}`}>
@@ -1898,7 +1967,7 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
           </div>
           {!!result.hypotheses.length && (
             <div>
-              <strong>Ranked hypotheses</strong>
+              <strong>Most likely causes</strong>
               {result.hypotheses.map((hypothesis) => (
                 <div
                   key={hypothesis.rank}
@@ -1906,8 +1975,8 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
                 >
                   #{hypothesis.rank} · {hypothesis.confidence} confidence · {hypothesis.description}
                   <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-                    Supports: {hypothesis.supportingEvidence.join('; ') || 'None recorded'} ·
-                    Against: {hypothesis.contradictingEvidence.join('; ') || 'None recorded'}
+                    Why it fits: {hypothesis.supportingEvidence.join('; ') || 'None recorded'} ·
+                    What conflicts: {hypothesis.contradictingEvidence.join('; ') || 'None recorded'}
                   </div>
                 </div>
               ))}
@@ -1952,8 +2021,9 @@ function TorqueAssistPanel({ diagnostic, creditsHref }: { diagnostic: TorqueShed
         </div>
       )}
 
+      {!canWrite && <div role="status" style={{ color: '#fde68a' }}>Read-only access lets you review prior analysis. New analysis and credit purchases are disabled.</div>}
       <Link href={creditsHref} style={{ color: '#fbbf24', fontWeight: 800 }}>
-        Buy credits and review authoritative usage
+        Buy credits and review usage
       </Link>
     </section>
   );

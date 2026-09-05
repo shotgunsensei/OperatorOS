@@ -25,7 +25,7 @@ test('TradeFlowKit lead messaging is consent-aware, replay-safe, provider-neutra
   assert.match(leadCenter, /tradeflowkit-lead-message-status/);
   assert.match(leadCenter, /Queue email to/);
   assert.match(leadCenter, /SMS consent is required/);
-  assert.match(leadCenter, /Provider delivery is tracked by OperatorOS/);
+  assert.match(leadCenter, /OperatorOS will show whether the connected service delivers it/);
   assert.match(leadCenter, /tradeflowkit-lead-read-only/);
   assert.match(shell, /canManage=\{canManageModule\}/);
   assert.match(ledger, /lead_messaging/);

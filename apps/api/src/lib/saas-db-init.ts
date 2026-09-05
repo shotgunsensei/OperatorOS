@@ -511,7 +511,7 @@ interface ModuleSeedSpec {
 // suppresses the "Buy Add-on" button even when STRIPE_PRICE_ADDON_<SLUG>
 // is configured. Per-tier defaults are baked into the seed; admins can
 // edit `modules.metadata` to set custom prices per module.
-const ADDON_DEFAULT_CENTS = { starter: 1900, pro: 2900, elite: 4900 } as const;
+const STACK_COMPANION_PRICE_CENTS = 2900;
 
 // Derived from the SDK MODULE_CATALOG so the slug list, canonical origins,
 // plan tiers, and lifecycle defaults can never drift between the API seed
@@ -530,7 +530,9 @@ const MODULE_SEED_SPECS: ModuleSeedSpec[] = MODULE_CATALOG.map(c => ({
   canonicalBaseUrl: c.canonicalBaseUrl,
   planMin: c.planMin,
   ord: c.ord,
-  addonPriceCents: ADDON_DEFAULT_CENTS[c.planMin],
+  addonPriceCents: c.commercialType === 'addon' && c.defaultStatus !== 'coming_soon'
+    ? STACK_COMPANION_PRICE_CENTS
+    : 0,
 }));
 
 export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
@@ -643,9 +645,11 @@ export async function seedModules() {
         slug: m.slug, name: m.name, description: m.description,
         category: m.category, status: m.status, baseUrl: m.baseUrl,
         planMin: m.planMin, ord: m.ord,
-        // Seed default addon price into metadata so the buy_addon CTA
-        // surfaces in the UI on first install. Admin can edit later.
-        metadata: { addonPriceCents: spec.addonPriceCents },
+        // Only the six stack-eligible companions carry commercial display
+        // metadata. Core/free apps and OutCall never enter price admin.
+        metadata: spec.addonPriceCents > 0
+          ? { addonPriceCents: spec.addonPriceCents, commerceModel: 'application_stack' }
+          : {},
         ...tfkPushConfig,
       });
     } else {
@@ -669,8 +673,12 @@ export async function seedModules() {
       // addon-price seeding (existing.metadata is null OR missing the
       // key). Never overwrite a value an admin has already set.
       const existingMd = (existing[0].metadata ?? {}) as Record<string, unknown>;
-      if (existingMd.addonPriceCents == null) {
-        updates.metadata = { ...existingMd, addonPriceCents: spec.addonPriceCents };
+      if (spec.addonPriceCents > 0 && existingMd.addonPriceCents == null) {
+        updates.metadata = {
+          ...existingMd,
+          addonPriceCents: spec.addonPriceCents,
+          commerceModel: 'application_stack',
+        };
       }
       if (spec.defaultStatus === 'live') {
         updates.status = 'live';

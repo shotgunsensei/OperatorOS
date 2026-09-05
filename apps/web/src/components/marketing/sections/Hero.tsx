@@ -26,20 +26,20 @@ const VALUE_STRIP = [
 ];
 
 const STACK_LAYERS = [
-  { label: 'Main Modules', value: 'TradeFlowKit · PulseDesk · TechDeck', accent: brand.accentCyan },
+  { label: 'Flagship Applications', value: 'TradeFlowKit · PulseDesk · TechDeck', accent: brand.accentCyan },
   {
-    label: 'Included Companions',
+    label: 'Included Applications',
     value: 'TorqueShed · FaultlineLab · Operator Pool Hall',
     accent: brand.accentGreen,
   },
   {
-    label: 'Specialized Companions',
+    label: 'Business Add-ons',
     value: 'SnapProofOS · BrandForgeOS · Script Ops · Deploy Ops',
     accent: brand.accentViolet,
   },
 ];
 
-const COMMAND_SIGNALS = ['Sign-in', 'Billing', 'Organizations', 'Access', 'Modules'];
+const COMMAND_SIGNALS = ['Sign-in', 'Billing', 'Organizations', 'Access', 'Applications'];
 
 export default function Hero() {
   const { user, loading } = useAuth();
@@ -49,7 +49,7 @@ export default function Hero() {
   // the register mode of the login page; signed-in users keep launching straight
   // into the app.
   const heroCtaHref = loading ? '/login' : signedIn ? primary.href : '/login?mode=register';
-  const heroCtaLabel = signedIn ? 'Open your free command layer' : 'Create free account';
+  const heroCtaLabel = signedIn ? 'Open My Apps' : 'Create free account';
 
   return (
     <section
@@ -222,7 +222,7 @@ export default function Hero() {
             }}
           >
             Give your team one secure place to enter, manage, and launch every application your
-            operation depends on. Identity, billing, access, and application handoffs stay connected
+            operation depends on. Identity, billing, access, and work between applications stay connected
             behind the scenes.
           </p>
 
@@ -339,7 +339,7 @@ export default function Hero() {
 
           <img
             src="/media/operatoros/operatoros-command-nexus.png"
-            alt="Cinematic OperatorOS command nexus connecting modules through identity, billing, and access rails."
+            alt="OperatorOS home base connecting business applications, team access, and billing."
             onError={(event) => {
               event.currentTarget.src = '/media/operatoros/operatoros-hero.png';
             }}

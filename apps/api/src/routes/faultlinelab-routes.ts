@@ -651,6 +651,22 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
           tenantId: tenant(request), challengeId: id, versionNumber,
         });
         if (!version) return notFound(reply, 'Challenge version');
+        const storedReviewResult = await db.execute(sql`
+          SELECT validation
+          FROM faultlinelab_challenge_versions
+          WHERE tenant_id=${tenant(request)} AND challenge_id=${id} AND version_number=${versionNumber}
+          LIMIT 1
+        `);
+        const storedReviewValue = storedReviewResult.rows[0]?.validation;
+        const storedReview = (typeof storedReviewValue === 'string'
+          ? JSON.parse(storedReviewValue)
+          : storedReviewValue ?? {}) as Record<string, unknown>;
+        if (storedReview.importedWorkflowDraft === true && storedReview.requiresAuthorReview === true) {
+          return reply.code(422).send({
+            error: 'Review this imported draft against the source record and save a new revision before publishing',
+            code: 'FAULTLINE_IMPORTED_DRAFT_REVIEW_REQUIRED',
+          });
+        }
         const validation = validateFaultlineChallengeContent(version.content);
         if (!validation.valid) {
           return reply.code(422).send({

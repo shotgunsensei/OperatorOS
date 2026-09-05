@@ -153,7 +153,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/runs': { sectionId: 'faultlinelab-progress', label: 'Runs and Progress' },
     '/evidence': { sectionId: 'faultlinelab-evidence', label: 'Evidence' },
     '/authoring': { sectionId: 'faultlinelab-authoring', label: 'Challenge Authoring' },
-    '/analytics': { sectionId: 'faultlinelab-analytics', label: 'Tenant Analytics', redirectPath: '/reports' },
+    '/analytics': { sectionId: 'faultlinelab-analytics', label: 'Team Analytics', redirectPath: '/reports' },
     '/reports': { sectionId: 'faultlinelab-analytics', label: 'Reports' },
     '/settings': { sectionId: 'faultlinelab-settings', label: 'Settings' },
   },
@@ -241,7 +241,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/pricing': { sectionId: 'studyforge-account', label: 'OperatorOS Plan', redirectPath: '/settings' },
     '/subjects': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses', redirectPath: '/sources' },
     '/courses': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses', redirectPath: '/sources' },
-    '/sources': { sectionId: 'studyforge-sources', label: 'Authorized Sources' },
+    '/sources': { sectionId: 'studyforge-sources', label: 'Learning materials' },
     '/studio': { sectionId: 'studyforge-studio', label: 'AI Studio' },
     '/decks': { sectionId: 'studyforge-decks', label: 'Flashcard Decks', redirectPath: '/flashcards' },
     '/flashcards': { sectionId: 'studyforge-decks', label: 'Flashcard Decks' },
@@ -476,6 +476,7 @@ export function resolveCoreModuleDeepLink(
     const [resource] = pathSegments;
     if (resource === 'challenges') return { sectionId: 'faultlinelab-challenges', label: 'Challenge' };
     if (resource === 'sessions') return { sectionId: 'faultlinelab-session', label: 'Investigation' };
+    if (resource === 'authoring') return { sectionId: 'faultlinelab-authoring', label: 'Challenge Draft' };
   }
   if (slug === 'ninja-pool-hall' && pathSegments.length === 2) {
     const [resource] = pathSegments;

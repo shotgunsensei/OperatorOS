@@ -10,10 +10,10 @@ interface OperatorLoaderProps {
 }
 
 const DEFAULT_STEPS = [
-  'Loading modules',
-  'Checking entitlements',
-  'Preparing command layer',
-  'Syncing operator console',
+  'Loading your applications',
+  'Checking your access',
+  'Preparing your workspace',
+  'Connecting your business home base',
 ];
 
 /**

@@ -29,7 +29,7 @@ export function guidePage(
     workflow: options.workflow ?? [
       `Open ${title} and confirm that the organization and access badge are correct.`,
       'Use the page filters or record list to narrow the work before changing anything.',
-      'Complete the needed action, then confirm the saved state, activity entry, or provider result shown by the page.',
+      'Complete the needed action, then confirm the saved result, activity entry, or connection status shown by the page.',
     ],
     access: options.access,
     notes: options.notes,

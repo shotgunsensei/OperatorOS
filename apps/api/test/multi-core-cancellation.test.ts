@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { tenantEntitlements, tenants } from '../src/schema.js';
-import { INCLUDED_SEATS } from '@operatoros/sdk';
+import { FREE_WITH_ANY_ACCOUNT, INCLUDED_SEATS } from '@operatoros/sdk';
 import {
   ensureSchemaReady,
   createTestUser,
@@ -35,8 +35,7 @@ before(async () => {
   user = await createTestUser();
 
   const { grantStackEntitlements } = await import('../src/lib/product-entitlements.js');
-  // Two distinct core subscriptions on the SAME tenant, each with its own
-  // included apps, free companion, and seat pack.
+  // Create the supported forward-sale subscription first.
   await grantStackEntitlements({
     tenantId: user.currentTenantId,
     coreProduct: 'tradeflowkit',
@@ -45,14 +44,47 @@ before(async () => {
     additionalSeats: 3,
     stripeSubscriptionId: subA,
   });
-  await grantStackEntitlements({
+
+  // Defensive compatibility fixture: a tenant may still contain two historic
+  // core grants from before the one-flagship contract. The forward grant API
+  // correctly rejects creating this state now, so materialize only the legacy
+  // rows needed to prove cancellation remains safe for grandfathered data.
+  await db.insert(tenantEntitlements).values({
     tenantId: user.currentTenantId,
-    coreProduct: 'pulsedesk',
-    freeCompanionModule: 'brandforgeos',
-    additionalModules: [],
-    additionalSeats: 2,
+    entitlementKey: 'pulsedesk',
+    entitlementType: 'core_product',
+    source: 'stripe',
     stripeSubscriptionId: subB,
+    metadata: { legacyCompatibilityFixture: true, includedSeats: INCLUDED_SEATS },
   });
+  await db.insert(tenantEntitlements).values(
+    FREE_WITH_ANY_ACCOUNT.map(app => ({
+      tenantId: user.currentTenantId,
+      entitlementKey: app.key,
+      entitlementType: 'included_app' as const,
+      source: 'included_with_core' as const,
+      stripeSubscriptionId: subB,
+      metadata: { legacyCompatibilityFixture: true, includedWithCoreProduct: 'pulsedesk' },
+    })),
+  );
+  await db.insert(tenantEntitlements).values([
+    {
+      tenantId: user.currentTenantId,
+      entitlementKey: 'brandforgeos',
+      entitlementType: 'companion_module',
+      source: 'selected_free_companion',
+      stripeSubscriptionId: subB,
+      metadata: { legacyCompatibilityFixture: true, includedPriceCents: 0 },
+    },
+    {
+      tenantId: user.currentTenantId,
+      entitlementKey: 'additional-seats',
+      entitlementType: 'seat_pack',
+      source: 'stripe',
+      stripeSubscriptionId: subB,
+      metadata: { legacyCompatibilityFixture: true, quantity: 2 },
+    },
+  ]);
 });
 
 after(async () => {

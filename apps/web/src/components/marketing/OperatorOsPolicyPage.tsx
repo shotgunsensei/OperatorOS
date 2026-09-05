@@ -27,14 +27,14 @@ function PrivacyPolicy() {
           This Privacy Policy describes how OperatorOS, a service operated by Shotgun Ninjas Productions,
           collects, uses, protects, and retains information when you visit operatoros.net, create or use an
           OperatorOS account, interact with an enabled module, request support, or opt in to communications.
-          OperatorOS is a command and entitlement platform for business and operational software tools.
+          OperatorOS is a command and access platform for business and operational software tools.
         </p>
       </section>
       <section>
         <h2>2. Information we collect</h2>
         <p>Depending on the services you choose to use, we may collect:</p>
         <ul>
-          <li><strong>Account and organization data</strong>, such as name, email address, authentication and tenant membership information, roles, and subscription or entitlement records.</li>
+          <li><strong>Account and organization data</strong>, such as name, email address, sign-in and organization membership information, roles, and subscription or application-access records.</li>
           <li><strong>Operational data</strong> that you submit to OperatorOS or an enabled module, including workflow, support, customer, asset, task, and service records.</li>
           <li><strong>Transaction data</strong>, including plan, checkout, invoice, and payment-status metadata. Payment-card processing is performed by the applicable payment provider.</li>
           <li><strong>Security and technical data</strong>, such as session and audit events, device/browser information, request metadata, error codes, and appropriately handled network-address evidence.</li>
@@ -45,7 +45,7 @@ function PrivacyPolicy() {
         <h2>3. How information is used</h2>
         <p>
           We use information to operate, secure, support, and improve OperatorOS; authenticate users;
-          enforce tenant, role, subscription, and module boundaries; complete requested workflows;
+          keep each organization's data, roles, subscriptions, and application access separate; complete requested workflows;
           provide support and requested communications; detect misuse; maintain audit and compliance
           evidence; and meet legal, carrier, payment, and service-provider requirements.
         </p>
@@ -89,7 +89,7 @@ function PrivacyPolicy() {
           service operation, dispute resolution, security, audit, suppression, and legal obligations.
           Retention periods vary by data type and module. We use reasonable administrative, technical, and
           organizational safeguards, including access controls, encrypted transmission, bounded logs, and
-          tenant-scoped authorization. No storage or transmission method is completely secure.
+          organization-specific authorization. No storage or transmission method is completely secure.
         </p>
       </section>
       <section>
@@ -121,7 +121,7 @@ function TermsAndConditions() {
       <section>
         <h2>1. OperatorOS service</h2>
         <p>
-          These Terms and Conditions govern access to OperatorOS, a command, authentication, entitlement,
+          These Terms and Conditions govern access to OperatorOS, a command, authentication, access-management,
           and operations platform operated by Shotgun Ninjas Productions. Enabled modules may provide
           business workflows, support operations, automation, communications, and related tools. Your use
           of a module may also be subject to a disclosed plan, order, or module-specific rule.
@@ -131,7 +131,7 @@ function TermsAndConditions() {
         <h2>2. Accounts, organizations, and access</h2>
         <p>
           You must provide accurate information, protect your credentials, and use only accounts and
-          organizations you are authorized to access. Tenant, role, module, subscription, and entitlement
+          organizations you are authorized to access. Organization, role, application, subscription, and access
           controls determine available functionality. You are responsible for authorized users and data
           submitted through your organization, subject to applicable law and your agreement with us.
         </p>
@@ -149,7 +149,7 @@ function TermsAndConditions() {
         <h2>4. Plans, billing, and availability</h2>
         <p>
           Paid plans and add-ons are governed by the price, interval, limits, and renewal terms presented at
-          checkout. Taxes may apply. Features may be gated by plan or entitlement. The service is provided on
+          checkout. Taxes may apply. Features may depend on your plan and application access. The service is provided on
           an “as available” basis; maintenance, provider failures, security events, and circumstances beyond
           our control may interrupt access. We may modify features while preserving purchased commitments as
           required by applicable law or agreement.

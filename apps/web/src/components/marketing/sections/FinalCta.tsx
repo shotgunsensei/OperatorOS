@@ -71,8 +71,8 @@ export default function FinalCta() {
               maxWidth: 560,
             }}
           >
-            OperatorOS gives your whole operation one command layer.
-            Sign in once, light up the modules you need, and run.
+            OperatorOS gives your whole operation one connected home base.
+            Sign in once, add the applications you need, and get to work.
           </p>
           <Link
             href={href}
@@ -92,7 +92,7 @@ export default function FinalCta() {
               boxShadow: brand.ctaGlowLarge,
             }}
           >
-            Enter the Command Layer <ArrowRight size={16} />
+            Open OperatorOS <ArrowRight size={16} />
           </Link>
         </div>
       </div>

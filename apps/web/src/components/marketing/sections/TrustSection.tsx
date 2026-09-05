@@ -36,23 +36,23 @@ const ITEMS: readonly TrustItem[] = [
   },
   {
     icon: Users,
-    title: 'Tenant-aware by design',
-    body: 'Every record, module grant, and audit row is scoped to your organization. Your business data stays separated.',
+    title: 'Your organization stays separate',
+    body: 'Every business record, application permission, and activity entry stays inside the correct organization.',
   },
   {
     icon: KeyRound,
-    title: 'Module entitlement model',
-    body: 'Module access is granted per organization and per user. Access can be revoked when a subscription ends.',
+    title: 'Application access you control',
+    body: 'Choose application access by organization and team member, and remove paid access when a subscription ends.',
   },
   {
     icon: LogIn,
     title: 'One centralized login',
-    body: 'Sign in once and every unlocked module opens through the same session. No per-app password sprawl.',
+    body: 'Sign in once and every available application opens through the same session. No separate password for every tool.',
   },
   {
     icon: FileSearch,
-    title: 'Audit-friendly workflows',
-    body: 'Sensitive changes write to a centralized audit trail with the person, target, and organization context for later review.',
+    title: 'Important changes stay reviewable',
+    body: 'Sensitive changes record who acted, what changed, and which organization was affected.',
   },
   {
     icon: Target,

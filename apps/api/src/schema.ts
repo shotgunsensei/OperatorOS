@@ -778,6 +778,47 @@ export const tenantEntitlements = pgTable('tenant_entitlements', {
   index('idx_tenant_entitlements_subscription').on(t.stripeSubscriptionId),
 ]);
 
+/**
+ * Tenant-owned commercial authority for the application-stack sale model.
+ * One row per tenant enforces the release-v60 one-flagship invariant while
+ * preserving user-owned legacy subscription rows for grandfathered access.
+ */
+export const tenantApplicationSubscriptions = pgTable('tenant_application_subscriptions', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }).unique(),
+  initiatedByUserId: varchar('initiated_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  coreProduct: text('core_product', { enum: ['tradeflowkit', 'pulsedesk', 'techdeck'] }).notNull(),
+  includedCompanionKey: text('included_companion_key').notNull(),
+  additionalModuleKeys: jsonb('additional_module_keys').$type<string[]>().notNull().default([]),
+  additionalSeats: integer('additional_seats').notNull().default(0),
+  status: text('status', {
+    enum: ['incomplete', 'checkout_failed', 'trialing', 'active', 'past_due', 'canceling', 'canceled', 'expired'],
+  }).notNull().default('incomplete'),
+  stripeCustomerId: text('stripe_customer_id').notNull(),
+  stripeCheckoutSessionId: text('stripe_checkout_session_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  corePriceId: text('core_price_id').notNull(),
+  companionPriceId: text('companion_price_id'),
+  additionalSeatPriceId: text('additional_seat_price_id'),
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('idx_tenant_application_subscriptions_status').on(t.status),
+  uniqueIndex('uq_tenant_application_subscriptions_customer').on(t.stripeCustomerId),
+  uniqueIndex('uq_tenant_application_subscriptions_stripe_subscription')
+    .on(t.stripeSubscriptionId)
+    .where(sql`${t.stripeSubscriptionId} IS NOT NULL`),
+  uniqueIndex('uq_tenant_application_subscriptions_checkout_session')
+    .on(t.stripeCheckoutSessionId)
+    .where(sql`${t.stripeCheckoutSessionId} IS NOT NULL`),
+]);
+
+export type TenantApplicationSubscriptionRow = typeof tenantApplicationSubscriptions.$inferSelect;
+
 export const tenantUsers = pgTable('tenant_users', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),

@@ -67,7 +67,7 @@ export default function PulseDeskPublicIntake({ params }: { params: { slug: stri
         <label>Urgency<select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical operational impact</option><option value="low">Low</option></select></label>
         <button disabled={!online}>{online ? 'Submit issue' : 'Reconnect to submit'}</button>
       </form>}
-      <footer>Submissions are rate-limited, tenant-routed, privacy-filtered, and recorded in the operational audit trail.</footer>
+      <footer>Requests are protected against abuse, kept with the correct organization, checked for sensitive content, and recorded for review.</footer>
     </section>
   </main>;
 }

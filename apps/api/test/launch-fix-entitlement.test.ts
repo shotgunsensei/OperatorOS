@@ -19,7 +19,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   users, tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
@@ -53,11 +53,17 @@ before(async () => {
   // Subscribe the user to the Elite plan.
   await db.insert(subscriptions).values({
     userId,
+    tenantId,
     planId: elitePlanId,
     status: 'active',
     currentPeriodStart: new Date(),
     currentPeriodEnd: new Date(Date.now() + 30 * 86400_000),
   });
+  await db.execute(sql`
+    UPDATE subscriptions
+    SET legacy_access_grandfathered_at=clock_timestamp()
+    WHERE user_id=${userId} AND tenant_id=${tenantId}
+  `);
 
   // Module that IS included in the Elite plan.
   const m1 = await createTestModule(uniqueId('lf-incl'));

@@ -21,6 +21,7 @@ import {
   requireTenantModuleAccess,
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
+import { tenantHasActiveApplicationStackCompanion } from '../lib/product-entitlements.js';
 
 const base = '/v1/modules/snapproofos';
 const readGuards = [requireTenantModuleAccess('snapproofos')];
@@ -392,10 +393,32 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
     return { organization: camel(result.rows[0] || {}), authority: 'OperatorOS' };
   });
   app.get(`${base}/billing`, { preHandler: readGuards }, async (request) => {
+    if (await tenantHasActiveApplicationStackCompanion(tenant(request), 'snapproofos')) {
+      return {
+        billing: {
+          accessModel: 'application_stack',
+          status: 'enabled',
+          planCode: 'application_stack',
+          planName: 'Application Stack',
+          entitlementSource: 'application_stack',
+          completeAccess: true,
+        },
+        authority: 'OperatorOS',
+        manageUrl: '/app?page=billing',
+      };
+    }
     const result = await db.execute(
-      sql`SELECT tm.status,tm.entitlement_source,p.code AS plan_code,p.name AS plan_name FROM tenant_modules tm JOIN modules m ON m.id=tm.module_id LEFT JOIN tenant_subscriptions ts ON ts.tenant_id=tm.tenant_id AND ts.status IN ('active','trialing') LEFT JOIN plans p ON p.id=ts.plan_id WHERE tm.tenant_id=${tenant(request)} AND m.slug='snapproofos' LIMIT 1`,
+      sql`SELECT tm.status,tm.source AS entitlement_source FROM tenant_modules tm JOIN modules m ON m.id=tm.module_id WHERE tm.tenant_id=${tenant(request)} AND m.slug='snapproofos' LIMIT 1`,
     );
-    return { billing: camel(result.rows[0] || {}), authority: 'OperatorOS', manageUrl: '/pricing' };
+    return {
+      billing: {
+        ...camel(result.rows[0] || {}),
+        accessModel: 'grandfathered_or_manual',
+        completeAccess: true,
+      },
+      authority: 'OperatorOS',
+      manageUrl: '/app?page=billing',
+    };
   });
   app.get(`${base}/team`, { preHandler: readGuards }, async (request) => {
     const module = await snapModuleId();

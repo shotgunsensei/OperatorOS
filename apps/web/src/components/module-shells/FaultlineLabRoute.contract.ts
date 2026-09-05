@@ -67,15 +67,15 @@ export const FAULTLINELAB_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
 ] as const;
 
 const copy: Record<FaultlineLabRouteArea, Pick<FaultlineLabRouteState, 'eyebrow' | 'title' | 'subtitle'>> = {
-  overview: { eyebrow: 'Diagnostic proving ground', title: 'Learning operations overview', subtitle: 'See assigned investigations, recent runs, challenge coverage, and durable skill progress.' },
-  challenges: { eyebrow: 'Case library', title: 'Challenge library', subtitle: 'Find compiler-published diagnostic cases and start a bounded investigation.' },
-  session: { eyebrow: 'Investigation workspace', title: 'Follow the evidence', subtitle: 'Run allowlisted diagnostic actions, unlock evidence, submit a cause, and record server-scored proof.' },
-  assignments: { eyebrow: 'Team development', title: 'Assignments', subtitle: 'Assign published challenges and progress tenant-scoped learning work.' },
-  runs: { eyebrow: 'Durable attempts', title: 'Runs and progress', subtitle: 'Review scored attempts, solved challenges, streaks, badges, and personal history.' },
-  evidence: { eyebrow: 'Proof register', title: 'Evidence', subtitle: 'Trace recorded investigation actions and private proof back to durable attempts.' },
-  authoring: { eyebrow: 'Challenge compiler', title: 'Authoring', subtitle: 'Create, validate, revise, publish, export, and retire tenant-scoped diagnostic cases.' },
-  reports: { eyebrow: 'Learning outcomes', title: 'Reports', subtitle: 'Review personal and authorized tenant outcomes without inventing certificates.' },
-  settings: { eyebrow: 'Workspace control', title: 'FaultlineLab settings', subtitle: 'Review access, scoring, evidence, export, and challenge-authority boundaries.' },
+  overview: { eyebrow: 'Build diagnostic skill', title: 'Learning operations overview', subtitle: 'See assigned investigations, recent attempts, skill coverage, and the areas that need more practice.' },
+  challenges: { eyebrow: 'Choose the next problem', title: 'Challenge library', subtitle: 'Find a reviewed diagnostic case and start working through the clues.' },
+  session: { eyebrow: 'Investigate before you answer', title: 'Follow the evidence', subtitle: 'Run the available checks, unlock clues, identify the cause, and see how well your reasoning holds up.' },
+  assignments: { eyebrow: 'Develop the team', title: 'Assignments', subtitle: 'Assign published challenges, set expectations, and follow each learner’s progress.' },
+  runs: { eyebrow: 'Track improvement over time', title: 'Runs and progress', subtitle: 'Review scored attempts, solved challenges, streaks, badges, and personal history.' },
+  evidence: { eyebrow: 'Review the reasoning', title: 'Evidence', subtitle: 'See which checks and clues supported each submitted diagnosis.' },
+  authoring: { eyebrow: 'Build realistic challenges', title: 'Authoring', subtitle: 'Create, test, revise, publish, export, and retire diagnostic cases for your team.' },
+  reports: { eyebrow: 'See where skills are growing', title: 'Reports', subtitle: 'Review individual and team results, solved cases, and practice gaps.' },
+  settings: { eyebrow: 'Understand the rules of the lab', title: 'Workspace rules and access', subtitle: 'Review how training cases, scores, private proof, authoring, and team access are handled.' },
 };
 
 function state(area: FaultlineLabRouteArea, canonicalPath: string, extra: Partial<FaultlineLabRouteState> = {}): FaultlineLabRouteState {
@@ -94,7 +94,7 @@ export function resolveFaultlineLabRoute(routePath?: string): FaultlineLabRouteS
   if (root === 'assignments') return state('assignments', '/assignments');
   if (['progress', 'runs'].includes(root)) return state('runs', '/runs');
   if (root === 'evidence') return state('evidence', '/evidence');
-  if (root === 'authoring') return state('authoring', '/authoring');
+  if (root === 'authoring') return state('authoring', '/authoring', { challengeId: recordId });
   if (['analytics', 'reports'].includes(root)) return state('reports', '/reports');
   if (root === 'settings') return state('settings', '/settings');
   return state('overview', '/');

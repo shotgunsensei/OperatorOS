@@ -86,13 +86,13 @@ test('admin-created modules require an explicit add-on classification', () => {
   );
 });
 
-test('admin readiness checks only active catalog add-ons', () => {
+test('admin readiness checks the exact forward-model companion roster', () => {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const platformRoutes = fs.readFileSync(
     path.join(repoRoot, 'apps/api/src/routes/platform-routes.ts'),
     'utf8',
   );
-  assert.match(platformRoutes, /module\.commercialType === 'addon'/);
-  assert.match(platformRoutes, /module\.defaultStatus !== 'coming_soon'/);
-  assert.match(platformRoutes, /readinessAddons\.map/);
+  assert.match(platformRoutes, /ELIGIBLE_COMPANION_MODULE_KEYS\.map/);
+  assert.match(platformRoutes, /STRIPE_PRICE_COMPANION_MODULE_MONTHLY/);
+  assert.doesNotMatch(platformRoutes, /readinessAddons\.map/);
 });

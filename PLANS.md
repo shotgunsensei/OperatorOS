@@ -5,17 +5,29 @@ Status: current execution plan
 Authority: `docs/IMPLEMENTATION_STATUS.md` records the latest evidence and
 `docs/modules/MODULE_PARITY_INDEX.md` records module state.
 
+## Module outcome and release-v60 candidate status
+
+The 2026-09-05 release-v60 candidate has passed its final source/local gates:
+the full API aggregate completed **1,440 tests with 1,434 passed, 0 failed, 6
+intentional Next-server HTTP-only skips, and 0 todos** in **713,438.7749 ms**;
+root typecheck and lint passed; disposable PostgreSQL 16 planned v60 in 798 ms,
+clean-applied it in 18,916 ms, reapplied it idempotently in 2,907 ms, and
+independently verified it in 1,860 ms; and the Next 15.5.23 production build
+generated all 35 of 35 pages.
+
+It remains a source candidate until exact commit and push evidence is recorded.
+Production remains live and accepted at v59. Production backup, manual v60
+apply/verify, Replit redeploy, live identity, authenticated exact-host,
+provider/billing, monitoring, restore, and rollback acceptance remain open.
+
 ## Autoscale startup/readiness status
 
-The accepted release candidate removes database apply authority from routine
-Replit Autoscale startup, keeps the public gateway at HTTP 503 until database,
-Next, and Fastify readiness pass, and automatically returns a waiting browser
-to its complete original URL. The decisive root release gate passes 14/14,
-including the full API, disposable database, production build, exact-host
-browser/accessibility, visual, security, and preflight gates. The owner has
-authorized direct `main` delivery and Replit publish. Exact deployed release
-identity, live cold/warm behavior, and rollback evidence remain the final
-acceptance gates; see `docs/AUTOSCALE_STARTUP_READINESS.md`.
+The Autoscale startup/readiness repair is live accepted as recorded in
+`docs/CURRENT_RELEASE_GATE.md`. Replit deployment `0a1f03b4` serves application
+commit `2b385f56a3ff04e319b8448e41d995fd52feb10d` and immutable build
+`9c6511f9dc457a180839112f`; production remained at v59/59. The routine
+supervisor is verify-only. Provider acceptance and full restore/rollback
+exercises remain separate from that accepted startup release.
 
 ## Release v59 evaluation status
 
@@ -103,30 +115,18 @@ slice is not parity.
 
 ## Immediate next gate
 
-Use the Phase 21 compiler output to triage the remaining non-TechDeck/non-PulseDesk/non-TorqueShed Phase 20 blocked inventory before
-resuming deployment promotion or broad product work:
+1. Commit and push the exact reviewed v60 candidate, then record the commit SHA
+   and remote CI result without changing the production-v59 claim.
+2. Before database promotion, complete the reviewed production backup and
+   rollback preparation in `docs/DATABASE_BACKUP_RESTORE.md`.
+3. Run the separately authorized one-shot production v60 apply and verify
+   operation. Do not place apply mode in the serving environment.
+4. After production reports v60/60, perform the user-initiated Replit redeploy.
+5. Verify live `/readyz` commit, immutable build, database release, worker/queue
+   state, and verify-only supervisor behavior.
+6. Complete authenticated exact-host owner/non-owner, Stripe sandbox
+   checkout/webhook/portal, provider, reconciliation, monitoring, restore, and
+   rollback acceptance.
 
-1. Resolve source authority for OutCall without replacing pinned snapshots
-   blindly; TorqueShed web/API source authority is closed by Phase 28.
-2. Review the highest-value `SOURCE_CAPABILITY_UNMAPPED` records and add exact
-   OperatorOS targets plus automated compatibility evidence.
-3. Review all remaining `BLOCKED_REVIEW` records individually. TechDeck's 182
-   historical retirements are closed for TechDeck by Phase 26 and PulseDesk by Phase 27; implement a native/shared
-   equivalent or obtain an exact owner waiver for other modules; Phase 28
-   closes TorqueShed web/API records without waivers; do not waive
-   categories.
-4. Restore the 52 missing runnable FaultlineLab cases and TradeFlowKit's
-   orange/navy visual contract in scoped later phases with their required
-   security, tenant, visual, and browser evidence.
-5. Clear the 61 exact route-ID and 39 exact schema-ID gaps without replacing
-   them with coarse file mappings.
-6. Review and approve all three viewport baselines against pinned source only
-   after the source-faithful screen is restored; never approve generated drift.
-7. Keep the Phase 20 reproducibility check green and run the strict
-   `corepack pnpm verify:parity` gate whenever an imported tree, target mapping,
-   route, schema, test, or waiver changes. It is expected to remain red until
-   every required Phase 20 blocker is resolved.
-
-The Phase 18 deployment/provider checklist remains historical operational
-evidence, but it cannot establish product parity while the Phase 20 ledger is
-blocked.
+The former Phase 21 parity inventory remains a deferred parity backlog; it is
+not the immediate release-v60 gate.

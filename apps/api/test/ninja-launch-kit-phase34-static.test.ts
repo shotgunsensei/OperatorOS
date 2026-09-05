@@ -28,10 +28,11 @@ test('Phase 34 persistence remains additive and tenant/user scoped', () => {
   assert.match(dbInit, /user_id VARCHAR\(36\) NOT NULL/);
 });
 
-test('complete workspace renders source counts, honest locked states, product CRUD, exports, and parent authority', () => {
-  for (const phrase of ['All 20 niche templates','Visual promo contracts','Soft delete','Audited export vault','OperatorOS remains the billing source of truth','Locked by the current OperatorOS plan']) {
+test('complete workspace renders customer outcomes, honest access states, product CRUD, exports, and parent authority', () => {
+  for (const phrase of ['All 20 niche templates','Visual-production briefs','Soft delete','Campaign downloads','File verified','Application Stack','Locked by the current OperatorOS plan']) {
     assert.match(workspace, new RegExp(phrase));
   }
+  assert.match(workspace, /grandfathered[\s\S]*plan[\s\S]*retains its original package limits/);
   assert.match(workspace, /shell-ninja-launch-kit-complete/);
   assert.match(workspace, /colorScheme: 'dark'/);
 });

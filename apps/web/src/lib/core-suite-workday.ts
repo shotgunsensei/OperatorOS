@@ -108,9 +108,9 @@ export function buildTradeFlowKitWorkday(
   for (const quote of acceptedQuotes) {
     actions.push({
       id: `quote-${quote.id}`,
-      eyebrow: 'Close the handoff',
+      eyebrow: 'Bill approved work',
       title: `Accepted quote ${numberLabel(quote.number, 'draft')} is ready to invoice`,
-      detail: `${money(quote.totalCents)} accepted · invoice from the quote to preserve the audit trail`,
+      detail: `${money(quote.totalCents)} accepted · create the invoice without entering the details again`,
       href: `/quotes/${quote.id}`,
       severity: 'attention',
     });
@@ -147,21 +147,21 @@ export function buildTradeFlowKitWorkday(
   }
 
   const hasRecords = revenue.customers.length + revenue.jobs.length + revenue.quotes.length + revenue.invoices.length + operations.tasks.length + operations.metrics.leads > 0;
-  const revenueHandoffs = acceptedQuotes.length + finishedJobs.length;
+  const readyToBill = acceptedQuotes.length + finishedJobs.length;
   const selectedActions = take(actions);
   const state: WorkdayBrief['state'] = !hasRecords ? 'setup' : selectedActions.length ? 'active' : 'clear';
 
   return {
     state,
-    title: state === 'setup' ? 'Reach first value in three short steps' : state === 'clear' ? 'Revenue loops are caught up' : 'Revenue Rescue',
+    title: state === 'setup' ? 'Set up your first path to payment' : state === 'clear' ? 'Nothing is holding up payment' : 'Move the next job toward payment',
     summary: state === 'setup'
-      ? 'Start with the records you already have. TradeFlowKit will keep the lead-to-cash trail connected from there.'
+      ? 'Add a customer, create the next quote or job, and keep every step connected through payment.'
       : state === 'clear'
-        ? 'No overdue invoice, unbilled finished work, accepted-quote handoff, or late task needs attention right now.'
-        : `${selectedActions.length} highest-value handoff${selectedActions.length === 1 ? '' : 's'} are ready now. Work top to bottom instead of hunting through menus.`,
+        ? 'No overdue invoice, unbilled finished work, accepted quote, or late task needs attention right now.'
+        : `${selectedActions.length} high-value item${selectedActions.length === 1 ? ' is' : 's are'} ready now. Start at the top to protect cash flow and delivery.`,
     metrics: [
       { label: 'Cash waiting', value: money(Number(operations.metrics.outstanding_cents) || 0), detail: 'Open invoice balance', severity: overdueInvoices.length ? 'critical' : openInvoices.length ? 'attention' : 'steady' },
-      { label: 'Revenue handoffs', value: String(revenueHandoffs), detail: 'Accepted or finished, not invoiced', severity: revenueHandoffs ? 'attention' : 'steady' },
+      { label: 'Ready to bill', value: String(readyToBill), detail: 'Accepted or finished, not invoiced', severity: readyToBill ? 'attention' : 'steady' },
       { label: 'Delivery blockers', value: String(new Set([...overdueTasks, ...blockedTasks].map(task => task.id)).size), detail: 'Late or blocked active tasks', severity: overdueTasks.length ? 'critical' : blockedTasks.length ? 'attention' : 'steady' },
     ],
     actions: selectedActions,
@@ -171,9 +171,9 @@ export function buildTradeFlowKitWorkday(
         ? { label: 'Open top priority', href: selectedActions[0].href }
         : { label: 'Open lead pipeline', href: '/leads' },
     setupSteps: [
-      { label: 'Bring in customers', detail: 'Add one customer or paste a bounded CSV import.', href: '/customers' },
-      { label: 'Create the next paid step', detail: 'Start a quote or a customer job with only the essentials.', href: '/quotes/new' },
-      { label: 'Remove repeat admin', detail: 'Turn repeat service into audited recurring jobs.', href: '/recurring-jobs' },
+      { label: 'Bring in customers', detail: 'Add one customer or import a carefully reviewed CSV file.', href: '/customers' },
+      { label: 'Create the next paid step', detail: 'Start a quote or customer job with only the details you need.', href: '/quotes/new' },
+      { label: 'Schedule repeat work', detail: 'Turn regular service into recurring jobs your team can plan around.', href: '/recurring-jobs' },
     ],
     automations: [
       { label: 'Automate repeat work', detail: 'Schedule recurring jobs with a customer, owner, next run, and pause control.', href: '/recurring-jobs' },
@@ -222,7 +222,7 @@ export function buildTechDeckWorkday(
       id: `asset-risk-${asset.id}`,
       eyebrow: 'Technical risk',
       title: asset.name,
-      detail: `${asset.health} · ${asset.type.replaceAll('_', ' ')} · open the evidence-linked record`,
+      detail: `${asset.health} · ${asset.type.replaceAll('_', ' ')} · open the record to review health, history, and next steps`,
       href: `/assets/${asset.id}`,
       severity: asset.health === 'offline' ? 'critical' : 'attention',
     });
@@ -259,12 +259,12 @@ export function buildTechDeckWorkday(
 
   return {
     state,
-    title: state === 'setup' ? 'Stand up the service desk without a consulting project' : state === 'clear' ? 'No urgent technical risk is waiting' : 'Risk-to-Proof Brief',
+    title: state === 'setup' ? 'Start running the service desk' : state === 'clear' ? 'No urgent technical risk is waiting' : 'Handle the highest-risk work first',
     summary: state === 'setup'
       ? 'Start with one client, one managed item, and one real ticket. Add depth only when the work calls for it.'
       : state === 'clear'
         ? 'No overdue ticket, unassigned urgent request, critical asset, lifecycle deadline, or document review is currently waiting.'
-        : `${selectedActions.length} ranked service risks connect directly to the ticket, configuration, or documentation record needed to act and prove the work.`,
+        : `${selectedActions.length} service risk${selectedActions.length === 1 ? ' is' : 's are'} ranked by urgency, with a direct path to the ticket, asset, or procedure your team needs.`,
     metrics: [
       { label: 'Open tickets', value: String(openTickets.length), detail: 'Not resolved or closed', severity: overdueTickets.length ? 'critical' : openTickets.length ? 'attention' : 'steady' },
       { label: 'Critical risk', value: String(criticalRisk), detail: 'SLA, dispatch, or asset exposure', severity: criticalRisk ? 'critical' : 'steady' },
@@ -277,13 +277,13 @@ export function buildTechDeckWorkday(
         ? { label: 'Open top risk', href: selectedActions[0].href }
         : { label: 'Open ticket queue', href: '/tickets' },
     setupSteps: [
-      { label: 'Add a managed client', detail: 'Reuse the shared organization and site directory.', href: '/clients' },
+      { label: 'Add a managed client', detail: 'Add the client, sites, and contacts your team supports.', href: '/clients' },
       { label: 'Record what you support', detail: 'Add the first server, network item, application, or credential reference.', href: '/assets' },
-      { label: 'Work one real request', detail: 'Open a ticket and keep ownership, time, notes, and evidence together.', href: '/tickets' },
+      { label: 'Work one real request', detail: 'Open a ticket and keep the owner, time, notes, and results together.', href: '/tickets' },
     ],
     automations: [
       { label: 'Schedule repeat service', detail: 'Use recurring ticket templates and appointments for routine maintenance.', href: '/calendar' },
-      { label: 'Package proof automatically', detail: 'Create deterministic compliance and evidence exports without remote execution.', href: '/compliance' },
+      { label: 'Prepare a service record', detail: 'Create a consistent report from completed checks and attached results.', href: '/compliance' },
     ],
   };
 }
@@ -356,12 +356,12 @@ export function buildPulseDeskWorkday(
 
   return {
     state,
-    title: state === 'setup' ? 'Start operational coordination in minutes' : state === 'clear' ? 'Operations are inside their current guardrails' : 'Operational Pulse',
+    title: state === 'setup' ? 'Start coordinating operational requests' : state === 'clear' ? 'No urgent operational issue is waiting' : 'Resolve the most urgent operational issue',
     summary: state === 'setup'
-      ? 'Capture one PHI-minimized request, route it to an accountable team, and add an SLA only where the operation needs one.'
+      ? 'Capture one operational request without unnecessary patient information, assign it to a responsible team, and add a response target where needed.'
       : state === 'clear'
         ? 'No overdue, at-risk, unassigned urgent, supply, or facility pressure needs immediate coordination.'
-        : `${selectedActions.length} operational pressure point${selectedActions.length === 1 ? '' : 's'} are ranked without exposing patient charts or clinical details.`,
+        : `${selectedActions.length} operational issue${selectedActions.length === 1 ? ' is' : 's are'} ranked by urgency while patient charts and clinical details stay out of the workflow.`,
     metrics: [
       { label: 'Open requests', value: String(dashboard.metrics.openTickets), detail: 'Operational work in progress', severity: dashboard.metrics.openTickets ? 'attention' : 'steady' },
       { label: 'SLA pressure', value: String(dashboard.metrics.atRisk + dashboard.metrics.overdue), detail: 'At risk or overdue', severity: dashboard.metrics.overdue ? 'critical' : dashboard.metrics.atRisk ? 'attention' : 'steady' },
@@ -376,11 +376,11 @@ export function buildPulseDeskWorkday(
     setupSteps: [
       { label: 'Capture the need', detail: 'Use a short operational summary with no patient data or unnecessary PHI.', href: '/requests' },
       { label: 'Give it an owner', detail: 'Route the request by department, queue, team, and accountable operator.', href: '/assignments' },
-      { label: canManage ? 'Set the response guardrail' : 'Review the response guardrail', detail: 'Use elapsed-time SLA targets and notifications instead of memory and inbox hunting.', href: canManage ? '/settings' : '/requests' },
+      { label: canManage ? 'Set response targets' : 'Review response targets', detail: 'Use clear deadlines and notifications instead of relying on memory or inbox searches.', href: canManage ? '/settings' : '/requests' },
     ],
     automations: [
       canManage
-        ? { label: 'Automate intake safely', detail: 'Connect approved mail intake with replay protection, health state, and PHI-minimized summaries.', href: '/inbound' }
+        ? { label: 'Share one protected request form', detail: 'Use the protected intake link now; mailbox import will appear here only after a supported connection is ready.', href: '/inbound' }
         : { label: 'Use one intake queue', detail: 'Submit and track operational work from the shared request queue.', href: '/requests' },
       canManage
         ? { label: 'Prevent SLA surprises', detail: 'Set default response and resolution policies, then let the dashboard rank pressure.', href: '/settings' }

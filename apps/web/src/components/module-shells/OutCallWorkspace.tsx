@@ -34,7 +34,7 @@ function errorMessage(error: unknown) {
   return (error as any)?.error || (error as any)?.message || 'OutCall request failed';
 }
 
-export default function OutCallWorkspace({ view, recordId, hrefFor = path => path }: { view: OutCallRouteArea; recordId?: string; hrefFor?: (path: string) => string }) {
+export default function OutCallWorkspace({ view, recordId, hrefFor = path => path, canWrite = false }: { view: OutCallRouteArea; recordId?: string; hrefFor?: (path: string) => string; canWrite?: boolean }) {
   const router = useRouter();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [busy, setBusy] = useState('');
@@ -63,6 +63,7 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
   useEffect(() => { void load(); }, [load]);
 
   async function run(name: string, action: () => Promise<unknown>, success: string) {
+    if (!canWrite || busy) return;
     setBusy(name); setError(''); setNotice('');
     try {
       await action();
@@ -89,6 +90,7 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
   const selectedCall = workspace.calls.find(item => item.id === recordId) ?? null;
 
   async function exportData() {
+    if (!canWrite || busy) return;
     setBusy('export'); setError(''); setNotice('');
     try {
       const result = await moduleShellApi.outcall.exportData(privacyPassword) as { export: Record<string, unknown> };
@@ -114,6 +116,12 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
           {error || notice}
         </div>
       )}
+      {!canWrite && (
+        <div role="status" data-testid="outcall-read-only" style={{ ...cardStyle, marginBottom: space.lg, borderColor: '#8b5cf6', color: '#ddd6fe' }}>
+          <strong>Read-only OutCall access</strong>
+          <div style={{ color: semantic.textMuted, marginTop: 4 }}>You can review safety status, verified-self setup, profiles, triggers, and call history. Edit access is required to change settings, verify a phone, request a call, cancel a schedule, export, or remove data.</div>
+        </div>
+      )}
 
       {['overview', 'delivery', 'settings'].includes(view) && <section id="outcall-readiness" tabIndex={-1} style={{ ...cardStyle, marginBottom: space.lg }}>
         <h2 style={{ marginTop: 0, fontSize: 18 }}>Readiness and safety</h2>
@@ -124,12 +132,12 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
           <Status ok={providerReady} text={providerReady ? 'Calling ready' : 'Calling setup required'} />
         </div>
         {!accepted && (
-          <button data-testid="button-outcall-accept-safety" style={{ ...button, marginTop: 16 }} disabled={!!busy}
+          <button data-testid="button-outcall-accept-safety" style={{ ...button, marginTop: 16 }} disabled={!canWrite || !!busy}
             onClick={() => run('safety', moduleShellApi.outcall.acceptSafety, 'Safety acknowledgement saved.')}>
             <ShieldCheck size={16} /> I understand the safety limitations
           </button>
         )}
-        {!providerReady && <p style={{ color: '#d29922', marginBottom: 0 }}>{workspace.provider.reason} You can finish your profile now; calling will unlock when setup is complete.</p>}
+        {!providerReady && <p style={{ color: '#d29922', marginBottom: 0 }}>Calling is not connected for this organization yet. You can finish your profile now; an administrator can complete phone-service setup when you are ready to place calls.</p>}
       </section>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: space.lg }}>
@@ -137,15 +145,15 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
           <h2 style={{ marginTop: 0, fontSize: 18 }}>Verified mobile</h2>
           {verified ? <p><CheckCircle2 size={16} /> {workspace.settings?.phoneMasked}</p> : (
             <>
-              <label>Mobile number (E.164)<input data-testid="input-outcall-phone" style={input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+15551234567" /></label>
+              <label>Mobile number, including country code<input data-testid="input-outcall-phone" style={input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 123 4567" disabled={!canWrite} /></label>
               <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>We send a one-time code to confirm this is your number. It is the only destination OutCall can call.</p>
               {workspace.provider.name === 'test' ? (
-                <button data-testid="button-outcall-verify-phone" style={button} disabled={!accepted || !!busy || !providerReady || !phone}
+                <button data-testid="button-outcall-verify-phone" style={button} disabled={!canWrite || !accepted || !!busy || !providerReady || !phone}
                   onClick={() => run('phone', () => moduleShellApi.outcall.verifyPhone(phone, '000000'), 'Phone ownership verified.')}>
                   Verify phone
                 </button>
               ) : !verificationStarted ? (
-                <button data-testid="button-outcall-start-verification" style={button} disabled={!accepted || !!busy || !providerReady || !phone}
+                <button data-testid="button-outcall-start-verification" style={button} disabled={!canWrite || !accepted || !!busy || !providerReady || !phone}
                   onClick={() => run('phone-start', async () => {
                     await moduleShellApi.outcall.startPhoneVerification(phone);
                     setVerificationStarted(true);
@@ -154,8 +162,8 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'end' }}>
-                  <label style={{ flex: 1 }}>Verification code<input data-testid="input-outcall-verification-code" inputMode="numeric" autoComplete="one-time-code" style={input} value={verificationCode} onChange={e => setVerificationCode(e.target.value)} /></label>
-                  <button data-testid="button-outcall-confirm-verification" style={button} disabled={!!busy || !verificationCode}
+                  <label style={{ flex: 1 }}>Verification code<input data-testid="input-outcall-verification-code" inputMode="numeric" autoComplete="one-time-code" style={input} value={verificationCode} onChange={e => setVerificationCode(e.target.value)} disabled={!canWrite} /></label>
+                  <button data-testid="button-outcall-confirm-verification" style={button} disabled={!canWrite || !!busy || !verificationCode}
                     onClick={() => run('phone-confirm', () => moduleShellApi.outcall.confirmPhoneVerification(phone, verificationCode), 'Phone ownership verified.')}>
                     Confirm
                   </button>
@@ -168,9 +176,9 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
         {view === 'contacts' && <section id="outcall-profiles" tabIndex={-1} style={cardStyle}>
           <h2 style={{ marginTop: 0, fontSize: 18 }}>Rescue profile</h2>
           <p style={{ color: semantic.textMuted }}>OutCall has no arbitrary contact address book. Every profile can call only your independently verified mobile number.</p>
-          <input aria-label="Rescue profile name" data-testid="input-outcall-profile-name" style={input} value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} placeholder="Trusted callback" />
-          <textarea aria-label="Neutral assistance message" data-testid="input-outcall-profile-message" style={{ ...input, minHeight: 88, marginTop: 10 }} value={profile.message} onChange={e => setProfile({ ...profile, message: e.target.value })} placeholder="A neutral, non-emergency message to play" />
-          <button data-testid="button-outcall-create-profile" style={{ ...button, marginTop: 10 }} disabled={!!busy}
+          <input aria-label="Rescue profile name" data-testid="input-outcall-profile-name" style={input} value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} placeholder="Trusted callback" disabled={!canWrite} />
+          <textarea aria-label="Neutral assistance message" data-testid="input-outcall-profile-message" style={{ ...input, minHeight: 88, marginTop: 10 }} value={profile.message} onChange={e => setProfile({ ...profile, message: e.target.value })} placeholder="A neutral, non-emergency message to play" disabled={!canWrite} />
+          <button data-testid="button-outcall-create-profile" style={{ ...button, marginTop: 10 }} disabled={!canWrite || !!busy}
             onClick={() => run('profile', async () => {
               if (editingProfileId) await moduleShellApi.outcall.updateProfile(editingProfileId, profile);
               else await moduleShellApi.outcall.createProfile(profile);
@@ -184,19 +192,20 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
               setEditingProfileId(String(row.id));
               setProfile({ name: String(row.name ?? ''), message: String(row.message ?? '') });
             }}
-            actionLabel="Remove profile" onAction={row => run(`profile-${row.id}`, () => moduleShellApi.outcall.deleteProfile(row.id), 'Rescue profile removed.')} />
+            secondaryActionEnabled={canWrite}
+            actionLabel="Remove profile" actionEnabled={canWrite} onAction={row => run(`profile-${row.id}`, () => moduleShellApi.outcall.deleteProfile(row.id), 'Rescue profile removed.')} />
         </section>}
 
         {view === 'campaigns' && <section id="outcall-triggers" tabIndex={-1} style={cardStyle}>
           <h2 style={{ marginTop: 0, fontSize: 18 }}>Private SMS triggers</h2>
           <p style={{ color: semantic.textMuted }}>This is not a bulk outbound campaign. An exact private phrase can request one bounded call to your verified number.</p>
-          <select aria-label="Rescue profile for trigger" style={input} value={trigger.profileId || workspace.profiles[0]?.id || ''}
+          <select aria-label="Rescue profile for trigger" style={input} value={trigger.profileId || workspace.profiles[0]?.id || ''} disabled={!canWrite}
             onChange={event => setTrigger({ ...trigger, profileId: event.target.value })}>
             {workspace.profiles.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}
           </select>
-          <input aria-label="Private exact-match phrase" data-testid="input-outcall-trigger" style={{ ...input, marginTop: 10 }} type="password" autoComplete="off" value={trigger.phrase} onChange={e => setTrigger({ ...trigger, phrase: e.target.value })} placeholder="Private exact-match phrase" />
-          <input style={{ ...input, marginTop: 10 }} value={trigger.neutralReply} onChange={e => setTrigger({ ...trigger, neutralReply: e.target.value })} aria-label="Neutral reply" />
-          <button data-testid="button-outcall-create-trigger" style={{ ...button, marginTop: 10 }} disabled={!verified || workspace.profiles.length === 0 || !!busy}
+          <input aria-label="Private exact-match phrase" data-testid="input-outcall-trigger" style={{ ...input, marginTop: 10 }} type="password" autoComplete="off" value={trigger.phrase} onChange={e => setTrigger({ ...trigger, phrase: e.target.value })} placeholder="Private exact-match phrase" disabled={!canWrite} />
+          <input style={{ ...input, marginTop: 10 }} value={trigger.neutralReply} onChange={e => setTrigger({ ...trigger, neutralReply: e.target.value })} aria-label="Neutral reply" disabled={!canWrite} />
+          <button data-testid="button-outcall-create-trigger" style={{ ...button, marginTop: 10 }} disabled={!canWrite || !verified || workspace.profiles.length === 0 || !!busy}
             onClick={() => run('trigger', async () => {
               const input = { ...trigger, profileId: trigger.profileId || workspace.profiles[0].id };
               if (editingTriggerId) await moduleShellApi.outcall.updateTrigger(editingTriggerId, input);
@@ -211,15 +220,16 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
               setEditingTriggerId(String(row.id));
               setTrigger({ profileId: String(row.profileId ?? ''), phrase: '', neutralReply: String(row.neutralReply ?? 'Request received.'), delaySeconds: Number(row.delaySeconds ?? 0) });
             }}
-            actionLabel="Remove trigger" onAction={row => run(`trigger-${row.id}`, () => moduleShellApi.outcall.deleteTrigger(row.id), 'Private trigger removed.')} />
+            secondaryActionEnabled={canWrite}
+            actionLabel="Remove trigger" actionEnabled={canWrite} onAction={row => run(`trigger-${row.id}`, () => moduleShellApi.outcall.deleteTrigger(row.id), 'Private trigger removed.')} />
         </section>}
 
         {['schedules', 'calls', 'reminders', 'history'].includes(view) && <section id="outcall-schedule" tabIndex={-1} style={cardStyle}>
           <h2 style={{ marginTop: 0, fontSize: 18 }}>{view === 'history' ? 'Call delivery history' : view === 'calls' ? 'Call requests' : view === 'reminders' ? 'Exit-call reminders' : 'Schedule an exit call'}</h2>
           <p style={{ color: semantic.textMuted }}>Calls can only go to your verified number.</p>
-          {['schedules', 'reminders'].includes(view) && <><label>When to call (optional)<input type="datetime-local" style={{ ...input, marginBottom: 10 }} value={runAt} onChange={event => setRunAt(event.target.value)} /></label>
+          {['schedules', 'reminders'].includes(view) && <><label>When to call (optional)<input type="datetime-local" style={{ ...input, marginBottom: 10 }} value={runAt} onChange={event => setRunAt(event.target.value)} disabled={!canWrite} /></label>
           <button data-testid="button-outcall-schedule" style={button}
-            disabled={!verified || !providerReady || workspace.profiles.length === 0 || !!busy}
+            disabled={!canWrite || !verified || !providerReady || workspace.profiles.length === 0 || !!busy}
             onClick={() => run('call', () => moduleShellApi.outcall.schedule({
               profileId: workspace.profiles[0].id,
               idempotencyKey: crypto.randomUUID(),
@@ -227,10 +237,11 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
             }), 'Durable call request scheduled.')}>
             {runAt ? <CalendarClock size={16} /> : <PhoneCall size={16} />} {runAt ? 'Schedule call' : 'Call me now'}
           </button></>}
-          {selectedCall && <article data-testid="outcall-call-record" style={{ ...cardStyle, marginTop: 12 }}><strong>{selectedCall.destinationMasked}</strong><p style={{ color: semantic.textMuted }}>{selectedCall.status} · scheduled {new Date(selectedCall.scheduledAt).toLocaleString()}</p><small>Provider state: {selectedCall.providerStatus || selectedCall.status}. A request is not presented as delivered until the provider confirms it.</small></article>}
+          {selectedCall && <article data-testid="outcall-call-record" style={{ ...cardStyle, marginTop: 12 }}><strong>{selectedCall.destinationMasked}</strong><p style={{ color: semantic.textMuted }}>{selectedCall.status} · scheduled {new Date(selectedCall.scheduledAt).toLocaleString()}</p><small>Delivery status: {String(selectedCall.providerStatus || selectedCall.status).replaceAll('_', ' ')}. A call appears as completed only after the calling service confirms it.</small></article>}
           <ActionList rows={workspace.calls} empty="No call requests yet." render={row => `${row.destinationMasked} · ${row.status} · ${new Date(row.scheduledAt).toLocaleString()}`}
             secondaryActionLabel="Open call record" onSecondaryAction={row => router.push(hrefFor(`/calls/${row.id}`))}
             actionLabel="Cancel call" actionWhen={row => row.status === 'scheduled'}
+            actionEnabled={canWrite}
             onAction={row => run(`call-${row.id}`, () => moduleShellApi.outcall.cancel(row.id), 'Scheduled call canceled.')} />
         </section>}
       </div>
@@ -238,13 +249,13 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
       {view === 'compliance' && <section id="outcall-privacy" tabIndex={-1} style={{ ...cardStyle, marginTop: space.lg }}>
         <h2 style={{ marginTop: 0, fontSize: 18 }}>Your privacy</h2>
         <p style={{ color: semantic.textMuted }}>Download a private copy of your OutCall data or remove it from this workspace. Your password is required for either action.</p>
-        <label>Password<input type="password" autoComplete="current-password" style={{ ...input, maxWidth: 420 }} value={privacyPassword} onChange={event => setPrivacyPassword(event.target.value)} /></label>
+        <label>Password<input type="password" autoComplete="current-password" style={{ ...input, maxWidth: 420 }} value={privacyPassword} onChange={event => setPrivacyPassword(event.target.value)} disabled={!canWrite} /></label>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-          <button style={{ ...button, background: semantic.bgPanel, border: `1px solid ${semantic.border}` }} disabled={!!busy || !privacyPassword} onClick={() => void exportData()}>
+          <button style={{ ...button, background: semantic.bgPanel, border: `1px solid ${semantic.border}` }} disabled={!canWrite || !!busy || !privacyPassword} onClick={() => void exportData()}>
             <Download size={16} /> Download my data
           </button>
-          <input aria-label="Deletion confirmation" style={{ ...input, maxWidth: 220 }} value={deleteConfirmation} onChange={event => setDeleteConfirmation(event.target.value)} placeholder="Type DELETE OUTCALL" />
-          <button style={{ ...button, background: semantic.accentDanger }} disabled={!!busy || !privacyPassword || deleteConfirmation !== 'DELETE OUTCALL'}
+          <input aria-label="Deletion confirmation" style={{ ...input, maxWidth: 220 }} value={deleteConfirmation} onChange={event => setDeleteConfirmation(event.target.value)} placeholder="Type DELETE OUTCALL" disabled={!canWrite} />
+          <button style={{ ...button, background: semantic.accentDanger }} disabled={!canWrite || !!busy || !privacyPassword || deleteConfirmation !== 'DELETE OUTCALL'}
             onClick={() => run('delete-data', () => moduleShellApi.outcall.deleteData(privacyPassword, deleteConfirmation), 'Your OutCall data was removed.')}>
             <Trash2 size={16} /> Remove my OutCall data
           </button>
@@ -277,6 +288,8 @@ function ActionList({
   onAction,
   secondaryActionLabel,
   onSecondaryAction,
+  actionEnabled = true,
+  secondaryActionEnabled = true,
 }: {
   rows: Row[];
   empty: string;
@@ -286,15 +299,17 @@ function ActionList({
   onAction: (row: Row) => void;
   secondaryActionLabel?: string;
   onSecondaryAction?: (row: Row) => void;
+  actionEnabled?: boolean;
+  secondaryActionEnabled?: boolean;
 }) {
   if (!rows.length) return <p style={{ color: semantic.textMuted }}>{empty}</p>;
   return <ul style={{ paddingLeft: 20, color: semantic.textMuted }}>{rows.slice(0, 5).map(row => <li key={row.id} style={{ marginTop: 8 }}>
     <Clock3 size={12} /> {render(row)}{' '}
-    {secondaryActionLabel && onSecondaryAction && <button type="button" aria-label={secondaryActionLabel} onClick={() => onSecondaryAction(row)}
+    {secondaryActionLabel && onSecondaryAction && <button type="button" aria-label={secondaryActionLabel} disabled={!secondaryActionEnabled} onClick={() => onSecondaryAction(row)}
       style={{ border: 0, background: 'transparent', color: outCallLink, cursor: 'pointer', fontWeight: 700 }}>
       {secondaryActionLabel}
     </button>}{' '}
-    {(!actionWhen || actionWhen(row)) && <button type="button" aria-label={actionLabel} onClick={() => onAction(row)}
+    {(!actionWhen || actionWhen(row)) && <button type="button" aria-label={actionLabel} disabled={!actionEnabled} onClick={() => onAction(row)}
       style={{ border: 0, background: 'transparent', color: semantic.accentDanger, cursor: 'pointer', fontWeight: 700 }}>
       {actionLabel}
     </button>}

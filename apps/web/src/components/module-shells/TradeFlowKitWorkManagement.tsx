@@ -44,22 +44,22 @@ const viewCopy: Record<TradeFlowKitWorkView, { eyebrow: string; title: string; d
   jobs: {
     eyebrow: 'Scheduled service work',
     title: 'Job workflow and recurring schedules',
-    description: 'Move jobs through approved stages and manage repeat work through the shared, audited scheduler.',
+    description: 'Move jobs through approved stages and schedule repeat work without rebuilding the same checklist.',
   },
   workflows: {
     eyebrow: 'Workflow studio',
     title: 'Workflow templates and job stages',
-    description: 'Define reusable job or task stages and apply them to persisted organization work.',
+    description: 'Define reusable job or task stages and apply them to your organization’s active work.',
   },
   tasks: {
     eyebrow: 'Team execution',
     title: 'Organization task queue',
-    description: 'Search and update canonical job-scoped tasks across the current organization.',
+    description: 'Search, assign, and update job tasks across your organization.',
   },
   recurring: {
     eyebrow: 'Scheduled automation',
     title: 'Recurring job schedules',
-    description: 'Create, pause, resume, and review repeat work enqueued by the shared audited scheduler.',
+    description: 'Create, pause, resume, and review repeat service schedules and their next job date.',
   },
   activity: {
     eyebrow: 'Operational history',
@@ -70,11 +70,13 @@ const viewCopy: Record<TradeFlowKitWorkView, { eyebrow: string; title: string; d
 
 export default function TradeFlowKitWorkManagement({
   tenantKey,
+  canWrite,
   canManage,
   view = 'all',
   recordId,
 }: {
   tenantKey: string;
+  canWrite: boolean;
   canManage: boolean;
   view?: TradeFlowKitWorkView;
   recordId?: string;
@@ -184,7 +186,7 @@ export default function TradeFlowKitWorkManagement({
 
   const createRecurringSchedule = (event: FormEvent) => {
     event.preventDefault();
-    if (!recurringName.trim() || !recurringCustomerId || !recurringTitle.trim() || !recurringNextRunAt) {
+    if (!canWrite || !recurringName.trim() || !recurringCustomerId || !recurringTitle.trim() || !recurringNextRunAt) {
       setError('Enter a schedule name, customer, job title, and first run time.');
       return;
     }
@@ -270,7 +272,7 @@ export default function TradeFlowKitWorkManagement({
                 {workflows.map(workflow => (
                   <article key={workflow.id} className="tfk-workflow-card" data-testid={`tradeflowkit-workflow-${workflow.id}`}>
                     <div className="tfk-workflow-title">
-                      <div><strong>{workflow.name}</strong><span>{workflow.entityType} workflow · v{workflow.version}</span></div>
+                      <div><strong>{workflow.name}</strong><span>{workflow.entityType} workflow</span></div>
                       {workflow.isDefault && <span className="tfk-work-default"><Star size={12} />Default</span>}
                     </div>
                     {workflow.description && <p>{workflow.description}</p>}
@@ -279,7 +281,7 @@ export default function TradeFlowKitWorkManagement({
                         <li key={stage.id}>
                           <span style={{ background: stage.color }} />
                           <strong>{stage.name}</strong>
-                          <small>{stage.mappedStatus ? `maps to ${stage.mappedStatus}` : 'no status change'} · v{stage.version}</small>
+                          <small>{stage.mappedStatus ? `moves work to ${stage.mappedStatus.replaceAll('_', ' ')}` : 'keeps the current status'}</small>
                         </li>
                       ))}
                     </ol>
@@ -325,11 +327,11 @@ export default function TradeFlowKitWorkManagement({
               <div className="tfk-job-workflow-list">
                 {jobs.map(job => (
                   <div key={job.id}>
-                    <div><strong>{job.title}</strong><span>#{job.number ?? '—'} · {job.status} · v{job.version}</span></div>
+                    <div><strong>{job.title}</strong><span>#{job.number ?? '—'} · {job.status.replaceAll('_', ' ')}</span></div>
                     <select
                       aria-label={`Workflow stage for ${job.title}`}
                       value={job.workflowStageId ?? ''}
-                      disabled={!canManage || pending || jobStages.length === 0}
+                      disabled={!canWrite || pending || jobStages.length === 0}
                       onChange={event => {
                         if (event.target.value) void run(() => moduleShellApi.tradeflowkit.transitionJobWorkflow(job.id, event.target.value, job.version));
                       }}
@@ -345,10 +347,10 @@ export default function TradeFlowKitWorkManagement({
 
           <section id="tradeflowkit-recurring-jobs" className="tfk-work-section tfk-recurring-route" aria-labelledby="tfk-recurring-heading" data-testid="tradeflowkit-recurring-route" tabIndex={-1}>
             <div className="tfk-work-section-heading">
-              <div><Repeat2 size={18} /><div><h3 id="tfk-recurring-heading">Recurring jobs</h3><p>Schedule repeat work through the shared worker so each due run creates one persisted, audited job.</p></div></div>
+              <div><Repeat2 size={18} /><div><h3 id="tfk-recurring-heading">Recurring jobs</h3><p>Schedule repeat work so every due visit creates one assigned job with a clear history.</p></div></div>
             </div>
 
-            {canManage && (
+            {canWrite && (
               <form className="tfk-work-form tfk-recurring-form" onSubmit={createRecurringSchedule} data-testid="tradeflowkit-recurring-job-form">
                 <label>Schedule name<input value={recurringName} onChange={event => setRecurringName(event.target.value)} maxLength={120} required /></label>
                 <label>Customer<select value={recurringCustomerId} onChange={event => setRecurringCustomerId(event.target.value)} required><option value="">Select a customer</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
@@ -362,7 +364,7 @@ export default function TradeFlowKitWorkManagement({
               </form>
             )}
 
-            {customers.length === 0 && canManage && <div className="tfk-work-state"><AlertTriangle size={17} />Create a customer before scheduling recurring work.</div>}
+            {customers.length === 0 && canWrite && <div className="tfk-work-state"><AlertTriangle size={17} />Create a customer before scheduling recurring work.</div>}
             {recurringSchedules.length === 0 ? (
               <div className="tfk-work-state"><Repeat2 size={18} /><span>No recurring work is scheduled.</span></div>
             ) : (
@@ -375,10 +377,10 @@ export default function TradeFlowKitWorkManagement({
                     </div>
                     <dl>
                       <div><dt>Next run</dt><dd>{new Date(schedule.nextRunAt).toLocaleString()}</dd></div>
-                      <div><dt>Last enqueued</dt><dd>{schedule.lastEnqueuedAt ? new Date(schedule.lastEnqueuedAt).toLocaleString() : 'Not yet'}</dd></div>
+                      <div><dt>Last job created</dt><dd>{schedule.lastEnqueuedAt ? new Date(schedule.lastEnqueuedAt).toLocaleString() : 'Not yet'}</dd></div>
                       <div><dt>Worker state</dt><dd>{schedule.lastErrorCode ? `Retry required: ${schedule.lastErrorCode}` : 'Ready'}</dd></div>
                     </dl>
-                    {canManage && <button type="button" disabled={pending} onClick={() => void run(() => moduleShellApi.tradeflowkit.updateRecurringJob(schedule.id, schedule.version, !schedule.enabled))}>{schedule.enabled ? <PauseCircle size={15} /> : <PlayCircle size={15} />}{schedule.enabled ? 'Pause' : 'Resume'}</button>}
+                    {canWrite && <button type="button" disabled={pending} onClick={() => void run(() => moduleShellApi.tradeflowkit.updateRecurringJob(schedule.id, schedule.version, !schedule.enabled))}>{schedule.enabled ? <PauseCircle size={15} /> : <PlayCircle size={15} />}{schedule.enabled ? 'Pause' : 'Resume'}</button>}
                   </article>
                 ))}
               </div>
@@ -397,11 +399,11 @@ export default function TradeFlowKitWorkManagement({
               <div className="tfk-team-tasks">
                 {tasks.map(task => (
                   <article key={task.id} className={recordId === task.id ? 'selected' : undefined} aria-current={recordId === task.id ? 'true' : undefined} data-testid={`tradeflowkit-team-task-${task.id}`}>
-                    <div><strong>{task.title}</strong><span>{task.jobTitle ?? 'Job'} · {task.customerName ?? 'Customer'} · v{task.version}</span></div>
+                    <div><strong>{task.title}</strong><span>{task.jobTitle ?? 'Job'} · {task.customerName ?? 'Customer'}</span></div>
                     <select
                       aria-label={`Status for ${task.title}`}
                       value={task.status}
-                      disabled={!canManage || pending}
+                      disabled={!canWrite || pending}
                       onChange={event => void run(() => moduleShellApi.tradeflowkit.updateTask(task.id, {
                         expectedVersion: task.version,
                         status: event.target.value,
@@ -409,7 +411,7 @@ export default function TradeFlowKitWorkManagement({
                     >
                       {taskStatuses.map(status => <option key={status} value={status}>{status.replace('_', ' ')}</option>)}
                     </select>
-                    {canManage && <button type="button" className="icon danger" title="Archive task" disabled={pending} onClick={() => void run(() => moduleShellApi.tradeflowkit.archiveTask(task.id, task.version))}><Archive size={14} /><span className="sr-only">Archive {task.title}</span></button>}
+                    {canWrite && <button type="button" className="icon danger" title="Archive task" disabled={pending} onClick={() => void run(() => moduleShellApi.tradeflowkit.archiveTask(task.id, task.version))}><Archive size={14} /><span className="sr-only">Archive {task.title}</span></button>}
                   </article>
                 ))}
               </div>

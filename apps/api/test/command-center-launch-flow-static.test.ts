@@ -29,7 +29,7 @@ test('Command Center launchpad is registry-driven and starts authorization on th
     /name:\s*summary/,
     'registered launcher cards must use registry-owned canonical display names',
   );
-  assert.match(moduleRoutes, /name:\s*getCanonicalModuleDisplayName\(m\.slug\)\s*\?\?\s*m\.name/);
+  assert.match(moduleRoutes, /name:\s*getCanonicalModuleDisplayName\(module\.slug\)\s*\?\?\s*module\.name/);
   assert.match(entitlementService, /name:\s*getCanonicalModuleDisplayName\(m\.slug\)\s*\?\?\s*m\.name/);
   assert.match(page, /command-center-tenant-selector/);
   assert.match(page, /button-command-center-platform/);

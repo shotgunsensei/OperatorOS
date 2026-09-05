@@ -74,7 +74,7 @@ test('homepage leads with the canonical application hierarchy and complete activ
     await expect(card).toHaveAttribute('data-application-type', 'main-module');
     await expect(card).toContainText(name);
     await expect(mainCards.nth(index)).toContainText(name);
-    await expect(card).toContainText('Main Module');
+    await expect(card).toContainText('Flagship Application');
   }
 
   for (const [slug, name] of ACTIVE_COMPANIONS) {
@@ -82,7 +82,7 @@ test('homepage leads with the canonical application hierarchy and complete activ
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute('data-application-type', 'companion-application');
     await expect(card).toContainText(name);
-    await expect(card).toContainText('Companion Application');
+    await expect(card).toContainText('Specialized Application');
   }
 
   const bodyText = await page.locator('body').innerText();
@@ -103,12 +103,12 @@ test('ecosystem page orders and labels main modules before companion application
   for (const [slug, name] of MAIN_MODULES) {
     const card = page.getByTestId(`ecosystem-card-${slug}`);
     await expect(card).toContainText(name);
-    await expect(card).toContainText('Main Module');
+    await expect(card).toContainText('Flagship Application');
   }
   for (const [slug, name] of ACTIVE_COMPANIONS) {
     const card = page.getByTestId(`ecosystem-card-${slug}`);
     await expect(card).toContainText(name);
-    await expect(card).toContainText('Companion Application');
+    await expect(card).toContainText('Specialized Application');
   }
 
   await expect(page.getByTestId('ecosystem-launch-ninja-pool-hall')).toHaveAttribute(

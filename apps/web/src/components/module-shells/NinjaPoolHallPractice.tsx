@@ -212,7 +212,7 @@ function drawBall(ctx: CanvasRenderingContext2D, ball: Ball, pos: Vec2): void {
   ctx.restore();
 }
 
-export default function NinjaPoolHallPractice() {
+export default function NinjaPoolHallPractice({ canWrite }: { canWrite: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const sessionRef = useRef<NinjaPoolPracticeSession | null>(null);
@@ -247,7 +247,7 @@ export default function NinjaPoolHallPractice() {
     ? (session?.objectBallsPocketed ?? objectBallsPocketed)
     : objectBallsPocketed;
   const controlsLocked =
-    !active || recoveryRequired || animating || saving || reconciling || pendingProgress !== null;
+    !canWrite || !active || recoveryRequired || animating || saving || reconciling || pendingProgress !== null;
 
   const loadHistory = useCallback(async (discoverActive = false) => {
     setHistoryLoading(true);
@@ -408,8 +408,8 @@ export default function NinjaPoolHallPractice() {
           setRecoveryRequired(false);
           setStatusMessage(
             result.session.status === 'completed'
-              ? `Rack cleared in ${result.session.shots} shots. The saved summary was reconciled.`
-              : `${result.session.objectBallsPocketed} down · ${15 - result.session.objectBallsPocketed} remaining. The saved shot was reconciled.`,
+              ? `Rack cleared in ${result.session.shots} shots. Your saved summary is up to date.`
+              : `${result.session.objectBallsPocketed} down · ${15 - result.session.objectBallsPocketed} remaining. Your saved shot is up to date.`,
           );
           return;
         }
@@ -422,8 +422,8 @@ export default function NinjaPoolHallPractice() {
           setRecoveryRequired(requiresRecovery);
           setStatusMessage(
             requiresRecovery
-              ? 'The server summary changed, but exact table positions are local-only. End the recovered rack before starting another.'
-              : `The server reports this rack as ${result.session.status}. Start a new local rack when ready.`,
+              ? 'The saved rack summary changed, but exact table positions stay on this device. End the recovered rack before starting another.'
+              : `This rack is saved as ${result.session.status}. Start a new local rack when ready.`,
           );
           return;
         }
@@ -443,6 +443,7 @@ export default function NinjaPoolHallPractice() {
   );
 
   const startRack = useCallback(async () => {
+    if (!canWrite) return;
     setStarting(true);
     setError(null);
     try {
@@ -476,7 +477,7 @@ export default function NinjaPoolHallPractice() {
     } finally {
       setStarting(false);
     }
-  }, [loadHistory]);
+  }, [canWrite, loadHistory]);
 
   const saveProgress = useCallback(
     async (progress: NinjaPoolPracticeProgressInput) => {
@@ -588,7 +589,7 @@ export default function NinjaPoolHallPractice() {
   }, [aimPoint, controlsLocked, cueBall, gameState, playFrames, power, saveProgress, session]);
 
   const abandonRack = useCallback(async () => {
-    if (!session || session.status !== 'active') return;
+    if (!canWrite || !session || session.status !== 'active') return;
     setEnding(true);
     setError(null);
     try {
@@ -611,7 +612,7 @@ export default function NinjaPoolHallPractice() {
     } finally {
       setEnding(false);
     }
-  }, [loadHistory, reconcileSession, session]);
+  }, [canWrite, loadHistory, reconcileSession, session]);
 
   const retry = useCallback(() => {
     if (!error) return;
@@ -641,7 +642,7 @@ export default function NinjaPoolHallPractice() {
     setError(null);
     setRecoveryRequired(session.status === 'active');
     setStatusMessage(
-      'The uncertain local table was discarded. Its server summary was not treated as authoritative physics; end or reload the recovered rack.',
+      'The unfinished local table could not be verified against the saved match. End the rack or reload the recovered game before continuing.',
     );
   }, [session]);
 
@@ -682,10 +683,13 @@ export default function NinjaPoolHallPractice() {
           <AlertTriangle size={18} />
           <div className="nph-error-copy">
             <strong>{error.message}</strong>
-            <span>
-              {error.status ? `HTTP ${error.status}` : 'Request error'}
-              {error.code ? ` · ${error.code}` : ''}
-            </span>
+            <details>
+              <summary>Technical details</summary>
+              <span>
+                {error.status ? `HTTP ${error.status}` : 'Request error'}
+                {error.code ? ` · ${error.code}` : ''}
+              </span>
+            </details>
           </div>
           <div className="nph-error-actions">
             <button type="button" onClick={retry}>
@@ -705,7 +709,7 @@ export default function NinjaPoolHallPractice() {
           <div className="nph-toolbar">
             <div>
               <span className="nph-kicker">
-                <Crosshair size={14} /> SYS::FREE_SHOOT
+                <Crosshair size={14} /> PRACTICE TABLE
               </span>
               <h2>Practice rack</h2>
               <p>{statusMessage}</p>
@@ -758,15 +762,15 @@ export default function NinjaPoolHallPractice() {
                 </strong>
                 <span>
                   {recoveryRequired
-                    ? 'OperatorOS retained the bounded totals, not the ball positions. End this recovered rack cleanly before starting another.'
-                    : 'Physics runs entirely on this device; only bounded rack totals are saved.'}
+                    ? 'OperatorOS saved the rack totals, but not the exact ball positions. End this recovered rack cleanly before starting another.'
+                    : 'Shot movement runs on this device; only your rack totals are saved.'}
                 </span>
                 {recoveryRequired && session ? (
                   <div className="nph-recovery-actions">
                     <button
                       type="button"
                       onClick={() => void abandonRack()}
-                      disabled={ending || reconciling}
+                      disabled={!canWrite || ending || reconciling}
                       data-testid="ninja-pool-end-recovered-rack"
                     >
                       {ending ? (
@@ -788,14 +792,14 @@ export default function NinjaPoolHallPractice() {
                       ) : (
                         <RefreshCw size={17} />
                       )}
-                      {reconciling ? 'Checking…' : 'Reload server summary'}
+                      {reconciling ? 'Checking…' : 'Reload saved summary'}
                     </button>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => void startRack()}
-                    disabled={starting}
+                    disabled={!canWrite || starting}
                     data-testid="ninja-pool-start"
                   >
                     {starting ? <Loader2 className="nph-spin" size={17} /> : <Play size={17} />}
@@ -844,6 +848,7 @@ export default function NinjaPoolHallPractice() {
               type="button"
               className="nph-secondary"
               disabled={
+                !canWrite ||
                 !active ||
                 recoveryRequired ||
                 animating ||
@@ -863,8 +868,8 @@ export default function NinjaPoolHallPractice() {
           <div className="nph-boundary">
             <ShieldCheck size={17} />
             <span>
-              <b>Local-first boundary:</b> no WebSocket room, remote opponent, local login, billing,
-              or competitive ranking is active in this slice.
+              <b>Private practice:</b> shots run on this device and only your rack summary is saved.
+              Practice does not affect a public ranking or create any charge.
             </span>
           </div>
         </div>

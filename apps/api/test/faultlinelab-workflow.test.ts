@@ -4,9 +4,11 @@ process.env.NODE_ENV ||= 'test';
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { modules, tenantModules, tenantUserModuleAccess, tenantUsers } from '../src/schema.js';
+import { faultlineContentHash } from '../src/lib/faultlinelab-domain.js';
 import { FAULTLINELAB_STARTER_CHALLENGES } from '../src/lib/faultlinelab-starter-content.js';
 import { createTestModule, createTestUser, ensureSchemaReady } from './_setup.js';
 
@@ -293,4 +295,71 @@ test('FaultlineLab persists a server-scored investigation with strict tenant and
   assert.equal(persisted.statusCode, 200, persisted.body);
   assert.equal(persisted.json().session.state, 'completed');
   assert.equal(persisted.json().submission.id, session.submission.id);
+});
+
+test('an imported workflow draft stays private and unpublishable until a trainer saves a reviewed revision', async () => {
+  const source = FAULTLINELAB_STARTER_CHALLENGES[0]!;
+  const imported = await db.execute(sql`
+    INSERT INTO faultlinelab_challenges(
+      tenant_id,owner_user_id,scope,slug,title,category,difficulty,status,
+      current_version_number,created_by_user_id,updated_by_user_id
+    ) VALUES (
+      ${ownerA.currentTenantId},${ownerA.id},'tenant',${`imported-review-${randomUUID().slice(0,8)}`},
+      'Imported workflow review gate',${source.category},${source.difficulty},'draft',1,${ownerA.id},${ownerA.id}
+    ) RETURNING id,version,status
+  `);
+  const challengeId = String(imported.rows[0].id);
+  await db.execute(sql`
+    INSERT INTO faultlinelab_challenge_versions(
+      tenant_id,challenge_id,version_number,content,content_sha256,validation,change_note,created_by_user_id
+    ) VALUES (
+      ${ownerA.currentTenantId},${challengeId},1,${JSON.stringify(source.content)}::jsonb,
+      ${faultlineContentHash(source.content)},
+      ${JSON.stringify({
+        valid:false,
+        errors:[{ code:'FAULTLINE_IMPORTED_DRAFT_REVIEW_REQUIRED',path:'content',message:'Trainer review required.' }],
+        warnings:[],
+        importedWorkflowDraft:true,
+        requiresAuthorReview:true,
+        structuralValidationPassed:true,
+      })}::jsonb,
+      'Imported workflow draft',${ownerA.id}
+    )
+  `);
+
+  const authoring = await inject('GET', `/v1/modules/faultlinelab/authoring/challenges/${challengeId}`, ownerA);
+  assert.equal(authoring.statusCode,200,authoring.body);
+  assert.equal(authoring.json().challenge.status,'draft');
+  assert.equal(authoring.json().content.description,source.content.description);
+  assert.equal(
+    (await inject('GET', `/v1/modules/faultlinelab/authoring/challenges/${challengeId}`, ownerB)).statusCode,
+    404,
+  );
+
+  const blocked = await inject('POST', `/v1/modules/faultlinelab/authoring/challenges/${challengeId}/publish`, ownerA, {
+    expectedVersion:Number(imported.rows[0].version),
+    versionNumber:1,
+  });
+  assert.equal(blocked.statusCode,422,blocked.body);
+  assert.equal(blocked.json().code,'FAULTLINE_IMPORTED_DRAFT_REVIEW_REQUIRED');
+
+  const reviewedContent = {
+    ...source.content,
+    briefing: `${source.content.briefing}\n\nTRAINER REVIEW: Compared with the approved source record; private details and instructional framing were checked.`,
+  };
+  const reviewed = await inject('PATCH', `/v1/modules/faultlinelab/authoring/challenges/${challengeId}`, ownerA, {
+    expectedVersion:Number(imported.rows[0].version),
+    content:reviewedContent,
+    changeNote:'Trainer compared the draft with the approved source record.',
+  });
+  assert.equal(reviewed.statusCode,200,reviewed.body);
+  assert.equal(reviewed.json().challenge.currentVersionNumber,2);
+  assert.equal(reviewed.json().validation.valid,true);
+
+  const published = await inject('POST', `/v1/modules/faultlinelab/authoring/challenges/${challengeId}/publish`, ownerA, {
+    expectedVersion:Number(reviewed.json().challenge.version),
+    versionNumber:2,
+  });
+  assert.equal(published.statusCode,200,published.body);
+  assert.equal(published.json().challenge.status,'published');
 });

@@ -52,7 +52,13 @@ import {
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
-import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice, resyncUserBilling, validateAddonStripePriceId, __setStripeTestOverrides } from '../lib/billing-service.js';
+import {
+  lookupAddonStripePrice,
+  retryBillingEvent,
+  resyncUserBilling,
+  __setStripeTestOverrides,
+  getApplicationStackProviderReadiness,
+} from '../lib/billing-service.js';
 import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 import { getEmailFromHealth } from '../lib/email-service.js';
@@ -64,6 +70,7 @@ import {
 import {
   PLAN_CATALOG,
   MODULE_CATALOG,
+  ELIGIBLE_COMPANION_MODULE_KEYS,
   getCanonicalModuleBaseUrl,
   getCanonicalModuleBaseUrlMismatch,
   getCanonicalModuleDisplayName,
@@ -1322,23 +1329,12 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     // price-ID presence as booleans (NEVER the raw values). Sourced from the
     // shared SDK PLAN_CATALOG / MODULE_CATALOG so adding a new plan or module
     // automatically extends the readiness probe.
-    const planPriceIds: Record<string, { monthly: boolean; annual: boolean }> =
-      Object.fromEntries(PLAN_CATALOG.map(p => [
-        p.slug,
-        {
-          monthly: !!pickEnv([...p.stripeMonthlyEnvKeys]),
-          annual:  !!pickEnv([...p.stripeAnnualEnvKeys]),
-        },
-      ]));
-    const allPlanMonthlyPriceIdsConfigured = Object.values(planPriceIds).every(p => p.monthly);
-    const allPlanAnnualPriceIdsConfigured  = Object.values(planPriceIds).every(p => p.annual);
-    const readinessAddons = MODULE_CATALOG.filter(module =>
-      module.commercialType === 'addon' && module.defaultStatus !== 'coming_soon'
-    );
+    const sharedCompanionPriceConfigured = !!process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY;
     const addonPriceIds: Record<string, boolean> = Object.fromEntries(
-      readinessAddons.map(m => [m.slug, !!pickEnv([...m.stripeAddonEnvKeys])])
+      ELIGIBLE_COMPANION_MODULE_KEYS.map(slug => [slug, sharedCompanionPriceConfigured])
     );
     const allAddonPriceIdsConfigured = Object.values(addonPriceIds).every(Boolean);
+    const applicationStackProvider = await getApplicationStackProviderReadiness();
 
     // Diagnostic counts (NOT booleans): kept under a separate `diagnostics`
     // namespace so the booleans-only contract for launch-readiness probes
@@ -1375,11 +1371,29 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       plans: {
         seeded: planRows.length > 0,
         pricesMatchConfig,
-        // Per-plan { monthly, annual } booleans. UI shows a green dot for
-        // each interval that has a Stripe price ID configured.
-        priceIds: planPriceIds,
-        allMonthlyPriceIdsConfigured: allPlanMonthlyPriceIdsConfigured,
-        allAnnualPriceIdsConfigured: allPlanAnnualPriceIdsConfigured,
+        salesStatus: 'grandfathered_only',
+      },
+      applicationStack: {
+        billingInterval: 'month',
+        envConfigured: applicationStackProvider.envConfigured,
+        providerValidated: applicationStackProvider.providerValidated,
+        corePriceIds: {
+          tradeflowkit: !!process.env.STRIPE_PRICE_TRADEFLOWKIT_MONTHLY,
+          pulsedesk: !!process.env.STRIPE_PRICE_PULSEDESK_MONTHLY,
+          techdeck: !!process.env.STRIPE_PRICE_TECHDECK_MONTHLY,
+        },
+        corePriceIdsProviderValidated: {
+          tradeflowkit: applicationStackProvider.priceProviderValidated.tradeflowkit,
+          pulsedesk: applicationStackProvider.priceProviderValidated.pulsedesk,
+          techdeck: applicationStackProvider.priceProviderValidated.techdeck,
+        },
+        companionPriceId: sharedCompanionPriceConfigured,
+        companionPriceProviderValidated: applicationStackProvider.priceProviderValidated.companionModule,
+        additionalSeatPriceId: !!process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY,
+        additionalSeatPriceProviderValidated: applicationStackProvider.priceProviderValidated.additionalSeat,
+        portalConfigurationEnvConfigured: applicationStackProvider.portalConfigurationEnvConfigured,
+        portalConfigurationProviderValidated: applicationStackProvider.portalConfigurationProviderValidated,
+        validationErrors: applicationStackProvider.errors,
       },
       modules: {
         seeded: modRows.length > 0,
@@ -1464,38 +1478,52 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   });
 
   app.get('/v1/platform/pricing', { preHandler: [requireSuperAdmin] }, async () => {
-    const all = await db.select().from(modules).where(isNull(modules.archivedAt)).orderBy(modules.ord);
+    const all = await db.select().from(modules)
+      .where(and(
+        isNull(modules.archivedAt),
+        inArray(modules.slug, [...ELIGIBLE_COMPANION_MODULE_KEYS]),
+      ))
+      .orderBy(modules.ord);
+    const sharedPriceId = process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || '';
+    const applicationStackProvider = await getApplicationStackProviderReadiness();
+    const companionProviderValidated = applicationStackProvider.priceProviderValidated.companionModule;
+    const companionProviderError = applicationStackProvider.errors
+      .find(error => error.startsWith('companionModule:')) ?? null;
     const out = [] as any[];
     for (const m of all) {
-      const md = (m.metadata ?? {}) as Record<string, any>;
-      const declared = typeof md.addonPriceCents === 'number' ? md.addonPriceCents : null;
-      const lookup = await lookupAddonStripePrice(m.slug, m);
-      const mismatch = declared != null && lookup.unitAmountCents != null && declared !== lookup.unitAmountCents;
+      const declared = 2900;
       out.push({
         slug: m.slug,
         name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
         status: m.status,
         declaredAddonPriceCents: declared,
-        envKey: lookup.envKey,
+        envKey: 'STRIPE_PRICE_COMPANION_MODULE_MONTHLY',
         // Effective binding: true iff *some* mechanism (override or env)
         // resolved a priceId. Kept for backward compatibility with the
         // previous Pricing surface.
-        envKeyConfigured: !!lookup.priceId,
+        envKeyConfigured: !!sharedPriceId,
         // New: report each mechanism independently plus which one is
         // currently winning, so the Pricing tab can show "configured via
         // override" vs "configured via env" per row.
-        overridePriceId: lookup.overridePriceId || null,
-        envPriceId: lookup.envPriceId || null,
-        priceId: lookup.priceId || null,
-        priceSource: lookup.source,
-        stripeUnitAmountCents: lookup.unitAmountCents,
-        stripeCurrency: lookup.currency,
-        stripeFetched: lookup.fetched,
-        mismatch,
-        error: lookup.error,
+        overridePriceId: null,
+        envPriceId: sharedPriceId || null,
+        priceId: sharedPriceId || null,
+        priceSource: sharedPriceId ? 'shared_env' : 'none',
+        stripeUnitAmountCents: companionProviderValidated ? declared : null,
+        stripeCurrency: 'usd',
+        stripeFetched: companionProviderValidated,
+        mismatch: !!sharedPriceId && !companionProviderValidated,
+        error: companionProviderError,
+        commerceModel: 'application_stack',
+        mutable: false,
       });
     }
-    return { pricing: out, total: out.length, stripeMode: process.env.STRIPE_MODE || 'off' };
+    return {
+      pricing: out,
+      total: out.length,
+      stripeMode: process.env.STRIPE_MODE || 'off',
+      applicationStackProviderValidated: applicationStackProvider.providerValidated,
+    };
   });
 
   app.get('/v1/platform/torqueshed/credit-catalog', { preHandler: [requireSuperAdmin] }, async () => {
@@ -1532,188 +1560,42 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     };
   });
 
-  // Pricing-drift fix #1: copy live Stripe unit_amount into
-  // modules.metadata.addonPriceCents so the in-app displayed price matches
-  // what Stripe will actually charge. Read-only against Stripe (no price
-  // mutation); only modifies the local module row.
+  // Retained compatibility endpoint. The forward model uses one shared
+  // companion Price, so this former per-module mutation always fails closed.
   app.post<{ Params: { slug: string } }>(
     '/v1/platform/pricing/:slug/sync-from-stripe',
     { preHandler: [requireSuperAdmin] },
     async (request, reply) => {
-      const admin = (request as any).user;
       const { slug } = request.params;
       const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
       if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
-
-      const lookup = await lookupAddonStripePrice(slug);
-      if (!lookup.priceId) {
-        return reply.code(409).send({
-          error: `No Stripe price configured (${lookup.envKey} is empty)`,
-          code: 'STRIPE_PRICE_NOT_CONFIGURED',
-        });
-      }
-      if (!lookup.fetched || typeof lookup.unitAmountCents !== 'number') {
-        return reply.code(502).send({
-          error: lookup.error || 'Could not fetch Stripe price',
-          code: 'STRIPE_LOOKUP_FAILED',
-        });
-      }
-
-      const beforeMd = (before.metadata ?? {}) as Record<string, any>;
-      const previousCents = typeof beforeMd.addonPriceCents === 'number' ? beforeMd.addonPriceCents : null;
-      const nextCents = lookup.unitAmountCents;
-      const nextMd = { ...beforeMd, addonPriceCents: nextCents };
-      const [after] = await db.update(modules)
-        .set({ metadata: nextMd, updatedAt: new Date() })
-        .where(eq(modules.slug, slug))
-        .returning();
-
-      await writeAudit({
-        actorUserId: admin.id,
-        targetType: 'module',
-        targetId: before.id,
-        action: 'module_addon_price_synced_from_stripe',
-        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
-        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
-        extra: {
-          slug, envKey: lookup.envKey, priceId: lookup.priceId,
-          previousCents, nextCents, currency: lookup.currency,
-        },
-        ipAddress: request.ip,
-      }, request);
-
-      const fresh = await lookupAddonStripePrice(slug);
-      return {
-        ok: true,
-        action: 'synced_from_stripe',
-        previousCents,
-        nextCents,
-        module: after,
-        lookup: fresh,
-      };
+      return reply.code(409).send({
+        error: 'Application stacks use one shared companion price. Per-module price mutations are closed.',
+        code: 'APPLICATION_STACK_SHARED_PRICE_REQUIRED',
+      });
     },
   );
 
-  // Pricing-drift fix #2: provision a new Stripe Price (recurring monthly)
-  // for the module's add-on, point the in-process env binding at it, and
-  // align modules.metadata.addonPriceCents to the new amount. Requires
-  // STRIPE_MODE=live so we never invent priceIds against a non-live env.
-  //
-  // IMPORTANT: process.env mutation only persists for the running process.
-  // The response carries `requiresSecretRotation: true` and the new priceId
-  // so the operator can persist STRIPE_PRICE_ADDON_<SLUG> in their secrets.
+  // Retained compatibility endpoint. Shared companion pricing is provisioned
+  // outside this per-module route and reviewed through the read-only surface.
   app.post<{ Params: { slug: string }; Body: { unitAmountCents?: unknown; currency?: unknown } }>(
     '/v1/platform/pricing/:slug/create-stripe-price',
     { preHandler: [requireSuperAdmin] },
     async (request, reply) => {
-      const admin = (request as any).user;
       const { slug } = request.params;
-      const body = (request.body ?? {}) as any;
-      const raw = body.unitAmountCents;
+      const raw = request.body?.unitAmountCents;
       if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw <= 0) {
         return badRequest(reply, 'unitAmountCents must be a positive integer (cents)');
       }
       if (raw > 100_000_00) {
         return badRequest(reply, 'unitAmountCents is unreasonably large (>$100,000)');
       }
-      const currency = typeof body.currency === 'string' && body.currency.length > 0
-        ? body.currency.toLowerCase() : 'usd';
-
       const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
       if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
-
-      const envKey = getAddonStripePriceEnvKey(slug);
-      const envPriceId = process.env[envKey] || null;
-      const beforeMd = (before.metadata ?? {}) as Record<string, any>;
-      const previousMetaPriceId = typeof beforeMd.stripePriceId === 'string' ? beforeMd.stripePriceId : null;
-      // The "previous" priceId for audit/UX is whatever would have been
-      // resolved by getAddonStripePriceIdFromModule before the rotation:
-      // metadata override wins over env binding.
-      const previousPriceId = previousMetaPriceId || envPriceId;
-
-      let created;
-      try {
-        created = await createAddonStripePrice({
-          moduleSlug: slug,
-          moduleName: getCanonicalModuleDisplayName(before.slug) ?? before.name,
-          unitAmountCents: raw,
-          currency,
-        });
-      } catch (err: any) {
-        const msg = err?.message || 'Stripe price creation failed';
-        const isLive = (process.env.STRIPE_MODE || '') === 'live';
-        return reply.code(isLive ? 502 : 409).send({
-          error: msg,
-          code: isLive ? 'STRIPE_PRICE_CREATE_FAILED' : 'STRIPE_NOT_LIVE',
-        });
-      }
-
-      // Rotate in-process env binding so subsequent /v1/admin/.../stripe-price
-      // and addon checkout flows immediately use the new price.
-      process.env[envKey] = created.priceId;
-
-      // Persist the rotation to modules.metadata.stripePriceId so it
-      // survives a server restart. getAddonStripePriceIdFromModule already
-      // prefers this override over the legacy env binding, so both
-      // lookupAddonStripePrice and the addon checkout flow honor it
-      // automatically. Operators can later restore the previous priceId
-      // (or clear back to the env binding) from the same Pricing tab.
-      const previousCents = typeof beforeMd.addonPriceCents === 'number' ? beforeMd.addonPriceCents : null;
-      const nextMd: Record<string, any> = {
-        ...beforeMd,
-        addonPriceCents: created.unitAmountCents,
-        stripePriceId: created.priceId,
-      };
-      const [after] = await db.update(modules)
-        .set({ metadata: nextMd, updatedAt: new Date() })
-        .where(eq(modules.slug, slug))
-        .returning();
-
-      await writeAudit({
-        actorUserId: admin.id,
-        targetType: 'module',
-        targetId: before.id,
-        action: 'module_stripe_price_created',
-        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
-        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
-        extra: {
-          slug, envKey,
-          previousPriceId, newPriceId: created.priceId,
-          previousMetaPriceId, envPriceId,
-          persistedToMetadata: true,
-          previousCents, nextCents: created.unitAmountCents,
-          currency: created.currency, productId: created.productId,
-        },
-        ipAddress: request.ip,
-      }, request);
-
-      const fresh = await lookupAddonStripePrice(slug);
-      return {
-        ok: true,
-        action: 'stripe_price_created',
-        envKey,
-        previousPriceId,
-        previousMetaPriceId,
-        envPriceId,
-        newPriceId: created.priceId,
-        productId: created.productId,
-        previousCents,
-        nextCents: created.unitAmountCents,
-        currency: created.currency,
-        module: after,
-        lookup: fresh,
-        // Persisted to modules.metadata.stripePriceId — the binding now
-        // survives a server restart without manual secret edits. The legacy
-        // STRIPE_PRICE_ADDON_<SLUG> env binding can still be updated for
-        // parity with other environments, but it is no longer required for
-        // this server to keep using the new price after a restart.
-        persistedToMetadata: true,
-        requiresSecretRotation: false,
-        secretRotationHint:
-          `New Stripe price persisted to modules.metadata.stripePriceId — ` +
-          `it will survive a restart. Optional: also save ${envKey}=${created.priceId} ` +
-          `into your environment secrets for parity across environments.`,
-      };
+      return reply.code(409).send({
+        error: 'Application stacks use one shared companion price. Per-module price mutations are closed.',
+        code: 'APPLICATION_STACK_SHARED_PRICE_REQUIRED',
+      });
     },
   );
 
@@ -2140,6 +2022,13 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         }).returning();
       }
+      // Post-cutover plan assignments may adjust workspace capacity but must
+      // never mint or expand legacy application access.
+      await db.execute(sql`
+        UPDATE subscriptions
+        SET legacy_access_grandfathered_at=NULL
+        WHERE id=${after.id}
+      `);
       await db.insert(billingEvents).values({
         userId: id, eventType: 'plan_changed_by_admin',
         metadata: { adminId: admin.id, planSlug, previousPlanId: before?.planId ?? null },
@@ -2151,7 +2040,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         action: 'user_plan_changed',
         before: pickSafe(before, [...SUB_SAFE_FIELDS]),
         after: pickSafe(after, [...SUB_SAFE_FIELDS]),
-        extra: { planSlug },
+        extra: { planSlug, legacyApplicationAccessRetained: false },
         ipAddress: request.ip,
       }, request);
       return { ok: true, plan: plan.name };
@@ -2524,38 +2413,20 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   );
 
   // -------------------------------------------------------------------------
-  // Module add-on price + Stripe drift (port of legacy admin endpoints)
+  // Retired per-module price mutations. The routes remain so older clients
+  // receive an explicit migration response rather than an ambiguous 404.
   // -------------------------------------------------------------------------
   app.put<{ Params: { slug: string }; Body: { addonPriceCents?: unknown } }>(
     '/v1/platform/modules/:slug/addon-price',
     { preHandler: [requireSuperAdmin] },
     async (request, reply) => {
-      const admin = (request as any).user;
       const { slug } = request.params;
-      const raw = request.body?.addonPriceCents;
-      if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
-        return badRequest(reply, 'addonPriceCents must be a non-negative integer (cents)');
-      }
-      if (raw > 100_000_00) return badRequest(reply, 'addonPriceCents is unreasonably large (>$100,000)');
       const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
       if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
-      const existingMd = (before.metadata ?? {}) as Record<string, unknown>;
-      const previous = typeof existingMd.addonPriceCents === 'number' ? existingMd.addonPriceCents : null;
-      const nextMd = { ...existingMd, addonPriceCents: raw };
-      const [after] = await db.update(modules)
-        .set({ metadata: nextMd, updatedAt: new Date() })
-        .where(eq(modules.slug, slug)).returning();
-      await writeAudit({
-        actorUserId: admin.id,
-        targetType: 'module',
-        targetId: before.id,
-        action: 'module_addon_price_updated',
-        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
-        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
-        extra: { previousCents: previous, nextCents: raw, slug },
-        ipAddress: request.ip,
-      }, request);
-      return { module: after };
+      return reply.code(409).send({
+        error: 'Application stacks use one shared companion price. Per-module price mutations are closed.',
+        code: 'APPLICATION_STACK_SHARED_PRICE_REQUIRED',
+      });
     },
   );
 
@@ -2618,64 +2489,18 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     },
   );
 
-  // Per-module Stripe Price ID override stored at modules.metadata.stripePriceId.
-  // The override is preferred over the legacy STRIPE_PRICE_ADDON_<SLUG> env var
-  // so admins can rotate the price without a redeploy. We always validate the
-  // id against Stripe (`prices.retrieve`) before persisting so a bad id can
-  // never break the checkout flow. Pass `stripePriceId: null` (or empty) to
-  // clear the override and fall back to the env binding.
+  // Retained compatibility endpoint for the retired per-module Price binding.
   app.put<{ Params: { slug: string }; Body: { stripePriceId: string | null } }>(
     '/v1/platform/modules/:slug/stripe-price-id',
     { preHandler: [requireSuperAdmin] },
     async (request, reply) => {
-      const admin = (request as any).user;
       const { slug } = request.params;
-      const raw = request.body?.stripePriceId;
-      const incoming = typeof raw === 'string' ? raw.trim() : '';
-      const isClear = raw === null || incoming === '';
-
       const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
       if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
-      const existingMd = (before.metadata ?? {}) as Record<string, unknown>;
-      const previous = typeof existingMd.stripePriceId === 'string' ? existingMd.stripePriceId : null;
-
-      let validation: Awaited<ReturnType<typeof validateAddonStripePriceId>> | null = null;
-      if (!isClear) {
-        validation = await validateAddonStripePriceId(incoming);
-        if (!validation.ok) {
-          return reply.code(400).send({
-            error: validation.error || 'Invalid Stripe Price ID',
-            code: 'STRIPE_PRICE_INVALID',
-            validation,
-          });
-        }
-      }
-
-      const nextMd = { ...existingMd };
-      if (isClear) delete (nextMd as any).stripePriceId;
-      else (nextMd as any).stripePriceId = incoming;
-
-      const [after] = await db.update(modules)
-        .set({ metadata: nextMd, updatedAt: new Date() })
-        .where(eq(modules.slug, slug)).returning();
-
-      await writeAudit({
-        actorUserId: admin.id,
-        targetType: 'module',
-        targetId: before.id,
-        action: 'module_stripe_price_id_updated',
-        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
-        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
-        extra: {
-          slug,
-          previousPriceId: previous,
-          nextPriceId: isClear ? null : incoming,
-          cleared: isClear,
-        },
-        ipAddress: request.ip,
-      }, request);
-
-      return { module: after, validation };
+      return reply.code(409).send({
+        error: 'Application stacks use one shared companion price. Per-module price mutations are closed.',
+        code: 'APPLICATION_STACK_SHARED_PRICE_REQUIRED',
+      });
     },
   );
 
@@ -2692,7 +2517,10 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const includedMappings = await db.select().from(planModules).where(eq(planModules.moduleId, mod.id));
       const includedPlanIds = new Set(includedMappings.map(m => m.planId));
 
-      const planSubs = includedPlanIds.size > 0 ? await db.select().from(subscriptions) : [];
+      const planSubs = includedPlanIds.size > 0
+        ? await db.select().from(subscriptions)
+            .where(sql`subscriptions.legacy_access_grandfathered_at IS NOT NULL`)
+        : [];
       const planUsers = planSubs
         .filter(s => includedPlanIds.has(s.planId) && ['active', 'trialing'].includes(s.status))
         .map(s => ({ userId: s.userId, source: 'plan' as const, planSlug: planIdToSlug[s.planId] }));

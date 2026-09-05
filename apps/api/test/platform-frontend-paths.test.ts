@@ -55,15 +55,7 @@ const PLATFORM_PAGE_CONTRACTS: FrontendContract[] = [
   { name: 'component list', frontend: '/platform/components', backend: '/v1/platform/components' },
   { name: 'module component patch', frontend: '/platform/modules/${m.slug}/component', backend: '/v1/platform/modules/:slug/component' },
   { name: 'module archive', frontend: '/platform/modules/${slug}/archive', backend: '/v1/platform/modules/:slug/archive' },
-  { name: 'plan list', frontend: '/platform/plans', backend: '/v1/platform/plans' },
-  { name: 'module plan mapping', frontend: '/platform/modules/${moduleSlug}/plan-mapping', backend: '/v1/platform/modules/:slug/plan-mapping' },
   { name: 'pricing list', frontend: '/platform/pricing', backend: '/v1/platform/pricing' },
-  { name: 'pricing stripe sync', frontend: '/platform/pricing/${encodeURIComponent(slug)}/sync-from-stripe', backend: '/v1/platform/pricing/:slug/sync-from-stripe' },
-  { name: 'pricing stripe create', frontend: '/platform/pricing/${encodeURIComponent(slug)}/create-stripe-price', backend: '/v1/platform/pricing/:slug/create-stripe-price' },
-  { name: 'addon price read', frontend: '/platform/modules/${m.slug}/stripe-price', backend: '/v1/platform/modules/:slug/stripe-price' },
-  { name: 'addon price update', frontend: '/platform/modules/${m.slug}/addon-price', backend: '/v1/platform/modules/:slug/addon-price' },
-  { name: 'addon price history', frontend: '/platform/modules/${m.slug}/addon-price-history', backend: '/v1/platform/modules/:slug/addon-price-history' },
-  { name: 'addon stripe price id update', frontend: '/platform/modules/${m.slug}/stripe-price-id', backend: '/v1/platform/modules/:slug/stripe-price-id' },
   { name: 'module members', frontend: '/platform/modules/${moduleSlug}/members', backend: '/v1/platform/modules/:slug/members' },
   { name: 'billing event list', frontend: '/platform/billing/events', backend: '/v1/platform/billing/events' },
   { name: 'billing event retry', frontend: '/platform/billing/events/${id}/retry', backend: '/v1/platform/billing/events/:id/retry' },
@@ -297,6 +289,16 @@ test('Platform Command frontend calls have registered backend route contracts', 
 
   assert.doesNotMatch(platformPage, /<option value="free">free<\/option>/);
   assert.match(platformPage, /select-change-platform-role/);
+  assert.match(platformPage, /application-stack-pricing-readiness/);
+  assert.match(platformPage, /STRIPE_PRICE_COMPANION_MODULE_MONTHLY/);
+  assert.match(platformPage, /Exactly six companions are eligible/);
+  assert.doesNotMatch(platformPage, /sync-from-stripe|create-stripe-price/);
+  assert.doesNotMatch(platformPage, /button-save-addon-price|button-save-stripe-price-id/);
+  assert.doesNotMatch(platformPage, /apiCall\(['"`]\/platform\/plans/);
+  assert.doesNotMatch(platformPage, /\/platform\/modules\/\$\{moduleSlug\}\/plan-mapping/);
+  assert.doesNotMatch(platformPage, /button-save-plan-mapping/);
+  assert.doesNotMatch(platformPage, /\/platform\/modules\/\$\{m\.slug\}\/addon-price/);
+  assert.doesNotMatch(platformPage, /\/platform\/modules\/\$\{m\.slug\}\/stripe-price-id/);
 });
 
 test('Platform Command auth, last-admin, and failure-logging invariants stay wired', () => {

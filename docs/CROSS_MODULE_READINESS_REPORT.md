@@ -1,5 +1,151 @@
 # Cross-module readiness report
 
+## Module outcome/value workflow overlay (2026-09-05)
+
+Verdict: **NOT DEPLOYED OR PRODUCTION-ACCEPTED — FINAL SOURCE/LOCAL V60 RELEASE
+GATES PASS; SOURCE PUBLICATION, PRODUCTION DATABASE PROMOTION, REPLIT REDEPLOY,
+AND DEPLOYED ACCEPTANCE REMAIN OPEN**.
+
+The current release candidate moves the highest-value connections out of an
+administrator-only activity view and places a preview, explicit confirmation,
+status, and exact-record result link in the relevant customer workflow. It
+also aligns the visible catalog, Help Center, route headings, empty states,
+and major workspaces for all 13 canonical applications: TradeFlowKit,
+PulseDesk, TechDeck, TorqueShed, FaultlineLab, Operator Pool Hall,
+BrandForgeOS, SnapProofOS, StudyForge AI, Deploy Ops, CallCommand AI, Script
+Ops, and OutCall. Pool Hall remains free; OutCall remains coming soon.
+
+### Ten registered connected outcomes
+
+| # | Source | Destination result | Delivery and truth boundary |
+| --- | --- | --- | --- |
+| 1 | Active TradeFlowKit job | SnapProofOS customer, job, and draft report | Creates proof work only; no completion, invoice, payment, or customer notice |
+| 2 | Approved SnapProofOS report with generated PDF and exact TradeFlowKit origin | The exact PDF attached to that originating TradeFlowKit job | Does not claim delivery, viewing, job completion, invoicing, or payment |
+| 3 | Completed, analyzed, provider-originated CallCommand call | Selected TradeFlowKit lead or customer/job | Simulator calls are rejected; no unattended outreach or purchase |
+| 4 | Completed, analyzed, provider-originated CallCommand call | PulseDesk operations request | Per-call confirmation that the content is operations-only and contains no patient or clinical data; no automatic rule |
+| 5 | Completed, analyzed, provider-originated CallCommand call | TechDeck support ticket | Simulator calls are rejected and the exact reviewed call is reloaded |
+| 6 | Resolved TechDeck ticket or PulseDesk operations request | Unpublished FaultlineLab draft with a case narrative, evidence clues, possible causes, progressive hints, diagnostic actions, and remediation | Manager access and privacy review in both applications; basic masking is not comprehensive de-identification; imported first revision cannot publish |
+| 7 | TorqueShed diagnostic | SnapProofOS diagnostic job, observations, and draft report | Exact diagnostic access is rechecked at queue and delivery |
+| 8 | Verified or resolved TorqueShed diagnostic | Unpublished FaultlineLab automotive draft built from the diagnosis, recorded tests, findings, possible causes, and remediation | Manager access and privacy review in both applications; imported first revision cannot publish |
+| 9 | BrandForgeOS campaign | Deploy Ops package with copy, up to nine visual-production briefs, launch work, and approval starting state | Prepares a package; it does not publish, deploy, buy media, change DNS, or notify a customer |
+| 10 | Approved Script Ops revision | Non-executing TechDeck draft runbook, first revision, and protected file-integrity record | Does not execute the script, touch an endpoint, or approve the runbook |
+
+### Authorization, freshness, and retry boundary
+
+- The server resolves application access; client labels and hidden buttons are
+  not authority. Queue and delivery both require current write access to the
+  source and destination. Manager-reviewed training transfers require manager
+  access in both applications at both stages.
+- TorqueShed-to-SnapProofOS also checks the exact diagnostic record. A regular
+  member may transfer a diagnostic they own or one shared with the organization,
+  but cannot enumerate or copy somebody else's private diagnostic.
+- Every request carries the reviewed source version. Delivery reloads the
+  exact organization-owned source and dead-letters a changed or invalid source
+  rather than exporting stale content. Automatic CallCommand rules derive that
+  version from the analyzed call's current update timestamp and reject
+  simulations.
+- Accepted work uses a semantic operation identity tied to workflow, source,
+  source version, and selected outcome. Nine workflows deduplicate the shared
+  business result for the tenant, preventing another authorized employee from
+  recreating it. BrandForgeOS-to-Deploy Ops remains actor-scoped because the
+  generation allowance and authorship are personal. An eligible dead-lettered
+  operation can be deliberately queued again after its cause is corrected.
+- Workflow activity lists are limited to tenant or platform administrators who
+  also have access to both applications. Exact-run detail is complete for the
+  creator, a tenant/platform administrator, or a person with manager access in
+  both applications. A non-creator with write access to both applications may
+  open a tenant-owned shared outcome, but receives a redacted result without the
+  actor, request key, or operation fingerprint. Actor-scoped runs return `404`
+  to ordinary non-creators; viewers, people without both-application access,
+  and cross-tenant requests also receive `404` where the route applies.
+- Newly published events use an HMAC-SHA-256 signature-envelope v2 that binds
+  the organization, run, workflow contract, source, destination, consumer,
+  actor, source reference, event and aggregate identity, idempotency identity,
+  payload, source deep link, and correlation/causation chain. Delivery locks and revalidates the inbox,
+  event, run, and source reference before any adapter write. Every newly
+  created event uses version 2; version-1 reads exist only for the controlled
+  legacy-compatibility window.
+
+TradeFlowKit now labels quote and invoice state transitions honestly: “Mark as
+sent” changes the shared record but does not deliver an email, while “Record
+customer acceptance/decline” records a separately confirmed response without
+claiming OperatorOS observed the customer's action. FaultlineLab's seven-stage
+guided editor and generated first drafts provide a usable training start, but
+the imported first revision remains private and unpublishable until a trainer
+saves a reviewed revision.
+
+BrandForgeOS's logo workflow is local: it produces wordmark, lockup, badge, and
+monogram concepts across four styles, three palettes, and three backgrounds;
+previews them responsively; exports editable SVG plus standard/2x PNG; escapes
+SVG text; and applies type/size controls when saving a chosen PNG through the
+private scanned-attachment path. The existing logo stays active until the
+candidate is explicitly saved, and a replaced generated logo remains
+recoverable for 30 days. Canva and Figma are manual file-import destinations
+only; this worktree contains no live OAuth/provider connection or provider-side
+creation claim.
+
+No current-run production provider, deployment, billing/Stripe, production
+database, DNS, customer-data, or authenticated exact-host browser evidence is
+recorded for this upgrade. The final source/local and disposable-database
+evidence is:
+
+- authoritative aggregate on a new disposable PostgreSQL 16 database: **1,440
+  tests, 1,434 passed, 0 failed, 6 intentional HTTP-only skips, and 0 todos** in
+  **713,438.7749 ms**; the skips require a separately running Next server and no
+  failure was converted to a skip;
+- typecheck: pass in all four workspaces (`apps/api`, `apps/runner-gateway`,
+  `apps/web`, and `apps/torqueshed-native`);
+- repository lint: pass with `--max-warnings=0`;
+- database release: **v60/60** planned in 798 ms with
+  `forward_commerce_contract` last; clean disposable apply completed in 18,916
+  ms, idempotent reapply in 2,907 ms, and independent read-only verification in
+  1,860 ms;
+- production build: pass, including deployment-scope verification,
+  FaultlineLab's 56-case catalog and four compiler tests, API/runner compilation,
+  and 35 of 35 generated Next 15.5.23 pages; and
+- production preflight: correctly fails closed because real production values
+  are absent from this local worktree.
+
+This evidence proves the reviewed source and disposable-database behavior. It
+does not prove a production runtime, deployed release identity, provider-side
+result, production database, billing settlement, or authenticated exact-host
+desktop/mobile/browser workflow.
+
+The owner approved and the source candidate implements one forward commercial
+contract. OperatorOS, TorqueShed, FaultlineLab, and Operator Pool Hall are
+free. A tenant may purchase one monthly flagship: TradeFlowKit or PulseDesk at
+$149, or TechDeck at $99. Five tenant seats and one of six eligible companions
+are included; additional companions are $29/month each and additional seats
+are $15/month each. OutCall remains excluded and coming soon.
+
+New Starter, Pro, Elite, annual, plan-change, reactivation, and individual
+application checkout paths fail closed. A one-shot release-v60 marker retains
+existing plan-to-application access without allowing a plan row created later
+to grant retired application access. Existing Stripe references, cancellation,
+quota history, and individual add-on entitlements remain compatible. New stack
+billing persists the Stripe customer and subscription at tenant scope, allows
+only the tenant owner or audited platform support authority to mutate the
+contract, and waits for signed Stripe state before granting paid access. The
+shared-price administrator view is limited to the exact six eligible
+companions; per-module Price creation and synchronization are closed.
+
+This resolves the source-level commercial contradiction and the final local
+release gates, but does not prove or authorize live billing. After source
+publication, release v60 still requires a fresh production backup and separate
+one-shot database apply and verification before Replit redeployment. Live Stripe catalog validation,
+signed sandbox checkout/webhook/portal acceptance, production deployment, and
+reconciliation remain open.
+
+See `docs/modules/MODULE_PRODUCT_OUTCOME_UPGRADE.md` for the customer-outcome
+contract and detailed provider boundaries.
+
+---
+
+**Historical scope delimiter:** The overlays and cumulative parity matrix below
+retain their original dates and evidence. They do not supersede the 2026-09-05
+release-v60 candidate verdict or turn source/local evidence into deployed,
+production-database, provider, billing, or browser acceptance.
+
 ## Autoscale startup/readiness overlay (2026-09-03)
 
 The shared Replit gateway now fails closed with HTTP 503 for every route and

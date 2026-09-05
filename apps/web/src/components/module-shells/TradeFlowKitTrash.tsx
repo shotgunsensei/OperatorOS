@@ -21,8 +21,8 @@ const money = (cents: number) => new Intl.NumberFormat('en-US', {
 }).format(cents / 100);
 
 export default function TradeFlowKitTrash({
-  tenantKey, canManage,
-}: { tenantKey: string; canManage: boolean }) {
+  tenantKey, canWrite, canManage,
+}: { tenantKey: string; canWrite: boolean; canManage: boolean }) {
   const [data, setData] = useState<TradeFlowKitTrashResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [restoring, setRestoring] = useState('');
@@ -39,7 +39,7 @@ export default function TradeFlowKitTrash({
   useEffect(() => { void load(); }, [tenantKey, load]);
 
   async function restore(kind: RestoreKind, row: TrashRow) {
-    if (!canManage || restoring) return;
+    if (!canWrite || restoring) return;
     setRestoring(`${kind}:${row.id}`); setError('');
     try {
       if (kind === 'customers') await moduleShellApi.tradeflowkit.restoreCustomer(row.id, row.version);
@@ -91,17 +91,17 @@ export default function TradeFlowKitTrash({
         <div className="tfk-trash-state" data-testid="tradeflowkit-trash-empty"><Trash2 size={19} /> No archived customers, jobs, or invoices.</div>
       ) : data ? (
         <div className="tfk-trash-groups" data-testid="tradeflowkit-trash-groups">
-          <TrashGroup title="Customers" kind="customers" Icon={Users} rows={data.customers} hasMore={data.hasMore.customers} canManage={canManage} restoring={restoring} selected={selected} onToggle={toggle} onRestore={restore} onRestoreSelected={restoreSelected} render={row => {
+          <TrashGroup title="Customers" kind="customers" Icon={Users} rows={data.customers} hasMore={data.hasMore.customers} canWrite={canWrite} canManage={canManage} restoring={restoring} selected={selected} onToggle={toggle} onRestore={restore} onRestoreSelected={restoreSelected} render={row => {
             const customer = row as TradeFlowKitTrashResponse['customers'][number];
             return <><strong>{customer.name}</strong><small>{customer.email || customer.phone || 'Customer record'} · archived {new Date(customer.deletedAt).toLocaleDateString()}</small></>;
           }} />
-          <TrashGroup title="Jobs" kind="jobs" Icon={BriefcaseBusiness} rows={data.jobs} hasMore={data.hasMore.jobs} canManage={canManage} restoring={restoring} selected={selected} onToggle={toggle} onRestore={restore} onRestoreSelected={restoreSelected} render={row => {
+          <TrashGroup title="Jobs" kind="jobs" Icon={BriefcaseBusiness} rows={data.jobs} hasMore={data.hasMore.jobs} canWrite={canWrite} canManage={canManage} restoring={restoring} selected={selected} onToggle={toggle} onRestore={restore} onRestoreSelected={restoreSelected} render={row => {
             const job = row as TradeFlowKitTrashResponse['jobs'][number];
             return <><strong>{job.number ? `Job #${job.number} · ` : ''}{job.title}</strong><small>{job.status.replaceAll('_', ' ')} · archived {new Date(job.deletedAt).toLocaleDateString()}</small></>;
           }} />
-          <TrashGroup title="Invoices" kind="invoices" Icon={Receipt} rows={data.invoices} hasMore={data.hasMore.invoices} canManage={canManage} restoring={restoring} selected={selected} onToggle={toggle} onRestore={restore} onRestoreSelected={restoreSelected} render={row => {
+          <TrashGroup title="Invoices" kind="invoices" Icon={Receipt} rows={data.invoices} hasMore={data.hasMore.invoices} canWrite={canWrite} canManage={canManage} restoring={restoring} selected={selected} onToggle={toggle} onRestore={restore} onRestoreSelected={restoreSelected} render={row => {
             const invoice = row as TradeFlowKitTrashResponse['invoices'][number];
-            return <><strong>{invoice.number ? `Invoice #${invoice.number}` : `Invoice ${invoice.id.slice(0, 8)}`}</strong><small>{invoice.status} · {money(invoice.totalCents)} · archived {new Date(invoice.deletedAt).toLocaleDateString()}</small></>;
+            return <><strong>{invoice.number ? `Invoice #${invoice.number}` : 'Draft invoice'}</strong><small>{invoice.status} · {money(invoice.totalCents)} · archived {new Date(invoice.deletedAt).toLocaleDateString()}</small></>;
           }} />
         </div>
       ) : null}
@@ -110,10 +110,10 @@ export default function TradeFlowKitTrash({
 }
 
 function TrashGroup({
-  title, kind, Icon, rows, hasMore, canManage, restoring, selected, onToggle, onRestore, onRestoreSelected, render,
+  title, kind, Icon, rows, hasMore, canWrite, canManage, restoring, selected, onToggle, onRestore, onRestoreSelected, render,
 }: {
   title: string; kind: RestoreKind; Icon: LucideIcon; rows: TrashRow[]; hasMore: boolean;
-  canManage: boolean; restoring: string; onRestore: (kind: RestoreKind, row: TrashRow) => Promise<void>;
+  canWrite: boolean; canManage: boolean; restoring: string; onRestore: (kind: RestoreKind, row: TrashRow) => Promise<void>;
   selected: Set<string>; onToggle: (kind: RestoreKind, id: string) => void;
   onRestoreSelected: (kind: 'jobs' | 'invoices', rows: TrashRow[]) => Promise<void>;
   render: (row: TrashRow) => ReactNode;
@@ -132,7 +132,7 @@ function TrashGroup({
         <article key={row.id} data-testid={`tradeflowkit-trash-${kind}-${row.id}`}>
           {canManage && kind !== 'customers' && <input type="checkbox" aria-label={`Select archived ${kind.slice(0, -1)} ${row.id}`} checked={selected.has(`${kind}:${row.id}`)} disabled={!!restoring || (!selected.has(`${kind}:${row.id}`) && selectedCount >= 25)} onChange={() => onToggle(kind, row.id)} />}
           <div>{render(row)}</div>
-          {canManage ? (
+          {canWrite ? (
             <button type="button" disabled={!!restoring} onClick={() => void onRestore(kind, row)}>
               {restoring === `${kind}:${row.id}` ? <Loader2 className="spin" size={14} /> : <ArchiveRestore size={14} />} Restore
             </button>

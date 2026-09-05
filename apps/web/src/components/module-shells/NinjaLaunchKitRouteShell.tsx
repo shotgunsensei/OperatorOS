@@ -25,13 +25,14 @@ import {
   type ModuleThemeTokens,
 } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const Workspace = dynamic(() => import('./NinjaLaunchKitProductShell'), {
   loading: () => (
     <div role="status" aria-busy="true">
-      <Activity size={18} /> Loading release operations…
+      <Activity size={18} /> Opening your campaign workspace…
     </div>
   ),
 });
@@ -69,7 +70,7 @@ const theme: ModuleThemeTokens = {
 const nav: readonly ModuleRouteManifestGroup[] = [
   {
     id: 'release',
-    label: 'Release operations',
+    label: 'Campaign production',
     items: [
       {
         id: 'overview',
@@ -81,7 +82,7 @@ const nav: readonly ModuleRouteManifestGroup[] = [
       {
         id: 'projects',
         canonicalPath: '/projects',
-        label: 'Releases',
+        label: 'Campaign packages',
         icon: Layers3,
         activeMatch: { kind: 'prefix' },
       },
@@ -102,14 +103,14 @@ const nav: readonly ModuleRouteManifestGroup[] = [
       {
         id: 'deliverables',
         canonicalPath: '/deliverables',
-        label: 'Artifacts',
+        label: 'Campaign deliverables',
         icon: FileText,
         activeMatch: { kind: 'prefix' },
       },
       {
         id: 'review',
         canonicalPath: '/review',
-        label: 'Readiness',
+        label: 'Launch review',
         icon: ClipboardCheck,
         activeMatch: { kind: 'prefix' },
       },
@@ -139,47 +140,47 @@ const nav: readonly ModuleRouteManifestGroup[] = [
 
 const copy: Record<string, { eyebrow: string; title: string; subtitle: string }> = {
   overview: {
-    eyebrow: 'Release control',
+    eyebrow: 'Move the campaign toward launch',
     title: 'Deploy Ops dashboard',
     subtitle:
-      'See durable release packages, generation usage, exports, approvals, and readiness evidence.',
+      'See campaign packages, overdue launch tasks, approval checks, exports, and the next action needed to move a campaign forward.',
   },
   projects: {
-    eyebrow: 'Release systems',
-    title: 'Releases and packages',
+    eyebrow: 'Keep every campaign launch organized',
+    title: 'Campaign launch packages',
     subtitle:
-      'Create and reopen tenant-scoped release packages without claiming provider deployment success.',
+      'Create or reopen a package with its business brief, campaign copy, visual directions, tasks, files, and review history.',
   },
   templates: {
-    eyebrow: 'Pinned source catalog',
+    eyebrow: 'Start with a reviewed structure',
     title: 'Templates',
-    subtitle: 'Choose from the reviewed template catalog without leaking locked prefills.',
+    subtitle: 'Choose a business template so the team starts with a complete campaign structure instead of a blank page.',
   },
   brief: {
-    eyebrow: 'Deployment direction',
-    title: 'Configuration and release brief',
-    subtitle: 'Define audience, environment intent, rollout notes, and reusable release direction.',
+    eyebrow: 'Define the campaign once',
+    title: 'Campaign brief',
+    subtitle: 'Capture the business, audience, offer, desired action, tone, channels, brand, and promo deadline.',
   },
   deliverables: {
-    eyebrow: 'Persisted release package',
-    title: 'Artifacts',
-    subtitle: 'Review stored deliverables, communications, evidence, and release briefs.',
+    eyebrow: 'Gather what the launch team needs',
+    title: 'Campaign deliverables',
+    subtitle: 'Review landing, ad, email, SMS, social, FAQ, flyer, checklist, and visual-production deliverables.',
   },
   review: {
-    eyebrow: 'Promotion discipline',
-    title: 'Readiness and approvals',
+    eyebrow: 'Find missing work before launch day',
+    title: 'Launch checklist and review',
     subtitle:
-      'Manage tasks, artifacts, approvals, promotion evidence, rollback notes, and release proof.',
+      'Work through tasks, milestones, required files, and approvals before handing the campaign to its publishing tools.',
   },
   exports: {
-    eyebrow: 'Audited delivery',
+    eyebrow: 'Prepare files for your team',
     title: 'Export history',
-    subtitle: 'Download authorized formats with durable checksum evidence.',
+    subtitle: 'Download complete campaign packages and reopen exports already prepared for your team.',
   },
   settings: {
-    eyebrow: 'OperatorOS authority',
+    eyebrow: 'Understand your launch workspace',
     title: 'Deploy Ops settings',
-    subtitle: 'Review plan limits, administration, and safe provider configuration.',
+    subtitle: 'Review application access, usage, brand-profile capacity, export options, and organization administration.',
   },
 };
 
@@ -212,6 +213,10 @@ export default function NinjaLaunchKitRouteShell({
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
+  const moduleAccessLevel = useModuleAccessLevel();
+  const canWriteModule = user?.platformRole === 'super_admin' || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
   const current = area(routePath || pathname);
   const localRoute = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
   const hrefFor = useCallback(
@@ -244,14 +249,18 @@ export default function NinjaLaunchKitRouteShell({
       }
       organization={{
         label: 'Organization',
-        value: activeTenant?.name ?? tenantId ?? 'No organization selected',
+        value: activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected'),
       }}
       accessContext={{
         label: 'Access',
         value:
           user?.platformRole === 'super_admin'
             ? 'Platform administrator'
-            : (activeRole ?? 'member'),
+            : !canWriteModule
+              ? 'Read-only access'
+              : moduleAccessLevel === 'manager'
+                ? 'Deploy Ops manager'
+                : 'Launch contributor',
       }}
       utilityActions={[
         { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2 },
@@ -273,6 +282,7 @@ export default function NinjaLaunchKitRouteShell({
           embedded
           view={current}
           hrefFor={hrefFor}
+          canWrite={canWriteModule}
         />
       )}
     </ModuleApplicationShell>

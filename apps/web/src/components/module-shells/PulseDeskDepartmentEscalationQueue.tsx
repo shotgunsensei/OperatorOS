@@ -202,7 +202,7 @@ function filterQuery(filters: FilterForm): PulseDeskRequestFilters {
   };
 }
 
-export default function PulseDeskDepartmentEscalationQueue({ tenantKey }: { tenantKey: string }) {
+export default function PulseDeskDepartmentEscalationQueue({ tenantKey, canWrite }: { tenantKey: string; canWrite: boolean }) {
   const summaryInputRef = useRef<HTMLInputElement>(null);
   const [requests, setRequests] = useState<PulseDeskRequest[]>([]);
   const [departments, setDepartments] = useState<PulseDeskDepartment[]>([]);
@@ -341,6 +341,10 @@ export default function PulseDeskDepartmentEscalationQueue({ tenantKey }: { tena
 
   async function createRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canWrite) {
+      setActionError({ scope: 'intake', message: 'This access level can review requests but cannot create them.' });
+      return;
+    }
     if (submitting || !intake.summary.trim() || !intake.phiAcknowledged) return;
     setSubmitting(true);
     setActionError(null);
@@ -514,7 +518,7 @@ export default function PulseDeskDepartmentEscalationQueue({ tenantKey }: { tena
         </div>
       )}
 
-      <form className="pdq-intake" onSubmit={createRequest} data-testid="pulsedesk-request-form">
+      {canWrite ? <form className="pdq-intake" onSubmit={createRequest} data-testid="pulsedesk-request-form">
         <div className="pdq-form-title">
           <ClipboardPlus size={18} aria-hidden="true" />
           <div>
@@ -629,7 +633,7 @@ export default function PulseDeskDepartmentEscalationQueue({ tenantKey }: { tena
             {submitting ? 'Creating request…' : 'Create operational request'}
           </button>
         </div>
-      </form>
+      </form> : <div className="pdq-intake" data-testid="pulsedesk-request-form-read-only"><strong>Read-only request queue</strong><span>Ask a PulseDesk user or manager to create a new operational request.</span></div>}
 
       {canManageWorkflow && (
         <details className="pdq-departments" data-testid="pulsedesk-department-manager">
@@ -1021,7 +1025,6 @@ function RequestDetail({
           <div><dt>Assignee</dt><dd>{request.assignedToName || (request.assignedToUserId ? 'Assigned operator' : 'Unassigned')}</dd></div>
           <div><dt>Location</dt><dd>{request.locationLabel || 'Not specified'}</dd></div>
           <div><dt>Due</dt><dd>{formatDate(request.dueAt)}</dd></div>
-          <div><dt>Revision</dt><dd>{request.version}</dd></div>
         </dl>
       </div>
 
@@ -1166,7 +1169,7 @@ function TimelineEvent({ event }: { event: PulseDeskRequestEvent }) {
         )}
         {reason && <span>Reason: {reason}</span>}
         <small>
-          {event.actorUserId ? `Operator ${event.actorUserId.slice(0, 8)}` : 'System'} · {formatDate(event.createdAt)}
+          {event.actorUserId ? 'Organization team member' : 'Automated workflow'} · {formatDate(event.createdAt)}
         </small>
       </div>
     </li>

@@ -156,6 +156,12 @@ export async function ensureSchemaReady() {
   const { ensureCoreSuiteTrialTables } = await import('../src/lib/core-suite-trial-db-init.js');
   await ensureCoreSuiteTrialTables();
   await ensureTestPlans();
+  // Ordinary integration tests exercise the current release shape. The
+  // dedicated forward-commerce migration contract temporarily removes only
+  // these v60 objects on its isolated disposable database so it can prove the
+  // one-shot grandfather boundary, then immediately reapplies v60.
+  const { ensureForwardCommerceContract } = await import('../src/lib/application-stack-billing-db-init.js');
+  await ensureForwardCommerceContract();
 }
 
 export function uniqueId(prefix: string) {

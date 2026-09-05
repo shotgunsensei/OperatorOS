@@ -56,6 +56,10 @@ test('shared shell owns structure and states while TradeFlowKit keeps business l
   assert.match(shell, /ops-skip-link/);
   assert.match(shell, /aria-controls=\{`\$\{props\.moduleId\}-route-navigation`\}/);
   assert.match(shell, /findActiveModuleRoute/);
+  assert.match(shell, /const unavailable = !permitted \|\| item\.status === 'disabled'/);
+  assert.match(shell, /if \(unavailable\) \{[\s\S]*?<span[\s\S]*?aria-disabled="true"/);
+  assert.doesNotMatch(shell, /<Link[\s\S]{0,400}aria-disabled=/);
+  assert.match(shell, /Ask an organization owner or administrator/);
   assert.match(tradeFlow, /<ModuleApplicationShell<TradeFlowKitCapability, TradeFlowKitRole>/);
   assert.match(tradeFlow, /TradeFlowKitScreen/);
   assert.match(contract, /id: 'tradeflowkit-orange-navy'/);

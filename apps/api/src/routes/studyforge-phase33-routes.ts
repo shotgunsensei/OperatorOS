@@ -639,7 +639,7 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
     });
   }
 
-  app.post(`${base}/study-sets/:id/quiz-attempts`, { preHandler: readGuards }, async (request, reply) => {
+  app.post(`${base}/study-sets/:id/quiz-attempts`, { preHandler: writeGuards }, async (request, reply) => {
     try {
       const tenantId = tenant(request), userId = actor(request), set = await loadStudySet(tenantId, userId, identifier(request));
       const input = body(request), key = idempotency(input.idempotencyKey);
@@ -675,7 +675,7 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
     return { attempts: result.rows.map(camel) };
   });
 
-  app.post(`${base}/study-sets/:id/flashcard-sessions`, { preHandler: readGuards }, async (request, reply) => {
+  app.post(`${base}/study-sets/:id/flashcard-sessions`, { preHandler: writeGuards }, async (request, reply) => {
     try {
       const set = await loadStudySet(tenant(request), actor(request), identifier(request));
       const key = idempotency(body(request).idempotencyKey);
@@ -684,7 +684,7 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
     } catch (error) { return failure(reply, error); }
   });
 
-  app.patch(`${base}/flashcards/:id/status`, { preHandler: readGuards }, async (request, reply) => {
+  app.patch(`${base}/flashcards/:id/status`, { preHandler: writeGuards }, async (request, reply) => {
     try {
       const tenantId = tenant(request), userId = actor(request), cardId = identifier(request);
       const state = String(body(request).state);
@@ -698,7 +698,7 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
     } catch (error) { return failure(reply, error); }
   });
 
-  app.post(`${base}/flashcard-sessions/:sessionId/cards/:cardId`, { preHandler: readGuards }, async (request, reply) => {
+  app.post(`${base}/flashcard-sessions/:sessionId/cards/:cardId`, { preHandler: writeGuards }, async (request, reply) => {
     try {
       const tenantId = tenant(request), userId = actor(request), sessionId = identifier(request, 'sessionId'), cardId = identifier(request, 'cardId');
       const input = body(request), state = String(input.state);
@@ -719,7 +719,7 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
     } catch (error) { return failure(reply, error); }
   });
 
-  app.patch(`${base}/flashcard-sessions/:id/complete`, { preHandler: readGuards }, async (request, reply) => {
+  app.patch(`${base}/flashcard-sessions/:id/complete`, { preHandler: writeGuards }, async (request, reply) => {
     try {
       const input = body(request), duration = integer(input.durationSeconds, 'durationSeconds', 0, 86_400);
       const tenantId = tenant(request), userId = actor(request), id = identifier(request);
@@ -737,7 +737,7 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
     } catch (error) { return failure(reply, error); }
   });
 
-  app.patch(`${base}/study-sets/:setId/plan-sessions/:sessionId/complete`, { preHandler: readGuards }, async (request, reply) => {
+  app.patch(`${base}/study-sets/:setId/plan-sessions/:sessionId/complete`, { preHandler: writeGuards }, async (request, reply) => {
     try {
       const tenantId = tenant(request), userId = actor(request), set = await loadStudySet(tenantId, userId, identifier(request, 'setId'));
       const sessionId = identifier(request, 'sessionId'), input = body(request), completed = input.completed !== false;

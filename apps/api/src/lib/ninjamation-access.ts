@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { resolveEntitlements } from './entitlement-resolver.js';
+import { tenantHasActiveApplicationStackCompanion } from './product-entitlements.js';
 
 export type NinjamationPlan = 'starter' | 'pro' | 'enterprise';
 
@@ -13,6 +14,15 @@ export const NINJAMATION_PLAN_LIMITS = Object.freeze({
 export async function resolveNinjamationAccess(userId: string, tenantId: string) {
   const snapshot = await resolveEntitlements(userId, tenantId);
   const module = snapshot?.modules.find((entry) => entry.slug === 'ninjamation');
+  if (module?.enabled && await tenantHasActiveApplicationStackCompanion(tenantId, 'ninjamation')) {
+    return {
+      plan: 'enterprise' as const,
+      limits: NINJAMATION_PLAN_LIMITS.enterprise,
+      source: 'application_stack' as const,
+      billingAuthority: 'OperatorOS' as const,
+      billingManagementPath: '/app/billing',
+    };
+  }
   const configured = module?.features.ninjamationPlan;
   let plan: NinjamationPlan = configured === 'enterprise' || configured === 'pro' || configured === 'starter'
     ? configured

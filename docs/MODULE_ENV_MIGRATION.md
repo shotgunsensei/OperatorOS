@@ -20,9 +20,12 @@ Commands and Secrets** environment:
 | `ALLOW_LEGACY_SSO_ROLLBACK` | absent or `false` |
 | Thirteen canonical module URL variables | Exact active `*.operatoros.net` values from `docs/operatoros-env-vars.md`, including `OUTCALL_URL=https://outcall.operatoros.net`; provider signature validation separately requires the same origin in `OUTCALL_PUBLIC_URL` |
 
-Stripe platform price IDs and webhook secrets remain OperatorOS-owned. Use the
-existing `STRIPE_PRICE_ADDON_<MODULE>` convention only for purchasable add-ons;
-the three free modules and core bundle modules are not sold as add-ons.
+Stripe platform price IDs and webhook secrets remain OperatorOS-owned. The only
+forward-sale variables are the five shared monthly stack Price IDs documented
+in `docs/stripe-setup.md`. Existing `STRIPE_PRICE_ADDON_<MODULE>` values are
+legacy-contract compatibility only; no new individual module purchase may use
+them. Free applications, the included companion, and OutCall have no Stripe
+line item.
 
 Before release, run the names-only preflight inside the production Replit
 environment. It never prints configured values:
@@ -69,11 +72,11 @@ one shared runtime value per row; do not copy each child project's old secret.
 | CallCommand outbound calling | A bound Replit Twilio connector or `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`; always set `TWILIO_PUBLIC_BASE_URL=https://callcommand-ai.operatoros.net` | Calls stay unavailable/log-only; no call is represented as placed |
 | OutCall verified-self safety calling | `OUTCALL_LIVE_PROVIDER=enabled`, `OUTCALL_PUBLIC_URL=https://outcall.operatoros.net`, independent field-encryption and lookup-HMAC keys, `TWILIO_ACCOUNT_SID`, primary `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`, owned `TWILIO_PHONE_NUMBER`, and `TWILIO_ALLOWED_COUNTRIES=US,CA`; optional REST API-key SID/secret may replace the primary token only for outbound REST authentication | Verify, SMS, voice, and DTMF stay unavailable; no external action is represented as completed |
 
-Stripe add-on price variables are needed only for a module sold through the
-legacy individual add-on checkout. The current stack configurator uses
-`STRIPE_PRICE_COMPANION_MODULE_MONTHLY` for paid companion quantity; do not
-invent one Price per module unless the catalog intentionally exposes that
-purchase path.
+Legacy Stripe add-on price variables may be retained only while an existing
+customer contract or historical record still references them. The current
+stack configurator uses `STRIPE_PRICE_COMPANION_MODULE_MONTHLY` for paid
+companion quantity; do not invent one Price per module or re-enable the closed
+individual add-on checkout.
 
 ## Provider families not yet ported
 

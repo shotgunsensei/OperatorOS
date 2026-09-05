@@ -46,27 +46,27 @@ export default function EcosystemPage() {
       <EcosystemHeader />
       <ModuleSection
         id="main-modules"
-        eyebrow="Main Modules"
-        title="The three flagship products beneath OperatorOS"
-        subtitle="TradeFlowKit, PulseDesk, and TechDeck receive the strongest visual priority while sharing OperatorOS identity, tenant, billing, entitlement, and launch authority."
+        eyebrow="Flagship Business Applications"
+        title="Three complete applications for the work that drives the business"
+        subtitle="TradeFlowKit, PulseDesk, and TechDeck lead the suite while sharing one OperatorOS sign-in, team, plan, and billing experience."
         modules={mainModules}
         testId="ecosystem-section-main-modules"
         prominent
       />
       <ModuleSection
         id="companion-applications"
-        eyebrow="Companion Applications"
-        title="Active specialist applications"
-        subtitle="Every active companion application is listed here after the main modules and launches through its canonical operatoros.net host."
+        eyebrow="Specialized Applications"
+        title="Focused tools for high-value work"
+        subtitle="Add the applications that match the work your organization needs, without creating another disconnected account or team list."
         modules={activeCompanions}
         testId="ecosystem-section-companion-applications"
       />
       {plannedCompanions.length > 0 && (
         <ModuleSection
           id="planned"
-          eyebrow="Planned Companion Applications"
-          title="On the roadmap"
-          subtitle="Reserved product identities that remain visibly unavailable until their activation gates pass."
+          eyebrow="Coming Next"
+          title="Applications still being prepared"
+          subtitle="These products remain unavailable until their real workflows, safety checks, and launch testing are complete."
           modules={plannedCompanions}
           testId="ecosystem-section-planned"
         />
@@ -127,7 +127,7 @@ function EcosystemHeader() {
           maxWidth: 880,
         }}
       >
-        OperatorOS is the central command layer for your entire product ecosystem.
+        One home base for every application your organization uses.
       </h1>
       <p
         style={{
@@ -138,11 +138,9 @@ function EcosystemHeader() {
           maxWidth: 680,
         }}
       >
-        One platform, one sign-on, one bill. OperatorOS is the parent command layer. TradeFlowKit,
-        PulseDesk, and TechDeck are its{' '}
-        <strong style={{ color: brand.textPrimary }}>Main Modules</strong>; every other product
-        follows beneath them as a{' '}
-        <strong style={{ color: brand.textPrimary }}>Companion Application</strong>.
+        Sign in once, choose your organization, and open the work that needs attention. Start with
+        TradeFlowKit, PulseDesk, or TechDeck, then add specialized applications for branding,
+        field proof, learning, campaigns, calls, automation, diagnostics, and team play.
       </p>
     </header>
   );
@@ -347,7 +345,7 @@ function ModuleCard({ module: m, prominent }: { module: EcosystemModule; promine
             letterSpacing: '0.02em',
           }}
         >
-          {m.applicationType === 'main-module' ? 'Main Module' : 'Companion Application'}
+          {m.applicationType === 'main-module' ? 'Flagship Application' : 'Specialized Application'}
         </span>
       </div>
 

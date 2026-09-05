@@ -79,6 +79,7 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       source_reference_id VARCHAR(36),
       destination_reference_id VARCHAR(36),
       status VARCHAR(24) NOT NULL DEFAULT 'queued',
+      idempotency_scope VARCHAR(16) NOT NULL DEFAULT 'actor',
       idempotency_key VARCHAR(180) NOT NULL,
       correlation_id VARCHAR(120) NOT NULL,
       causation_id VARCHAR(120),
@@ -91,10 +92,13 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       CONSTRAINT uq_shared_workflow_run_tenant_id UNIQUE (tenant_id,id),
       CONSTRAINT uq_shared_workflow_run_key UNIQUE (tenant_id,workflow_key,idempotency_key),
+      CONSTRAINT uq_shared_workflow_run_source_route UNIQUE (tenant_id,id,source_module_id),
+      CONSTRAINT uq_shared_workflow_run_destination_route UNIQUE (tenant_id,id,destination_module_id,workflow_key),
       CONSTRAINT shared_workflow_run_source_fk FOREIGN KEY (tenant_id,source_reference_id) REFERENCES shared_resource_references(tenant_id,id),
       CONSTRAINT shared_workflow_run_destination_fk FOREIGN KEY (tenant_id,destination_reference_id) REFERENCES shared_resource_references(tenant_id,id),
       CONSTRAINT shared_workflow_run_modules_check CHECK (source_module_id <> destination_module_id),
       CONSTRAINT shared_workflow_run_status_check CHECK (status IN ('queued','running','completed','partial','compensated','dead_letter','cancelled')),
+      CONSTRAINT shared_workflow_run_idempotency_scope_check CHECK (idempotency_scope IN ('tenant','actor')),
       CONSTRAINT shared_workflow_run_retry_check CHECK (retry_count >= 0),
       CONSTRAINT shared_workflow_run_details_check CHECK (jsonb_typeof(details_json)='object')
     );
@@ -117,6 +121,7 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       payload_sha256 CHAR(64) NOT NULL,
       signature_hmac_sha256 CHAR(64) NOT NULL,
       signing_key_version VARCHAR(80) NOT NULL,
+      signature_envelope_version INTEGER NOT NULL DEFAULT 1,
       idempotency_key VARCHAR(180) NOT NULL,
       correlation_id VARCHAR(120) NOT NULL,
       causation_id VARCHAR(120),
@@ -127,7 +132,9 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       dispatched_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ,
       CONSTRAINT uq_shared_domain_event_tenant_id UNIQUE (tenant_id,id),
+      CONSTRAINT uq_shared_domain_event_run_route UNIQUE (tenant_id,id,workflow_run_id),
       CONSTRAINT shared_domain_event_run_fk FOREIGN KEY (tenant_id,workflow_run_id) REFERENCES shared_workflow_runs(tenant_id,id) ON DELETE CASCADE,
+      CONSTRAINT shared_domain_event_source_run_route_fk FOREIGN KEY (tenant_id,workflow_run_id,source_module_id) REFERENCES shared_workflow_runs(tenant_id,id,source_module_id) ON DELETE CASCADE,
       CONSTRAINT shared_domain_event_root_fk FOREIGN KEY (tenant_id,root_event_id) REFERENCES shared_domain_events(tenant_id,id),
       CONSTRAINT uq_shared_domain_event_idempotency UNIQUE (tenant_id,source_module_id,event_type,idempotency_key),
       CONSTRAINT uq_shared_domain_event_sequence UNIQUE (tenant_id,source_module_id,aggregate_type,aggregate_id,aggregate_sequence),
@@ -135,6 +142,7 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       CONSTRAINT shared_domain_event_depth_check CHECK (propagation_depth BETWEEN 0 AND 12),
       CONSTRAINT shared_domain_event_payload_check CHECK (jsonb_typeof(payload_json)='object'),
       CONSTRAINT shared_domain_event_hash_check CHECK (payload_sha256 ~ '^[0-9a-f]{64}$' AND signature_hmac_sha256 ~ '^[0-9a-f]{64}$'),
+      CONSTRAINT shared_domain_event_signature_envelope_check CHECK (signature_envelope_version >= 1),
       CONSTRAINT shared_domain_event_link_check CHECK (source_deep_link ~ '^/[A-Za-z0-9_?=&%./:#-]+$' AND source_deep_link !~ '^//'),
       CONSTRAINT shared_domain_event_status_check CHECK (status IN ('pending','dispatching','delivered','partial','dead_letter','cancelled'))
     );
@@ -163,6 +171,8 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       CONSTRAINT uq_shared_event_inbox_tenant_id UNIQUE (tenant_id,id),
       CONSTRAINT shared_event_inbox_event_fk FOREIGN KEY (tenant_id,event_id) REFERENCES shared_domain_events(tenant_id,id) ON DELETE CASCADE,
       CONSTRAINT shared_event_inbox_run_fk FOREIGN KEY (tenant_id,workflow_run_id) REFERENCES shared_workflow_runs(tenant_id,id) ON DELETE CASCADE,
+      CONSTRAINT shared_event_inbox_event_run_route_fk FOREIGN KEY (tenant_id,event_id,workflow_run_id) REFERENCES shared_domain_events(tenant_id,id,workflow_run_id) ON DELETE CASCADE,
+      CONSTRAINT shared_event_inbox_destination_run_route_fk FOREIGN KEY (tenant_id,workflow_run_id,destination_module_id,consumer_key) REFERENCES shared_workflow_runs(tenant_id,id,destination_module_id,workflow_key) ON DELETE CASCADE,
       CONSTRAINT uq_shared_event_inbox_consumer UNIQUE (tenant_id,event_id,destination_module_id,consumer_key),
       CONSTRAINT shared_event_inbox_status_check CHECK (status IN ('pending','processing','retry','completed','dead_letter','cancelled')),
       CONSTRAINT shared_event_inbox_attempt_check CHECK (attempt_count >= 0 AND max_attempts BETWEEN 1 AND 20 AND replay_count >= 0),
@@ -170,6 +180,47 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_shared_event_inbox_delivery
       ON shared_event_inbox(status,available_at,id);
+
+    -- Existing installations predate explicit idempotency ownership and the
+    -- routed-signature schema. Defaults retain their legacy interpretation;
+    -- only newly published workflows opt into tenant scope and envelope v2.
+    ALTER TABLE shared_workflow_runs
+      ADD COLUMN IF NOT EXISTS idempotency_scope VARCHAR(16) NOT NULL DEFAULT 'actor';
+    ALTER TABLE shared_domain_events
+      ADD COLUMN IF NOT EXISTS signature_envelope_version INTEGER NOT NULL DEFAULT 1;
+    DO $$ BEGIN
+      ALTER TABLE shared_workflow_runs ADD CONSTRAINT shared_workflow_run_idempotency_scope_check
+        CHECK (idempotency_scope IN ('tenant','actor')) NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE shared_domain_events ADD CONSTRAINT shared_domain_event_signature_envelope_check
+        CHECK (signature_envelope_version >= 1) NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- Composite route keys let PostgreSQL reject newly inserted event/inbox
+    -- rows that pair an otherwise valid event with the wrong run or consumer.
+    -- The runtime performs the same checks for legacy rows before dispatch.
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_workflow_run_source_route
+      ON shared_workflow_runs(tenant_id,id,source_module_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_workflow_run_destination_route
+      ON shared_workflow_runs(tenant_id,id,destination_module_id,workflow_key);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_domain_event_run_route
+      ON shared_domain_events(tenant_id,id,workflow_run_id);
+    DO $$ BEGIN
+      ALTER TABLE shared_domain_events ADD CONSTRAINT shared_domain_event_source_run_route_fk
+        FOREIGN KEY (tenant_id,workflow_run_id,source_module_id)
+        REFERENCES shared_workflow_runs(tenant_id,id,source_module_id) ON DELETE CASCADE NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE shared_event_inbox ADD CONSTRAINT shared_event_inbox_event_run_route_fk
+        FOREIGN KEY (tenant_id,event_id,workflow_run_id)
+        REFERENCES shared_domain_events(tenant_id,id,workflow_run_id) ON DELETE CASCADE NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE shared_event_inbox ADD CONSTRAINT shared_event_inbox_destination_run_route_fk
+        FOREIGN KEY (tenant_id,workflow_run_id,destination_module_id,consumer_key)
+        REFERENCES shared_workflow_runs(tenant_id,id,destination_module_id,workflow_key) ON DELETE CASCADE NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
     CREATE TABLE IF NOT EXISTS shared_resource_links (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),

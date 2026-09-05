@@ -36,10 +36,17 @@ test('companion workflow logic is read-only and the shared presentation supports
     assert.match(component, new RegExp(`'${moduleId}'`));
     assert.match(css, new RegExp(`data-module='${moduleId}'`));
   }
-  assert.match(logic, /Purchases and go-live remain explicit administrator decisions/);
-  assert.match(logic, /deployment stays manual/);
-  assert.match(logic, /OperatorOS never executes the script/);
-  for (const briefName of ['Campaign Flow Brief', 'Proof-to-Delivery Brief', 'Learning Focus Brief', 'Launch Readiness Brief', 'Receptionist Readiness Brief', 'Script Delivery Brief']) {
-    assert.match(help, new RegExp(briefName));
+  assert.match(logic, /Purchases and going live still require an administrator's confirmation/);
+  assert.match(logic, /Publishing stays manual/);
+  assert.match(logic, /this app does not run them/);
+  for (const outcome of [
+    'Build reusable brand kits',
+    'Create a branded customer report',
+    'complete study sets',
+    'campaign preparation, review, and export',
+    'caller outcomes',
+    'Reviewed defensive scripts',
+  ]) {
+    assert.match(help, new RegExp(outcome, 'i'));
   }
 });

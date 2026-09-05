@@ -43,6 +43,7 @@ const quiet: React.CSSProperties = {
   ...primary, background: 'rgba(15,23,42,.72)', border: '1px solid rgba(148,163,184,.24)', color: semantic.text,
 };
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 };
+const READ_ONLY_MESSAGE = 'Your StudyForge AI access is read-only. Ask an organization owner or administrator for edit access.';
 
 function mutationKey(prefix: string) {
   return `${prefix}:${Date.now()}:${crypto.randomUUID()}`;
@@ -57,7 +58,7 @@ function Panel({ id, eyebrow, title, description, children }: { id: string; eyeb
   </section>;
 }
 
-export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'overview', hrefFor = path => path }: { routePath?: string; view?: string; hrefFor?: (path: string) => string }) {
+export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'overview', hrefFor = path => path, canWrite = true }: { routePath?: string; view?: string; hrefFor?: (path: string) => string; canWrite?: boolean }) {
   const [workspace, setWorkspace] = useState<CompleteWorkspace | null>(null);
   const [selected, setSelected] = useState<Item | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,10 @@ export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'ov
   useEffect(() => { void load(); }, [load]);
 
   const act = async (action: () => Promise<unknown>, options: { reloadSelected?: string; clearSelected?: boolean } = {}) => {
+    if (!canWrite) {
+      setError(READ_ONLY_MESSAGE);
+      return;
+    }
     setBusy(true); setError(null);
     try {
       await action();
@@ -97,21 +102,22 @@ export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'ov
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routePath]);
 
-  return <div data-testid="studyforge-phase33-complete" style={{ marginBottom: 36, minHeight: '100vh' }}>
+  return <div data-testid="studyforge-phase33-complete" data-can-write={canWrite ? 'true' : 'false'} style={{ marginBottom: 36, minHeight: '100vh' }}>
     {error && <div role="alert" style={{ ...shellCard, borderColor: 'rgba(248,113,113,.7)', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
+    {!canWrite && <div role="status" data-testid="studyforge-complete-read-only" style={{ ...shellCard, borderColor: 'rgba(196,181,253,.55)', color: '#ddd6fe', marginBottom: 16 }}>Saved study sets, review sheets, flashcards, quiz questions, progress history, and allowed downloads remain available. Read-only access cannot save answers, study sessions, preferences, folders, countdowns, or changes to a set.</div>}
     {!workspace ? <div style={shellCard}>Loading complete StudyForge learning records…</div> : <>
-      {view === 'settings' && !workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} />}
+      {view === 'settings' && !workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} canWrite={canWrite} />}
       {view === 'overview' && <CompleteDashboard workspace={workspace} hrefFor={hrefFor} />}
-      {view === 'sets' && <Organizer workspace={workspace} busy={busy} act={act} open={open} />}
-      {view === 'sets' && <SetCreator workspace={workspace} busy={busy} act={act} />}
-      {view === 'sets' && selected && <SetWorkspace key={selected.id} set={selected} plan={workspace.plan} busy={busy} act={act} close={() => setSelected(null)} />}
-      {view === 'sessions' && <Countdowns workspace={workspace} busy={busy} act={act} />}
+      {view === 'sets' && <Organizer workspace={workspace} busy={busy} act={act} open={open} canWrite={canWrite} />}
+      {view === 'sets' && <SetCreator workspace={workspace} busy={busy} act={act} canWrite={canWrite} />}
+      {view === 'sets' && selected && <SetWorkspace key={selected.id} set={selected} plan={workspace.plan} busy={busy} act={act} close={() => setSelected(null)} canWrite={canWrite} />}
+      {view === 'sessions' && <Countdowns workspace={workspace} busy={busy} act={act} canWrite={canWrite} />}
       {view === 'settings' && <Account workspace={workspace} />}
     </>}
   </div>;
 }
 
-function Onboarding({ busy, act }: { busy: boolean; act: (action: () => Promise<unknown>) => Promise<void> }) {
+function Onboarding({ busy, act, canWrite }: { busy: boolean; act: (action: () => Promise<unknown>) => Promise<void>; canWrite: boolean }) {
   const [zone, setZone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [difficulty, setDifficulty] = useState('medium');
   const submit = (event: FormEvent) => {
@@ -122,13 +128,14 @@ function Onboarding({ busy, act }: { busy: boolean; act: (action: () => Promise<
     <form onSubmit={submit} style={{ ...shellCard, ...grid }}>
       <label>Time zone<input aria-label="Time zone" value={zone} onChange={(event) => setZone(event.target.value)} style={{ ...input, marginTop: 6 }} /></label>
       <label>Default difficulty<select aria-label="Default difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)} style={{ ...input, marginTop: 6 }}><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
-      <button disabled={busy} style={primary}><GraduationCap size={16} /> Activate workspace</button>
+      <button disabled={busy || !canWrite} style={primary}><GraduationCap size={16} /> Activate workspace</button>
     </form>
   </Panel>;
 }
 
 function CompleteDashboard({ workspace, hrefFor }: { workspace: CompleteWorkspace; hrefFor: (path: string) => string }) {
   const brief = buildStudyForgeWorkflowFocus(workspace);
+  const nextSet = workspace.sets.find(set => set.status === 'active') ?? workspace.sets[0] ?? null;
   const metrics = [
     ['Active sets', workspace.metrics.activeSets, Layers3],
     ['Study minutes', workspace.metrics.totalStudyMinutes, Gauge],
@@ -137,17 +144,40 @@ function CompleteDashboard({ workspace, hrefFor }: { workspace: CompleteWorkspac
     ['Current streak', `${workspace.metrics.currentStreak} days`, Trophy],
     ['Longest streak', `${workspace.metrics.longestStreak} days`, Sparkles],
   ] as const;
-  return <Panel id="studyforge-dashboard" eyebrow="Live learning data" title="Your study command center" description="Actual persisted sets, sessions, quiz results, countdowns, and streak activity—never demo metrics.">
+  return <Panel id="studyforge-dashboard" eyebrow="Your learning progress" title="Your study command center" description="See your saved study sets, completed sessions, quiz results, exam countdowns, and learning streak at a glance.">
     <div style={{ marginBottom: 16 }}>
       <CoreSuiteWorkdayBrief moduleId="studyforge-ai" eyebrow="Next best learning actions" brief={brief} hrefFor={hrefFor} />
     </div>
+    <article data-testid="studyforge-next-completed-outcome" style={{ ...shellCard, marginBottom: 16, borderColor: 'rgba(167,139,250,.55)' }}>
+      <div style={{ color: '#c4b5fd', textTransform: 'uppercase', letterSpacing: '.13em', fontSize: 11, fontWeight: 850 }}>
+        {nextSet ? 'Continue a saved set' : 'Your first finished outcome'}
+      </div>
+      <h3 style={{ margin: '7px 0 5px' }}>
+        {nextSet ? `Continue “${nextSet.title}”` : 'Turn one set of notes into a complete study system'}
+      </h3>
+      <p style={{ color: semantic.textMuted, margin: '0 0 12px', lineHeight: 1.55 }}>
+        {nextSet
+          ? 'Reopen this recently saved active set and complete its next flashcard or quiz session. Your answers, study minutes, and streak progress are saved. The account-wide quiz average below is not used to label this particular set weak.'
+          : 'Paste your real notes once. StudyForge creates and saves a summary, key terms, flashcards, two quiz formats, a review sheet, and a day-by-day study plan.'}
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
+        {['Summary + key terms', 'Flashcards', 'Multiple choice + written quiz', 'Review sheet', 'Study plan'].map(deliverable => (
+          <span key={deliverable} style={{ border: '1px solid rgba(167,139,250,.28)', borderRadius: 999, padding: '5px 9px', color: '#ddd6fe', fontSize: 12 }}>
+            {deliverable}
+          </span>
+        ))}
+      </div>
+      <a href={hrefFor(nextSet ? `/sets/${nextSet.id}` : '/sets')} style={{ ...primary, textDecoration: 'none' }}>
+        <Play size={16} /> {nextSet ? 'Continue this set' : 'Create my complete study set'}
+      </a>
+    </article>
     <div style={grid}>{metrics.map(([label, value, Icon]) => <article key={label} style={{ ...shellCard, position: 'relative', overflow: 'hidden' }}>
       <Icon size={18} color="#a78bfa" /><div style={{ color: semantic.textMuted, fontSize: 13, marginTop: 12 }}>{label}</div><strong style={{ fontSize: 26, display: 'block', marginTop: 4 }}>{value}</strong>
     </article>)}</div>
   </Panel>;
 }
 
-function Organizer({ workspace, busy, act, open }: { workspace: CompleteWorkspace; busy: boolean; act: (action: () => Promise<unknown>) => Promise<void>; open: (id: string) => Promise<void> }) {
+function Organizer({ workspace, busy, act, open, canWrite }: { workspace: CompleteWorkspace; busy: boolean; act: (action: () => Promise<unknown>) => Promise<void>; open: (id: string) => Promise<void>; canWrite: boolean }) {
   const [folderName, setFolderName] = useState('');
   const createFolder = (event: FormEvent) => {
     event.preventDefault();
@@ -156,7 +186,7 @@ function Organizer({ workspace, busy, act, open }: { workspace: CompleteWorkspac
   return <Panel id="studyforge-sets" eyebrow="Library" title="Folders and study sets" description="Organize complete sets, reopen archived work, and continue exactly where you stopped.">
     <form onSubmit={createFolder} style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
       <input aria-label="New folder name" value={folderName} onChange={(event) => setFolderName(event.target.value)} maxLength={160} placeholder="New folder" style={{ ...input, width: 260 }} />
-      <button disabled={busy || !folderName.trim()} style={quiet}><FolderPlus size={15} /> Add folder</button>
+      <button disabled={busy || !canWrite || !folderName.trim()} style={quiet}><FolderPlus size={15} /> Add folder</button>
     </form>
     <div style={{ display: 'flex', gap: 7, overflowX: 'auto', marginBottom: 14 }}>
       {workspace.folders.length ? workspace.folders.map((folder) => <span key={folder.id} style={{ ...quiet, cursor: 'default', whiteSpace: 'nowrap' }}>{folder.name}</span>) : <span style={{ color: semantic.textMuted }}>No folders yet.</span>}
@@ -169,7 +199,7 @@ function Organizer({ workspace, busy, act, open }: { workspace: CompleteWorkspac
   </Panel>;
 }
 
-function SetCreator({ workspace, busy, act }: { workspace: CompleteWorkspace; busy: boolean; act: (action: () => Promise<unknown>) => Promise<void> }) {
+function SetCreator({ workspace, busy, act, canWrite }: { workspace: CompleteWorkspace; busy: boolean; act: (action: () => Promise<unknown>) => Promise<void>; canWrite: boolean }) {
   const [title, setTitle] = useState('');
   const [course, setCourse] = useState('');
   const [notes, setNotes] = useState('');
@@ -184,7 +214,7 @@ function SetCreator({ workspace, busy, act }: { workspace: CompleteWorkspace; bu
       setTitle(''); setCourse(''); setNotes(''); setExamDate('');
     });
   };
-  return <Panel id="studyforge-new-set" eyebrow="Complete generation" title="Turn notes into a full learning system" description="One transaction persists your source, summary, key terms, flashcards, multiple-choice and short-answer questions, review sheet, and personalized plan. Auto mode records AI provenance and falls back deterministically when policy allows.">
+  return <Panel id="studyforge-new-set" eyebrow="Build a complete set" title="Turn notes into a full learning system" description="Paste your notes once to create and save a summary, key terms, flashcards, multiple-choice and short-answer questions, a review sheet, and a personalized plan. Auto mode uses AI when it is available and the built-in generator otherwise.">
     <form onSubmit={submit} style={{ ...shellCard, display: 'grid', gap: 12 }}>
       <div style={grid}>
         <label>Set title<input value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={200} style={{ ...input, marginTop: 6 }} placeholder="Network fundamentals final" /></label>
@@ -195,21 +225,21 @@ function SetCreator({ workspace, busy, act }: { workspace: CompleteWorkspace; bu
       <div style={grid}>
         <label>Difficulty<select value={difficulty} onChange={(event) => setDifficulty(event.target.value)} style={{ ...input, marginTop: 6 }}><option value="easy">Easy · 20 min/day</option><option value="medium">Medium · 35 min/day</option><option value="hard">Hard · 50 min/day</option></select></label>
         <label>Exam date<input type="date" value={examDate} onChange={(event) => setExamDate(event.target.value)} style={{ ...input, marginTop: 6 }} /></label>
-        <label>Generator<select value={generationMode} onChange={(event) => setGenerationMode(event.target.value as any)} style={{ ...input, marginTop: 6 }}><option value="auto">AI with deterministic fallback</option><option value="deterministic">Deterministic local</option><option value="ai">AI required</option></select></label>
+        <label>Creation method<select value={generationMode} onChange={(event) => setGenerationMode(event.target.value as any)} style={{ ...input, marginTop: 6 }}><option value="auto">Use AI when available</option><option value="deterministic">Built-in generator only</option><option value="ai">AI required</option></select></label>
       </div>
-      <button disabled={busy || title.trim().length < 1 || notes.trim().length < 8} style={primary}><Sparkles size={16} /> Generate every artifact</button>
+      <button disabled={busy || !canWrite || title.trim().length < 1 || notes.trim().length < 8} style={primary}><Sparkles size={16} /> Build complete study pack</button>
     </form>
   </Panel>;
 }
 
-function SetWorkspace({ set, plan, busy, act, close }: { set: Item; plan: CompleteWorkspace['plan']; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string; clearSelected?: boolean }) => Promise<void>; close: () => void }) {
+function SetWorkspace({ set, plan, busy, act, close, canWrite }: { set: Item; plan: CompleteWorkspace['plan']; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string; clearSelected?: boolean }) => Promise<void>; close: () => void; canWrite: boolean }) {
   const [tab, setTab] = useState<'overview' | 'flashcards' | 'quiz' | 'review' | 'plan'>('overview');
   const refresh = { reloadSelected: set.id };
   const copy = (action: 'duplicate' | 'regenerate') => void act(() => moduleShellApi.studyforge.copyCompleteSet(set.id, action, { generationMode: 'auto', idempotencyKey: mutationKey(`studyforge-${action}`) }), action === 'regenerate' ? { clearSelected: true } : {});
   const remove = () => {
     if (window.confirm(`Delete “${set.title}” and its generated learning records?`)) void act(() => moduleShellApi.studyforge.deleteCompleteSet(set.id), { clearSelected: true });
   };
-  return <Panel id="studyforge-set-workspace" eyebrow="Active set" title={set.title} description={`${set.course || 'General'} · ${set.difficulty} · generator ${set.generationProvenance?.effectiveMode || 'recorded'} · quality ${set.qualityScore}`}>
+  return <Panel id="studyforge-set-workspace" eyebrow="Active set" title={set.title} description={`${set.course || 'General'} · ${set.difficulty} · ${set.generationProvenance?.effectiveMode === 'ai' ? 'AI-refined' : 'built-in creation'} · Quality check: ${set.qualityScore}/100`}>
     <div style={{ ...shellCard, marginBottom: 12 }}>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
         <button style={quiet} onClick={close}><ChevronLeft size={15} /> Library</button>
@@ -218,16 +248,16 @@ function SetWorkspace({ set, plan, busy, act, close }: { set: Item; plan: Comple
         {plan.limits.advancedExport && <a href={`/api/modules/studyforge-ai/study-sets/${set.id}/export?format=csv`} style={{ ...quiet, textDecoration: 'none' }}><Download size={15} /> CSV</a>}
       </div>
       {tab === 'overview' && <Overview set={set} />}
-      {tab === 'flashcards' && <Flashcards set={set} busy={busy} act={act} />}
-      {tab === 'quiz' && <Quiz set={set} busy={busy} act={act} />}
+      {tab === 'flashcards' && <Flashcards set={set} busy={busy} act={act} canWrite={canWrite} />}
+      {tab === 'quiz' && <Quiz set={set} busy={busy} act={act} canWrite={canWrite} />}
       {tab === 'review' && <Review set={set} />}
-      {tab === 'plan' && <Plan set={set} busy={busy} act={act} />}
+      {tab === 'plan' && <Plan set={set} busy={busy} act={act} canWrite={canWrite} />}
     </div>
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <button disabled={busy} style={quiet} onClick={() => copy('duplicate')}><Copy size={15} /> Duplicate</button>
-      <button disabled={busy} style={quiet} onClick={() => copy('regenerate')}><RefreshCw size={15} /> Regenerate revision</button>
-      <button disabled={busy} style={quiet} onClick={() => void act(() => moduleShellApi.studyforge.updateCompleteSet(set.id, { status: set.status === 'active' ? 'archived' : 'active', expectedVersion: set.version }), refresh)}>{set.status === 'active' ? <Archive size={15} /> : <RotateCcw size={15} />}{set.status === 'active' ? ' Archive' : ' Restore'}</button>
-      <button disabled={busy} style={{ ...quiet, color: '#fecaca', borderColor: 'rgba(248,113,113,.4)' }} onClick={remove}><Trash2 size={15} /> Delete</button>
+      <button disabled={busy || !canWrite} style={quiet} onClick={() => copy('duplicate')}><Copy size={15} /> Duplicate</button>
+      <button disabled={busy || !canWrite} style={quiet} onClick={() => copy('regenerate')}><RefreshCw size={15} /> Regenerate revision</button>
+      <button disabled={busy || !canWrite} style={quiet} onClick={() => void act(() => moduleShellApi.studyforge.updateCompleteSet(set.id, { status: set.status === 'active' ? 'archived' : 'active', expectedVersion: set.version }), refresh)}>{set.status === 'active' ? <Archive size={15} /> : <RotateCcw size={15} />}{set.status === 'active' ? ' Archive' : ' Restore'}</button>
+      <button disabled={busy || !canWrite} style={{ ...quiet, color: '#fecaca', borderColor: 'rgba(248,113,113,.4)' }} onClick={remove}><Trash2 size={15} /> Delete</button>
     </div>
   </Panel>;
 }
@@ -240,7 +270,7 @@ function Overview({ set }: { set: Item }) {
   </div>;
 }
 
-function Flashcards({ set, busy, act }: { set: Item; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string }) => Promise<void> }) {
+function Flashcards({ set, busy, act, canWrite }: { set: Item; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string }) => Promise<void>; canWrite: boolean }) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [session, setSession] = useState<Item | null>(null);
@@ -252,14 +282,14 @@ function Flashcards({ set, busy, act }: { set: Item; busy: boolean; act: (action
     setSession(created); return created;
   };
   const rate = useCallback(async (state: 'known' | 'learning') => {
-    if (!card || busy) return;
+    if (!card || busy || !canWrite) return;
     await act(async () => {
       const active = await ensureSession();
       await moduleShellApi.studyforge.reviewSessionCard(active.id, card.id, { state, clientMutationId: mutationKey('studyforge-card-review') });
       setFlipped(false); setIndex((value) => Math.min(set.cards.length - 1, value + 1));
     }, { reloadSelected: set.id });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card?.id, busy, session, set.id, set.cards.length]);
+  }, [card?.id, busy, canWrite, session, set.id, set.cards.length]);
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -273,26 +303,60 @@ function Flashcards({ set, busy, act }: { set: Item; busy: boolean; act: (action
   }, [rate, set.cards.length]);
   if (!card) return <p>No flashcards are available.</p>;
   return <div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', color: semantic.textMuted }}><span>Card {index + 1} of {set.cards.length}</span><span>Space flips · 1 learning · 2 known</span></div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', color: semantic.textMuted }}><span>Card {index + 1} of {set.cards.length}</span><span>{canWrite ? 'Space flips · 1 learning · 2 known' : 'Space flips · arrow keys move between cards'}</span></div>
     <button onClick={() => setFlipped((value) => !value)} style={{ width: '100%', minHeight: 240, margin: '12px 0', borderRadius: 16, border: '1px solid rgba(139,92,246,.35)', background: flipped ? 'linear-gradient(145deg,#172554,#111827)' : 'linear-gradient(145deg,#2e1065,#111827)', color: '#fff', padding: 28, cursor: 'pointer', fontSize: 21 }}>
       <span style={{ display: 'block', color: '#c4b5fd', fontSize: 12, textTransform: 'uppercase', marginBottom: 16 }}>{flipped ? 'Answer' : 'Prompt'}</span>{flipped ? card.answer : card.question}
     </button>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
       <div><button style={quiet} onClick={() => setIndex((value) => Math.max(0, value - 1))}><ChevronLeft size={15} /></button> <button style={quiet} onClick={() => setIndex((value) => Math.min(set.cards.length - 1, value + 1))}><ChevronRight size={15} /></button></div>
-      <div><button disabled={busy} style={{ ...quiet, color: '#fde68a' }} onClick={() => void rate('learning')}>Learning</button> <button disabled={busy} style={{ ...primary, background: 'linear-gradient(135deg,#059669,#2563eb)' }} onClick={() => void rate('known')}><Check size={15} /> Known</button></div>
-      {session && <button disabled={busy} style={quiet} onClick={() => void act(() => moduleShellApi.studyforge.completeFlashcardSession(session.id, Math.max(0, Math.round((Date.now() - startedAt) / 1000))), { reloadSelected: set.id })}>Finish session</button>}
+      <div><button disabled={busy || !canWrite} style={{ ...quiet, color: '#fde68a' }} onClick={() => void rate('learning')}>Learning</button> <button disabled={busy || !canWrite} style={{ ...primary, background: 'linear-gradient(135deg,#059669,#2563eb)' }} onClick={() => void rate('known')}><Check size={15} /> Known</button></div>
+      {session && <button disabled={busy || !canWrite} style={quiet} onClick={() => void act(() => moduleShellApi.studyforge.completeFlashcardSession(session.id, Math.max(0, Math.round((Date.now() - startedAt) / 1000))), { reloadSelected: set.id })}>Finish session</button>}
     </div>
   </div>;
 }
 
-function Quiz({ set, busy, act }: { set: Item; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string }) => Promise<void> }) {
+function Quiz({ set, busy, act, canWrite }: { set: Item; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string }) => Promise<void>; canWrite: boolean }) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const submit = () => void act(() => moduleShellApi.studyforge.submitCompleteQuiz(set.id, { answers: set.questions.map((question: Item) => ({ questionId: question.id, selectedIndex: answers[question.id] })), idempotencyKey: mutationKey('studyforge-quiz') }), { reloadSelected: set.id });
   return <div style={{ display: 'grid', gap: 14 }}>
     {set.questions.map((question: Item, questionIndex: number) => <fieldset key={question.id} style={{ border: 0, background: '#090d1c', padding: 14, borderRadius: 10 }}><legend style={{ fontWeight: 700, paddingTop: 10 }}>{questionIndex + 1}. {question.question}</legend>{question.choices.map((choice: string, choiceIndex: number) => <label key={choiceIndex} style={{ display: 'flex', gap: 8, padding: '8px 0', color: semantic.textMuted }}><input type="radio" name={question.id} checked={answers[question.id] === choiceIndex} onChange={() => setAnswers((value) => ({ ...value, [question.id]: choiceIndex }))} />{choice}</label>)}</fieldset>)}
-    <button disabled={busy || Object.keys(answers).length !== set.questions.length} style={primary} onClick={submit}><ClipboardList size={16} /> Submit and review</button>
-    {!!set.attempts.length && <div><h3>Attempt history</h3>{set.attempts.map((attempt: Item) => <div key={attempt.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 10, borderBottom: '1px solid rgba(148,163,184,.16)' }}><span>{new Date(attempt.completedAt).toLocaleString()}</span><strong>{attempt.scorePercent}%</strong></div>)}</div>}
+    <button disabled={busy || !canWrite || Object.keys(answers).length !== set.questions.length} style={primary} onClick={submit}><ClipboardList size={16} /> Submit and review</button>
+    {!!set.attempts.length && <div><h3>Attempt history</h3><p style={{ color: semantic.textMuted }}>Open any saved attempt to review each selected answer against the recorded answer and source material.</p>{set.attempts.map((attempt: Item) => <AttemptReview key={attempt.id} attempt={attempt} questions={set.questions} />)}</div>}
   </div>;
+}
+
+function answerText(question: Item | undefined, index: unknown, fallback: string) {
+  if (!question || !Array.isArray(question.choices) || !Number.isSafeInteger(index)) return fallback;
+  const answer = question.choices[Number(index)];
+  return typeof answer === 'string' && answer.trim() ? answer : fallback;
+}
+
+function savedText(value: unknown, fallback: string) {
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
+function AttemptReview({ attempt, questions }: { attempt: Item; questions: Item[] }) {
+  const review = Array.isArray(attempt.reviewJson) ? attempt.reviewJson : [];
+  return <details data-testid="studyforge-attempt-review" style={{ ...shellCard, padding: 0, overflow: 'hidden', marginBottom: 9 }}>
+    <summary style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: 13, cursor: 'pointer', fontWeight: 750 }}>
+      <span>{new Date(attempt.completedAt).toLocaleString()}</span>
+      <strong>{attempt.scorePercent}% · {attempt.correctCount}/{attempt.totalCount} correct</strong>
+    </summary>
+    <div style={{ borderTop: '1px solid rgba(148,163,184,.16)', padding: 13, display: 'grid', gap: 10 }}>
+      {review.length === 0 ? <p style={{ color: semantic.textMuted }}>Answer-by-answer review was not recorded for this older attempt.</p> : review.map((item: Item, index: number) => {
+        const question = questions.find((candidate) => candidate.id === item.questionId);
+        const selected = answerText(question, item.selectedIndex, 'No selected answer was recorded.');
+        const correct = answerText(question, item.correctIndex, 'The recorded correct answer is unavailable.');
+        return <article key={`${attempt.id}-${item.questionId || index}`} style={{ background: '#090d1c', border: `1px solid ${item.correct ? 'rgba(52,211,153,.34)' : 'rgba(248,113,113,.34)'}`, borderRadius: 10, padding: 13 }}>
+          <strong style={{ color: item.correct ? '#6ee7b7' : '#fca5a5' }}>{index + 1}. {savedText(question?.question, 'Saved question')}</strong>
+          <p style={{ marginBottom: 5 }}><b>Selected answer:</b> {selected}</p>
+          <p style={{ margin: '5px 0' }}><b>Correct answer:</b> {correct}</p>
+          <p style={{ margin: '5px 0', color: semantic.textMuted }}><b>Explanation:</b> {savedText(item.explanation, 'No explanation was recorded.')}</p>
+          <p style={{ margin: '5px 0 0', color: '#c4b5fd' }}><b>Source excerpt:</b> {savedText(item.sourceExcerpt, 'No source excerpt was recorded.')}</p>
+        </article>;
+      })}
+    </div>
+  </details>;
 }
 
 function Review({ set }: { set: Item }) {
@@ -303,27 +367,28 @@ function Review({ set }: { set: Item }) {
   </div>;
 }
 
-function Plan({ set, busy, act }: { set: Item; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string }) => Promise<void> }) {
+function Plan({ set, busy, act, canWrite }: { set: Item; busy: boolean; act: (action: () => Promise<unknown>, options?: { reloadSelected?: string }) => Promise<void>; canWrite: boolean }) {
   return <div style={{ display: 'grid', gap: 10 }}>{set.studyPlan.map((session: Item) => <article key={session.id} style={{ background: '#090d1c', borderRadius: 10, padding: 13, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
     <div style={{ width: 42, height: 42, display: 'grid', placeItems: 'center', borderRadius: 12, background: session.completedAt ? '#065f46' : '#312e81' }}>{session.completedAt ? <Check size={19} /> : session.position + 1}</div>
     <div style={{ flex: 1, minWidth: 200 }}><strong>{session.title}</strong><div style={{ color: semantic.textMuted }}>{session.scheduledFor ? new Date(`${String(session.scheduledFor).slice(0, 10)}T00:00:00`).toLocaleDateString() : 'Flexible'} · {session.estimatedMinutes} min</div><p style={{ marginBottom: 0 }}>{session.focus}</p></div>
-    <button disabled={busy} style={session.completedAt ? quiet : primary} onClick={() => void act(() => moduleShellApi.studyforge.completePlanItem(set.id, session.id, !session.completedAt), { reloadSelected: set.id })}>{session.completedAt ? 'Reopen' : 'Complete'}</button>
+    <button disabled={busy || !canWrite} style={session.completedAt ? quiet : primary} onClick={() => void act(() => moduleShellApi.studyforge.completePlanItem(set.id, session.id, !session.completedAt), { reloadSelected: set.id })}>{session.completedAt ? 'Reopen' : 'Complete'}</button>
   </article>)}</div>;
 }
 
-function Countdowns({ workspace, busy, act }: { workspace: CompleteWorkspace; busy: boolean; act: (action: () => Promise<unknown>) => Promise<void> }) {
+function Countdowns({ workspace, busy, act, canWrite }: { workspace: CompleteWorkspace; busy: boolean; act: (action: () => Promise<unknown>) => Promise<void>; canWrite: boolean }) {
   const [title, setTitle] = useState(''); const [examDate, setExamDate] = useState('');
   const entitled = workspace.plan.limits.examCountdowns;
-  return <Panel id="studyforge-exams" eyebrow="Exam planning" title="Countdowns that respect your time zone" description={entitled ? 'Create persisted date-only countdowns linked to your learning calendar.' : 'Exam countdowns unlock with the OperatorOS Pro or Tutor StudyForge entitlement.'}>
-    {entitled && <form onSubmit={(event) => { event.preventDefault(); void act(async () => { await moduleShellApi.studyforge.createCountdown({ title, examDate, timeZone: workspace.preferences.timeZone }); setTitle(''); setExamDate(''); }); }} style={{ ...shellCard, display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}><input aria-label="Exam title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Certification exam" style={{ ...input, flex: '2 1 240px' }} /><input aria-label="Exam date" type="date" value={examDate} onChange={(event) => setExamDate(event.target.value)} style={{ ...input, flex: '1 1 180px' }} /><button disabled={busy || !title || !examDate} style={primary}><CalendarClock size={15} /> Add countdown</button></form>}
-    <div style={grid}>{workspace.countdowns.length ? workspace.countdowns.map((countdown) => <article key={countdown.id} style={shellCard}><CalendarClock color="#a78bfa" /><strong style={{ display: 'block', margin: '10px 0 3px' }}>{countdown.title}</strong><span style={{ fontSize: 26 }}>{countdown.daysRemaining} days</span><div style={{ color: semantic.textMuted, margin: '5px 0 12px' }}>{String(countdown.examDate).slice(0, 10)}</div><button disabled={busy} onClick={() => void act(() => moduleShellApi.studyforge.deleteCountdown(countdown.id))} style={quiet}><Trash2 size={14} /> Remove</button></article>) : <div style={shellCard}>No exam countdowns yet.</div>}</div>
+  return <Panel id="studyforge-exams" eyebrow="Exam planning" title="Countdowns that respect your time zone" description={entitled ? 'Save exam dates and see accurate day-by-day countdowns in your learning calendar.' : 'Exam countdowns are available on the OperatorOS Pro or Tutor StudyForge plan.'}>
+    {entitled && <form onSubmit={(event) => { event.preventDefault(); void act(async () => { await moduleShellApi.studyforge.createCountdown({ title, examDate, timeZone: workspace.preferences.timeZone }); setTitle(''); setExamDate(''); }); }} style={{ ...shellCard, display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}><input aria-label="Exam title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Certification exam" style={{ ...input, flex: '2 1 240px' }} /><input aria-label="Exam date" type="date" value={examDate} onChange={(event) => setExamDate(event.target.value)} style={{ ...input, flex: '1 1 180px' }} /><button disabled={busy || !canWrite || !title || !examDate} style={primary}><CalendarClock size={15} /> Add countdown</button></form>}
+    <div style={grid}>{workspace.countdowns.length ? workspace.countdowns.map((countdown) => <article key={countdown.id} style={shellCard}><CalendarClock color="#a78bfa" /><strong style={{ display: 'block', margin: '10px 0 3px' }}>{countdown.title}</strong><span style={{ fontSize: 26 }}>{countdown.daysRemaining} days</span><div style={{ color: semantic.textMuted, margin: '5px 0 12px' }}>{String(countdown.examDate).slice(0, 10)}</div><button disabled={busy || !canWrite} onClick={() => void act(() => moduleShellApi.studyforge.deleteCountdown(countdown.id))} style={quiet}><Trash2 size={14} /> Remove</button></article>) : <div style={shellCard}>No exam countdowns yet.</div>}</div>
   </Panel>;
 }
 
 function Account({ workspace }: { workspace: CompleteWorkspace }) {
   const generations = workspace.usage.generationCount || 0;
   const attempts = workspace.usage.quizAttemptCount || 0;
-  return <Panel id="studyforge-account" eyebrow="OperatorOS authority" title="Plan and usage" description="StudyForge reads server-side entitlement and usage state from OperatorOS. There is no child checkout, demo account, or second Stripe authority.">
-    <div style={grid}><article style={shellCard}><strong style={{ fontSize: 22, textTransform: 'capitalize' }}>{workspace.plan.plan}</strong><p style={{ color: semantic.textMuted }}>Resolved from {workspace.plan.source.replaceAll('_', ' ')}</p></article><article style={shellCard}><strong>{generations} / {workspace.plan.limits.generationsPerMonth ?? '∞'}</strong><p style={{ color: semantic.textMuted }}>Generations this month</p></article><article style={shellCard}><strong>{attempts} / {workspace.plan.limits.quizAttemptsPerMonth ?? '∞'}</strong><p style={{ color: semantic.textMuted }}>Quiz attempts this month</p></article><article style={shellCard}><strong>{workspace.plan.limits.flashcardsPerSet}</strong><p style={{ color: semantic.textMuted }}>Flashcards per set</p></article></div>
+  const applicationStack = workspace.plan.source === 'application_stack';
+  return <Panel id="studyforge-account" eyebrow="Application access" title="Access and usage" description={applicationStack ? 'StudyForge AI is fully unlocked for this organization through Application Stack. Subscription and team-access changes remain in OperatorOS.' : 'See this organization’s grandfathered StudyForge AI allowance and current monthly use. Account access remains managed in OperatorOS.'}>
+    <div style={grid}><article style={shellCard}><strong style={{ fontSize: 22, textTransform: 'capitalize' }}>{applicationStack ? 'Application Stack' : `${workspace.plan.plan} plan`}</strong><p style={{ color: semantic.textMuted }}>{applicationStack ? 'Complete application access' : 'Grandfathered access managed in OperatorOS'}</p></article><article style={shellCard}><strong>{generations} / {workspace.plan.limits.generationsPerMonth ?? '∞'}</strong><p style={{ color: semantic.textMuted }}>Generations this month</p></article><article style={shellCard}><strong>{attempts} / {workspace.plan.limits.quizAttemptsPerMonth ?? '∞'}</strong><p style={{ color: semantic.textMuted }}>Quiz attempts this month</p></article><article style={shellCard}><strong>{workspace.plan.limits.flashcardsPerSet}</strong><p style={{ color: semantic.textMuted }}>Flashcards per set</p></article></div>
   </Panel>;
 }

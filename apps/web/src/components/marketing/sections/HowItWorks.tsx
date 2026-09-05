@@ -11,24 +11,24 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    cmd: '> operator login',
+    cmd: '1 · Sign in',
     title: 'Sign in once.',
-    body: 'One account, one organization, every module. Roles and permissions follow you everywhere.',
+    body: 'One account, one organization, every application. Your role and access follow you everywhere.',
   },
   {
-    cmd: '> operator modules enable',
-    title: 'Choose your modules.',
-    body: 'Turn on the operating systems your team actually runs — billing and access adjust on the fly.',
+    cmd: '2 · Choose applications',
+    title: 'Choose your applications.',
+    body: 'Add the business tools your team actually needs, with plan and access managed in one place.',
   },
   {
-    cmd: '> operator integrations connect',
+    cmd: '3 · Connect your tools',
     title: 'Connect your workflows.',
     body: 'Wire in the calls, calendars, payments, and tools that already power your day.',
   },
   {
-    cmd: '> operator run',
-    title: 'Operate from one command layer.',
-    body: 'Everything is one keystroke away. Your whole operation, in one window.',
+    cmd: '4 · Run the day',
+    title: 'Run the day from one home base.',
+    body: 'See your applications, priorities, team access, and next actions without hunting across disconnected accounts.',
   },
 ];
 
@@ -74,7 +74,7 @@ export default function HowItWorks() {
           How OperatorOS works.
         </h2>
         <p style={{ fontSize: 16, color: brand.textSecondary, margin: 0 }}>
-          Four steps to a single command layer for your whole operation.
+          Four steps to one connected home base for your whole operation.
         </p>
       </div>
       <ol

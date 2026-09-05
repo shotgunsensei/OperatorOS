@@ -9,6 +9,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   TicketCheck,
   UserCheck,
   UserMinus,
@@ -19,11 +20,14 @@ import {
   type TechDeckTicketPriority,
   type TechDeckTicketStatus,
 } from '@/lib/auth';
+import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 
 interface TechDeckTicketQueueProps {
   tenantKey: string;
   currentUserId: string;
+  canWriteTickets: boolean;
   canManageTickets: boolean;
+  recordId?: string;
 }
 
 type AssignmentFilter = 'all' | 'mine' | 'unassigned';
@@ -115,7 +119,9 @@ function ticketDeadline(ticket: TechDeckTicket): { label: string; value: string;
 export default function TechDeckTicketQueue({
   tenantKey,
   currentUserId,
+  canWriteTickets,
   canManageTickets,
+  recordId,
 }: TechDeckTicketQueueProps) {
   const [tickets, setTickets] = useState<TechDeckTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,19 +135,32 @@ export default function TechDeckTicketQueue({
   const [statusFilter, setStatusFilter] = useState<TechDeckTicketStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TechDeckTicketPriority | 'all'>('all');
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>('all');
-  const [requestedTicketId, setRequestedTicketId] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const requestedTicketId = recordId ?? routeTicketId();
 
   useEffect(() => {
     let cancelled = false;
-    setRequestedTicketId(routeTicketId());
     setLoading(true);
     setLoadError(null);
     setActionError(null);
 
-    moduleShellApi.techdeck.list()
-      .then((response) => {
-        if (!cancelled) setTickets(Array.isArray(response?.tickets) ? response.tickets : []);
+    Promise.all([
+      moduleShellApi.techdeck.list(),
+      requestedTicketId
+        ? moduleShellApi.techdeck.get(requestedTicketId)
+          .then((ticket) => ({ ticket, unavailable: false }))
+          .catch(() => ({ ticket: null, unavailable: true }))
+        : Promise.resolve({ ticket: null, unavailable: false }),
+    ])
+      .then(([response, requested]) => {
+        if (cancelled) return;
+        const listed = Array.isArray(response?.tickets) ? response.tickets : [];
+        setTickets(requested.ticket && !listed.some((ticket) => ticket.id === requested.ticket?.id)
+          ? [requested.ticket, ...listed]
+          : listed);
+        if (requested.unavailable) {
+          setLoadError('The requested ticket is not available in this organization. It may have been removed, or your role may not allow access.');
+        }
       })
       .catch((requestError) => {
         if (!cancelled) setLoadError(errorMessage(requestError, 'Could not load the technician ticket queue.'));
@@ -153,7 +172,7 @@ export default function TechDeckTicketQueue({
     return () => {
       cancelled = true;
     };
-  }, [tenantKey, reloadVersion]);
+  }, [reloadVersion, requestedTicketId, tenantKey]);
 
   const visibleTickets = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -177,6 +196,9 @@ export default function TechDeckTicketQueue({
   const requestedTicket = requestedTicketId
     ? tickets.find((ticket) => ticket.id === requestedTicketId)
     : undefined;
+  const trainingTicket = requestedTicket && ['resolved', 'closed'].includes(requestedTicket.status)
+    ? requestedTicket
+    : tickets.find(ticket => ['resolved', 'closed'].includes(ticket.status));
 
   function clearFilters() {
     setSearch('');
@@ -187,7 +209,7 @@ export default function TechDeckTicketQueue({
 
   async function createTicket(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting || !form.title.trim()) return;
+    if (!canWriteTickets || submitting || !form.title.trim()) return;
 
     const responseDeadline = toIso(form.responseDeadline);
     const resolutionDeadline = toIso(form.resolutionDeadline);
@@ -217,7 +239,7 @@ export default function TechDeckTicketQueue({
   }
 
   async function updateStatus(ticket: TechDeckTicket, status: TechDeckTicketStatus) {
-    if (ticket.status === status || updatingId) return;
+    if (!canWriteTickets || ticket.status === status || updatingId) return;
     setUpdatingId(ticket.id);
     setActionError(null);
     try {
@@ -234,7 +256,7 @@ export default function TechDeckTicketQueue({
   }
 
   async function updatePriority(ticket: TechDeckTicket, priority: TechDeckTicketPriority) {
-    if (ticket.priority === priority || updatingId) return;
+    if (!canWriteTickets || ticket.priority === priority || updatingId) return;
     setUpdatingId(ticket.id);
     setActionError(null);
     try {
@@ -251,7 +273,7 @@ export default function TechDeckTicketQueue({
   }
 
   async function updateAssignment(ticket: TechDeckTicket) {
-    if (updatingId) return;
+    if (!canWriteTickets || updatingId) return;
     setUpdatingId(ticket.id);
     setActionError(null);
     const assignedToUserId = ticket.assignedToUserId === currentUserId ? null : currentUserId;
@@ -297,7 +319,7 @@ export default function TechDeckTicketQueue({
           <div className="techdeck-ticket-eyebrow">Active service workflow</div>
           <h2>Technician Ticket Queue</h2>
           <p>
-            Triage, prioritize, assign, and close organization support work. OperatorOS owns identity, module access, and the active organization boundary.
+            Triage, prioritize, assign, and close support work while keeping the right technician, customer, and next action visible.
           </p>
         </div>
         <div className="techdeck-ticket-metrics" aria-label="Ticket queue summary">
@@ -308,11 +330,46 @@ export default function TechDeckTicketQueue({
         </div>
       </div>
 
+      {!canWriteTickets && (
+        <div className="techdeck-ticket-read-only" role="status" data-testid="techdeck-ticket-read-only">
+          <ShieldCheck size={17} aria-hidden="true" />
+          <div><strong>Read-only ticket queue</strong><span>You can search and review service work. Ask an organization administrator to change your TechDeck access before opening, assigning, prioritizing, or updating tickets.</span></div>
+        </div>
+      )}
+
       {requestedTicketId && !loading && (
         <div className="techdeck-ticket-route-context" data-testid="techdeck-ticket-route-context" data-found={Boolean(requestedTicket)}>
           {requestedTicket
-            ? <><CheckCircle2 size={17} aria-hidden="true" /><span>Deep-linked ticket: <strong>#{requestedTicket.number} {requestedTicket.title}</strong></span></>
+            ? <><CheckCircle2 size={17} aria-hidden="true" /><span>Opened ticket: <strong>#{requestedTicket.number} {requestedTicket.title}</strong></span></>
             : <><AlertTriangle size={17} aria-hidden="true" /><span>The requested ticket is not available for this organization.</span></>}
+        </div>
+      )}
+
+      {!loading && trainingTicket && (
+        <div style={{ margin: '14px 0 18px' }}>
+          <OutcomeWorkflowAction
+            workflowKey="support.resolved_to_faultlinelab"
+            aggregateId={trainingTicket.id}
+            sourceVersion={trainingTicket.version}
+            sourceDeepLink={`/modules/techdeck/tickets/${trainingTicket.id}`}
+            sourceModuleSlug="techdeck"
+            sourceType="techdeck_ticket"
+            sourceKind="ticket"
+            payload={{ authorApproved: true, privacyReviewed: true }}
+            title="Turn this resolution into team practice"
+            description={`Use the lessons from ticket #${trainingTicket.number} to start a reusable troubleshooting exercise instead of letting the fix disappear into ticket history.`}
+            destinationLabel="FaultlineLab"
+            actionLabel="Preview training exercise"
+            confirmationText="Create an unpublished FaultlineLab draft with common identifiers masked. I have reviewed the ticket for customer-sensitive information and confirm it is appropriate for a training draft; a trainer must still complete a full privacy and technical review before publishing."
+            disabled={!canManageTickets}
+            disabledReason={!canManageTickets ? 'An organization administrator must approve this training draft.' : undefined}
+            previewItems={[
+              { label: 'Masked troubleshooting scenario', detail: 'Common email, phone, identifier, and payment-number patterns are masked in the draft' },
+              { label: 'Resolution-based review material', detail: 'The recorded outcome is retained for trainer validation' },
+              { label: 'Unpublished authoring draft', detail: 'No learner sees it until an author completes privacy, accuracy, and publishing review' },
+            ]}
+            testId="techdeck-create-training-exercise"
+          />
         </div>
       )}
 
@@ -330,11 +387,11 @@ export default function TechDeckTicketQueue({
         </div>
       )}
 
-      <form className="techdeck-ticket-form" onSubmit={createTicket} data-testid="techdeck-ticket-create-form">
+      {canWriteTickets && <form className="techdeck-ticket-form" onSubmit={createTicket} data-testid="techdeck-ticket-create-form">
         <div className="techdeck-ticket-form-title">
           <Plus size={17} aria-hidden="true" />
           <strong>Open a technician ticket</strong>
-          <span>Ownership and access are assigned automatically.</span>
+          <span>Set ownership and response targets up front.</span>
         </div>
 
         {actionError && !actionError.ticketId && (
@@ -410,7 +467,7 @@ export default function TechDeckTicketQueue({
             {submitting ? 'Opening ticket…' : 'Open ticket'}
           </button>
         </div>
-      </form>
+      </form>}
 
       <div className="techdeck-ticket-toolbar" aria-label="Ticket filters">
         <label className="techdeck-ticket-search">
@@ -483,15 +540,15 @@ export default function TechDeckTicketQueue({
                 : 'Clear the current search and filters to restore the full queue.'}
             </span>
           </div>
-          <button
+          {(canWriteTickets || tickets.length > 0) && <button
             type="button"
             onClick={() => {
-              if (tickets.length === 0) titleInputRef.current?.focus();
+              if (tickets.length === 0 && canWriteTickets) titleInputRef.current?.focus();
               else clearFilters();
             }}
           >
             {tickets.length === 0 ? 'Create first ticket' : 'Clear filters'}
-          </button>
+          </button>}
         </div>
       ) : !loadError ? (
         <div className="techdeck-ticket-list" data-testid="techdeck-ticket-list">
@@ -542,7 +599,7 @@ export default function TechDeckTicketQueue({
                     <span>Status</span>
                     <select
                       value={ticket.status}
-                      disabled={Boolean(updatingId)}
+                      disabled={!canWriteTickets || Boolean(updatingId)}
                       onChange={(event) => updateStatus(ticket, event.target.value as TechDeckTicketStatus)}
                       data-testid={`techdeck-ticket-status-${ticket.id}`}
                     >
@@ -555,7 +612,7 @@ export default function TechDeckTicketQueue({
                     <span>Priority</span>
                     <select
                       value={ticket.priority}
-                      disabled={Boolean(updatingId)}
+                      disabled={!canWriteTickets || Boolean(updatingId)}
                       onChange={(event) => updatePriority(ticket, event.target.value as TechDeckTicketPriority)}
                       data-testid={`techdeck-ticket-priority-${ticket.id}`}
                     >
@@ -566,7 +623,7 @@ export default function TechDeckTicketQueue({
                   </label>
                   <button
                     type="button"
-                    disabled={Boolean(updatingId) || !canChangeAssignment}
+                    disabled={!canWriteTickets || Boolean(updatingId) || !canChangeAssignment}
                     onClick={() => updateAssignment(ticket)}
                     data-testid={`techdeck-ticket-assignment-${ticket.id}`}
                   >
@@ -575,7 +632,9 @@ export default function TechDeckTicketQueue({
                       ? 'Updating…'
                       : isMine
                         ? 'Unassign me'
-                        : assignmentOwnedByAnother && !canManageTickets
+                        : !canWriteTickets
+                          ? 'Read only'
+                          : assignmentOwnedByAnother && !canManageTickets
                           ? 'Assigned'
                           : 'Assign to me'}
                   </button>
@@ -628,6 +687,10 @@ const ticketQueueCss = `
   .techdeck-ticket-metrics span { color: #8fa3bd; font-size: 10px; text-transform: uppercase; font-weight: 800; }
   .techdeck-ticket-metrics strong { color: #e5eefc; font-size: 14px; font-variant-numeric: tabular-nums; }
   .techdeck-ticket-error { border: 1px solid rgba(239,68,68,.38); background: rgba(127,29,29,.2); color: #fecaca; border-radius: 7px; padding: 11px 12px; display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  .techdeck-ticket-read-only { border: 1px solid rgba(148,163,184,.32); background: #101826; color: #cbd5e1; border-radius: 7px; padding: 11px 12px; display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+  .techdeck-ticket-read-only > svg { color: #7dd3fc; flex: none; margin-top: 1px; }
+  .techdeck-ticket-read-only > div { display: grid; gap: 3px; }
+  .techdeck-ticket-read-only span { color: #8fa3bd; line-height: 1.45; }
   .techdeck-ticket-route-context { border: 1px solid rgba(148,163,184,.24); background: #101826; color: #cbd5e1; border-radius: 7px; padding: 10px 12px; display: flex; gap: 9px; align-items: center; font-size: 13px; }
   .techdeck-ticket-route-context[data-found=true] { border-color: rgba(56,189,248,.45); color: #bae6fd; }
   .techdeck-ticket-error > div { flex: 1; display: grid; gap: 3px; }

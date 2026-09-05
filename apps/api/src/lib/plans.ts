@@ -3,7 +3,7 @@ import {
   subscriptions, subscriptionPlans, saasWorkspaces, saasProjects,
   saasTasks, notes, workspaceMemberships, usageTracking,
 } from '../schema.js';
-import { eq, and, count, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, count, desc, gte, lte, sql } from 'drizzle-orm';
 
 export interface PlanConfig {
   slug: string;
@@ -132,11 +132,22 @@ export const LIMIT_LABELS: Record<keyof PlanLimits, string> = {
   maxAiActionsPerMonth: 'AI Actions / Month',
 };
 
-export async function getUserPlanConfig(userId: string): Promise<{ config: PlanConfig; subscription: any | null }> {
+export async function getUserPlanConfig(
+  userId: string,
+  tenantId?: string,
+): Promise<{ config: PlanConfig; subscription: any | null }> {
   const allSubs = await db.select().from(subscriptions)
-    .where(eq(subscriptions.userId, userId))
+    .where(and(
+      eq(subscriptions.userId, userId),
+      ...(tenantId ? [eq(subscriptions.tenantId, tenantId)] : []),
+      ...(tenantId ? [sql`${subscriptions.status} IN ('active','trialing')`] : []),
+      ...(tenantId ? [sql`subscriptions.legacy_access_grandfathered_at IS NOT NULL`] : []),
+    ))
+    .orderBy(desc(subscriptions.createdAt))
     .limit(5);
-  const sub = allSubs.find(s => s.status === 'active' || s.status === 'trialing') || allSubs[0] || null;
+  const sub = tenantId
+    ? allSubs[0] ?? null
+    : allSubs.find(s => s.status === 'active' || s.status === 'trialing') || allSubs[0] || null;
 
   if (!sub) {
     return { config: PLAN_CONFIGS[0], subscription: null };
@@ -156,7 +167,7 @@ export async function getUserPlanConfig(userId: string): Promise<{ config: PlanC
 // active tenant. Plan limits remain user-level for now (one plan per user)
 // — caps apply per-tenant against the user's plan.
 export async function getUserUsageSummary(userId: string, tenantId: string): Promise<UsageSummary> {
-  const { config } = await getUserPlanConfig(userId);
+  const { config } = await getUserPlanConfig(userId, tenantId);
 
   const [{ value: wsCount }] = await db.select({ value: count() }).from(saasWorkspaces)
     .where(and(eq(saasWorkspaces.ownerId, userId), eq(saasWorkspaces.tenantId, tenantId)));
@@ -200,7 +211,7 @@ export async function getUserUsageSummary(userId: string, tenantId: string): Pro
 }
 
 export async function checkResourceLimit(userId: string, tenantId: string, resource: keyof PlanLimits): Promise<PlanCheckResult> {
-  const { config } = await getUserPlanConfig(userId);
+  const { config } = await getUserPlanConfig(userId, tenantId);
   const usage = await getUserUsageSummary(userId, tenantId);
 
   const resourceToUsageKey: Record<keyof PlanLimits, keyof UsageSummary> = {
@@ -229,8 +240,12 @@ export async function checkResourceLimit(userId: string, tenantId: string, resou
   return { allowed: true, resource: usageKey, used, limit, message: '' };
 }
 
-export async function checkFeatureAccess(userId: string, feature: keyof PlanFeatures): Promise<PlanCheckResult> {
-  const { config } = await getUserPlanConfig(userId);
+export async function checkFeatureAccess(
+  userId: string,
+  tenantId: string,
+  feature: keyof PlanFeatures,
+): Promise<PlanCheckResult> {
+  const { config } = await getUserPlanConfig(userId, tenantId);
 
   if (!config.features[feature]) {
     const nextPlan = getNextUpgradePlan(config.slug);

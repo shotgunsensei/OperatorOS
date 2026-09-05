@@ -58,10 +58,10 @@ export default function PricingTeaser() {
               letterSpacing: '-0.01em',
             }}
           >
-            OperatorOS is free. Build the paid app stack you need.
+            OperatorOS is free. Build one paid Application Stack.
           </h2>
           <p style={{ fontSize: 14, lineHeight: 1.55, color: brand.textSecondary, margin: 0 }}>
-            TorqueShed, FaultlineLab, and Operator Pool Hall are free with any account. Add TradeFlowKit, PulseDesk, or TechDeck for 5 seats and one selectable companion application.
+            TorqueShed, FaultlineLab, and Operator Pool Hall are free with any account. Choose one flagship for 5 seats and one organization-wide companion; monthly extras stay predictable.
           </p>
         </div>
         <style>{`

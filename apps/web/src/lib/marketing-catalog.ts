@@ -13,6 +13,7 @@
 
 import { brand } from './brand';
 import {
+  getModuleProductValue,
   MODULE_CATALOG,
   type ModuleApplicationType,
   type ModuleCatalogEntry,
@@ -51,7 +52,7 @@ export interface MarketingModule {
   outcome: string;
   /** Primary user or buyer the module is built for. */
   audience: string;
-  /** Plain-language problem the module solves. */
+  /** First useful result shown as the card's concrete operator value. */
   solves: string;
   /** Optional curated public media asset for card thumbnails. */
   imageSrc?: string;
@@ -61,79 +62,18 @@ export interface MarketingModule {
   source: MarketingCatalogSource;
 }
 
-const OUTCOMES: Record<string, string> = {
-  tradeflowkit:
-    'Turn a new lead into a scheduled job, approved quote, invoice, and recorded payment.',
-  torqueshed:
-    'Keep each vehicle’s service history, repair evidence, reminders, and diagnostic work together.',
-  techdeck:
-    'Triage tickets while keeping client systems, procedures, evidence, and technician time connected.',
-  pulsedesk:
-    'Route facility and department requests without losing ownership, deadlines, or escalation history.',
-  faultlinelab:
-    'Practice difficult troubleshooting scenarios and keep a clear evidence trail for every attempt.',
-  'ninja-pool-hall':
-    'Play deterministic 8-ball in practice, CPU, local hot-seat, or protected online rooms.',
-  brandforgeos: 'Build campaigns, review brand assets, and keep approved creative work organized.',
-  snapproofos: 'Capture dated proof of work before a customer, auditor, or teammate asks for it.',
-  'studyforge-ai':
-    'Turn team knowledge into guided study sessions that can be reused and reviewed.',
-  'ninja-launch-kit':
-    'Coordinate release gates, approvals, promotion evidence, rollback plans, and audited exports.',
-  'callcommand-ai':
-    'Handle repetitive phone work with reviewed scripts, routing, and call history.',
-  ninjamation:
-    'Create, review, approve, and download repeatable infrastructure and endpoint automation scripts.',
-  outcall:
-    'Schedule a discreet safety call with a clear fallback plan and trusted contact details.',
-};
-
-const AUDIENCES: Record<string, string> = {
-  tradeflowkit: 'Service businesses and operators',
-  torqueshed: 'Mechanics and repair shops',
-  techdeck: 'MSP teams and field technicians',
-  pulsedesk: 'Healthcare operations teams',
-  faultlinelab: 'Troubleshooters and technical leads',
-  'ninja-pool-hall': 'Pool players and friendly rivals',
-  brandforgeos: 'Founders, marketers, and creators',
-  snapproofos: 'Teams that need proof and verification',
-  'studyforge-ai': 'Training teams and operators',
-  'ninja-launch-kit': 'Operators shipping applications and services',
-  'callcommand-ai': 'Teams with high-volume calls',
-  ninjamation: 'IT operators building repeatable PC automation',
-  outcall: 'People who want discreet personal-safety support',
-};
-
-const SOLVES: Record<string, string> = {
-  tradeflowkit: 'Revenue work scattered across quotes, invoices, and status updates.',
-  torqueshed: 'Repair knowledge trapped in conversations and disconnected tickets.',
-  techdeck: 'Technicians jumping between notes, scripts, tickets, and tools.',
-  pulsedesk: 'Escalations and handoffs disappearing between busy departments.',
-  faultlinelab: 'Root-cause analysis that never becomes reusable knowledge.',
-  'ninja-pool-hall':
-    'Browser pool games that fake gameplay or lose the table when a connection drops.',
-  brandforgeos: 'Campaign assets and positioning spread across disconnected docs.',
-  snapproofos: 'Missing evidence when customers, auditors, or teams ask what happened.',
-  'studyforge-ai': 'Training material that is hard to reuse, test, or operationalize.',
-  'ninja-launch-kit':
-    'Release decisions scattered across checklists, evidence, approvals, and rollback notes.',
-  'callcommand-ai': 'Missed calls and repetitive phone workflows draining operator time.',
-  ninjamation: 'Unreviewed one-off scripts with no version, approval, or download trail.',
-  outcall: 'Awkward or unsafe situations where a planned check-in can help someone leave.',
-};
-
 export const PACKAGE_LABELS: Record<MarketingPackageType, string> = {
-  core: 'Main Modules',
-  included: 'Included Companion Applications',
-  companion: 'Add-on Companion Applications',
+  core: 'Flagship Business Applications',
+  included: 'Included Applications',
+  companion: 'Business Add-ons',
 };
 
 export const PACKAGE_DESCRIPTIONS: Record<MarketingPackageType, string> = {
-  core: 'The three flagship products beneath OperatorOS, with deeper workflows and stronger visual priority.',
+  core: 'Choose from three complete business applications that share one sign-in and home base.',
   included:
-    'Active companion applications included with any OperatorOS account — no paid main module required.',
+    'Useful applications included with every OperatorOS account — no paid subscription required.',
   companion:
-    'Specialized companion applications governed by the same OperatorOS identity, tenant, billing, and entitlement authority.',
+    'Specialized business applications that share one sign-in, team access, plan, and billing experience.',
 };
 
 function packageFor(entry: MarketingCatalogSource): MarketingPackageType {
@@ -142,12 +82,12 @@ function packageFor(entry: MarketingCatalogSource): MarketingPackageType {
 }
 
 function applicationLabel(entry: MarketingCatalogSource): string {
-  return entry.applicationType === 'main-module' ? 'Main Module' : 'Companion Application';
+  return entry.applicationType === 'main-module' ? 'Flagship Application' : 'Specialized Application';
 }
 
 function accessLabel(commercialType: ModuleCommercialType): string {
   if (commercialType === 'free') return 'Included with account';
-  if (commercialType === 'addon') return 'Entitlement-controlled add-on';
+  if (commercialType === 'addon') return 'Available as an add-on';
   return 'Flagship product';
 }
 
@@ -183,6 +123,10 @@ export const MARKETING_MODULES: readonly MarketingModule[] = SOURCE.slice()
   .sort((a, b) => a.ord - b.ord)
   .map((entry) => {
     const packageType = packageFor(entry);
+    const productValue = getModuleProductValue(entry.slug);
+    if (!productValue) {
+      throw new Error(`Missing customer product-value contract for ${entry.slug}`);
+    }
     return {
       slug: entry.slug,
       name: entry.name,
@@ -190,9 +134,9 @@ export const MARKETING_MODULES: readonly MarketingModule[] = SOURCE.slice()
       packageLabel: applicationLabel(entry),
       accessLabel: accessLabel(entry.commercialType),
       applicationType: entry.applicationType,
-      outcome: OUTCOMES[entry.slug] ?? entry.description,
-      audience: AUDIENCES[entry.slug] ?? 'Operations teams',
-      solves: SOLVES[entry.slug] ?? entry.description,
+      outcome: productValue.promise,
+      audience: productValue.buyer,
+      solves: productValue.firstUsefulResult,
       imageSrc: IMAGE_SRC[entry.slug],
       status: statusFor(entry),
       source: entry,

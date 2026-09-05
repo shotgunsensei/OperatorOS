@@ -11,6 +11,7 @@ import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import type { CallCommandRouteArea } from './CallCommandRoute.contract';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 import { buildCallCommandWorkflowFocus } from '@/lib/companion-workflow';
 
 type Row = Record<string, any>;
@@ -93,7 +94,7 @@ function Heading({ icon, title, subtitle, action }: { icon: React.ReactNode; tit
 
 function disabledStyle(enabled: boolean): React.CSSProperties { return enabled ? {} : { opacity: .5, cursor: 'not-allowed' }; }
 
-export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor }: { view: CallCommandRouteArea; recordId?: string; hrefFor: (path: string) => string }) {
+export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor, allowWrite }: { view: CallCommandRouteArea; recordId?: string; hrefFor: (path: string) => string; allowWrite: boolean }) {
   const router = useRouter();
   const [product, setProduct] = useState<ProductWorkspace | null>(null);
   const [commercial, setCommercial] = useState<Row | null>(null);
@@ -128,7 +129,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
   const [callDetail, setCallDetail] = useState<Row | null>(null);
   const [callDetailLoading, setCallDetailLoading] = useState(false);
   const [callQuery, setCallQuery] = useState('');
-  const canWrite = commercial?.capabilities?.canWrite === true;
+  const canWrite = allowWrite && commercial?.capabilities?.canWrite === true;
   const canAdmin = commercial?.capabilities?.canAdmin === true;
 
   const refresh = useCallback(async () => {
@@ -261,12 +262,12 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
 
   const readiness = [
     { label: 'AI receptionist assigned', ready: Boolean(assignedProfile), detail: assignedProfile ? `${assignedProfile.name} is assigned to this number.` : 'Create and assign the receptionist who will answer this number.' },
-    { label: 'Phone number connected', ready: numberVerified, detail: numberVerified ? 'The provider confirms this number is active.' : activeChannel ? 'The number is saved but provider ownership is not verified.' : 'Get a new number or connect your existing number.' },
+    { label: 'Phone number connected', ready: numberVerified, detail: numberVerified ? 'Twilio confirms this number is active.' : activeChannel ? 'The number is saved, but Twilio has not confirmed it is active.' : 'Get a new number or connect your existing number.' },
     { label: 'Published workflow assigned', ready: Boolean(activeFlow), detail: activeFlow ? `${activeFlow.name} is published and assigned to this number.` : 'Choose a template, publish it, and assign it to this number.' },
-    { label: 'Incoming call route verified', ready: routingVerified, detail: routingVerified ? 'The provider confirms incoming routing.' : 'Provider routing must pass a health check before go-live.' },
-    { label: 'Managed-number billing entitled', ready: numberBillingReady, detail: numberBillingReady ? 'This number is included, paid, or within an active payment grace period.' : 'Number billing must settle before this line can accept live calls.' },
-    { label: 'Telephony provider ready', ready: providerReady, detail: providerReady ? 'Provider access is healthy for this tenant.' : 'A tenant-specific provider connection is still required.' },
-    { label: 'OpenAI Realtime SIP configured', ready: realtimeConfigured, detail: realtimeConfigured ? `${realtimeModel || 'The allowlisted Realtime model'} is configured on the server.` : 'A deployment administrator must configure the OpenAI project, webhook signature, SIP route secret, and allowlisted model.' },
+    { label: 'Incoming call route verified', ready: routingVerified, detail: routingVerified ? 'Twilio confirms incoming calls reach CallCommand.' : 'The incoming call route must pass a health check before go-live.' },
+    { label: 'Phone number billing active', ready: numberBillingReady, detail: numberBillingReady ? 'This number is included, paid, or within an active payment grace period.' : 'Number billing must be active before this line can accept live calls.' },
+    { label: 'Twilio connection ready', ready: providerReady, detail: providerReady ? 'Twilio is ready for this organization.' : 'This organization still needs a Twilio connection.' },
+    { label: 'OpenAI Realtime SIP configured', ready: realtimeConfigured, detail: realtimeConfigured ? `${realtimeModel || 'The approved Realtime model'} is configured in OperatorOS.` : 'A deployment administrator must configure the OpenAI project, webhook signature, SIP route secret, and approved model.' },
   ];
 
   async function searchNumbers() {
@@ -281,15 +282,15 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
       }));
       setAvailableNumbers(found);
       setNotice(found.length
-        ? `${found.length} voice number${found.length === 1 ? '' : 's'} found. Review and acknowledge the recurring provider-charge notice before purchasing.`
+        ? `${found.length} voice number${found.length === 1 ? '' : 's'} found. Review and acknowledge the recurring phone-service charge before purchasing.`
         : 'No matching voice numbers were returned. Try a nearby area code or locality.');
-    } catch (caught) { setError(errorMessage(caught, 'Number search is unavailable until the telephony provider is configured.')); }
+    } catch (caught) { setError(errorMessage(caught, 'Number search is unavailable until the phone service is connected.')); }
     finally { setBusy(''); }
   }
 
   async function provisionNumber(item: Row) {
     if (!canAdmin || !numberChargeConfirmed) {
-      setError('An organization administrator must acknowledge the recurring provider charge before purchasing a number.');
+      setError('An organization administrator must acknowledge the recurring phone-service charge before purchasing a number.');
       return;
     }
     const phone = item.phoneE164 ?? item.phone ?? item.number;
@@ -316,12 +317,12 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
       setAvailableNumbers(current => current.filter(candidate => (candidate.phoneE164 ?? candidate.phone ?? candidate.number) !== phone));
       setNotice(result.readyForLiveCalls
         ? 'Number acquired, routing verified, billing authorized, and the receptionist workflow was assigned.'
-        : `The provider acquired the number. Provisioning is in ${String(result.lifecycleState ?? 'reconciliation').replaceAll('_', ' ').toLowerCase()} and live calls remain locked.`);
+        : `Twilio acquired the number. Setup is in ${String(result.lifecycleState ?? 'reconciliation').replaceAll('_', ' ').toLowerCase()} and live calls remain locked.`);
       await refresh();
     } catch (caught) {
       const failure = caught as Row;
       if (failure?.code === 'CALLCOMMAND_NUMBER_INVENTORY_CHANGED' || failure?.refreshSearch === true) {
-        setNotice('That number was just claimed. CallCommand is refreshing provider inventory now.');
+        setNotice('That number was just claimed. CallCommand is refreshing the available-number list now.');
         setAvailableNumbers([]);
         setBusy('number-search');
         try {
@@ -332,7 +333,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
             uiIdempotencyKey: `commercial-number:${requestKey}:${candidate.phoneE164 ?? candidate.phone ?? candidate.number}`,
           })));
         } catch (searchFailure) {
-          setError(errorMessage(searchFailure, 'Fresh provider inventory could not be loaded.'));
+          setError(errorMessage(searchFailure, 'The latest available-number list could not be loaded.'));
         }
       } else if (failure?.code === 'CALLCOMMAND_NUMBER_BILLING_REQUIRED' && failure.required) {
         const billingKey = `managed-number-billing:${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
@@ -343,16 +344,16 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
             idempotencyKey: billingKey,
           }) as Row;
           if (billing.checkoutUrl) {
-            setNotice('OperatorOS opened secure billing for the required number quantity. Return here after signed payment settlement, then choose the number again.');
+            setNotice('OperatorOS opened secure billing for the required number quantity. Return here after Stripe confirms payment, then choose the number again.');
             window.location.assign(String(billing.checkoutUrl));
           } else {
-            setNotice('The managed-number billing update is pending signed Stripe settlement. The provider purchase has not occurred.');
+            setNotice('The phone-number billing update is waiting for Stripe confirmation. No Twilio number has been purchased.');
           }
         } catch (billingFailure) {
-          setError(errorMessage(billingFailure, 'Managed-number billing could not be started. No provider number was purchased.'));
+          setError(errorMessage(billingFailure, 'Managed-number billing could not be started. No phone number was purchased.'));
         }
       } else {
-        setError(errorMessage(caught, 'The provider did not confirm number provisioning.'));
+        setError(errorMessage(caught, 'Twilio did not confirm that the phone number was ready.'));
       }
     } finally { setBusy(''); }
   }
@@ -363,7 +364,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
       ...existingNumber,
       connectionType: numberPath === 'forward' ? 'forwarding' : existingNumber.connectionType,
       profileId: availableProfile?.id ?? null,
-    }), 'The provider handoff plan was saved. Complete its listed steps before running health validation.');
+    }), 'The phone-number connection plan was saved. Complete the listed carrier steps before running the connection check.');
     if (result?.connectionPlan) setConnectionPlan(result.connectionPlan as Row);
   }
 
@@ -372,7 +373,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
     const result = await run(`number-release:${item.id}`, () => moduleShellApi.callcommand.commercialReleaseNumber(item.id, {
       confirmRelease: true,
       confirmationText: releasePhrase,
-    }), 'The number release is scheduled behind a recovery hold. The provider still owns the number and billing remains active until final execution is confirmed.');
+    }), 'The number release is scheduled behind a recovery hold. Twilio still owns the number and billing remains active until final release is confirmed.');
     if (result) { setReleaseNumberId(''); setReleasePhrase(''); }
   }
 
@@ -488,7 +489,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
 
   async function simulate() {
     if (!activeChannel || !assignedProfile) { setError('Assign a general-purpose receptionist to this phone number before running a test.'); return; }
-    const result = await run('simulation', () => moduleShellApi.callcommand.productSimulate({ channelId: activeChannel.id, profileId: assignedProfile.id, callerName: 'Setup test caller', callerPhone: '+15555550100', transcript: simulationTranscript, idempotencyKey: `commercial-ui-sim-${Date.now()}` }), 'Simulation complete. No external call was placed. Review the persisted timeline below.');
+    const result = await run('simulation', () => moduleShellApi.callcommand.productSimulate({ channelId: activeChannel.id, profileId: assignedProfile.id, callerName: 'Setup test caller', callerPhone: '+15555550100', transcript: simulationTranscript, idempotencyKey: `commercial-ui-sim-${Date.now()}` }), 'Simulation complete. No external call was placed. Review the saved timeline below.');
     const callId = result?.call?.id ?? result?.callId;
     // The workspace refresh performed by run() already exposes the persisted
     // call. Select it in place so a user's next navigation cannot race a
@@ -507,7 +508,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
         realtimeEnabled: true,
         activationChannelId: activeChannel.id,
       });
-    }, 'CallCommand Realtime is enabled on the provider-verified number and route. Place a controlled live call to establish deployment health evidence.');
+    }, 'CallCommand Realtime is enabled on the verified number and incoming route. Place a controlled live call to confirm this environment is ready.');
   }
 
   async function requestLaneQuantity(quantity: number) {
@@ -526,10 +527,10 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
         return;
       }
       setNotice(quantity === 0
-        ? 'Stripe accepted the request to cancel the dedicated paid-lane subscription at the end of its billing period. Paid capacity stays active until a signed subscription-deletion event removes it.'
+        ? 'Stripe accepted the request to cancel the dedicated paid-lane subscription at the end of its billing period. Paid capacity stays active until Stripe confirms cancellation.'
         : result.action === 'quantity_update_pending'
-        ? `The desired total was submitted to Stripe. Capacity stays unchanged until signed payment settlement confirms ${quantity} additional lane${quantity === 1 ? '' : 's'}.`
-        : 'The paid-lane request was accepted. Capacity remains unchanged until signed payment settlement.');
+        ? `The desired total was submitted to Stripe. Capacity stays unchanged until Stripe confirms payment for ${quantity} additional lane${quantity === 1 ? '' : 's'}.`
+        : 'The paid-lane request was accepted. Capacity remains unchanged until Stripe confirms payment.');
       try { await refresh(); }
       catch (refreshError) { setError(`The billing request was submitted, but the refreshed workspace could not be loaded: ${errorMessage(refreshError, 'refresh failed')}`); }
     } catch (caught) {
@@ -540,8 +541,8 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
   async function refreshVisibleWorkspace() {
     if (busy) return;
     setBusy('refresh'); setError('');
-    try { await refresh(); setNotice('CallCommand configuration and health facts were refreshed.'); }
-    catch (caught) { setError(errorMessage(caught, 'CallCommand could not refresh its current health facts.')); }
+    try { await refresh(); setNotice('CallCommand setup and health status were refreshed.'); }
+    catch (caught) { setError(errorMessage(caught, 'CallCommand could not refresh its current setup and health status.')); }
     finally { setBusy(''); }
   }
 
@@ -555,13 +556,13 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
     {notice && <div role="status" style={{ ...panel, borderColor: 'rgba(52,211,153,.45)', color: '#6ee7b7', marginBottom: space.md }}><CheckCircle2 size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{notice}</div>}
     <section data-testid="banner-callcommand-provider" style={{ ...panel, display: 'flex', gap: 12, alignItems: 'center', marginBottom: space.lg, borderColor: telephonyReady ? 'rgba(52,211,153,.45)' : 'rgba(251,191,36,.45)' }}>
       <span style={{ color: telephonyReady ? '#34d399' : '#fbbf24' }}>{telephonyReady ? <CheckCircle2 size={19}/> : <AlertTriangle size={19}/>}</span>
-      <div style={{ flex: 1 }}><strong>{telephonyReady ? 'Twilio voice provider available' : 'Twilio voice provider unavailable'}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{telephonyReady ? 'The shared runtime has a configured telephony provider. Tenant-specific number, routing, and workflow readiness are verified separately below.' : 'Configuration, flows, simulations, and call review remain available. Live calls and transfers fail closed until an administrator configures Twilio.'}</div></div>
+      <div style={{ flex: 1 }}><strong>{telephonyReady ? 'Twilio voice connection available' : 'Twilio voice connection unavailable'}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{telephonyReady ? "Twilio setup is available. Each organization's business number, incoming route, and receptionist workflow are checked separately below." : 'Configuration, workflows, simulations, and call review remain available. Live calls and transfers remain unavailable until an administrator configures Twilio.'}</div></div>
     </section>
-    {commercialUnavailable && <div style={{ ...panel, borderColor: 'rgba(251,191,36,.35)', color: '#fde68a', marginBottom: space.md }}><AlertTriangle size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>Commercial number, capacity, pricing, and health data are not available from this environment. Existing configuration and the no-cost simulator remain available; no provider readiness is being inferred.</div>}
+    {commercialUnavailable && <div style={{ ...panel, borderColor: 'rgba(251,191,36,.35)', color: '#fde68a', marginBottom: space.md }}><AlertTriangle size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>Commercial number, capacity, pricing, and health data are not available from this environment. Existing configuration and the no-cost simulator remain available; this screen does not mark Twilio ready without current health data.</div>}
 
     {(view === 'overview' || view === 'setup') && <section style={{ ...panel, marginBottom: space.lg, padding: 0, overflow: 'hidden' }}>
       <div style={{ padding: '22px 24px', background: 'radial-gradient(circle at 88% 0,rgba(16,185,129,.22),transparent 38%),linear-gradient(135deg,rgba(6,78,59,.3),rgba(5,15,22,.2))' }}>
-        <Heading icon={<Sparkles/>} title={goLiveReady ? 'CallCommand is ready for live calls' : 'Finish setting up your receptionist'} subtitle={goLiveReady ? 'Your tenant-specific provider, number, incoming route, receptionist, and workflow are verified.' : 'Complete the checklist below. CallCommand will not claim live readiness until the provider confirms the number and incoming route.'}/>
+        <Heading icon={<Sparkles/>} title={goLiveReady ? 'CallCommand is ready for live calls' : 'Finish setting up your receptionist'} subtitle={goLiveReady ? 'Your Twilio connection, business number, incoming route, receptionist, and workflow are verified.' : 'Complete the checklist below. CallCommand will not claim live readiness until Twilio confirms the number and incoming route.'}/>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{readiness.map(item => <Badge key={item.label} tone={item.ready ? 'good' : 'warn'}>{item.ready ? 'Ready' : 'Next'} · {item.label}</Badge>)}</div>
       </div>
     </section>}
@@ -581,16 +582,16 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
           ['Follow-up actions', commercialProduct?.actionRuns.length ?? 0, Activity], ['Available call lanes', firstNumber(commercial, ['capacity.available', 'concurrency.available']), Users],
         ].map(([label, value, Icon]: any) => <article key={label} style={panel}><Icon size={17} color="#2dd4bf"/><div style={{ fontSize: 27, fontWeight: 900, marginTop: 7 }}>{value === null ? '—' : value}</div><div style={{ color: semantic.textMuted, fontSize: 12 }}>{label}</div></article>)}
       </div>
-      <section style={panel}><Heading icon={<HeartPulse/>} title="What needs attention" subtitle="These are configuration facts from this tenant, not a global provider-credential check."/>
+      <section style={panel}><Heading icon={<HeartPulse/>} title="What needs attention" subtitle="These checks reflect this organization's current setup; a global Twilio credential alone does not make a phone number ready."/>
         <div style={{ display: 'grid', gap: 8 }}>{readiness.map(item => <div key={item.label} style={{ display: 'flex', gap: 10, padding: 11, border: '1px solid rgba(94,234,212,.13)', borderRadius: 9 }}><span style={{ color: item.ready ? '#34d399' : '#fbbf24' }}>{item.ready ? <CheckCircle2 size={17}/> : <AlertTriangle size={17}/>}</span><div><strong>{item.label}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 3 }}>{item.detail}</div></div></div>)}</div>
       </section>
     </>}
 
     {view === 'setup' && <div style={{ display: 'grid', gap: space.lg }}>
-      <section style={panel}><Heading icon={<PhoneCall/>} title="1. Choose your business number" subtitle="Get a new number, forward an existing line, or connect an existing provider account. Provider purchases remain blocked until number billing is entitled."/>
+      <section style={panel}><Heading icon={<PhoneCall/>} title="1. Choose your business number" subtitle="Get a new number, forward an existing line, or connect an existing provider account. Twilio purchases remain blocked until phone-number billing is active."/>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 10, marginBottom: 14 }}>{[
-          ['new', 'Get New Number', 'Search current local or toll-free inventory. Billing entitlement is checked before the provider purchase.'],
-          ['forward', 'Forward Existing', 'Keep the current carrier and create a forwarding handoff plan. This does not claim provider activation.'],
+          ['new', 'Get New Number', 'Search current local or toll-free inventory. Your plan is checked before a Twilio number is purchased.'],
+          ['forward', 'Forward Existing', 'Keep the current carrier and create a forwarding plan.'],
           ['provider', 'Connect Provider', 'Transfer an existing Twilio number, connect SIP/PBX, or begin a controlled porting plan.'],
         ].map(([key, title, description]) => <button key={key} type="button" aria-pressed={numberPath === key} onClick={() => { setNumberPath(key as 'new'|'forward'|'provider'); setConnectionPlan(null); setExistingNumber(current => ({ ...current, connectionType: key === 'forward' ? 'forwarding' : current.connectionType === 'forwarding' ? 'twilio_transfer' : current.connectionType })); }} style={{ ...quiet, textAlign: 'left', alignItems: 'flex-start', background: numberPath === key ? 'rgba(16,185,129,.18)' : '#102630' }}><span><strong>{title}</strong><small style={{ display: 'block', color: semantic.textMuted, marginTop: 5, lineHeight: 1.4 }}>{description}</small></span></button>)}</div>
         {numberPath === 'new' ? <div style={{ display: 'grid', gap: 10 }}>
@@ -608,9 +609,9 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
             <Field label="Receptionist for this number" hint={generalProfiles.length === 0 ? 'CallCommand will create an AI Receptionist automatically.' : generalProfiles.length > 1 ? 'Required when more than one receptionist exists.' : undefined}><select style={field} value={provisionProfileId} onChange={event => setProvisionProfileId(event.target.value)}><option value="">{generalProfiles.length === 0 ? 'Create AI Receptionist' : 'Choose receptionist'}</option>{generalProfiles.filter(item => item.status === 'active').map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
             <Field label="Published workflow" hint={generalFlows.filter(item => item.status === 'active').length === 0 ? 'CallCommand will create and publish General Reception automatically.' : undefined}><select style={field} value={provisionFlowId} onChange={event => setProvisionFlowId(event.target.value)}><option value="">{generalFlows.filter(item => item.status === 'active').length === 0 ? 'Create General Reception' : 'Choose workflow'}</option>{generalFlows.filter(item => item.status === 'active').map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
           </div>
-        </div> : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 10 }}><Field label="Business number in E.164 format"><input data-testid="input-callcommand-channel-phone" style={field} value={existingNumber.phone} placeholder="+15551234567" onChange={event => setExistingNumber({ ...existingNumber, phone: event.target.value.replace(/[\s()-]/g, '') })}/></Field>{numberPath === 'provider' && <Field label="Provider connection"><select style={field} value={existingNumber.connectionType} onChange={event => setExistingNumber({ ...existingNumber, connectionType: event.target.value })}><option value="twilio_transfer">Transfer an existing Twilio number</option><option value="sip">Connect VoIP or PBX</option><option value="port">Begin number porting</option></select></Field>}<button data-testid="button-callcommand-connect-number" style={{ ...primary, alignSelf: 'end', ...disabledStyle(canAdmin && /^\+[1-9]\d{7,14}$/.test(existingNumber.phone)) }} disabled={!canAdmin || !!busy || !/^\+[1-9]\d{7,14}$/.test(existingNumber.phone)} onClick={() => void connectExistingNumber()}><ArrowRight size={15}/>{numberPath === 'forward' ? 'Save forwarding plan' : 'Save provider handoff plan'}</button></div>}
-        {(connectionPlan ?? selectedCommercialNumber?.connectionPlan) && <div style={{ marginTop: 14, padding: 13, border: '1px solid rgba(251,191,36,.35)', borderRadius: 9 }}><strong>Provider action required</strong><p style={{ color: semantic.textMuted, fontSize: 13 }}>This saved plan is not proof that the number is connected. Complete each provider step, then run health validation.</p><ol>{(Array.isArray((connectionPlan ?? selectedCommercialNumber?.connectionPlan)?.instructions) ? (connectionPlan ?? selectedCommercialNumber?.connectionPlan).instructions : []).map((instruction: unknown, index: number) => <li key={index}>{String(instruction)}</li>)}</ol></div>}
-        {availableNumbers.length > 0 && <div role="status" aria-live="polite" style={{ display: 'grid', gap: 8, marginTop: 14 }}><label style={{ padding: 11, border: '1px solid rgba(251,191,36,.35)', borderRadius: 9, color: '#fde68a', display: 'flex', gap: 9, alignItems: 'flex-start' }}><input type="checkbox" checked={numberChargeConfirmed} onChange={event => setNumberChargeConfirmed(event.target.checked)}/><span>I authorize this provider purchase and understand that the first local number is included in CallCommand billing, while additional local and every toll-free number require a paid OperatorOS number entitlement. Provider usage charges remain separate.</span></label>{availableNumbers.map(item => { const phone = item.phoneE164 ?? item.phone ?? item.number; const location = [item.locality, item.region, item.postalCode].filter(Boolean).join(', '); return <div key={item.id ?? phone} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 11, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, flexWrap: 'wrap' }}><div style={{ flex: 1, minWidth: 210 }}><strong>{phone}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 4 }}>{item.numberType === 'toll_free' ? 'Toll-free' : location || 'Local'} · {item.capabilities?.voice ? 'Voice ready' : 'Voice capability unavailable'}</div><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 4 }}>{providerPriceText(item)}</div></div><button aria-label={`Choose and provision ${phone}`} style={{ ...primary, ...disabledStyle(canAdmin && !busy && numberChargeConfirmed && item.capabilities?.voice === true) }} disabled={!canAdmin || !!busy || !numberChargeConfirmed || item.capabilities?.voice !== true} onClick={() => void provisionNumber(item)}><Plus size={14}/>{busy === `provision:${item.id ?? phone}` ? 'Provisioning…' : 'Choose and provision'}</button></div>; })}</div>}
+        </div> : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 10 }}><Field label="Business phone number" hint="Use the country code, for example +1 555 123 4567."><input data-testid="input-callcommand-channel-phone" style={field} value={existingNumber.phone} placeholder="+1 555 123 4567" onChange={event => setExistingNumber({ ...existingNumber, phone: event.target.value.replace(/[\s()-]/g, '') })}/></Field>{numberPath === 'provider' && <Field label="Provider connection"><select style={field} value={existingNumber.connectionType} onChange={event => setExistingNumber({ ...existingNumber, connectionType: event.target.value })}><option value="twilio_transfer">Transfer an existing Twilio number</option><option value="sip">Connect VoIP or PBX</option><option value="port">Begin number porting</option></select></Field>}<button data-testid="button-callcommand-connect-number" style={{ ...primary, alignSelf: 'end', ...disabledStyle(canAdmin && /^\+[1-9]\d{7,14}$/.test(existingNumber.phone)) }} disabled={!canAdmin || !!busy || !/^\+[1-9]\d{7,14}$/.test(existingNumber.phone)} onClick={() => void connectExistingNumber()}><ArrowRight size={15}/>{numberPath === 'forward' ? 'Save forwarding plan' : 'Save connection plan'}</button></div>}
+        {(connectionPlan ?? selectedCommercialNumber?.connectionPlan) && <div style={{ marginTop: 14, padding: 13, border: '1px solid rgba(251,191,36,.35)', borderRadius: 9 }}><strong>Carrier action required</strong><p style={{ color: semantic.textMuted, fontSize: 13 }}>Saving this plan does not connect the number. Complete each carrier step, then run the connection check.</p><ol>{(Array.isArray((connectionPlan ?? selectedCommercialNumber?.connectionPlan)?.instructions) ? (connectionPlan ?? selectedCommercialNumber?.connectionPlan).instructions : []).map((instruction: unknown, index: number) => <li key={index}>{String(instruction)}</li>)}</ol></div>}
+        {availableNumbers.length > 0 && <div role="status" aria-live="polite" style={{ display: 'grid', gap: 8, marginTop: 14 }}><label style={{ padding: 11, border: '1px solid rgba(251,191,36,.35)', borderRadius: 9, color: '#fde68a', display: 'flex', gap: 9, alignItems: 'flex-start' }}><input type="checkbox" checked={numberChargeConfirmed} onChange={event => setNumberChargeConfirmed(event.target.checked)}/><span>I authorize this Twilio purchase and understand that the first local number is included in CallCommand billing, while additional local numbers and every toll-free number require a paid OperatorOS number add-on. Twilio usage charges remain separate.</span></label>{availableNumbers.map(item => { const phone = item.phoneE164 ?? item.phone ?? item.number; const location = [item.locality, item.region, item.postalCode].filter(Boolean).join(', '); return <div key={item.id ?? phone} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 11, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, flexWrap: 'wrap' }}><div style={{ flex: 1, minWidth: 210 }}><strong>{phone}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 4 }}>{item.numberType === 'toll_free' ? 'Toll-free' : location || 'Local'} · {item.capabilities?.voice ? 'Voice ready' : 'Voice capability unavailable'}</div><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 4 }}>{providerPriceText(item)}</div></div><button aria-label={`Choose and provision ${phone}`} style={{ ...primary, ...disabledStyle(canAdmin && !busy && numberChargeConfirmed && item.capabilities?.voice === true) }} disabled={!canAdmin || !!busy || !numberChargeConfirmed || item.capabilities?.voice !== true} onClick={() => void provisionNumber(item)}><Plus size={14}/>{busy === `provision:${item.id ?? phone}` ? 'Provisioning…' : 'Choose and provision'}</button></div>; })}</div>}
       </section>
 
       <AgentEditor agent={agent} setAgent={setAgent} canWrite={canWrite} busy={busy} editing={Boolean(editingAgentId)} onSave={() => void saveAgent()}/>
@@ -630,18 +631,18 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
       releasePhrase={releasePhrase}
       onAdd={() => router.push(hrefFor('/setup'))}
       onHealth={item => void run(`number-health:${item.id}`, () => moduleShellApi.callcommand.commercialNumberHealth(item.id), 'Number health check completed.')}
-      onRepair={item => void run(`number-repair:${item.id}`, () => moduleShellApi.callcommand.commercialRepairNumber(item.id), 'Provider routing repair and health validation completed.')}
+      onRepair={item => void run(`number-repair:${item.id}`, () => moduleShellApi.callcommand.commercialRepairNumber(item.id), 'Phone routing repair and health check completed.')}
       onStartRelease={item => { setReleaseNumberId(String(item.id)); setReleasePhrase(''); }}
       onRelease={item => void releaseProviderNumber(item)}
-      onCancelRelease={item => void run(`number-release-cancel:${item.id}`, () => moduleShellApi.callcommand.commercialCancelNumberRelease(item.id), 'The scheduled release was canceled before provider execution. Run health check or repair before returning the line to service.')}
-      onExecuteRelease={item => void run(`number-release-execute:${item.id}`, () => moduleShellApi.callcommand.commercialExecuteNumberRelease(item.id), 'The provider confirmed number release and OperatorOS requested the resulting billing quantity update.')}
+      onCancelRelease={item => void run(`number-release-cancel:${item.id}`, () => moduleShellApi.callcommand.commercialCancelNumberRelease(item.id), 'The scheduled release was canceled before Twilio released the number. Run a health check or repair before returning the line to service.')}
+      onExecuteRelease={item => void run(`number-release-execute:${item.id}`, () => moduleShellApi.callcommand.commercialExecuteNumberRelease(item.id), 'Twilio confirmed the number release; OperatorOS is updating the billed number count.')}
       onReleasePhrase={setReleasePhrase}
       onCloseRelease={() => { setReleaseNumberId(''); setReleasePhrase(''); }}
     />}
 
     {view === 'agents' && <div style={{ display: 'grid', gap: space.lg }}><AgentEditor agent={agent} setAgent={setAgent} canWrite={canWrite} busy={busy} editing={Boolean(editingAgentId)} onSave={() => void saveAgent()}/><section style={panel}><Heading icon={<Bot/>} title="Saved receptionists" subtitle="Only general-purpose receptionists appear here; MSP intake profiles remain isolated."/><div style={{ display: 'grid', gap: 8 }}>{generalProfiles.length ? generalProfiles.map(item => <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 11, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9 }}><div style={{ flex: 1 }}><strong>{item.name}</strong><div style={{ color: semantic.textMuted, fontSize: 12 }}>{item.greeting}</div></div><Badge tone={item.status === 'active' ? 'good' : 'neutral'}>{item.status}</Badge><button aria-label={`Edit receptionist ${item.name}`} style={{ ...quiet, padding: '7px 10px', ...disabledStyle(canWrite) }} disabled={!canWrite} onClick={() => editAgent(item)}>Edit</button></div>) : <span style={{ color: semantic.textMuted }}>No general-purpose receptionist has been created.</span>}</div></section></div>}
 
-    {view === 'workflows' && <div style={{ display: 'grid', gap: space.lg }}><WorkflowEditor product={commercialProduct} flow={flow} setFlow={setFlow} templateKey={templateKey} setTemplateKey={key => { setTemplateKey(key); setFlow(current => ({ ...current, name: `${TEMPLATES[key].label} workflow`, description: TEMPLATES[key].description })); }} alerts={alerts} setAlerts={setAlerts} endpoints={endpoints} canAdmin={canAdmin} busy={busy} onSaveAlerts={() => void saveAlertSettings()} onActivate={() => void activateWorkflow()}/><section style={panel}><Heading icon={<GitBranch/>} title="Published workflows" subtitle="A workflow is operational only when it is published and assigned to a general-purpose phone number."/><div style={{ display: 'grid', gap: 8 }}>{generalFlows.length ? generalFlows.map(item => <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 11, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9 }}><div style={{ flex: 1 }}><strong>{item.name}</strong><div style={{ color: semantic.textMuted, fontSize: 12 }}>Version {item.version} · {generalChannels.filter(channel => channel.activeFlowId === item.id).length} assigned number(s)</div></div><Badge tone={item.status === 'active' ? 'good' : 'warn'}>{item.status}</Badge></div>) : <span style={{ color: semantic.textMuted }}>No general-purpose workflow has been created.</span>}</div></section></div>}
+    {view === 'workflows' && <div style={{ display: 'grid', gap: space.lg }}><WorkflowEditor product={commercialProduct} flow={flow} setFlow={setFlow} templateKey={templateKey} setTemplateKey={key => { setTemplateKey(key); setFlow(current => ({ ...current, name: `${TEMPLATES[key].label} workflow`, description: TEMPLATES[key].description })); }} alerts={alerts} setAlerts={setAlerts} endpoints={endpoints} canAdmin={canAdmin} busy={busy} onSaveAlerts={() => void saveAlertSettings()} onActivate={() => void activateWorkflow()}/><section style={panel}><Heading icon={<GitBranch/>} title="Published workflows" subtitle="A workflow is operational only when it is published and assigned to a general-purpose phone number."/><div style={{ display: 'grid', gap: 8 }}>{generalFlows.length ? generalFlows.map(item => <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 11, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9 }}><div style={{ flex: 1 }}><strong>{item.name}</strong><div style={{ color: semantic.textMuted, fontSize: 12 }}>Revision {item.version} · {generalChannels.filter(channel => channel.activeFlowId === item.id).length} assigned number(s)</div></div><Badge tone={item.status === 'active' ? 'good' : 'warn'}>{item.status}</Badge></div>) : <span style={{ color: semantic.textMuted }}>No general-purpose workflow has been created.</span>}</div></section></div>}
 
     {view === 'calls' && <CallsWorkspace product={commercialProduct} calls={callRows} query={callQuery} setQuery={setCallQuery} selectedCallId={selectedCallId} setSelectedCallId={id => { setSelectedCallId(id); router.push(hrefFor(`/calls/${id}`)); }} detail={callDetail} detailLoading={callDetailLoading} simulationTranscript={simulationTranscript} setSimulationTranscript={setSimulationTranscript} canWrite={canWrite} busy={busy} onSimulate={() => void simulate()}/>}
 
@@ -649,7 +650,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
 
     {view === 'usage' && <UsageWorkspace commercial={commercial} lanePrice={lanePrice} canAdmin={canAdmin} busy={busy} onCheckout={quantity => void requestLaneQuantity(quantity)}/>}
 
-    {view === 'health' && <section style={panel}><Heading icon={<HeartPulse/>} title="Health and go-live readiness" subtitle="The checklist is recomputed from tenant-scoped provider ownership, routing, number billing, receptionist, workflow, and Realtime authority. Reconciliation never releases an orphan automatically." action={<div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}><button style={quiet} disabled={!!busy} onClick={() => void refreshVisibleWorkspace()}><RefreshCw size={14}/>{busy === 'refresh' ? 'Refreshing…' : 'Refresh'}</button><button style={quiet} disabled={!canAdmin || !!busy} onClick={() => void run('number-reconcile', () => moduleShellApi.callcommand.commercialReconcileNumbers({ autoRepair: false }), 'Provider inventory, routing, stale operations, and billing quantities were reconciled in dry-run mode.')}><ShieldCheck size={14}/>{busy === 'number-reconcile' ? 'Reconciling…' : 'Reconcile'}</button><button style={primary} disabled={!canAdmin || !!busy} onClick={() => void run('number-reconcile-repair', () => moduleShellApi.callcommand.commercialReconcileNumbers({ autoRepair: true }), 'Safe routing drift repairs completed. Orphans and destructive actions remain in manual review.')}><RefreshCw size={14}/>Safe auto-repair</button></div>}/><div style={{ display: 'grid', gap: 9 }}>{readiness.map(item => <div key={item.label} style={{ padding: 12, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, display: 'flex', gap: 10 }}><span style={{ color: item.ready ? '#34d399' : '#fbbf24' }}>{item.ready ? <CheckCircle2 size={17}/> : <AlertTriangle size={17}/>}</span><div><strong>{item.label}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 4 }}>{item.detail}</div></div></div>)}</div>{reconciliationIssues.length > 0 && <div style={{ marginTop: 16 }}><h3 style={{ fontSize: 14 }}>Open reconciliation issues</h3><div style={{ display: 'grid', gap: 7 }}>{reconciliationIssues.map(issue => <div key={issue.id} style={{ padding: 10, border: '1px solid rgba(251,113,133,.35)', borderRadius: 8 }}><strong>{String(issue.issueType ?? 'unknown').replaceAll('_', ' ')}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 3 }}>{issue.safeAutoRepair ? 'Safe repair is available.' : 'Manual review is required; no destructive action will run automatically.'} · {issue.status}</div></div>)}</div></div>}</section>}
+    {view === 'health' && <section style={panel}><Heading icon={<HeartPulse/>} title="Health and go-live readiness" subtitle="Check number ownership, incoming call routing, billing, the receptionist, its workflow, and the live conversation service. A disconnected number is never removed automatically." action={<div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}><button style={quiet} disabled={!!busy} onClick={() => void refreshVisibleWorkspace()}><RefreshCw size={14}/>{busy === 'refresh' ? 'Refreshing…' : 'Refresh'}</button><button style={quiet} disabled={!canAdmin || !!busy} onClick={() => void run('number-reconcile', () => moduleShellApi.callcommand.commercialReconcileNumbers({ autoRepair: false }), 'Checked phone-number inventory, routing, billing, and stalled setup. No changes were made.')}><ShieldCheck size={14}/>{busy === 'number-reconcile' ? 'Checking…' : 'Check connections'}</button><button style={primary} disabled={!canAdmin || !!busy} onClick={() => void run('number-reconcile-repair', () => moduleShellApi.callcommand.commercialReconcileNumbers({ autoRepair: true }), 'Safe routing fixes completed. Anything that could disconnect a number still needs manual review.')}><RefreshCw size={14}/>Repair safe connection issues</button></div>}/><div style={{ display: 'grid', gap: 9 }}>{readiness.map(item => <div key={item.label} style={{ padding: 12, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, display: 'flex', gap: 10 }}><span style={{ color: item.ready ? '#34d399' : '#fbbf24' }}>{item.ready ? <CheckCircle2 size={17}/> : <AlertTriangle size={17}/>}</span><div><strong>{item.label}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 4 }}>{item.detail}</div></div></div>)}</div>{reconciliationIssues.length > 0 && <div style={{ marginTop: 16 }}><h3 style={{ fontSize: 14 }}>Connection issues needing review</h3><div style={{ display: 'grid', gap: 7 }}>{reconciliationIssues.map(issue => <div key={issue.id} style={{ padding: 10, border: '1px solid rgba(251,113,133,.35)', borderRadius: 8 }}><strong>{words(issue.issueType) || 'Connection issue'}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 3 }}>{issue.safeAutoRepair ? 'A safe repair is available.' : 'Manual review is required; CallCommand will not disconnect or remove anything automatically.'} · {friendlyCallStatus(issue.status)}</div></div>)}</div></div>}</section>}
   </section>;
 }
 
@@ -680,7 +681,7 @@ function NumberManagement({
     <Heading
       icon={<PhoneCall/>}
       title="Your phone numbers"
-      subtitle="Every line shows its provider lifecycle, number billing, assigned receptionist, workflow, and repair state. Release is delayed and cancelable before final provider execution."
+      subtitle="Every line shows its connection status, number billing, assigned receptionist, workflow, and repair state. Disconnecting a Twilio number is delayed and can be canceled before it completes."
       action={<button style={quiet} onClick={onAdd}><Plus size={14}/>Add or connect</button>}
     />
     <div style={{ display: 'grid', gap: 9 }}>
@@ -703,31 +704,31 @@ function NumberManagement({
             <Badge tone={['included','active'].includes(String(item.billingStatus)) ? 'good' : item.billingStatus === 'grace_period' ? 'warn' : 'neutral'}>billing {item.billingStatus ?? 'not configured'}</Badge>
             {active && item.phoneE164 && <a href={`tel:${item.phoneE164}`} style={{ ...primary, padding: '7px 10px', textDecoration: 'none' }}><PhoneCall size={13}/>Call It Now</a>}
             <button aria-label={`Check provider health for ${label}`} style={{ ...quiet, padding: '7px 10px', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onHealth(item)}><HeartPulse size={13}/>Check health</button>
-            {item.acquisitionMode === 'platform_provisioned' && lifecycle !== 'RELEASED' && <button aria-label={`Repair provider routing for ${label}`} style={{ ...quiet, padding: '7px 10px', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onRepair(item)}><RefreshCw size={13}/>Repair</button>}
-            {canRelease && <button aria-label={`Schedule release for ${label}`} style={{ ...quiet, padding: '7px 10px', color: '#fda4af', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onStartRelease(item)}>Release</button>}
+            {item.acquisitionMode === 'platform_provisioned' && lifecycle !== 'RELEASED' && <button aria-label={`Repair call routing for ${label}`} style={{ ...quiet, padding: '7px 10px', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onRepair(item)}><RefreshCw size={13}/>Repair routing</button>}
+            {canRelease && <button aria-label={`Schedule disconnection for ${label}`} style={{ ...quiet, padding: '7px 10px', color: '#fda4af', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onStartRelease(item)}>Disconnect</button>}
           </div>
           <div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 7 }}>
             {item.assignedAgentName ?? profiles.find(profile => profile.id === item.profileId)?.name ?? 'No receptionist assigned'} · {item.workflowName ?? flows.find(candidate => candidate.id === item.activeFlowId)?.name ?? 'No workflow assigned'}
           </div>
           <div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 4 }}>
-            Provider: {item.providerNumberStatus ?? 'unconfigured'} · Routing: {item.healthStatus ?? 'unknown'} · Last checked: {item.healthCheckedAt ? new Date(item.healthCheckedAt).toLocaleString() : 'never'}
+            Phone-line status: {friendlyCallStatus(item.providerNumberStatus ?? 'unconfigured')} · Call routing: {friendlyCallStatus(item.healthStatus ?? 'unknown')} · Last checked: {item.healthCheckedAt ? new Date(item.healthCheckedAt).toLocaleString() : 'never'}
           </div>
-          {item.connectionPlan && <div style={{ color: '#fde68a', fontSize: 12, marginTop: 6 }}>Provider handoff remains required before this existing number can pass health validation.</div>}
-          {itemIssues.length > 0 && <div style={{ color: '#fda4af', fontSize: 12, marginTop: 6 }}>{itemIssues.length} reconciliation issue{itemIssues.length === 1 ? '' : 's'}: {itemIssues.map(issue => String(issue.issueType).replaceAll('_', ' ')).join(', ')}</div>}
+          {item.connectionPlan && <div style={{ color: '#fde68a', fontSize: 12, marginTop: 6 }}>Complete the carrier steps before this number can pass the connection check.</div>}
+          {itemIssues.length > 0 && <div style={{ color: '#fda4af', fontSize: 12, marginTop: 6 }}>{itemIssues.length} issue{itemIssues.length === 1 ? '' : 's'} needing review: {itemIssues.map(issue => words(issue.issueType)).join(', ')}</div>}
           {lifecycle === 'RELEASE_PENDING' && releaseAt && <div style={{ marginTop: 11, padding: 11, border: '1px solid rgba(251,191,36,.4)', borderRadius: 9 }}>
-            <strong style={{ color: '#fde68a' }}>Release scheduled for {releaseAt.toLocaleString()}</strong>
-            <p style={{ color: semantic.textMuted, fontSize: 12 }}>The provider still owns this number. Billing changes only after final provider release is confirmed.</p>
+            <strong style={{ color: '#fde68a' }}>Disconnection scheduled for {releaseAt.toLocaleString()}</strong>
+            <p style={{ color: semantic.textMuted, fontSize: 12 }}>Twilio still controls this number. Billing changes after Twilio confirms it has been disconnected.</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {!holdElapsed && <button style={quiet} disabled={!canAdmin || !!busy} onClick={() => onCancelRelease(item)}>Cancel scheduled release</button>}
-              {holdElapsed && <button style={{ ...primary, background: '#9f1239' }} disabled={!canAdmin || !!busy} onClick={() => onExecuteRelease(item)}>Execute provider release</button>}
+              {!holdElapsed && <button style={quiet} disabled={!canAdmin || !!busy} onClick={() => onCancelRelease(item)}>Cancel disconnection</button>}
+              {holdElapsed && <button style={{ ...primary, background: '#9f1239' }} disabled={!canAdmin || !!busy} onClick={() => onExecuteRelease(item)}>Disconnect number from Twilio</button>}
             </div>
           </div>}
           {releaseNumberId === String(item.id) && <div style={{ marginTop: 11, padding: 11, border: '1px solid rgba(251,113,133,.45)', borderRadius: 9 }}>
-            <strong style={{ color: '#fda4af' }}>Schedule this provider-managed number for release?</strong>
-            <p style={{ color: semantic.textMuted, fontSize: 12 }}>Live use pauses immediately. A recovery hold starts, during which the release can be canceled. Type RELEASE NUMBER to authorize scheduling.</p>
+            <strong style={{ color: '#fda4af' }}>Schedule this Twilio number to be disconnected?</strong>
+            <p style={{ color: semantic.textMuted, fontSize: 12 }}>Live use pauses immediately. A recovery period starts, during which the disconnection can be canceled. Type RELEASE NUMBER to authorize scheduling.</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <input aria-label={`Type RELEASE NUMBER to schedule release for ${label}`} style={{ ...field, maxWidth: 240 }} value={releasePhrase} onChange={event => onReleasePhrase(event.target.value)}/>
-              <button style={{ ...primary, background: '#9f1239', ...disabledStyle(releasePhrase === 'RELEASE NUMBER' && !busy) }} disabled={releasePhrase !== 'RELEASE NUMBER' || !!busy} onClick={() => onRelease(item)}>Schedule release</button>
+              <button style={{ ...primary, background: '#9f1239', ...disabledStyle(releasePhrase === 'RELEASE NUMBER' && !busy) }} disabled={releasePhrase !== 'RELEASE NUMBER' || !!busy} onClick={() => onRelease(item)}>Schedule disconnection</button>
               <button style={quiet} disabled={!!busy} onClick={onCloseRelease}>Keep number</button>
             </div>
           </div>}
@@ -746,17 +747,237 @@ function WorkflowEditor({ product, flow, setFlow, templateKey, setTemplateKey, a
 }
 
 function TransferAndTest({ transfer, setTransfer, product, verificationCode, setVerificationCode, canWrite, busy, simulationTranscript, setSimulationTranscript, onCreateTarget, onStartVerification, onCheckVerification, onSimulate }: { transfer: Row; setTransfer: (value: any) => void; product: ProductWorkspace | null; verificationCode: Row; setVerificationCode: (value: any) => void; canWrite: boolean; busy: string; simulationTranscript: string; setSimulationTranscript: (value: string) => void; onCreateTarget: () => void; onStartVerification: (item: Row) => void; onCheckVerification: (item: Row) => void; onSimulate: () => void }) {
-  return <section style={panel}><Heading icon={<Users/>} title="4. Configure human help and alerts" subtitle="A saved transfer destination remains pending until the destination proves it can receive the verification challenge."/><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}><Field label="Person or team"><input style={field} value={transfer.label} onChange={event => setTransfer({ ...transfer, label: event.target.value })}/></Field><Field label="Phone number"><input style={field} value={transfer.phone} placeholder="+1 555 123 4567" onChange={event => setTransfer({ ...transfer, phone: event.target.value })}/></Field><button style={{ ...primary, alignSelf: 'end', ...disabledStyle(canWrite && !busy && /^\+[1-9]\d{7,14}$/.test(transfer.phone)) }} disabled={!canWrite || !!busy || !/^\+[1-9]\d{7,14}$/.test(transfer.phone)} onClick={onCreateTarget}><Plus size={15}/>Save pending destination</button></div><div style={{ display: 'grid', gap: 8, marginTop: 13 }}>{product?.targets.map(item => { const verified = Boolean(item.verifiedAt) || String(item.verificationStatus ?? '').toLowerCase() === 'verified'; return <div key={item.id} style={{ padding: 11, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><div style={{ flex: 1, minWidth: 180 }}><strong>{item.label}</strong><div style={{ color: semantic.textMuted, fontSize: 12 }}>{item.phoneMasked ?? 'External destination'}</div></div><Badge tone={verified ? 'good' : 'warn'}>{verified ? 'verified' : 'pending verification'}</Badge>{!verified && <><button style={{ ...quiet, padding: '7px 10px' }} disabled={!canWrite || !!busy} onClick={() => onStartVerification(item)}>Send code</button><input aria-label={`Verification code for ${item.label}`} style={{ ...field, width: 120 }} inputMode="numeric" value={verificationCode[item.id] ?? ''} onChange={event => setVerificationCode({ ...verificationCode, [item.id]: event.target.value.replace(/\D/g, '').slice(0, 10) })}/><button style={{ ...primary, padding: '7px 10px' }} disabled={!canWrite || !!busy || !(verificationCode[item.id] ?? '').trim()} onClick={() => onCheckVerification(item)}>Verify</button></>}</div>; })}</div><div style={{ borderTop: '1px solid rgba(94,234,212,.14)', marginTop: 16, paddingTop: 16 }}><Heading icon={<Radio/>} title="5. Run a no-cost setup test" subtitle="This creates an explicitly labeled simulation, exercises the assigned workflow, and persists a real call timeline. It does not place an external call."/><Field label="What the simulated caller says"><textarea style={{ ...field, minHeight: 105 }} value={simulationTranscript} onChange={event => setSimulationTranscript(event.target.value)}/></Field><button data-testid="button-callcommand-place-test-call" style={{ ...primary, marginTop: 10, ...disabledStyle(canWrite && !busy && simulationTranscript.trim().length >= 10) }} disabled={!canWrite || !!busy || simulationTranscript.trim().length < 10} onClick={onSimulate}><PhoneCall size={15}/>{busy === 'simulation' ? 'Running test…' : 'Run setup simulation'}</button></div></section>;
+  return <section style={panel}><Heading icon={<Users/>} title="4. Configure human help and alerts" subtitle="A saved transfer destination remains pending until the destination proves it can receive the verification challenge."/><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}><Field label="Person or team"><input style={field} value={transfer.label} onChange={event => setTransfer({ ...transfer, label: event.target.value })}/></Field><Field label="Phone number"><input style={field} value={transfer.phone} placeholder="+1 555 123 4567" onChange={event => setTransfer({ ...transfer, phone: event.target.value })}/></Field><button style={{ ...primary, alignSelf: 'end', ...disabledStyle(canWrite && !busy && /^\+[1-9]\d{7,14}$/.test(transfer.phone)) }} disabled={!canWrite || !!busy || !/^\+[1-9]\d{7,14}$/.test(transfer.phone)} onClick={onCreateTarget}><Plus size={15}/>Save pending destination</button></div><div style={{ display: 'grid', gap: 8, marginTop: 13 }}>{product?.targets.map(item => { const verified = Boolean(item.verifiedAt) || String(item.verificationStatus ?? '').toLowerCase() === 'verified'; return <div key={item.id} style={{ padding: 11, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><div style={{ flex: 1, minWidth: 180 }}><strong>{item.label}</strong><div style={{ color: semantic.textMuted, fontSize: 12 }}>{item.phoneMasked ?? 'External destination'}</div></div><Badge tone={verified ? 'good' : 'warn'}>{verified ? 'verified' : 'pending verification'}</Badge>{!verified && <><button style={{ ...quiet, padding: '7px 10px' }} disabled={!canWrite || !!busy} onClick={() => onStartVerification(item)}>Send code</button><input aria-label={`Verification code for ${item.label}`} style={{ ...field, width: 120 }} inputMode="numeric" value={verificationCode[item.id] ?? ''} onChange={event => setVerificationCode({ ...verificationCode, [item.id]: event.target.value.replace(/\D/g, '').slice(0, 10) })}/><button style={{ ...primary, padding: '7px 10px' }} disabled={!canWrite || !!busy || !(verificationCode[item.id] ?? '').trim()} onClick={() => onCheckVerification(item)}>Verify</button></>}</div>; })}</div><div style={{ borderTop: '1px solid rgba(94,234,212,.14)', marginTop: 16, paddingTop: 16 }}><Heading icon={<Radio/>} title="5. Run a no-cost setup test" subtitle="This creates an explicitly labeled simulation, exercises the assigned workflow, and saves a real call timeline. It does not place an external call."/><Field label="What the simulated caller says"><textarea style={{ ...field, minHeight: 105 }} value={simulationTranscript} onChange={event => setSimulationTranscript(event.target.value)}/></Field><button data-testid="button-callcommand-place-test-call" style={{ ...primary, marginTop: 10, ...disabledStyle(canWrite && !busy && simulationTranscript.trim().length >= 10) }} disabled={!canWrite || !!busy || simulationTranscript.trim().length < 10} onClick={onSimulate}><PhoneCall size={15}/>{busy === 'simulation' ? 'Running test…' : 'Run setup simulation'}</button></div></section>;
 }
 
 function ReadinessPanel({ readiness, goLiveReady, canAdmin, busy, onGoLive }: { readiness: Array<{ label: string; ready: boolean; detail: string }>; goLiveReady: boolean; canAdmin: boolean; busy: string; onGoLive: () => void }) {
-  return <section style={panel}><Heading icon={<ShieldCheck/>} title="6. Go-live readiness" subtitle="Go Live remains locked until the tenant provider, incoming route, receptionist workflow, and server-side OpenAI Realtime SIP authority are configured."/><div style={{ display: 'grid', gap: 8 }}>{readiness.map(item => <div key={item.label} style={{ display: 'flex', gap: 9, padding: 10, border: '1px solid rgba(94,234,212,.13)', borderRadius: 9 }}><span style={{ color: item.ready ? '#34d399' : '#fbbf24' }}>{item.ready ? <CheckCircle2 size={16}/> : <Clock3 size={16}/>}</span><div><strong>{item.label}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 3 }}>{item.detail}</div></div></div>)}</div><button style={{ ...primary, marginTop: 13, ...disabledStyle(goLiveReady && canAdmin && !busy) }} disabled={!goLiveReady || !canAdmin || !!busy} onClick={onGoLive}><Radio size={15}/>{goLiveReady ? 'Enable Realtime and Go Live' : 'Go Live locked — complete required checks'}</button></section>;
+  return <section style={panel}><Heading icon={<ShieldCheck/>} title="6. Go-live readiness" subtitle="Go Live remains locked until this organization's Twilio connection, incoming route, receptionist workflow, and OpenAI Realtime SIP setup pass their checks."/><div style={{ display: 'grid', gap: 8 }}>{readiness.map(item => <div key={item.label} style={{ display: 'flex', gap: 9, padding: 10, border: '1px solid rgba(94,234,212,.13)', borderRadius: 9 }}><span style={{ color: item.ready ? '#34d399' : '#fbbf24' }}>{item.ready ? <CheckCircle2 size={16}/> : <Clock3 size={16}/>}</span><div><strong>{item.label}</strong><div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 3 }}>{item.detail}</div></div></div>)}</div><button style={{ ...primary, marginTop: 13, ...disabledStyle(goLiveReady && canAdmin && !busy) }} disabled={!goLiveReady || !canAdmin || !!busy} onClick={onGoLive}><Radio size={15}/>{goLiveReady ? 'Enable Realtime and Go Live' : 'Go Live locked — complete required checks'}</button></section>;
 }
 
 function CallsWorkspace({ product, calls, query, setQuery, selectedCallId, setSelectedCallId, detail, detailLoading, simulationTranscript, setSimulationTranscript, canWrite, busy, onSimulate }: { product: ProductWorkspace | null; calls: Row[]; query: string; setQuery: (value: string) => void; selectedCallId: string; setSelectedCallId: (value: string) => void; detail: Row | null; detailLoading: boolean; simulationTranscript: string; setSimulationTranscript: (value: string) => void; canWrite: boolean; busy: string; onSimulate: () => void }) {
   const call = detail?.call as Row | undefined;
   const simulated = call?.provider === 'simulator';
-  return <div id="callcommand-calls" style={{ display: 'grid', gap: space.lg }}><section style={panel}><Heading icon={<PhoneCall/>} title="Call history" subtitle="Search persisted general-purpose call records and open one to see its timeline and workflow outcomes."/><Field label="Search calls"><input style={field} type="search" value={query} placeholder="Caller, status, or summary" onChange={event => setQuery(event.target.value)}/></Field><div style={{ display: 'grid', gap: 8, marginTop: 12 }}>{calls.length ? calls.map(item => <button key={item.id} data-call-id={item.id} aria-pressed={selectedCallId === item.id} style={{ ...quiet, textAlign: 'left', background: selectedCallId === item.id ? 'rgba(16,185,129,.16)' : '#102630' }} onClick={() => setSelectedCallId(item.id)}><span style={{ flex: 1 }}><strong>{item.subjectName ?? item.phoneMasked ?? 'Caller'}</strong><small style={{ display: 'block', color: semantic.textMuted, marginTop: 4 }}>{item.direction} · {item.provider} · {item.status}{item.summary ? ` · ${item.summary}` : ''}</small></span><Badge tone={item.provider === 'simulator' ? 'warn' : item.status === 'completed' ? 'good' : 'neutral'}>{item.provider === 'simulator' ? 'simulation' : item.status}</Badge></button>) : <span style={{ color: semantic.textMuted }}>No calls match this search.</span>}</div></section>{detailLoading && <section style={panel} role="status"><Loader2 size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>Loading the selected call…</section>}{detail && call && <section style={panel}><Heading icon={<FileText/>} title={call.subjectName ?? call.phoneMasked ?? 'Call detail'} subtitle="Provider facts, transcript, analysis provenance, events, workflow trace, and executed actions." action={simulated ? <Badge tone="warn">Simulation · no external call</Badge> : <Badge>{call.provider ?? 'provider unknown'}</Badge>}/><p style={{ color: semantic.textMuted }}>{call.summary ?? 'No summary is available.'}</p><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, marginBottom: 14 }}>{[['Outcome', call.status], ['Priority', call.priority], ['Sentiment', call.sentiment], ['Analysis', call.analysisProvider ?? call.analysisProvenance?.mode]].map(([label, value]) => <div key={label} style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>{label}</small><div style={{ fontWeight: 800, marginTop: 3 }}>{value ?? 'Not available'}</div></div>)}</div><h3>Transcript</h3><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', padding: 12, background: '#061117', border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, color: '#d8f3ef', fontFamily: 'inherit', lineHeight: 1.55 }}>{call.transcript ?? 'No transcript was retained for this call.'}</pre><Timeline title="Call timeline" items={rows(detail.events)} label={item => item.eventType ?? item.type ?? 'Call event'} detail={item => item.safePayload ? JSON.stringify(item.safePayload) : item.summary ?? ''}/><Timeline title="Workflow path" items={rows(detail.traces)} label={item => `${item.sequence ?? ''} ${item.nodeKey ?? item.nodeType ?? 'Workflow step'}`} detail={item => item.outcome ?? ''}/><Timeline title="Actions executed" items={rows(detail.actions)} label={item => item.actionType ?? 'Action'} detail={item => `${item.status ?? 'unknown'}${item.errorCode ? ` · ${item.errorCode}` : ''}`}/></section>}<section style={panel}><Heading icon={<Radio/>} title="Run another simulation" subtitle="Only this explicit test fixture is editable. A real provider transcript is never edited or reprocessed from this interface."/><Field label="Simulated caller request"><textarea style={{ ...field, minHeight: 100 }} value={simulationTranscript} onChange={event => setSimulationTranscript(event.target.value)}/></Field><button data-testid="button-callcommand-place-test-call" style={{ ...primary, marginTop: 10, ...disabledStyle(canWrite && !busy && Boolean(product?.channels.some(channel => channel.profileId) && product?.profiles.length)) }} disabled={!canWrite || !!busy || !product?.channels.some(channel => channel.profileId) || !product?.profiles.length} onClick={onSimulate}><PhoneCall size={15}/>Run no-cost simulation</button></section></div>;
+  const callId = String(call?.id ?? '');
+  const completed = String(call?.status ?? '').toLowerCase() === 'completed';
+  const analyzed = Boolean(call?.analyzedAt);
+  const handoffReady = Boolean(callId && completed && analyzed && canWrite && !simulated);
+  const handoffDisabledReason = simulated
+    ? 'Simulation results stay in CallCommand and cannot create production follow-up records. Complete and analyze a live call to use these connected workflows.'
+    : !canWrite
+      ? 'You need edit access to create follow-up records from this call.'
+      : !completed
+        ? 'This call must be completed before it can become follow-up work.'
+        : !analyzed
+          ? 'Analyze this call first so the new record has a verified summary, intent, and priority.'
+          : undefined;
+  const sourceVersion = call?.version ?? call?.updatedAt ?? call?.analyzedAt;
+  const sourceDeepLink = `/modules/callcommand-ai/calls/${callId}`;
+  const confirmationText = 'I confirm that this should create internal records only. It will not call, text, email, or send any other message to the caller.';
+
+  return (
+    <div id="callcommand-calls" style={{ display: 'grid', gap: space.lg }}>
+      <section style={panel}>
+        <Heading icon={<PhoneCall/>} title="Call history" subtitle="Search saved calls and open one to review what happened and start the right follow-up work."/>
+        <Field label="Search calls">
+          <input style={field} type="search" value={query} placeholder="Caller, status, or summary" onChange={event => setQuery(event.target.value)}/>
+        </Field>
+        <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+          {calls.length ? calls.map(item => (
+            <button key={item.id} data-call-id={item.id} aria-pressed={selectedCallId === item.id} style={{ ...quiet, textAlign: 'left', background: selectedCallId === item.id ? 'rgba(16,185,129,.16)' : '#102630' }} onClick={() => setSelectedCallId(item.id)}>
+              <span style={{ flex: 1 }}>
+                <strong>{item.subjectName ?? item.phoneMasked ?? 'Caller'}</strong>
+                <small style={{ display: 'block', color: semantic.textMuted, marginTop: 4 }}>{item.direction} · {item.provider === 'simulator' ? 'Simulation' : 'Live call'} · {friendlyCallStatus(item.status)}{item.summary ? ` · ${item.summary}` : ''}</small>
+              </span>
+              <Badge tone={item.provider === 'simulator' ? 'warn' : item.status === 'completed' ? 'good' : 'neutral'}>{item.provider === 'simulator' ? 'Simulation' : friendlyCallStatus(item.status)}</Badge>
+            </button>
+          )) : <span style={{ color: semantic.textMuted }}>No calls match this search.</span>}
+        </div>
+      </section>
+
+      {detailLoading && <section style={panel} role="status"><Loader2 size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>Loading the selected call…</section>}
+
+      {detail && call && (
+        <section style={panel}>
+          <Heading
+            icon={<FileText/>}
+            title={call.subjectName ?? call.phoneMasked ?? 'Call detail'}
+            subtitle="Review what the caller needed, what happened during the conversation, and the follow-up work your team can start now."
+            action={simulated ? <Badge tone="warn">Simulation · no external call</Badge> : <Badge tone="good">Live call</Badge>}
+          />
+          <p style={{ color: semantic.textMuted }}>{call.summary ?? 'No summary is available.'}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, marginBottom: 14 }}>
+            {[['Outcome', friendlyCallStatus(call.status)], ['Priority', words(call.priority)], ['Caller tone', words(call.sentiment)], ['Analysis method', friendlyAnalysisMethod(call)]].map(([label, value]) => (
+              <div key={label} style={{ padding: 10, background: '#07151c', borderRadius: 8 }}>
+                <small style={{ color: semantic.textMuted }}>{label}</small>
+                <div style={{ fontWeight: 800, marginTop: 3 }}>{value ?? 'Not available'}</div>
+              </div>
+            ))}
+          </div>
+          <h3>Transcript</h3>
+          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', padding: 12, background: '#061117', border: '1px solid rgba(94,234,212,.14)', borderRadius: 9, color: '#d8f3ef', fontFamily: 'inherit', lineHeight: 1.55 }}>{call.transcript ?? 'No transcript was retained for this call.'}</pre>
+          <Timeline title="Call timeline" items={rows(detail.events)} label={friendlyEventLabel} detail={friendlyEventDetail}/>
+          <Timeline title="Workflow path" items={rows(detail.traces)} label={friendlyWorkflowStep} detail={item => words(item.outcome) || 'Workflow step recorded.'}/>
+          <Timeline title="Follow-up actions" items={rows(detail.actions)} label={friendlyActionLabel} detail={item => friendlyCallStatus(item.status)}/>
+
+          <div style={{ borderTop: '1px solid rgba(94,234,212,.14)', marginTop: 18, paddingTop: 18 }}>
+            <Heading icon={<ArrowRight/>} title="Put this call to work" subtitle="Choose one or more destinations. Each action shows exactly what it will create and requires confirmation before anything is added."/>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,310px),1fr))', gap: 12 }}>
+              <OutcomeWorkflowAction
+                workflowKey="callcommand.analysis_to_tradeflowkit"
+                aggregateId={callId}
+                sourceDeepLink={sourceDeepLink}
+                sourceModuleSlug="callcommand-ai"
+                sourceType="callcommand_call"
+                sourceKind="case"
+                sourceVersion={sourceVersion}
+                idempotencyScope="call-to-lead"
+                payload={{ destinationType: 'tradeflowkit_lead' }}
+                title="Create a sales lead"
+                description="Send the caller's needs into TradeFlowKit so the sales team can qualify and follow up without retyping the call."
+                destinationLabel="TradeFlowKit"
+                confirmationText={confirmationText}
+                previewItems={[
+                  { label: 'TradeFlowKit lead', detail: 'Caller name, masked phone, call intent, analyzed summary, and mapped urgency.' },
+                ]}
+                actionLabel="Review lead creation"
+                disabled={!handoffReady}
+                disabledReason={handoffDisabledReason}
+                testId="callcommand-create-tradeflowkit-lead"
+              />
+              <OutcomeWorkflowAction
+                workflowKey="callcommand.analysis_to_tradeflowkit"
+                aggregateId={callId}
+                sourceDeepLink={sourceDeepLink}
+                sourceModuleSlug="callcommand-ai"
+                sourceType="callcommand_call"
+                sourceKind="case"
+                sourceVersion={sourceVersion}
+                idempotencyScope="call-to-job"
+                payload={{ destinationType: 'tradeflowkit_job' }}
+                title="Create a service job"
+                description="Turn the caller's service request into customer and job records ready for estimating, scheduling, and delivery."
+                destinationLabel="TradeFlowKit"
+                confirmationText={confirmationText}
+                previewItems={[
+                  { label: 'TradeFlowKit customer', detail: 'Caller name and masked phone linked back to this call.' },
+                  { label: 'TradeFlowKit job', detail: 'Call intent, analyzed summary, lead status, and mapped priority.' },
+                ]}
+                actionLabel="Review job creation"
+                disabled={!handoffReady}
+                disabledReason={handoffDisabledReason}
+                testId="callcommand-create-tradeflowkit-job"
+              />
+              <OutcomeWorkflowAction
+                workflowKey="callcommand.analysis_to_pulsedesk"
+                aggregateId={callId}
+                sourceDeepLink={sourceDeepLink}
+                sourceModuleSlug="callcommand-ai"
+                sourceType="callcommand_call"
+                sourceKind="case"
+                sourceVersion={sourceVersion}
+                idempotencyScope="call-to-pulsedesk"
+                payload={{ destinationType: 'pulsedesk_ticket', operationsOnlyApproved: true }}
+                title="Create an operations request"
+                description="Open a PulseDesk request from the analyzed call so the right department can take ownership without duplicate intake."
+                destinationLabel="PulseDesk"
+                confirmationText="I reviewed this call summary and confirm it is limited to facility, equipment, supply, vendor, or department operations and contains no patient or clinical data. This creates an internal request only and does not message the caller."
+                previewItems={[
+                  { label: 'PulseDesk request', detail: 'Call intent, analyzed summary, mapped priority, and CallCommand intake label.' },
+                ]}
+                actionLabel="Review request creation"
+                disabled={!handoffReady}
+                disabledReason={handoffDisabledReason}
+                testId="callcommand-create-pulsedesk-request"
+              />
+              <OutcomeWorkflowAction
+                workflowKey="callcommand.analysis_to_techdeck"
+                aggregateId={callId}
+                sourceDeepLink={sourceDeepLink}
+                sourceModuleSlug="callcommand-ai"
+                sourceType="callcommand_call"
+                sourceKind="case"
+                sourceVersion={sourceVersion}
+                idempotencyScope="call-to-techdeck"
+                payload={{ destinationType: 'techdeck_ticket' }}
+                title="Create a technical support ticket"
+                description="Open a TechDeck ticket with the analyzed issue and priority so technicians can begin triage from the call context."
+                destinationLabel="TechDeck"
+                confirmationText={confirmationText}
+                previewItems={[
+                  { label: 'TechDeck ticket', detail: 'Call intent, analyzed issue summary, open status, and mapped technical priority.' },
+                ]}
+                actionLabel="Review ticket creation"
+                disabled={!handoffReady}
+                disabledReason={handoffDisabledReason}
+                testId="callcommand-create-techdeck-ticket"
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section style={panel}>
+        <Heading icon={<Radio/>} title="Run another simulation" subtitle="Only this setup test is editable. A real call transcript is never edited or reprocessed from this screen."/>
+        <Field label="Simulated caller request">
+          <textarea style={{ ...field, minHeight: 100 }} value={simulationTranscript} onChange={event => setSimulationTranscript(event.target.value)}/>
+        </Field>
+        <button data-testid="button-callcommand-place-test-call" style={{ ...primary, marginTop: 10, ...disabledStyle(canWrite && !busy && Boolean(product?.channels.some(channel => channel.profileId) && product?.profiles.length)) }} disabled={!canWrite || !!busy || !product?.channels.some(channel => channel.profileId) || !product?.profiles.length} onClick={onSimulate}><PhoneCall size={15}/>Run no-cost simulation</button>
+      </section>
+    </div>
+  );
+}
+
+function words(value: unknown): string {
+  return String(value ?? '').replaceAll('_', ' ').replaceAll('-', ' ').trim();
+}
+
+function friendlyCallStatus(value: unknown): string {
+  const status = String(value ?? '').toLowerCase();
+  if (['completed', 'delivered', 'success', 'succeeded'].includes(status)) return 'Completed';
+  if (['active', 'healthy', 'configured'].includes(status)) return 'Ready';
+  if (['failed', 'error', 'degraded', 'unhealthy'].includes(status)) return 'Needs attention';
+  if (['queued', 'pending', 'processing', 'running'].includes(status)) return 'In progress';
+  if (['canceled', 'cancelled', 'suppressed'].includes(status)) return 'Stopped';
+  return words(value) || 'Not available';
+}
+
+function friendlyAnalysisMethod(call: Row): string {
+  const method = String(call.analysisProvider ?? call.analysisProvenance?.mode ?? '').toLowerCase();
+  if (!method) return 'Not analyzed';
+  return ['builtin', 'built_in', 'deterministic', 'rules'].some(value => method.includes(value)) ? 'Built-in review' : 'AI-assisted';
+}
+
+function friendlyEventLabel(item: Row): string {
+  const value = String(item.eventType ?? item.type ?? '').toLowerCase();
+  const mapped: Record<string, string> = {
+    call_started: 'Call started', call_completed: 'Call completed', call_ended: 'Call ended',
+    transcript_saved: 'Conversation saved', analysis_completed: 'Call reviewed',
+    transfer_requested: 'Human help requested', transfer_completed: 'Transferred to human help',
+    action_created: 'Follow-up work created', consent_recorded: 'Recording choice saved',
+  };
+  return mapped[value] ?? (words(value) || 'Call activity recorded').replace(/^./, character => character.toUpperCase());
+}
+
+function friendlyEventDetail(item: Row): string {
+  if (typeof item.summary === 'string' && item.summary.trim()) return item.summary;
+  const payload = item.safePayload && typeof item.safePayload === 'object' ? item.safePayload as Row : {};
+  for (const key of ['summary', 'message', 'outcome', 'purpose', 'reason']) {
+    if (typeof payload[key] === 'string' && payload[key].trim()) return payload[key];
+  }
+  return 'This activity was saved with the call.';
+}
+
+function friendlyWorkflowStep(item: Row): string {
+  const step = item.sequence ? `Step ${item.sequence} · ` : '';
+  const type = String(item.nodeType ?? '').toLowerCase();
+  const label = type === 'condition' ? 'Decision checked' : type === 'action' ? 'Follow-up action' : type === 'end' ? 'Workflow completed' : type === 'start' ? 'Workflow started' : 'Workflow step';
+  return `${step}${label}`;
+}
+
+function friendlyActionLabel(item: Row): string {
+  const type = String(item.actionType ?? '').toLowerCase();
+  const mapped: Record<string, string> = { ticket: 'Support ticket', lead: 'Sales lead', task: 'Follow-up task', email: 'Email alert', slack: 'Slack alert', webhook: 'Connected-service alert', transfer: 'Human transfer' };
+  return mapped[type] ?? (words(type) || 'Follow-up action').replace(/^./, character => character.toUpperCase());
 }
 
 function FollowUpWorkspace({ product, canWrite, busy, onAdvance }: { product: ProductWorkspace | null; canWrite: boolean; busy: string; onAdvance: (type: 'tickets' | 'leads' | 'tasks', item: Row) => void }) {
@@ -767,7 +988,7 @@ function FollowUpWorkspace({ product, canWrite, busy, onAdvance }: { product: Pr
   ];
   return <section id="callcommand-work" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,290px),1fr))', gap: space.md }}>
     {groups.map(group => <section key={group.type} style={panel}>
-      <Heading icon={group.type === 'tickets' ? <FileText/> : group.type === 'leads' ? <Users/> : <CheckCircle2/>} title={group.title} subtitle="Persisted follow-up work generated by this tenant's general-purpose calls and workflows."/>
+      <Heading icon={group.type === 'tickets' ? <FileText/> : group.type === 'leads' ? <Users/> : <CheckCircle2/>} title={group.title} subtitle="Saved follow-up work created from this organization's calls and workflows."/>
       {group.items.length ? <div style={{ display: 'grid', gap: 8 }}>{group.items.slice(0, 20).map(item => {
         const terminal = ['completed', 'won', 'lost', 'canceled'].includes(String(item.status));
         return <article key={item.id} style={{ padding: 10, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9 }}>
@@ -800,5 +1021,27 @@ function UsageWorkspace({ commercial, lanePrice, canAdmin, busy, onCheckout }: {
   const projectedMonthly = lanePrice === null ? null : lanePrice * quantity;
   const billingStatus = firstText(commercial, ['capacity.billingStatus']) || 'inactive';
   const noChange = quantity === currentAdditional && pendingAdditional === 0;
-  return <div style={{ display: 'grid', gap: space.lg }}><section style={panel}><Heading icon={<Activity/>} title="Concurrent call capacity" subtitle="One lane allows one simultaneous AI call. Phone-number count and call capacity are separate."/><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 9 }}>{values.map(([label, value]) => <div key={label as string} style={{ padding: 12, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9 }}><div style={{ fontSize: 25, fontWeight: 900 }}>{value === null ? '—' : value}</div><small style={{ color: semantic.textMuted }}>{label}</small></div>)}</div></section><section style={panel}><Heading icon={<CircleDollarSign/>} title="Set the paid additional-lane total" subtitle={lanePrice === null ? 'Pricing has not been returned by the OperatorOS catalog, so no price is being assumed.' : `Each additional lane is ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(lanePrice)} per month. This field replaces the desired paid quantity; it is not an increment.`}/><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 9, marginBottom: 13 }}><div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Current paid quantity</small><div style={{ fontWeight: 800, marginTop: 3 }}>{currentAdditional}</div></div><div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Requested paid quantity</small><div style={{ fontWeight: 800, marginTop: 3 }}>{quantity}</div></div><div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Resulting capacity after settlement</small><div style={{ fontWeight: 800, marginTop: 3 }}>{quantity + 1}</div></div><div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Requested recurring lane total</small><div style={{ fontWeight: 800, marginTop: 3 }}>{projectedMonthly === null ? 'Not available' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(projectedMonthly)}</div></div></div><p style={{ color: semantic.textMuted, fontSize: 13 }}>Billing status: {billingStatus}. Positive changes can create immediate prorations. Setting zero schedules cancellation of the dedicated paid-lane subscription at period end; paid capacity remains until the signed subscription-deletion webhook settles the removal. Pending increases never grant capacity before signed payment settlement.</p><div style={{ display: 'flex', gap: 9, alignItems: 'end', flexWrap: 'wrap' }}><Field label="Desired total additional paid lanes"><input style={{ ...field, width: 150 }} type="number" min={0} max={100} value={quantity} onChange={event => { const parsed = Number(event.target.value); setQuantity(Math.max(0, Math.min(100, Number.isFinite(parsed) ? Math.trunc(parsed) : 0))); setConfirmed(false); }}/></Field><label style={{ maxWidth: 560, color: quantity === 0 ? '#fda4af' : '#fde68a', display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13 }}><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{quantity === 0 ? 'I confirm that all paid lanes should be removed by canceling the dedicated lane subscription at the end of its current billing period.' : 'I confirm this desired paid quantity and understand that Stripe may bill a prorated subscription change without opening Checkout.'}</span></label><button style={{ ...primary, ...(quantity === 0 ? { background: '#9f1239' } : {}), ...disabledStyle(canAdmin && !busy && lanePrice !== null && confirmed && !noChange) }} disabled={!canAdmin || !!busy || lanePrice === null || !confirmed || noChange} onClick={() => onCheckout(quantity)}><CreditCard size={15}/>{busy === 'lane-checkout' ? 'Submitting…' : quantity === 0 ? 'Schedule paid-lane cancellation' : 'Submit paid lane quantity'}</button></div></section></div>;
+  return <div style={{ display: 'grid', gap: space.lg }}>
+    <section style={panel}>
+      <Heading icon={<Activity/>} title="Concurrent call capacity" subtitle="One lane allows one simultaneous AI call. Phone-number count and call capacity are separate."/>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 9 }}>
+        {values.map(([label, value]) => <div key={label as string} style={{ padding: 12, border: '1px solid rgba(94,234,212,.14)', borderRadius: 9 }}><div style={{ fontSize: 25, fontWeight: 900 }}>{value === null ? '—' : value}</div><small style={{ color: semantic.textMuted }}>{label}</small></div>)}
+      </div>
+    </section>
+    <section style={panel}>
+      <Heading icon={<CircleDollarSign/>} title="Set the paid additional-lane total" subtitle={lanePrice === null ? 'Pricing is not available from OperatorOS, so no price is being assumed.' : `Each additional lane is ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(lanePrice)} per month. Enter the total number of paid lanes you want.`}/>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 9, marginBottom: 13 }}>
+        <div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Current paid quantity</small><div style={{ fontWeight: 800, marginTop: 3 }}>{currentAdditional}</div></div>
+        <div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Requested paid quantity</small><div style={{ fontWeight: 800, marginTop: 3 }}>{quantity}</div></div>
+        <div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Capacity after Stripe confirms the change</small><div style={{ fontWeight: 800, marginTop: 3 }}>{quantity + 1}</div></div>
+        <div style={{ padding: 10, background: '#07151c', borderRadius: 8 }}><small style={{ color: semantic.textMuted }}>Requested recurring lane total</small><div style={{ fontWeight: 800, marginTop: 3 }}>{projectedMonthly === null ? 'Not available' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(projectedMonthly)}</div></div>
+      </div>
+      <p style={{ color: semantic.textMuted, fontSize: 13 }}>Billing status: {billingStatus}. Adding lanes can create an immediate prorated charge. Setting zero schedules cancellation at the end of the current billing period. Capacity changes only after Stripe confirms the billing change.</p>
+      <div style={{ display: 'flex', gap: 9, alignItems: 'end', flexWrap: 'wrap' }}>
+        <Field label="Desired total additional paid lanes"><input style={{ ...field, width: 150 }} type="number" min={0} max={100} value={quantity} onChange={event => { const parsed = Number(event.target.value); setQuantity(Math.max(0, Math.min(100, Number.isFinite(parsed) ? Math.trunc(parsed) : 0))); setConfirmed(false); }}/></Field>
+        <label style={{ maxWidth: 560, color: quantity === 0 ? '#fda4af' : '#fde68a', display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13 }}><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{quantity === 0 ? 'I confirm that all paid lanes should be removed by canceling the dedicated lane subscription at the end of its current billing period.' : 'I confirm this desired paid quantity and understand that Stripe may bill a prorated subscription change without opening Checkout.'}</span></label>
+        <button style={{ ...primary, ...(quantity === 0 ? { background: '#9f1239' } : {}), ...disabledStyle(canAdmin && !busy && lanePrice !== null && confirmed && !noChange) }} disabled={!canAdmin || !!busy || lanePrice === null || !confirmed || noChange} onClick={() => onCheckout(quantity)}><CreditCard size={15}/>{busy === 'lane-checkout' ? 'Submitting…' : quantity === 0 ? 'Schedule paid-lane cancellation' : 'Submit paid lane quantity'}</button>
+      </div>
+    </section>
+  </div>;
 }

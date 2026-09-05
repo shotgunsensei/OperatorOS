@@ -1,5 +1,196 @@
 # OperatorOS implementation status
 
+## Module product outcome/value upgrade - SOURCE/LOCAL RELEASE GATES GREEN / DEPLOYED E2E AND PRODUCTION APPLY OPEN (2026-09-05)
+
+- The current release candidate gives each of the 13 canonical applications
+  one shared customer-value contract: a plain-language promise, buyer, first
+  useful result, concrete deliverables, complete primary workflow, completion
+  condition, supported connections, and an honest setup boundary. The catalog,
+  pricing cards, marketing surfaces, Help Center, route headings, empty states,
+  and major workspaces now lead with the business result instead of database,
+  tenancy, provenance, compiler, or provider-architecture terminology.
+- The covered roster is exactly TradeFlowKit, PulseDesk, TechDeck, TorqueShed,
+  FaultlineLab, Operator Pool Hall, BrandForgeOS, SnapProofOS, StudyForge AI,
+  Deploy Ops, CallCommand AI, Script Ops, and OutCall. Operator Pool Hall remains
+  a free account benefit. OutCall remains coming soon and is neither sale-ready
+  nor launch-ready.
+- This is not a thirteen-way generic-dashboard rewrite. TradeFlowKit now leads
+  with lead-to-payment work; PulseDesk with non-clinical operations ownership;
+  TechDeck with technician resolution and reusable proof; TorqueShed with
+  vehicle diagnosis and repair history; FaultlineLab with coached diagnostic
+  practice; Pool Hall with rules-based play; BrandForgeOS with a usable campaign
+  package; SnapProofOS with approved field proof; StudyForge AI with a complete
+  study pack and next session; Deploy Ops with a reviewable campaign-launch
+  package; CallCommand with owned call follow-up; Script Ops with reviewed
+  automation; and OutCall with a provider-gated verified-self safety workflow.
+
+### Ten connected customer outcomes in the current source
+
+| Starting record | Confirmed result | Important boundary |
+| --- | --- | --- |
+| TradeFlowKit active job | SnapProofOS customer, field job, and draft report | Does not complete, invoice, bill, or notify the customer |
+| SnapProofOS approved report with a generated PDF and exact TradeFlowKit origin | That exact PDF attached to the originating TradeFlowKit job | Does not claim delivery, viewing, invoicing, payment, or job completion |
+| Completed, analyzed, provider-originated CallCommand call | Selected TradeFlowKit lead or customer/job | Simulations are rejected; no unattended purchase or outreach |
+| Completed, analyzed, provider-originated CallCommand call | PulseDesk operations request | Per-call human confirmation; operations-only and no patient/clinical content |
+| Completed, analyzed, provider-originated CallCommand call | TechDeck support ticket | Simulations are rejected and the exact reviewed call is reloaded |
+| Resolved TechDeck ticket or PulseDesk operations request | Unpublished FaultlineLab training draft | Manager access and privacy review are required; basic masking is not comprehensive de-identification |
+| TorqueShed diagnostic | SnapProofOS diagnostic job, observations, and draft report | The actor must own, manage, or be allowed to view the exact diagnostic |
+| Verified or resolved TorqueShed diagnostic | Unpublished FaultlineLab automotive draft | Manager access and privacy review are required before transfer |
+| BrandForgeOS campaign | Deploy Ops campaign-launch package | Produces copy, up to nine visual-production briefs with the current plan identified, launch work, and review state; it does not publish or deploy |
+| Approved Script Ops revision | Draft TechDeck runbook, first revision, and protected file-integrity record | Does not execute the script, change an endpoint, or approve the runbook |
+
+- TradeFlowKit's quote and invoice controls now distinguish recordkeeping from
+  real communication: “Mark as sent” changes only the shared status, and
+  “Record customer acceptance/decline” requires a staff confirmation without
+  claiming an email was delivered or that OperatorOS independently observed the
+  customer's decision.
+- Each action previews the records it will create, requires explicit
+  confirmation, queues a signed server-owned workflow, shows its durable result,
+  and opens the exact source or destination record. Module access is resolved by
+  the server and threaded into route shells; hiding a control is never treated
+  as authorization.
+- Queue and delivery both recheck write access in the source and destination.
+  Manager-reviewed training transfers recheck manager authority in both
+  applications. The TorqueShed-to-SnapProofOS workflow additionally rechecks
+  object-level diagnostic visibility at queue time and delivery time: an
+  ordinary member cannot copy another member's private diagnostic merely by
+  having module access.
+- The browser must send the reviewed source version. Delivery reloads the exact
+  tenant-owned record and rejects a changed version. Configured CallCommand
+  rules derive the expected version from the analyzed call's current update
+  timestamp; simulated calls do not publish automatic or manual production
+  handoffs. New events use an HMAC-SHA-256 signature-envelope version 2, which binds the
+  tenant, workflow run and key, source and destination applications, consumer,
+  actor, source reference, event identity and sequence, source deep link,
+  payload, idempotency key, and correlation/causation fields. Version-1
+  verification remains available for existing legacy rows only during the
+  controlled current/previous-signing-material compatibility window; new
+  workflow events are not downgraded to version 1. Nine workflows deduplicate the business
+  outcome tenant-wide; BrandForgeOS-to-Deploy Ops remains actor-scoped because
+  generation allowance and authorship are personal. An eligible dead-letter can
+  be deliberately requeued as the same operation.
+- FaultlineLab now has a seven-stage guided authoring path with validation,
+  learner preview, evidence links, and safe simulated tests. Resolved-support and
+  TorqueShed handoffs create meaningful private drafts from the recorded issue,
+  observations, possible causes, progressive hints, diagnostic actions, and
+  remediation. The imported first revision cannot be published until a trainer
+  reviews and saves a new revision; common identifier masking is never described
+  as comprehensive de-identification.
+- Workflow activity and exact-run detail have separate authorization rules.
+  Activity lists are limited to tenant/platform administrators and then show
+  only runs whose source and destination applications the administrator may
+  access. The creator, tenant/platform administrators, and a person
+  with manager access in both applications receive the full exact-run record.
+  For the nine tenant-owned outcomes, another person with write access in both
+  applications may open the existing shared result, but actor identity,
+  request/idempotency key, and fingerprint remain redacted. BrandForgeOS-to-
+  Deploy Ops is actor-owned, so that additional tenant-wide writer path does not
+  apply. A user without the required access receives not-found for an exact run
+  identifier rather than confirmation that the run exists.
+- BrandForgeOS generates local wordmark, lockup, badge, and monogram concepts
+  across four styles, three palettes, and three background treatments from a
+  saved brand kit. It offers responsive preview, optional tagline, editable SVG,
+  standard/2x PNG, and exact scan-gated private save. SVG text is escaped, upload
+  limits and allowed types remain enforced, the existing logo remains active
+  until a person saves the candidate, and replaced generated logos remain
+  recoverable for 30 days. Canva and Figma are accurately described as manual
+  file-import destinations; there is no OAuth connector or provider-side result
+  claim.
+
+### Verification and release boundary
+
+- The final source contract now has one executable forward-sale model:
+  OperatorOS remains the free home base; an organization may buy one monthly
+  Application Stack with TradeFlowKit or PulseDesk at **$149/month**, or
+  TechDeck at **$99/month**; the Stack includes five seats and one eligible
+  tenant-wide companion; additional eligible companions are **$29/month** each
+  and additional seats are **$15/month** each. The exact six sellable companions
+  are SnapProofOS, BrandForgeOS, StudyForge AI, Deploy Ops, CallCommand AI, and
+  Script Ops. Core applications, the three free applications, and coming-soon
+  OutCall are excluded from companion pricing and readiness.
+- Starter, Pro, Elite, and individual-application purchase routes now fail
+  closed for new sales with explicit `LEGACY_PLAN_SALES_CLOSED` or
+  `LEGACY_ADDON_SALES_CLOSED` responses. Existing active/trialing legacy rows
+  keep access only when the v60 one-time grandfather marker is present; a
+  legacy-shaped row created after cutover is not silently treated as a sale.
+  Legacy visibility and cancellation remain available.
+- Stack checkout, included-companion changes, and the billing portal require
+  the tenant owner. Checkout is monthly-only, enforces one flagship per tenant,
+  resumes the same still-open Checkout Session rather than duplicating it, and
+  persists the tenant-owned Stripe customer and subscription intent in
+  `tenant_application_subscriptions`. The portal prefers that exact tenant
+  customer. Signed webhook processing validates the tenant, customer, checkout
+  session, internal billing row, and subscription metadata before activating
+  the flagship, free applications, selected/paid companions, and seat capacity;
+  stale or foreign metadata grants nothing.
+- Platform pricing and readiness are now a read-only six-item shared-price
+  surface. The former plan-mapping, per-module amount, Stripe Price-ID, provider
+  sync, and price-creation controls no longer appear in the UI, and their
+  retained compatibility endpoints reject writes with
+  `APPLICATION_STACK_SHARED_PRICE_REQUIRED`.
+- `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1
+  test/commerce-forward-model-static.test.ts
+  test/forward-commerce-contract-static.test.ts` passed **14/14**, with zero
+  failures, skips, or todos, in **357.7742 ms**. This is the final forward-
+  commerce source contract run.
+- The focused eight-file commerce compatibility slice passed **43/43**, with
+  zero failures or skips, in **11,499.8255 ms**. It includes public/signed-in
+  pricing copy, retired-admin-route RBAC and no-mutation behavior, read-only
+  legacy diagnostics, one-flagship enforcement, and defensive cancellation of
+  grandfathered multi-core data without permitting a second forward grant.
+- On a brand-new disposable PostgreSQL **16.14** database, the dynamic commerce
+  suite passed **8/8**, with zero failures or skips, in **20,010.6101 ms**. It
+  proves the v60 grandfather backfill is one-shot, the post-cutover row remains
+  unmarked on reapply, owner/monthly/one-flagship enforcement, tenant Stripe
+  customer persistence and portal reuse, open-session idempotency, exact signed
+  webhook binding and replay safety, entitlement/seat activation, legacy sales
+  closure with existing-access compatibility, and the exact six-item pricing
+  and readiness allowlist.
+- The final complete API aggregate ran on a brand-new disposable PostgreSQL 16
+  database and reported **1,440 tests: 1,434 passed, 0 failed, 6 intentional
+  HTTP-only skips, and 0 todos** in **713,438.7749 ms**. The six skips require a
+  separately running Next server; no failure was converted to a skip. The same
+  registered aggregate includes the customer-language, workflow, access,
+  deep-link, commerce, billing, security, release-drift, and module-domain
+  regressions above.
+- `corepack pnpm typecheck` passed for `apps/api`, `apps/runner-gateway`,
+  `apps/web`, and `apps/torqueshed-native`. The repository-defined
+  `corepack pnpm lint` gate also passed with `--max-warnings=0`.
+- On a separate empty PostgreSQL 16 database, `db:plan` reported **v60/60** with
+  `forward_commerce_contract` last in **798 ms**. Clean `db:apply` completed and
+  verified in **18,916 ms**, immediate idempotent reapply in **2,907 ms**, and
+  independent read-only `db:verify` in **1,860 ms**. The first 59 manifest
+  entries and their order retain SHA-256
+  `8538083fe1ebbeaa54f7d11031f30d57c03118089e597f5c5314e0a1c08af746`.
+- `corepack pnpm build:production` passed deployment-scope verification, the
+  56-case FaultlineLab catalog and **4/4** compiler tests, all four typechecks,
+  API/runner compilation, and Next 15.5.23 production generation of **35/35**
+  pages.
+- `corepack pnpm preflight:production -- --core` correctly failed closed in the
+  local shell because real production database/secrets, production flags, exact
+  application URLs, disabled-runner declaration, and trusted-proxy declaration
+  are intentionally absent. It printed no secret values. This is an expected
+  environment block, not production acceptance.
+- No production provider was called; no Canva or Figma account was connected;
+  no Twilio call, OpenAI Realtime session, Stripe payment, number purchase,
+  email, ad, publication, deployment, DNS change, production database apply,
+  authenticated exact-host browser acceptance, customer-data operation, or
+  rollback rehearsal was performed by this work. Source publication is a
+  separate authorized Git operation and is not a Replit deployment or database
+  promotion claim.
+- The former dual-model pricing blocker is resolved in current source and
+  disposable-database behavior, not in production. Actual Stripe Products and
+  Prices, webhook configuration, tenant customer/portal behavior, legacy-row
+  reconciliation, backup/rollback, exact-host authenticated checkout, and the
+  deployed release identity still require separately authorized production
+  evidence. See `docs/modules/MODULE_PRODUCT_OUTCOME_UPGRADE.md`.
+
+---
+
+> Historical evidence boundary: every section below describes an earlier
+> committed, built, or deployed revision. It does not certify the current v60
+> module-outcome release candidate.
+
 ## Autoscale startup/readiness repair - LIVE ACCEPTED (2026-09-03)
 
 - The serving runtime no longer runs all 59 idempotent release operations on

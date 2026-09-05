@@ -16,7 +16,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   users, subscriptions, subscriptionPlans, modules, planModules,
@@ -80,13 +80,18 @@ before(async () => {
 
   const now = new Date(); const future = new Date(Date.now() + 30 * 86400_000);
   await db.insert(subscriptions).values([
-    { userId: starterUserId, planId: starterPlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
-    { userId: proUserId,     planId: proPlanId,     status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
-    { userId: eliteUserId,   planId: elitePlanId,   status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
+    { userId: starterUserId, tenantId: starterTenantId, planId: starterPlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
+    { userId: proUserId, tenantId: proTenantId, planId: proPlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
+    { userId: eliteUserId, tenantId: eliteTenantId, planId: elitePlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
     // super-admin user: ONLY a starter sub, so the test can prove the
     // platform role does not leak into billing config.
-    { userId: superUserId,   planId: starterPlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
+    { userId: superUserId, tenantId: superTenantId, planId: starterPlanId, status: 'active', currentPeriodStart: now, currentPeriodEnd: future },
   ]);
+  await db.execute(sql`
+    UPDATE subscriptions
+    SET legacy_access_grandfathered_at=clock_timestamp()
+    WHERE user_id IN (${starterUserId}, ${proUserId}, ${eliteUserId}, ${superUserId})
+  `);
   await db.update(users).set({ platformRole: 'super_admin' }).where(eq(users.id, superUserId));
 });
 

@@ -53,9 +53,9 @@ test('security domain retains assurance, prohibitions, rate-limit, idempotency a
 });
 
 test('premium MSP workspace implements operations, organizations, contacts, integrations, policy, audit and onboarding with honest gates', () => {
-  for (const text of ['MSP Intake Command Center','Live intake operations','Organizations and trusted originating lines','Support contacts and SupportLink','MSP Automation Fabric integrations','Assurance and action policy','Hash-linked call evidence','Production onboarding gates','display once','privileged actions gated']) assert.match(shell, new RegExp(text));
+  for (const text of ['MSP Intake Command Center','Live intake operations','Customers and verified originating lines','Support contacts and SupportLink','Connected MSP services','Assurance and action policy','Protected call activity history','Go-live checklist','display once','Sensitive actions require approval']) assert.match(shell, new RegExp(text));
   assert.match(shell, /gridTemplateColumns:'repeat\(auto-fit/);
   assert.match(shell, /colorScheme: 'dark'/);
-  assert.match(shell, /Password reset and RMM action toggles are server-forced off/);
+  assert.match(shell, /Password reset and remote-management actions are not available yet/);
   for (const path of ['/organizations','/contacts','/integrations/health','/action-catalog','/policy','/audit','/onboarding']) assert.match(routeMap, new RegExp(path.replaceAll('/', '\\/')));
 });

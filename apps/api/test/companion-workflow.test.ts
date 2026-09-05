@@ -128,7 +128,7 @@ test('Script Ops starts with search, guarded drafting, and human review', () => 
   assert.equal(brief.state, 'setup');
   assert.equal(brief.primaryAction.href, '/library');
   assert.deepEqual(brief.setupSteps.map(step => step.href), ['/library', '/generate', '/library']);
-  assert.match(brief.automations[1]?.detail ?? '', /unapproved until human review/i);
+  assert.match(brief.automations[1]?.detail ?? '', /unapproved until a person reviews it/i);
 });
 
 test('Script Ops ranks critical findings before approval and sync work', () => {
@@ -143,5 +143,5 @@ test('Script Ops ranks critical findings before approval and sync work', () => {
   assert.equal(brief.state, 'active');
   assert.equal(brief.actions[0]?.id, 'critical-script-script-1');
   assert.ok(brief.actions.some(action => action.id === 'failed-catalog-sync'));
-  assert.match(brief.summary, /never executes/i);
+  assert.match(brief.summary, /this app does not run them/i);
 });

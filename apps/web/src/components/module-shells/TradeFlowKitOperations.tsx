@@ -13,6 +13,7 @@ import {
 } from '@/lib/auth';
 import { buildTradeFlowKitWorkday } from '@/lib/core-suite-workday';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 
 const empty: TradeFlowKitOperationsResponse = {
   jobs: [], tasks: [], payments: [], settings: null,
@@ -30,17 +31,62 @@ function message(error: unknown): string {
 
 export type TradeFlowKitOperationsView = 'full' | 'dashboard' | 'jobs' | 'analytics' | 'settings';
 
+interface TradeFlowKitJobAttachment {
+  id: string;
+  originalName: string;
+  sizeBytes: number;
+  detectedMimeType: string;
+  scanStatus: string;
+  createdAt: string;
+}
+
+async function attachmentRequest(path: string, tenantKey: string): Promise<Response> {
+  const response = await fetch(`/api${path}`, {
+    credentials: 'include',
+    headers: { 'X-Tenant-Id': tenantKey },
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'The attachment request failed.' }));
+    throw { status: response.status, ...body };
+  }
+  return response;
+}
+
+async function listJobAttachments(jobId: string, tenantKey: string): Promise<TradeFlowKitJobAttachment[]> {
+  const response = await attachmentRequest(
+    `/modules/tradeflowkit/jobs/${encodeURIComponent(jobId)}/attachments`,
+    tenantKey,
+  );
+  const body = await response.json() as { attachments?: TradeFlowKitJobAttachment[] };
+  return Array.isArray(body.attachments) ? body.attachments : [];
+}
+
+function saveAttachment(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function TradeFlowKitOperations({
   tenantKey,
+  canWrite,
   canManage,
   view = 'full',
   recordId,
+  highlightedAttachmentId,
   routePrefix = '',
 }: {
   tenantKey: string;
+  canWrite: boolean;
   canManage: boolean;
   view?: TradeFlowKitOperationsView;
   recordId?: string;
+  highlightedAttachmentId?: string;
   routePrefix?: string;
 }) {
   const [data, setData] = useState(empty);
@@ -61,14 +107,29 @@ export default function TradeFlowKitOperations({
   const [viewPending, setViewPending] = useState(false);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState('scheduled');
+  const [attachments, setAttachments] = useState<TradeFlowKitJobAttachment[]>([]);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [attachmentBusy, setAttachmentBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setConflict(false);
     try {
-      const [next, nextRevenue] = await Promise.all([
+      const [operations, nextRevenue, exactBundle] = await Promise.all([
         moduleShellApi.tradeflowkit.operations({ search: search || undefined, status: status || undefined }),
         view === 'dashboard' ? moduleShellApi.tradeflowkit.revenue() : Promise.resolve(null),
+        recordId ? moduleShellApi.tradeflowkit.job(recordId) as Promise<{ job: TradeFlowKitJob; tasks?: TradeFlowKitTask[] }> : Promise.resolve(null),
       ]);
+      const next = exactBundle
+        ? {
+            ...operations,
+            jobs: [exactBundle.job, ...operations.jobs.filter(job => job.id !== exactBundle.job.id)],
+            tasks: [
+              ...(exactBundle.tasks ?? []),
+              ...operations.tasks.filter(task => task.jobId !== exactBundle.job.id),
+            ],
+          }
+        : operations;
       setData(next);
       if (nextRevenue) setRevenue(nextRevenue);
       setSelectedJobIds(new Set());
@@ -77,6 +138,7 @@ export default function TradeFlowKitOperations({
       const taskJobId = next.tasks.find(task => task.id === nestedTaskId)?.jobId || '';
       setSelectedJobId(current => {
         const candidate = nestedJobId || taskJobId || current;
+        if (nestedJobId) return next.jobs.some(job => job.id === nestedJobId) ? nestedJobId : '';
         return next.jobs.some(job => job.id === candidate) ? candidate : next.jobs[0]?.id || '';
       });
       if (canManage) {
@@ -104,6 +166,61 @@ export default function TradeFlowKitOperations({
   const workday = useMemo(() => buildTradeFlowKitWorkday(data, revenue), [data, revenue]);
   const deepTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
 
+  useEffect(() => {
+    let cancelled = false;
+    if (view !== 'jobs' || !selectedJobId) {
+      setAttachments([]);
+      setAttachmentError(null);
+      return;
+    }
+    setAttachmentsLoading(true);
+    setAttachmentError(null);
+    void listJobAttachments(selectedJobId, tenantKey)
+      .then(rows => {
+        if (!cancelled) setAttachments(rows);
+      })
+      .catch(reason => {
+        if (!cancelled) {
+          setAttachments([]);
+          setAttachmentError(message(reason));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAttachmentsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedJobId, tenantKey, view]);
+
+  useEffect(() => {
+    if (!highlightedAttachmentId || !attachments.some(item => item.id === highlightedAttachmentId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`tradeflowkit-attachment-${highlightedAttachmentId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [attachments, highlightedAttachmentId]);
+
+  async function downloadAttachment(item: TradeFlowKitJobAttachment) {
+    if (!selectedJobId) return;
+    setAttachmentBusy(item.id);
+    setAttachmentError(null);
+    try {
+      const response = await attachmentRequest(
+        `/modules/tradeflowkit/jobs/${encodeURIComponent(selectedJobId)}/attachments/${encodeURIComponent(item.id)}/content`,
+        tenantKey,
+      );
+      saveAttachment(await response.blob(), item.originalName);
+    } catch (reason) {
+      setAttachmentError(message(reason));
+    } finally {
+      setAttachmentBusy(null);
+    }
+  }
+
   async function run(operation: () => Promise<unknown>) {
     setPending(true); setError(null); setConflict(false);
     try { await operation(); await load(); }
@@ -115,7 +232,7 @@ export default function TradeFlowKitOperations({
 
   function addTask(event: FormEvent) {
     event.preventDefault();
-    if (!selectedJob || !taskTitle.trim()) return;
+    if (!canWrite || !selectedJob || !taskTitle.trim()) return;
     void run(async () => {
       await moduleShellApi.tradeflowkit.createTask(selectedJob.id, { title: taskTitle, priority: taskPriority, sortOrder: tasks.length });
       setTaskTitle('');
@@ -139,7 +256,7 @@ export default function TradeFlowKitOperations({
 
   async function saveCurrentView(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!viewName.trim()) return;
+    if (!canWrite || !viewName.trim()) return;
     setViewPending(true); setError(null);
     try {
       await moduleShellApi.tradeflowkit.createSavedView({
@@ -161,7 +278,7 @@ export default function TradeFlowKitOperations({
   }
 
   async function deleteSavedView(view: TradeFlowKitSavedView) {
-    if (!view.owned || !window.confirm(`Delete saved view “${view.name}”?`)) return;
+    if (!canWrite || !view.owned || !window.confirm(`Delete saved view “${view.name}”?`)) return;
     setViewPending(true); setError(null);
     try {
       await moduleShellApi.tradeflowkit.deleteSavedView(view.id);
@@ -192,21 +309,46 @@ export default function TradeFlowKitOperations({
     <section id="tradeflowkit-operations" className="tfk-panel tfk-ops" data-testid="tradeflowkit-operations" data-view={view} tabIndex={-1}>
       <style>{css}</style>
       <header className="tfk-ops-head">
-        <div><span>{view === 'dashboard' ? 'Live operations' : 'Field operations'}</span><h2>{view === 'dashboard' ? 'Operations at a glance' : 'Jobs, tasks, assignments, and cash position'}</h2><p>{view === 'dashboard' ? 'These totals are calculated from this organization’s persisted service and revenue records.' : 'Keep current work, team ownership, delivery status, and cash position visible in one place.'}</p></div>
+        <div><span>{view === 'dashboard' ? 'Live operations' : 'Field operations'}</span><h2>{view === 'dashboard' ? 'Operations at a glance' : 'Jobs, tasks, assignments, and cash position'}</h2><p>{view === 'dashboard' ? 'These totals are calculated from this organization’s saved service and revenue records.' : 'Keep current work, team ownership, delivery status, and cash position visible in one place.'}</p></div>
         <div className="tfk-ops-actions"><a href="/api/modules/tradeflowkit/exports/customers.csv">Customers CSV</a><a href="/api/modules/tradeflowkit/exports/invoices.csv">Invoices CSV</a><a href="/api/modules/tradeflowkit/exports/payments.csv">Payments CSV</a><button type="button" onClick={() => void load()} disabled={loading || pending}><RefreshCw size={15} /> Refresh</button></div>
       </header>
 
       {view === 'dashboard' && (
-        <div className="tfk-workday-slot" aria-busy={loading}>
-          {loading
-            ? <div className="tfk-workday-loading" role="status"><Loader2 className="spin" size={18} /> Preparing today’s lead-to-cash brief…</div>
-            : <CoreSuiteWorkdayBrief
-                moduleId="tradeflowkit"
-                eyebrow="Today · lead to cash"
-                brief={workday}
-                hrefFor={href => `${routePrefix}${href}`}
-              />}
-        </div>
+        <>
+          <div className="tfk-workday-slot" aria-busy={loading}>
+            {loading
+              ? <div className="tfk-workday-loading" role="status"><Loader2 className="spin" size={18} /> Preparing today’s lead-to-cash brief…</div>
+              : <CoreSuiteWorkdayBrief
+                  moduleId="tradeflowkit"
+                  eyebrow="Today · lead to cash"
+                  brief={workday}
+                  hrefFor={href => `${routePrefix}${href}`}
+                />}
+          </div>
+          {!loading && selectedJob && (
+            <div style={{ margin: '14px 0 18px' }}>
+              <OutcomeWorkflowAction
+                workflowKey="tradeflowkit.job_to_snapproof"
+                aggregateId={selectedJob.id}
+                sourceVersion={selectedJob.version}
+                sourceDeepLink={`/modules/tradeflowkit/jobs/${selectedJob.id}`}
+                title="Start a field-proof package for the selected job"
+                description={`Send “${selectedJob.title}” into SnapProofOS so the field team can capture before, during, and after proof without re-entering the customer and job.`}
+                destinationLabel="SnapProofOS"
+                actionLabel="Review field-proof package"
+                confirmationText="Create the connected customer, field job, and draft closeout report in SnapProofOS. This does not contact the customer or share a report."
+                disabled={!canWrite}
+                disabledReason={!canWrite ? 'You need job edit access to start a field-proof package.' : undefined}
+                previewItems={[
+                  { label: 'Field job', detail: 'Customer, job title, schedule, address, and assignee when available' },
+                  { label: 'Draft closeout report', detail: 'Ready for photos, findings, parts, labor, and manager review' },
+                  { label: 'Link back to this job', detail: 'An approved PDF can later be attached back to this TradeFlowKit job' },
+                ]}
+                testId="tradeflowkit-start-field-proof"
+              />
+            </div>
+          )}
+        </>
       )}
 
       <div className="tfk-ops-metrics" aria-label="Operational analytics">
@@ -239,15 +381,15 @@ export default function TradeFlowKitOperations({
       </div>
 
       <div className="tfk-saved-views" data-testid="tradeflowkit-saved-views">
-        <form onSubmit={saveCurrentView}>
+        {canWrite ? <form onSubmit={saveCurrentView}>
           <Bookmark size={15} />
           <label><span className="sr-only">Saved view name</span><input aria-label="Saved view name" value={viewName} onChange={event => setViewName(event.target.value)} placeholder="Save these job filters as…" minLength={1} maxLength={120} required /></label>
           {canManage && <label className="tfk-share-view"><input type="checkbox" checked={shareView} onChange={event => setShareView(event.target.checked)} /> <Share2 size={13} /> Share with team</label>}
           <button disabled={viewPending || !viewName.trim()}><Save size={14} /> Save view</button>
-        </form>
+        </form> : <span className="tfk-saved-empty" data-testid="tradeflowkit-operations-read-only">You can apply saved views, but this access level cannot create or delete them.</span>}
         {savedViews.length === 0
           ? <span className="tfk-saved-empty">No saved job views yet.</span>
-          : <div className="tfk-saved-chips" aria-label="Saved job views">{savedViews.map(view => <div key={view.id} data-testid={`tradeflowkit-saved-view-${view.id}`}><button type="button" className="tfk-saved-apply" onClick={() => applySavedView(view)} disabled={viewPending}>{view.isShared && <Share2 size={12} />}{view.name}</button>{view.owned && <button type="button" className="tfk-saved-delete" aria-label={`Delete saved view ${view.name}`} onClick={() => void deleteSavedView(view)} disabled={viewPending}><Trash2 size={12} /></button>}</div>)}</div>}
+          : <div className="tfk-saved-chips" aria-label="Saved job views">{savedViews.map(view => <div key={view.id} data-testid={`tradeflowkit-saved-view-${view.id}`}><button type="button" className="tfk-saved-apply" onClick={() => applySavedView(view)} disabled={viewPending}>{view.isShared && <Share2 size={12} />}{view.name}</button>{canWrite && view.owned && <button type="button" className="tfk-saved-delete" aria-label={`Delete saved view ${view.name}`} onClick={() => void deleteSavedView(view)} disabled={viewPending}><Trash2 size={12} /></button>}</div>)}</div>}
       </div>
 
       {canManage && data.jobs.length > 0 && <section className="tfk-bulk-bar" data-testid="tradeflowkit-job-bulk-actions" aria-label="Job batch actions">
@@ -270,14 +412,37 @@ export default function TradeFlowKitOperations({
             </aside>
             <div className="tfk-task-board">
               {selectedJob && <>
-                <JobEditor job={selectedJob} settings={settings} pending={pending} canManage={canManage} activeTaskCount={tasks.length} run={run} routePrefix={routePrefix} />
-                {canManage && <form onSubmit={addTask} className="tfk-task-form"><input aria-label="New task title" required value={taskTitle} onChange={event => setTaskTitle(event.target.value)} placeholder="Add a job task" maxLength={200} /><select aria-label="Task priority" value={taskPriority} onChange={event => setTaskPriority(event.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><button disabled={pending || !taskTitle.trim()}><Plus size={15} /> Add task</button></form>}
-                {tasks.length === 0 ? <div className="tfk-task-empty"><ListChecks size={18} /> No tasks yet. Add the first work step above.</div> : <div className="tfk-task-list">{tasks.map(task => <TaskRow key={task.id} task={task} selected={task.id === deepTaskId} pending={pending} canManage={canManage} run={run} routePrefix={routePrefix} />)}</div>}
+                <JobEditor job={selectedJob} settings={settings} pending={pending} canWrite={canWrite} activeTaskCount={tasks.length} run={run} routePrefix={routePrefix} />
+                <section className="tfk-attachments" aria-labelledby="tradeflowkit-job-attachments-title" data-testid="tradeflowkit-job-attachments">
+                  <div className="tfk-attachments-head">
+                    <div><strong id="tradeflowkit-job-attachments-title">Job files</strong><span>Files shared from connected workflows and uploads stay attached to this job.</span></div>
+                    {attachmentsLoading && <Loader2 className="spin" size={16} aria-label="Loading job files" />}
+                  </div>
+                  {attachmentError && <div className="tfk-attachment-error" role="alert">{attachmentError}</div>}
+                  {!attachmentsLoading && attachments.length === 0 && !attachmentError && <p className="tfk-attachment-empty">No files are attached to this job yet.</p>}
+                  {attachments.length > 0 && <div className="tfk-attachment-list">{attachments.map(item => {
+                    const highlighted = item.id === highlightedAttachmentId;
+                    const downloadable = item.scanStatus === 'clean';
+                    return <article
+                      key={item.id}
+                      id={`tradeflowkit-attachment-${item.id}`}
+                      className={`tfk-attachment ${highlighted ? 'highlighted' : ''}`}
+                      data-highlighted={highlighted ? 'true' : undefined}
+                      aria-current={highlighted ? 'true' : undefined}
+                    >
+                      <div><strong>{item.originalName}</strong><span>{Math.max(1, Math.ceil(item.sizeBytes / 1024)).toLocaleString()} KB · {item.detectedMimeType} · {downloadable ? 'Ready to download' : `Security check: ${item.scanStatus}`}</span></div>
+                      <button type="button" disabled={!downloadable || attachmentBusy === item.id} onClick={() => void downloadAttachment(item)}><Download size={14} />{attachmentBusy === item.id ? 'Downloading…' : 'Download'}</button>
+                    </article>;
+                  })}</div>}
+                  {highlightedAttachmentId && !attachmentsLoading && attachments.length > 0 && !attachments.some(item => item.id === highlightedAttachmentId) && <p className="tfk-attachment-error" role="status">The requested file is not attached to this job or is no longer available.</p>}
+                </section>
+                {canWrite && <form onSubmit={addTask} className="tfk-task-form"><input aria-label="New task title" required value={taskTitle} onChange={event => setTaskTitle(event.target.value)} placeholder="Add a job task" maxLength={200} /><select aria-label="Task priority" value={taskPriority} onChange={event => setTaskPriority(event.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><button disabled={pending || !taskTitle.trim()}><Plus size={15} /> Add task</button></form>}
+                {tasks.length === 0 ? <div className="tfk-task-empty"><ListChecks size={18} /> No tasks yet. Add the first work step above.</div> : <div className="tfk-task-list">{tasks.map(task => <TaskRow key={task.id} task={task} selected={task.id === deepTaskId} pending={pending} canWrite={canWrite} run={run} routePrefix={routePrefix} />)}</div>}
               </>}
             </div>
           </div>}
 
-      {canManage && settings && <form id="tradeflowkit-operating-settings" className="tfk-settings" onSubmit={saveSettings} data-testid="tradeflowkit-operating-settings"><div><Settings2 size={18} /><div><strong>Operating defaults</strong><span>Number prefixes, tax, labor rate, terms, currency, and timezone.</span></div></div><label>Job prefix<input value={settings.jobPrefix} onChange={event => setSettings({ ...settings, jobPrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Quote prefix<input value={settings.quotePrefix} onChange={event => setSettings({ ...settings, quotePrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Invoice prefix<input value={settings.invoicePrefix} onChange={event => setSettings({ ...settings, invoicePrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Default tax %<input type="number" min="0" max="100" step="0.01" value={settings.defaultTaxRateBps / 100} onChange={event => setSettings({ ...settings, defaultTaxRateBps: Math.round(Number(event.target.value) * 100) })} /></label><label>Payment terms days<input type="number" min="0" max="365" value={settings.paymentTermsDays} onChange={event => setSettings({ ...settings, paymentTermsDays: Number(event.target.value) })} /></label><label>Timezone<input value={settings.timezone} onChange={event => setSettings({ ...settings, timezone: event.target.value })} maxLength={80} /></label><button disabled={pending}>Save defaults · v{settings.version}</button></form>}
+      {canManage && settings && <form id="tradeflowkit-operating-settings" className="tfk-settings" onSubmit={saveSettings} data-testid="tradeflowkit-operating-settings"><div><Settings2 size={18} /><div><strong>Operating defaults</strong><span>Number prefixes, tax, labor rate, terms, currency, and timezone.</span></div></div><label>Job prefix<input value={settings.jobPrefix} onChange={event => setSettings({ ...settings, jobPrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Quote prefix<input value={settings.quotePrefix} onChange={event => setSettings({ ...settings, quotePrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Invoice prefix<input value={settings.invoicePrefix} onChange={event => setSettings({ ...settings, invoicePrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Default tax %<input type="number" min="0" max="100" step="0.01" value={settings.defaultTaxRateBps / 100} onChange={event => setSettings({ ...settings, defaultTaxRateBps: Math.round(Number(event.target.value) * 100) })} /></label><label>Payment terms days<input type="number" min="0" max="365" value={settings.paymentTermsDays} onChange={event => setSettings({ ...settings, paymentTermsDays: Number(event.target.value) })} /></label><label>Timezone<input value={settings.timezone} onChange={event => setSettings({ ...settings, timezone: event.target.value })} maxLength={80} /></label><button disabled={pending}>Save defaults</button></form>}
       {view === 'settings' && !canManage && <div className="tfk-ops-state" data-testid="tradeflowkit-settings-read-only">Operating defaults are available to workspace administrators.</div>}
     </section>
   );
@@ -293,8 +458,8 @@ function JobButton({ job, active, onClick, settings }: { job: TradeFlowKitJob; a
   return <button type="button" className={active ? 'active' : ''} onClick={onClick}><span>{formatJobNumber(job, settings)}</span><strong>{job.title}</strong><small>{job.status.replaceAll('_', ' ')} · {job.priority}</small></button>;
 }
 
-function JobEditor({ job, settings, pending, canManage, activeTaskCount, run, routePrefix }: {
-  job: TradeFlowKitJob; settings: TradeFlowKitSettings | null; pending: boolean; canManage: boolean;
+function JobEditor({ job, settings, pending, canWrite, activeTaskCount, run, routePrefix }: {
+  job: TradeFlowKitJob; settings: TradeFlowKitSettings | null; pending: boolean; canWrite: boolean;
   activeTaskCount: number; run: (operation: () => Promise<unknown>) => Promise<void>; routePrefix: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -324,17 +489,17 @@ function JobEditor({ job, settings, pending, canManage, activeTaskCount, run, ro
         <label>Priority<select value={priority} onChange={event => setPriority(event.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
       </div>
       <label>Description<textarea maxLength={4000} rows={3} value={description} onChange={event => setDescription(event.target.value)} /></label>
-      <div className="tfk-record-actions"><button type="button" className="secondary" disabled={pending} onClick={() => setEditing(false)}><X size={14} /> Cancel</button><button disabled={pending || title.trim().length < 2}><Save size={14} /> Save job · v{job.version}</button></div>
+      <div className="tfk-record-actions"><button type="button" className="secondary" disabled={pending} onClick={() => setEditing(false)}><X size={14} /> Cancel</button><button disabled={pending || title.trim().length < 2}><Save size={14} /> Save job</button></div>
     </form>;
   }
 
-  return <div className="tfk-task-title" data-testid={`tradeflowkit-job-${job.id}`}><div><span>{formatJobNumber(job, settings)}</span><h3>{job.title}</h3><p>{job.status.replaceAll('_', ' ')} · {job.priority} priority · v{job.version}</p>{job.description && <p className="tfk-record-description">{job.description}</p>}</div><div className="tfk-record-actions"><a href={`${routePrefix}/jobs/${job.id}`}>Record deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={14} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+  return <div className="tfk-task-title" data-testid={`tradeflowkit-job-${job.id}`}><div><span>{formatJobNumber(job, settings)}</span><h3>{job.title}</h3><p>{job.status.replaceAll('_', ' ')} · {job.priority} priority</p>{job.description && <p className="tfk-record-description">{job.description}</p>}</div><div className="tfk-record-actions"><a href={`${routePrefix}/jobs/${job.id}`}>Open job</a>{canWrite && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={14} /> Edit</button>}{canWrite && <button type="button" className="danger" disabled={pending} onClick={() => {
     if (window.confirm(`Archive this job? ${activeTaskCount ? 'Archive its active tasks first.' : 'It will leave the active workspace.'}`)) void run(() => moduleShellApi.tradeflowkit.archiveJob(job.id, job.version));
   }}><Archive size={14} /> Archive</button>}</div></div>;
 }
 
-function TaskRow({ task, selected, pending, canManage, run, routePrefix }: {
-  task: TradeFlowKitTask; selected: boolean; pending: boolean; canManage: boolean;
+function TaskRow({ task, selected, pending, canWrite, run, routePrefix }: {
+  task: TradeFlowKitTask; selected: boolean; pending: boolean; canWrite: boolean;
   run: (operation: () => Promise<unknown>) => Promise<void>; routePrefix: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -368,11 +533,11 @@ function TaskRow({ task, selected, pending, canManage, run, routePrefix }: {
         <label>Due date<input type="date" value={dueAt} onChange={event => setDueAt(event.target.value)} /></label>
       </div>
       <label>Description<textarea maxLength={4000} rows={2} value={description} onChange={event => setDescription(event.target.value)} /></label>
-      <div className="tfk-record-actions"><button type="button" className="secondary" disabled={pending} onClick={() => setEditing(false)}><X size={14} /> Cancel</button><button disabled={pending || title.trim().length < 2}><Save size={14} /> Save task · v{task.version}</button></div>
+      <div className="tfk-record-actions"><button type="button" className="secondary" disabled={pending} onClick={() => setEditing(false)}><X size={14} /> Cancel</button><button disabled={pending || title.trim().length < 2}><Save size={14} /> Save task</button></div>
     </form>;
   }
 
-  return <article className={`tfk-task tfk-task-${task.status} ${selected ? 'selected' : ''}`} id={`tradeflowkit-task-${task.id}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''} · v{task.version}</span>{task.description && <span>{task.description}</span>}</div><div className="tfk-record-actions"><a href={`${routePrefix}/tasks/${task.id}`}>Deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+  return <article className={`tfk-task tfk-task-${task.status} ${selected ? 'selected' : ''}`} id={`tradeflowkit-task-${task.id}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''}</span>{task.description && <span>{task.description}</span>}</div><div className="tfk-record-actions"><a href={`${routePrefix}/tasks/${task.id}`}>Open task</a>{canWrite && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>}{canWrite && <button type="button" className="danger" disabled={pending} onClick={() => {
     if (window.confirm('Archive this task? It will leave the active job board.')) void run(() => moduleShellApi.tradeflowkit.archiveTask(task.id, task.version));
   }}><Archive size={13} /> Archive</button>}</div></article>;
 }
@@ -421,6 +586,7 @@ const css = `
   .tfk-ops-layout aside small { color:#6d847c; text-transform:capitalize; }
   .tfk-task-board { border:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); border-radius:9px; padding:14px; background:var(--tfk-card); }
   .tfk-task-title { display:flex; justify-content:space-between; gap:12px; align-items:start; }.tfk-task-title h3 { margin:3px 0; }.tfk-task-title p { margin:0; color:#587067; font-size:12px; text-transform:capitalize; }.tfk-task-title .tfk-record-description { margin-top:6px; max-width:620px; text-transform:none; }.tfk-task-title a { font-size:12px; color:#0369a1; }
+  .tfk-attachments { margin-top:13px; border:1px solid color-mix(in srgb, var(--tfk-primary) 16%, transparent); border-radius:8px; background:#f8fffc; padding:11px; display:grid; gap:8px; }.tfk-attachments-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }.tfk-attachments-head>div { display:grid; gap:2px; }.tfk-attachments-head span,.tfk-attachment span { color:#587067; font-size:11px; }.tfk-attachment-list { display:grid; gap:6px; }.tfk-attachment { border:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); border-radius:7px; background:white; padding:9px; display:flex; align-items:center; justify-content:space-between; gap:10px; }.tfk-attachment>div { display:grid; gap:3px; min-width:0; }.tfk-attachment strong { overflow-wrap:anywhere; }.tfk-attachment.highlighted { border-color:#0284c7; background:#e0f2fe; box-shadow:0 0 0 3px rgba(2,132,199,.13),inset 3px 0 #0284c7; }.tfk-attachment button { border:0; border-radius:6px; padding:7px 9px; background:#0369a1; color:white; font-weight:800; display:inline-flex; align-items:center; gap:5px; cursor:pointer; }.tfk-attachment button:disabled { opacity:.5; cursor:not-allowed; }.tfk-attachment-empty,.tfk-attachment-error { margin:0; color:#587067; font-size:12px; }.tfk-attachment-error { color:#991b1b; }
   .tfk-task-form { display:grid; grid-template-columns:minmax(0,1fr) 130px auto; gap:8px; margin-top:13px; }
   .tfk-task-list { display:grid; gap:7px; margin-top:12px; }.tfk-task { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:9px; align-items:center; background:white; border:1px solid color-mix(in srgb, var(--tfk-primary) 13%, transparent); border-radius:7px; padding:10px; }.tfk-task.selected,.tfk-record-editor.selected { border-color:var(--tfk-primary); box-shadow:inset 3px 0 var(--tfk-primary); background:var(--tfk-primary-soft); }.tfk-task > div { display:grid; gap:2px; }.tfk-task span { color:#6d847c; font-size:11px; }.tfk-task-completed strong { text-decoration:line-through; color:#6d847c; }.tfk-task-completed > svg { color:var(--tfk-primary); }
   .tfk-record-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }.tfk-record-actions a { color:#0369a1; font-size:11px; font-weight:800; }.tfk-record-actions button { border:0; border-radius:6px; padding:7px 9px; background:var(--tfk-primary-hover); color:white; font-weight:800; display:inline-flex; gap:5px; align-items:center; cursor:pointer; }.tfk-record-actions button.edit { background:#b7791f; }.tfk-record-actions button.danger { background:#dc2626; }.tfk-record-actions button.secondary { background:#64748b; }

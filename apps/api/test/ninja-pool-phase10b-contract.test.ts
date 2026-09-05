@@ -61,8 +61,8 @@ test('Phase 30 UI exposes all playable modes, protected rooms, PWA, and durable 
   assert.match(routeMap, /'\/host'/);
   assert.match(routeMap, /'\/join'/);
   assert.match(routeMap, /resource === 'rooms'/);
-  assert.match(shell, /Authenticated online rooms/);
-  assert.match(shell, /Server-verified deterministic results/);
+  assert.match(shell, /Private online rooms/);
+  assert.match(shell, /Results checked against the same game rules/);
   assert.match(online, /NinjaPoolRoomSocket/);
   assert.match(online, /simulateOnlineShot/);
   assert.match(online, /hostShotResult/);

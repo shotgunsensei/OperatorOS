@@ -29,7 +29,7 @@ export default function TechDeckPublicStatus({ params }: { params: { slug: strin
       <section><h2 style={styles.sectionTitle}>Components</h2>{data.components.length === 0 ? <p style={styles.empty}>No components published.</p> : <div style={styles.list}>{data.components.map(row => <article key={row.id} style={styles.row}><div><strong>{row.name}</strong><p>{row.description}</p></div><span style={{ ...styles.pill, color: tone(row.status) }}>{String(row.status).replaceAll('_', ' ')}</span></article>)}</div>}</section>
       <section><h2 style={styles.sectionTitle}>Incident history</h2>{data.incidents.length === 0 ? <p style={styles.empty}>No incidents reported.</p> : <div style={styles.list}>{data.incidents.map(row => <article key={row.id} style={styles.incident}><div style={styles.incidentHead}><strong>{row.title}</strong><span>{row.status}</span></div><p>{row.description}</p>{(row.updates ?? []).map((update: Record<string, any>, index: number) => <div key={index} style={styles.update}><strong>{update.status}</strong> {update.message}</div>)}</article>)}</div>}</section>
     </div>}
-    <footer style={styles.footer}>Published from TechDeck. Tenant credentials, internal notes, and private evidence are never included.</footer>
+    <footer style={styles.footer}>Published from TechDeck. Sign-in details, internal notes, and private files are never included.</footer>
   </section></main>;
 }
 

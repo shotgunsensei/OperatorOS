@@ -48,7 +48,7 @@ test('Phase 11C exposes a real workspace and canonical deep-link destinations', 
   assert.match(workspace, /Edit session/);
   assert.match(workspace, /moduleShellApi\.studyforge\.workspace/);
   assert.match(workspace, /review required/i);
-  assert.match(workspace, /Source-grounded AI studio/);
+  assert.match(workspace, /Build from your materials/);
   assert.doesNotMatch(workspace, /Math\.random/);
   assert.match(client, /\/modules\/studyforge-ai\/generations/);
   for (const section of ['dashboard', 'subjects', 'sources', 'studio', 'decks', 'quizzes', 'plans', 'analytics']) {

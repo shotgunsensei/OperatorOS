@@ -14,9 +14,9 @@ test('Help Center searches every product guide and opens the matching page guide
   await expect(page.getByRole('heading', { name: 'TechDeck', exact: true })).toBeVisible();
   const guide = page.locator('#guide-techdeck-tech-tickets');
   await expect(guide).toHaveAttribute('open', '');
-  await expect(guide.getByText('What you can do')).toBeVisible();
-  await expect(guide.getByText('Normal workflow')).toBeVisible();
-  await expect(guide.getByRole('link', { name: 'Open this page' })).toHaveAttribute('href', 'https://techdeck.operatoros.net/tickets');
+  await expect(guide.getByText('What you will accomplish')).toBeVisible();
+  await expect(guide.getByText('How to do it')).toBeVisible();
+  await expect(guide.getByRole('link', { name: 'Go to Tickets' })).toHaveAttribute('href', 'https://techdeck.operatoros.net/tickets');
 });
 
 test('page-aware module Help URL selects the correct mobile guide without horizontal overflow', async ({ page }) => {
@@ -25,7 +25,7 @@ test('page-aware module Help URL selects the correct mobile guide without horizo
 
   const guide = page.locator('#guide-techdeck-tech-tickets');
   await expect(guide).toHaveAttribute('open', '');
-  await expect(guide.getByText('Triage, assign, progress, and close tenant-scoped support work with SLA context.')).toBeVisible();
+  await expect(guide.getByText('Triage, assign, update, and close support work without losing priority or response targets.')).toBeVisible();
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(hasHorizontalOverflow).toBe(false);
 });

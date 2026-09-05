@@ -9,6 +9,11 @@ test('TechDeck state-5 routes expose no secret reveal or remote execution endpoi
   const domain = read('../src/lib/techdeck-ops.ts');
   assert.doesNotMatch(routes, /\/execute['"`]|\/dispatch['"`]|\/commands['"`]|revealSecret|secretValue/);
   assert.match(routes, /execution: \{ enabled: false/);
+  assert.match(routes, /reports\/:id\/download/);
+  assert.match(routes, /evidence\/:id/);
+  assert.match(routes, /reports\/:id'/);
+  assert.match(routes, /eq\(techdeckReports\.tenantId, tenantId\)/);
+  assert.match(routes, /TECHDECK_REPORT_FORMAT_INVALID/);
   assert.match(domain, /SECRET_VALUE_FORBIDDEN/);
   assert.match(domain, /externalVaultReference/);
 });
@@ -30,6 +35,9 @@ test('TechDeck UI and deep links mount completed operations without pending work
     assert.match(`${workspace}\n${deepLinks}`, new RegExp(section));
   }
   assert.match(workspace, /Documentation-only runbooks/);
+  assert.match(workspace, /data-testid="techdeck-report-viewer"/);
+  assert.match(workspace, /downloadReport\(row\.id, format\)/);
+  assert.match(workspace, /Download/);
   assert.equal(
     workspace.match(/<option key=\{value\} value=\{value\}>\{value\.replaceAll\('_', ' '\)\}<\/option>/g)?.length,
     4,
@@ -44,10 +52,17 @@ test('TechDeck active record deep links select exact tenant-scoped records', () 
   const deepLinks = read('../../web/src/app/modules/[slug]/[...path]/route-map.ts');
 
   assert.match(workspace, /function routeRecord/);
+  assert.match(workspace, /getRequestedRecord/);
+  assert.match(workspace, /getConfigurationItem\(record\.id\)/);
+  assert.match(workspace, /getDocument\(record\.id\)/);
+  assert.match(workspace, /getEvidence\(record\.id\)/);
+  assert.match(workspace, /getReport\(record\.id\)/);
+  assert.match(workspace, /prependUnique/);
   assert.match(workspace, /techdeck-route-record-context/);
   assert.match(workspace, /data-active=\{requestedRecord\?\.kind === 'configuration'/);
   assert.match(workspace, /requestedDocumentId === row\.id/);
   assert.match(tickets, /function routeTicketId/);
+  assert.match(tickets, /moduleShellApi\.techdeck\.get\(requestedTicketId\)/);
   assert.match(tickets, /techdeck-ticket-route-context/);
   assert.match(tickets, /data-active=\{ticket\.id === requestedTicketId\}/);
   assert.match(directory, /organizationId: organizationMatch\?\.\[1\] \?\? ''/);

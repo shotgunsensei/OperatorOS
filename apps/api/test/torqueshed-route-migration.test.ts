@@ -59,8 +59,8 @@ test('Phase 49 is URL-driven, route-focused, and keeps credit settlement out of 
   assert.match(workspace, /dynamic\(\(\) => import\('\.\/TorqueShedSocialPanels'\)/);
   assert.match(workspace, /function TorqueCreditsPanel/);
   assert.match(workspace, /data-testid="torqueshed-credits-route"/);
-  assert.match(workspace, /Buy credits and review authoritative usage/);
-  assert.match(workspace, /provider-confirmed settlement/);
+  assert.match(workspace, /Buy credits and review usage/);
+  assert.match(workspace, /payment service confirms payment/);
   assert.match(workspace, /data-testid="torqueshed-credit-balance"/);
   assert.match(workspace, /showAssist=\{route\.kind === 'diagnostic-assist'\}/);
   assert.match(routes, /torqueshed-dark-garage-amber/);

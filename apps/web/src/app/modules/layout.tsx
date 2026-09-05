@@ -3,9 +3,9 @@ import type { ReactNode } from 'react';
 import { buildPublicMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = buildPublicMetadata({
-  title: 'OperatorOS Modules | Build Your Operations Stack',
+  title: 'OperatorOS Applications | Build Your Operations Stack',
   description:
-    'Compare the three OperatorOS main modules and the companion applications that share your team, billing, tenant, and access controls.',
+    'Compare flagship and specialized OperatorOS applications that share one sign-in, team, plan, and billing experience.',
   path: '/modules',
 });
 

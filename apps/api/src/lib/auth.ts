@@ -255,9 +255,16 @@ export function requirePlanFeature(featureKey: string) {
 
     if (user.role === 'admin') return;
 
-    const result = await checkFeatureAccess(user.id, featureKey as keyof PlanFeatures);
+    const { resolveTenantContext } = await import('./tenant-auth.js');
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) {
+      reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      return;
+    }
+
+    const result = await checkFeatureAccess(user.id, ctx.tenantId, featureKey as keyof PlanFeatures);
     if (!result.allowed) {
-      const { config } = await getUserPlanConfig(user.id);
+      const { config } = await getUserPlanConfig(user.id, ctx.tenantId);
       reply.code(403).send({
         error: result.message,
         code: 'PLAN_FEATURE_REQUIRED',
@@ -316,13 +323,13 @@ export function requireUsageWithinLimit(resourceType: string) {
   };
 }
 
-export async function getUserPlanLimits(userId: string): Promise<{
+export async function getUserPlanLimits(userId: string, tenantId?: string): Promise<{
   maxWorkspaces: number; maxProjects: number; maxTasks: number;
   maxTeamMembers: number; maxAiActionsPerMonth: number;
   hasExports: boolean; hasAutomation: boolean; hasTemplates: boolean;
   hasAdvancedAnalytics: boolean; planSlug: string; planName: string;
 }> {
-  const { config } = await getUserPlanConfig(userId);
+  const { config } = await getUserPlanConfig(userId, tenantId);
   return {
     maxWorkspaces: config.limits.maxWorkspaces,
     maxProjects: config.limits.maxProjects,

@@ -56,7 +56,7 @@ test('Phase 35 premium workspace exposes every major source module with honest p
   for (const phrase of [
     'Channels and phone lines','Receptionist profiles','Versioned call flows','Live switchboard',
     'Call intelligence and simulation','Rules and action dispatch','Tickets','Leads','Tasks',
-    'Twilio voice provider unavailable','fail honestly','OperatorOS owns identity',
+    'Twilio setup needed','remain unavailable','Manage organization access, plan features',
   ]) assert.match(shell, new RegExp(phrase));
   assert.match(shell, /colorScheme: 'dark'/);
   assert.match(shell, /gridTemplateColumns:'repeat\(auto-fit/);

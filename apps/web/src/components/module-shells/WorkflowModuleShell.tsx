@@ -9,7 +9,7 @@ import {
   type ModuleWorkflowItem,
   type NativeWorkflowModuleSlug,
 } from '@/lib/auth';
-import { ShellLiveBadge } from './ShellChrome';
+import { ShellWorkspaceBadge } from './ShellChrome';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const CONFIG: Record<NativeWorkflowModuleSlug, {
@@ -33,11 +33,11 @@ const CONFIG: Record<NativeWorkflowModuleSlug, {
     contextLabel: 'VIN / mileage / work order', contextPlaceholder: 'WO-1042 · 87,200 mi', accent: '#f59e0b', Icon: Wrench,
   },
   snapproofos: {
-    name: 'SnapProofOS', eyebrow: 'Evidence and verification ledger',
+    name: 'SnapProofOS', eyebrow: 'Field proof and customer reports',
     description: 'Record proof packages, review their context, and preserve a clear verification state.',
     titleLabel: 'Evidence package', titlePlaceholder: 'Rack cleanup — before and after',
     summaryLabel: 'What this evidence proves', summaryPlaceholder: 'Documents cable labeling, airflow clearance, and final port map…',
-    contextLabel: 'Reference / source', contextPlaceholder: 'Ticket INC-2841 · onsite photos', accent: '#22d3ee', Icon: FileCheck2,
+    contextLabel: 'Related job or case', contextPlaceholder: 'Ticket INC-2841 · onsite photos', accent: '#22d3ee', Icon: FileCheck2,
   },
 };
 
@@ -135,7 +135,7 @@ export default function WorkflowModuleShell({ moduleSlug }: { moduleSlug: Native
           <div>
             <div style={{ color: config.accent, textTransform: 'uppercase', letterSpacing: 1.2, fontSize: 11, fontWeight: 700 }}>{config.eyebrow}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 3 }}>
-              <h1 style={{ margin: 0, color: semantic.text, fontSize: 28 }}>{config.name}</h1><ShellLiveBadge />
+              <h1 style={{ margin: 0, color: semantic.text, fontSize: 28 }}>{config.name}</h1><ShellWorkspaceBadge />
             </div>
             <p style={{ color: semantic.textMuted, margin: '7px 0 0', maxWidth: 680 }}>{config.description}</p>
           </div>
@@ -172,7 +172,7 @@ export default function WorkflowModuleShell({ moduleSlug }: { moduleSlug: Native
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.md, marginTop: space.md, flexWrap: 'wrap' }}>
                 <select aria-label={`Status for ${item.title}`} value={item.status} disabled={pendingId === item.id} onChange={(e) => void changeStatus(item, e.target.value)} style={{ ...inputStyle, width: 'auto', textTransform: 'capitalize' }}>{statuses.map((status) => <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>)}</select>
-                <span style={{ color: semantic.textMuted, fontSize: 11 }}>v{item.version} · updated {new Date(item.updatedAt).toLocaleDateString()}</span>
+                <span style={{ color: semantic.textMuted, fontSize: 11 }}>Updated {new Date(item.updatedAt).toLocaleDateString()}</span>
               </div>
             </article>
           ))}

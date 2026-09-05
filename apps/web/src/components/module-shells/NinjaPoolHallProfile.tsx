@@ -9,10 +9,12 @@ export default function NinjaPoolHallProfile({
   value,
   progression,
   onSaved,
+  canWrite,
 }: {
   value: NinjaPoolProfile;
   progression: NinjaPoolProfileResponse['progression'];
   onSaved: (profile: NinjaPoolProfile) => void;
+  canWrite: boolean;
 }) {
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -23,6 +25,7 @@ export default function NinjaPoolHallProfile({
   useEffect(() => setVisualQualityState(getVisualQuality()), []);
 
   const save = async () => {
+    if (!canWrite) return;
     setSaving(true);
     setError(null);
     try {
@@ -53,21 +56,22 @@ export default function NinjaPoolHallProfile({
       {error && <div className="nphp-error" role="alert"><AlertTriangle size={17} /> {error}</div>}
       <div className="nphp-grid">
         <article>
-          <header><SlidersHorizontal size={19} /><div><span>PLAYER CONFIG</span><h2>Profile & table rules</h2></div></header>
-          <label>Display name<input value={draft.displayName} maxLength={40} onChange={(event) => setDraft((current) => ({ ...current, displayName: event.target.value }))} /></label>
-          <label className="toggle"><input type="checkbox" checked={draft.preferences.aimGuide} onChange={(event) => preference('aimGuide', event.target.checked)} /><span><b>Aim guide</b><small>Show the projected first-contact line.</small></span></label>
-          <label>Table speed <b>{draft.preferences.tableSpeed.toFixed(1)}×</b><input type="range" min="0.6" max="1.4" step="0.1" value={draft.preferences.tableSpeed} onChange={(event) => preference('tableSpeed', Number(event.target.value))} /></label>
+          <header><SlidersHorizontal size={19} /><div><span>PLAYER SETTINGS</span><h2>Profile & table rules</h2></div></header>
+          <label>Display name<input value={draft.displayName} maxLength={40} disabled={!canWrite} onChange={(event) => setDraft((current) => ({ ...current, displayName: event.target.value }))} /></label>
+          <label className="toggle"><input type="checkbox" checked={draft.preferences.aimGuide} disabled={!canWrite} onChange={(event) => preference('aimGuide', event.target.checked)} /><span><b>Aim guide</b><small>Show the projected first-contact line.</small></span></label>
+          <label>Table speed <b>{draft.preferences.tableSpeed.toFixed(1)}×</b><input type="range" min="0.6" max="1.4" step="0.1" value={draft.preferences.tableSpeed} disabled={!canWrite} onChange={(event) => preference('tableSpeed', Number(event.target.value))} /></label>
           <label>Visual performance<select value={visualQuality} onChange={(event) => { const next = event.target.value as NinjaPoolVisualQuality; setVisualQualityState(next); setVisualQuality(next); }}><option value="battery">Battery saver</option><option value="balanced">Balanced</option><option value="high">High motion detail</option></select><small>Saved on this device. Physics and rules remain identical at every quality.</small></label>
-          <label className="toggle"><input type="checkbox" checked={draft.preferences.sound} onChange={(event) => preference('sound', event.target.checked)} /><span><b>Procedural sound</b><small>Local Web Audio cue, contact, pocket, and result feedback.</small></span></label>
-          <label className="toggle"><input type="checkbox" checked={draft.preferences.vibration} onChange={(event) => preference('vibration', event.target.checked)} /><span><b>Haptic feedback</b><small>Use device vibration when the browser supports it.</small></span></label>
-          <label className="toggle"><input type="checkbox" checked={draft.preferences.callShotOn8} onChange={(event) => preference('callShotOn8', event.target.checked)} /><span><b>Call pocket on the 8</b><small>Require a selected pocket for the final ball.</small></span></label>
-          <label className="toggle"><input type="checkbox" checked={draft.preferences.threeFoulRule} onChange={(event) => preference('threeFoulRule', event.target.checked)} /><span><b>Three-foul rule</b><small>Three consecutive fouls lose the match.</small></span></label>
-          <button type="button" onClick={() => void save()} disabled={saving || !draft.displayName.trim()}>
+          <label className="toggle"><input type="checkbox" checked={draft.preferences.sound} disabled={!canWrite} onChange={(event) => preference('sound', event.target.checked)} /><span><b>Procedural sound</b><small>Local Web Audio cue, contact, pocket, and result feedback.</small></span></label>
+          <label className="toggle"><input type="checkbox" checked={draft.preferences.vibration} disabled={!canWrite} onChange={(event) => preference('vibration', event.target.checked)} /><span><b>Haptic feedback</b><small>Use device vibration when the browser supports it.</small></span></label>
+          <label className="toggle"><input type="checkbox" checked={draft.preferences.callShotOn8} disabled={!canWrite} onChange={(event) => preference('callShotOn8', event.target.checked)} /><span><b>Call pocket on the 8</b><small>Require a selected pocket for the final ball.</small></span></label>
+          <label className="toggle"><input type="checkbox" checked={draft.preferences.threeFoulRule} disabled={!canWrite} onChange={(event) => preference('threeFoulRule', event.target.checked)} /><span><b>Three-foul rule</b><small>Three consecutive fouls lose the match.</small></span></label>
+          {!canWrite && <div className="notice" data-testid="ninja-pool-profile-read-only"><ShieldCheck size={18} /><p><b>Read-only profile.</b> You can review these settings, but this access level cannot save profile or game-rule changes. Visual performance remains a device-only preference.</p></div>}
+          <button type="button" onClick={() => void save()} disabled={!canWrite || saving || !draft.displayName.trim()}>
             {saving ? <Loader2 className="spin" size={17} /> : <Save size={17} />} {saving ? 'Saving…' : 'Save profile'}
           </button>
         </article>
         <aside>
-          <header><Trophy size={19} /><div><span>LOCAL PROGRESSION</span><h2>Recorded results</h2></div></header>
+          <header><Trophy size={19} /><div><span>YOUR PROGRESS</span><h2>Recorded results</h2></div></header>
           <div className="stats">
             <span><b>{progression.matchesCompleted}</b>completed</span>
             <span><b>{progression.wins}</b>CPU wins</span>

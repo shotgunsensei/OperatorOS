@@ -16,6 +16,9 @@ test('TechDeck literal routes retain OperatorOS authority and shared safety serv
   assert.match(routes, /createOutboundWebhookEndpoint/);
   assert.match(routes, /requestSharedExport/);
   assert.match(routes, /createAttachment/);
+  assert.match(routes, /compliance-packets\/:id\/download/);
+  assert.match(routes, /objectType: 'shared_export'/);
+  assert.match(routes, /TECHDECK_COMPLIANCE_PACKET_NOT_FOUND/);
   assert.match(routes, /bcrypt\.hash\(password,12\)/);
   assert.match(routes, /documentation_only/);
   assert.match(routes, /executionAvailable:false/);
@@ -32,7 +35,8 @@ test('TechDeck restored shell and deep links expose all literal product areas', 
     assert.match(routeMap, new RegExp(id));
   }
   assert.match(consoleSource, /Copy now — shown once/);
-  assert.match(consoleSource, /deterministic ZIP packet/);
+  assert.match(consoleSource, /downloadCompliancePacket/);
+  assert.match(consoleSource, /Download package/);
   assert.match(consoleSource, /documentation-only diagnostic guidance/);
 });
 

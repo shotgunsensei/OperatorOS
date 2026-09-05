@@ -15,21 +15,21 @@ const RINGS: Array<{
 }> = [
   {
     type: 'core',
-    label: 'Main Modules',
+    label: 'Flagship Apps',
     radius: 24,
     accent: brand.accentCyan,
     testIdPrefix: 'orbit-node-core',
   },
   {
     type: 'included',
-    label: 'Included Companion Applications',
+    label: 'Included Applications',
     radius: 34,
     accent: brand.accentGreen,
     testIdPrefix: 'orbit-node-included',
   },
   {
     type: 'companion',
-    label: 'Add-on Companion Applications',
+    label: 'Business Add-ons',
     radius: 40,
     accent: brand.accentViolet,
     testIdPrefix: 'orbit-node-companion',
@@ -37,10 +37,10 @@ const RINGS: Array<{
 ];
 
 const COMMAND_RAILS = [
-  { label: 'SSO', icon: KeyRound, accent: brand.accentCyan },
+  { label: 'One Sign-in', icon: KeyRound, accent: brand.accentCyan },
   { label: 'Stripe', icon: CreditCard, accent: brand.accentGreen },
-  { label: 'Tenants', icon: ShieldCheck, accent: brand.accentAmber },
-  { label: 'Entitlements', icon: SlidersHorizontal, accent: brand.accentViolet },
+  { label: 'Organizations', icon: ShieldCheck, accent: brand.accentAmber },
+  { label: 'App Access', icon: SlidersHorizontal, accent: brand.accentViolet },
 ];
 
 export default function CommandOrbit() {
@@ -148,7 +148,7 @@ export default function CommandOrbit() {
             letterSpacing: '-0.04em',
           }}
         >
-          One parent platform. Three main modules. Every companion connected.
+          One home base. Three flagship applications. Every specialized tool connected.
         </h2>
         <p
           style={{

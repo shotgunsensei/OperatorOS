@@ -262,10 +262,27 @@ export async function fixShotgunTenant(): Promise<void> {
 
   await ensureShotgunCoreModuleEntitlements(tenantId, john.id);
 
+  const grandfatherColumn = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='subscriptions'
+        AND column_name='legacy_access_grandfathered_at'
+    ) AS present
+  `);
+  if (grandfatherColumn.rows[0]?.present !== true) {
+    console.log('[launch-fix:post] v60 legacy-access marker not applied yet; skipping plan module backfill');
+    return;
+  }
+
   // Back-fill tenant_modules for every plan-included live module on
   // John's tenant. Mirrors the Demo Co pattern.
   const [activeSub] = await db.select().from(subscriptions)
-    .where(and(eq(subscriptions.userId, john.id), eq(subscriptions.status, 'active')))
+    .where(and(
+      eq(subscriptions.userId, john.id),
+      eq(subscriptions.tenantId, tenantId),
+      eq(subscriptions.status, 'active'),
+      sql`subscriptions.legacy_access_grandfathered_at IS NOT NULL`,
+    ))
     .limit(1);
   if (!activeSub) {
     console.log('[launch-fix:post] no active subscription for super-admin; skipping module backfill');

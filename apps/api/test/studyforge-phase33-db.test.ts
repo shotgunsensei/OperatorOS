@@ -3,6 +3,7 @@ process.env.NODE_ENV = 'test';
 process.env.APP_ENV = 'test';
 
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { after, before, test } from 'node:test';
 import cookie from '@fastify/cookie';
 import Fastify from 'fastify';
@@ -136,8 +137,32 @@ test('Phase 33 requires OperatorOS authentication, trusted tenant scope, and wri
   assert.equal(anonymous.statusCode, 401, anonymous.body);
   const override = await app.inject({ method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', headers: headers(ownerA, ownerA.currentTenantId), payload: { ...setPayload('Rejected', 'phase33-rejected-tenant-0001'), tenantId: ownerB.currentTenantId } });
   assert.equal(override.statusCode, 400, override.body);
-  const viewerWrite = await app.inject({ method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', headers: headers(viewer, ownerA.currentTenantId), payload: setPayload('Viewer rejected', 'phase33-viewer-rejected-0001') });
-  assert.equal(viewerWrite.statusCode, 403, viewerWrite.body);
+  const setId = randomUUID();
+  const folderId = randomUUID();
+  const sessionId = randomUUID();
+  const cardId = randomUUID();
+  const planSessionId = randomUUID();
+  const countdownId = randomUUID();
+  for (const request of [
+    { method: 'PUT', url: '/v1/modules/studyforge-ai/preferences', payload: {} },
+    { method: 'POST', url: '/v1/modules/studyforge-ai/folders', payload: {} },
+    { method: 'PATCH', url: `/v1/modules/studyforge-ai/folders/${folderId}`, payload: {} },
+    { method: 'DELETE', url: `/v1/modules/studyforge-ai/folders/${folderId}`, payload: undefined },
+    { method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', payload: setPayload('Viewer rejected', 'phase33-viewer-rejected-0001') },
+    { method: 'PATCH', url: `/v1/modules/studyforge-ai/study-sets/${setId}`, payload: { expectedVersion: 1, status: 'archived' } },
+    { method: 'DELETE', url: `/v1/modules/studyforge-ai/study-sets/${setId}`, payload: undefined },
+    { method: 'POST', url: `/v1/modules/studyforge-ai/study-sets/${setId}/quiz-attempts`, payload: { answers: [], idempotencyKey: 'phase33-viewer-quiz-0001' } },
+    { method: 'POST', url: `/v1/modules/studyforge-ai/study-sets/${setId}/flashcard-sessions`, payload: { idempotencyKey: 'phase33-viewer-session-0001' } },
+    { method: 'PATCH', url: `/v1/modules/studyforge-ai/flashcards/${cardId}/status`, payload: { status: 'known' } },
+    { method: 'POST', url: `/v1/modules/studyforge-ai/flashcard-sessions/${sessionId}/cards/${cardId}`, payload: { state: 'known', clientMutationId: 'phase33-viewer-review-0001' } },
+    { method: 'PATCH', url: `/v1/modules/studyforge-ai/flashcard-sessions/${sessionId}/complete`, payload: { durationSeconds: 60 } },
+    { method: 'PATCH', url: `/v1/modules/studyforge-ai/study-sets/${setId}/plan-sessions/${planSessionId}/complete`, payload: { completed: true } },
+    { method: 'POST', url: '/v1/modules/studyforge-ai/exam-countdowns', payload: {} },
+    { method: 'DELETE', url: `/v1/modules/studyforge-ai/exam-countdowns/${countdownId}`, payload: undefined },
+  ]) {
+    const response = await app.inject({ method: request.method, url: request.url, headers: headers(viewer, ownerA.currentTenantId), ...(request.payload === undefined ? {} : { payload: request.payload }) });
+    assert.equal(response.statusCode, 403, response.body);
+  }
 });
 
 test('notes create every persisted artifact atomically and idempotent replay reuses the business row', async () => {

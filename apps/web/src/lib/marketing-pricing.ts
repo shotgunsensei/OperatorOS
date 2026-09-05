@@ -8,42 +8,47 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'what-is-operatoros',
     question: 'What is OperatorOS?',
-    answer: 'OperatorOS is the free command layer for SSO, tenant and user management, billing, module launch, entitlement enforcement, and audit history.',
+    answer: 'OperatorOS is the free home base for one sign-in, team access, billing, and every application your organization uses.',
   },
   {
     slug: 'operatoros-cost',
     question: 'Do I pay for OperatorOS?',
-    answer: 'No. OperatorOS itself is free. Billing begins when your tenant activates TradeFlowKit, PulseDesk, or TechDeck.',
+    answer: 'No. OperatorOS itself is free. Billing begins when your organization activates TradeFlowKit, PulseDesk, or TechDeck.',
   },
   {
     slug: 'core-product-inclusions',
-    question: 'What comes with a main module?',
-    answer: 'Every main module is fully unlocked and includes 5 operator seats and one selectable companion application. TorqueShed, FaultlineLab, and Operator Pool Hall are already free with any account.',
+    question: 'What comes with a flagship application?',
+    answer: 'The organization selects one flagship application for this release. Application Stack includes full access for 5 team members and one eligible organization-wide companion. TorqueShed, FaultlineLab, and Operator Pool Hall are included with every account.',
   },
   {
     slug: 'included-seats',
     question: 'How many seats are included?',
-    answer: 'Each active main module includes 5 operator seats for the tenant.',
+    answer: 'The organization’s Application Stack includes 5 team seats.',
   },
   {
     slug: 'additional-seats',
     question: 'Can I buy more seats?',
-    answer: 'Yes. Additional operator seats are $15 per seat each month. The amount is configuration-driven so billing can be adjusted without changing product logic.',
+    answer: 'Yes. Additional team seats are $15 per seat each month.',
   },
   {
     slug: 'included-apps',
     question: 'Which apps are free with any account?',
-    answer: 'TorqueShed, FaultlineLab, and Operator Pool Hall are free with any OperatorOS account — no paid main module required. Just create a free account to start using them.',
+    answer: 'TorqueShed, FaultlineLab, and Operator Pool Hall are free with any OperatorOS account — no paid subscription required. Just create a free account to start using them.',
   },
   {
     slug: 'free-companion',
-    question: 'How does the included companion application work?',
-    answer: 'Choose one eligible companion application for $0. Tenant owners or admins can change that selection inside OperatorOS while the main-module subscription remains active.',
+    question: 'How does the included companion work?',
+    answer: 'Choose one eligible organization-wide companion for $0. Only the organization owner can change that selection while the Application Stack subscription remains active.',
   },
   {
     slug: 'additional-modules',
-    question: 'What do additional companion applications cost?',
-    answer: 'Every eligible companion application beyond the included selection costs $29 per month.',
+    question: 'What do additional companions cost?',
+    answer: 'Each eligible organization-wide companion beyond the included selection costs $29 per month.',
+  },
+  {
+    slug: 'billing-interval',
+    question: 'Can I pay annually?',
+    answer: 'Not in this release. Application Stack is monthly-only, so checkout never presents a separate annual offer.',
   },
   {
     slug: 'pulsedesk-audience',
@@ -53,6 +58,6 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'cancellation',
     question: 'What happens if I cancel?',
-    answer: 'Paid app entitlements and paid seat capacity end with the subscription. OperatorOS remains available as the free command layer — including TorqueShed, FaultlineLab, and Operator Pool Hall — and billing history stays auditable.',
+    answer: 'Access to paid applications and extra seats ends with the subscription. OperatorOS remains available as your free home base — including TorqueShed, FaultlineLab, and Operator Pool Hall — and your billing history remains available.',
   },
 ] as const;

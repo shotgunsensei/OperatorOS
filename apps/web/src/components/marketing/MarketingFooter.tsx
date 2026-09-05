@@ -7,7 +7,7 @@ import { brand } from '@/lib/design-tokens';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const COL_PRODUCT = [
-  { href: '/modules', label: 'Modules' },
+  { href: '/modules', label: 'Applications' },
   { href: '/ecosystem', label: 'Ecosystem' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/how-it-works', label: 'How it works' },
@@ -23,7 +23,7 @@ const COL_MODULES = [
 const COL_ACTIONS = [
   { href: '/login', label: 'Sign in' },
   { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, label: 'Open console' },
-  { href: '/modules', label: 'View modules' },
+  { href: '/modules', label: 'View applications' },
   { href: '/help', label: 'Help and support' },
   { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];
@@ -71,12 +71,12 @@ export default function MarketingFooter() {
               maxWidth: 320,
             }}
           >
-            One calm command layer for your business tools. One sign-in. Every operation.
+            One calm home base for your business tools. One sign-in. Every operation.
           </p>
         </div>
 
         <FooterColumn title="Product" links={COL_PRODUCT} />
-        <FooterColumn title="Modules" links={COL_MODULES} />
+        <FooterColumn title="Applications" links={COL_MODULES} />
         <FooterColumn title="Actions" links={COL_ACTIONS} />
         <FooterColumn title="Legal" links={COL_LEGAL} />
       </div>

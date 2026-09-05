@@ -35,6 +35,7 @@ import {
   type PushAuthMode, type AdapterSkipReason,
 } from './entitlement-adapters.js';
 import { selectPlanModuleReconciliation } from './free-account-apps.js';
+import { subscriptionHasLegacyApplicationAccess } from './application-stack-billing-db-init.js';
 
 function getSigningSecret(): string | null {
   const secret = process.env.MODULE_SSO_SECRET;
@@ -104,10 +105,10 @@ export async function recomputeAndPropagateEntitlements(
   // sees. An inline status-filter query with no ordering could pick a
   // different row when multiple exist and produce inconsistent
   // include/exclude decisions across recompute passes.
-  const { getActiveSubscription } = await import('./entitlement-service.js');
-  const ownerSub = await getActiveSubscription(ownerId);
+  const { getActiveSubscriptionForTenant } = await import('./entitlement-service.js');
+  const ownerSub = await getActiveSubscriptionForTenant(ownerId, tenantId);
   const includedModuleIds = new Set<string>();
-  if (ownerSub) {
+  if (ownerSub && await subscriptionHasLegacyApplicationAccess(ownerSub.id)) {
     const pmRows = await db.select({ moduleId: planModules.moduleId })
       .from(planModules)
       .where(eq(planModules.planId, ownerSub.planId));

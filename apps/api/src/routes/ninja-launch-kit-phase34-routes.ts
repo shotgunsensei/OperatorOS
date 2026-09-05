@@ -185,6 +185,37 @@ async function loadKit(tenantId: string, userId: string, id: string, includeDele
   return result.rows[0] as Row;
 }
 
+function mayReviewTenantKit(request: FastifyRequest): boolean {
+  const context = (request as any).tenantContext as { role?: string; viaPlatformRole?: boolean } | undefined;
+  const moduleAccessLevel = String((request as any).tenantModuleAccessLevel ?? 'none');
+  return context?.viaPlatformRole === true
+    || context?.role === 'owner'
+    || context?.role === 'admin'
+    || moduleAccessLevel === 'manager';
+}
+
+function mayWriteOwnedKit(request: FastifyRequest): boolean {
+  const context = (request as any).tenantContext as { membershipRole?: string | null; viaPlatformRole?: boolean } | undefined;
+  const moduleAccessLevel = String((request as any).tenantModuleAccessLevel ?? 'none');
+  if (context?.membershipRole === 'viewer' && context.viaPlatformRole !== true) return false;
+  return moduleAccessLevel === 'user' || moduleAccessLevel === 'manager';
+}
+
+/** Exact shared-workflow links may be reviewed by tenant/module managers. */
+async function loadReviewableKit(request: FastifyRequest, id: string, executor: Executor = db): Promise<Row> {
+  const tenantId = tenant(request);
+  const userId = actor(request);
+  const tenantWide = mayReviewTenantKit(request);
+  const result = await executor.execute(sql`
+    SELECT * FROM launchkit_product_kits
+    WHERE tenant_id=${tenantId} AND id=${id} AND deleted_at IS NULL
+      AND (${tenantWide} OR user_id=${userId})
+    LIMIT 1
+  `);
+  if (!result.rows[0]) throw new InputError('Launch kit was not found', 'NINJA_LAUNCH_KIT_NOT_FOUND', 404);
+  return result.rows[0] as Row;
+}
+
 function kitResponse(row: Row): Row {
   return {
     ...camel(row),
@@ -296,12 +327,21 @@ export async function registerNinjaLaunchKitPhase34Routes(app: FastifyInstance):
 
   app.get(`${base}/kits/:id`, { preHandler: readGuards }, async (request, reply) => {
     try {
-      const row = await loadKit(tenant(request), actor(request), identifier(request));
+      const row = await loadReviewableKit(request, identifier(request));
+      const ownedByCurrentUser = String(row.user_id) === actor(request);
       const [history, exports] = await Promise.all([
         db.execute(sql`SELECT id,revision,reason,content_sha256,provenance_json,created_at FROM launchkit_product_revisions WHERE tenant_id=${tenant(request)} AND kit_id=${row.id} ORDER BY revision DESC`),
         db.execute(sql`SELECT id,format,file_name,mime_type,content_sha256,size_bytes,watermarked,white_label,created_at FROM launchkit_product_exports WHERE tenant_id=${tenant(request)} AND kit_id=${row.id} ORDER BY created_at DESC`),
       ]);
-      return { kit: kitResponse(row), history: history.rows.map(camel), exports: exports.rows.map(camel) };
+      return {
+        kit: kitResponse(row),
+        history: history.rows.map(camel),
+        exports: exports.rows.map(camel),
+        capabilities: {
+          ownedByCurrentUser,
+          canManage: ownedByCurrentUser && mayWriteOwnedKit(request),
+        },
+      };
     } catch (error) { return failure(reply, error); }
   });
 

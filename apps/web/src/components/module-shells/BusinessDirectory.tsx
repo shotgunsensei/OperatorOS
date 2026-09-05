@@ -38,8 +38,8 @@ function routeSelection(moduleSlug: DirectoryModuleSlug): { tab: Tab; organizati
 }
 
 export default function BusinessDirectory({
-  moduleSlug, tenantKey, canArchive,
-}: { moduleSlug: DirectoryModuleSlug; tenantKey: string; canArchive: boolean }) {
+  moduleSlug, tenantKey, canWrite, canArchive,
+}: { moduleSlug: DirectoryModuleSlug; tenantKey: string; canWrite: boolean; canArchive: boolean }) {
   const [tab, setTab] = useState<Tab>('organizations');
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [contacts, setContacts] = useState<DirectoryContact[]>([]);
@@ -110,9 +110,11 @@ export default function BusinessDirectory({
             {tab === 'sites' && <SiteList rows={sites} />}
           </div>
           <div className="directory-editor">
+            {!canWrite ? <div className="directory-state" data-testid="business-directory-read-only"><ShieldAlert size={18} /><div><strong>Read-only directory</strong><p>You can review organizations, contacts, and sites, but this access level cannot change them.</p></div></div> : <>
             {tab === 'organizations' && <OrganizationEditor moduleSlug={moduleSlug} rows={organizations} contacts={contacts} detail={detail} selected={selectedOrganization} canArchive={canArchive} saving={saving} run={run} select={setSelectedId} />}
             {tab === 'contacts' && <ContactEditor rows={contacts} canArchive={canArchive} saving={saving} run={run} moduleSlug={moduleSlug} />}
             {tab === 'sites' && <SiteEditor rows={sites} organizations={organizations} contacts={contacts} canArchive={canArchive} saving={saving} run={run} moduleSlug={moduleSlug} />}
+            </>}
           </div>
         </div>
       )}

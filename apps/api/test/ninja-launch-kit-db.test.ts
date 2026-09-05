@@ -287,11 +287,24 @@ test('Ninja Launch Kit blocks premature launch, then derives 100 percent from pe
   });
   assert.equal(detail.json().readiness.score, 100);
   assert.equal(detail.json().readiness.complete, detail.json().readiness.total);
-  const launched = await app.inject({
+  const unattested = await app.inject({
     method: 'PATCH',
     url: `/v1/modules/ninja-launch-kit/launches/${launchId}`,
     headers: headers(ownerA, ownerA.currentTenantId),
     payload: { status: 'launched', expectedVersion: detail.json().selected.version },
+  });
+  assert.equal(unattested.statusCode, 409, unattested.body);
+  assert.equal(unattested.json().code, 'LAUNCHKIT_EXTERNAL_CONFIRMATION_REQUIRED');
+  const launched = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/ninja-launch-kit/launches/${launchId}`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      status: 'launched',
+      expectedVersion: detail.json().selected.version,
+      externalLaunchConfirmed: true,
+      externalLaunchEvidence: 'Release ticket OPS-2026-0904 verified by the launch owner.',
+    },
   });
   assert.equal(launched.statusCode, 200, launched.body);
   assert.equal(launched.json().launch.status, 'launched');

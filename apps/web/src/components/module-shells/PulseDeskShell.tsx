@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
@@ -54,7 +55,7 @@ const overviewRoutes: Array<{ area: PulseDeskRouteArea; path: string; label: str
   { area: 'assignments', path: '/assignments', label: 'Assignments', summary: 'Coordinate department routing and escalations.', Icon: UsersRound },
   { area: 'contacts', path: '/contacts', label: 'Facilities and contacts', summary: 'Use the authorized operational directory.', Icon: Building2 },
   { area: 'operations', path: '/operations', label: 'Facility operations', summary: 'Coordinate equipment, supplies, and physical facilities.', Icon: Stethoscope },
-  { area: 'inbound', path: '/inbound', label: 'Inbound communication', summary: 'Review authorized mailbox delivery and intake state.', Icon: Inbox },
+  { area: 'inbound', path: '/inbound', label: 'Request intake', summary: 'Review protected public requests and see whether email intake is available.', Icon: Inbox },
   { area: 'analytics', path: '/analytics', label: 'Analytics', summary: 'Review demand, SLA pressure, and service health.', Icon: BarChart3 },
 ];
 
@@ -69,6 +70,7 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
   const tenantId = activeTenant?.id ?? fallbackTenantId;
   const platformAdmin = hasPlatformAdminAuthority(user);
+  const moduleAccessLevel = useModuleAccessLevel();
   const adapterRole = platformAdmin ? 'admin' : activeRole ?? 'member';
   const route = resolvePulseDeskRoute(routePath || pathname);
   const sourceRouted = pathname.startsWith('/app/') || pathname.startsWith('/modules/');
@@ -91,18 +93,23 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
 
   const isLoading = authLoading || tenantLoading;
   const hasTenantContext = !!adapter.tenantId;
-  const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const canManageModule = canWriteModule && (platformAdmin || activeRole === 'owner' || activeRole === 'admin' || moduleAccessLevel === 'manager');
   const restrictedProviderRoute = (route.area === 'inbound' || route.area === 'integrations') && !canManageModule;
   const roleLabel = platformAdmin
     ? 'Platform administrator'
-    : activeRole === 'owner'
-      ? 'Organization owner'
-      : activeRole === 'admin'
-        ? 'Organization administrator'
-        : activeRole === 'viewer'
-          ? 'Read-only access'
-          : 'Team member';
-  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
+    : !canWriteModule
+      ? 'Read-only access'
+      : activeRole === 'owner'
+        ? 'Organization owner'
+        : activeRole === 'admin'
+          ? 'Organization administrator'
+          : moduleAccessLevel === 'manager'
+            ? 'PulseDesk manager'
+            : 'Team member';
+  const tenantLabel = activeTenant?.name ?? (adapter.tenantId ? 'Selected organization' : 'No organization selected');
   const activeServiceView = serviceView[route.area];
 
   const pageAction = route.area === 'requests'
@@ -133,9 +140,9 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
       page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: pageAction, detailLabel: route.recordId }}
       state={isLoading ? 'loading' : !hasTenantContext ? 'empty' : restrictedProviderRoute ? 'forbidden' : 'ready'}
       stateMessage={!hasTenantContext
-        ? 'Choose an organization in My Apps before opening tenant-scoped PulseDesk work.'
+        ? 'Choose an organization in My Apps before opening its PulseDesk operations.'
         : restrictedProviderRoute
-          ? 'An organization administrator must review inbound provider configuration and delivery state.'
+          ? 'A workspace manager must review intake and connected-service setup.'
           : undefined}
       pageHeaderTestId="pulsedesk-module-header"
       mobileNavigation="drawer"
@@ -163,6 +170,7 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
               <PulseDeskServiceDeskWorkspace
                 key={`${adapter.tenantId}-${route.area}`}
                 tenantKey={adapter.tenantId}
+                canWriteModule={canWriteModule}
                 canManageModule={canManageModule}
                 view={activeServiceView}
                 requestHref={id => hrefFor(`/requests/${id}`)}
@@ -173,14 +181,14 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
 
           {route.area === 'assignments' && (
             <section id="pulsedesk-assignments" className="pulsedesk-route-panel" data-testid="pulsedesk-assignments-route">
-              <PulseDeskDepartmentEscalationQueue key={`department-queue-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
+              <PulseDeskDepartmentEscalationQueue key={`department-queue-${adapter.tenantId}`} tenantKey={adapter.tenantId} canWrite={canWriteModule} />
             </section>
           )}
 
           {route.area === 'contacts' && (
             <section id="pulsedesk-directory" data-testid="pulsedesk-contacts-route">
               <div className="pulsedesk-boundary"><ShieldCheck size={17} /><span><strong>Operational directory only.</strong> Do not store patient charts, clinical records, diagnoses, or unnecessary PHI.</span></div>
-              <BusinessDirectory moduleSlug="pulsedesk" tenantKey={adapter.tenantId} canArchive={canManageModule} />
+              <BusinessDirectory moduleSlug="pulsedesk" tenantKey={adapter.tenantId} canWrite={canWriteModule} canArchive={canManageModule} />
             </section>
           )}
 
@@ -194,9 +202,9 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
             <section id="pulsedesk-settings" className="pulsedesk-settings" data-testid="pulsedesk-settings-panel">
               <h2><Settings size={19} />Healthcare operations boundary</h2>
               <p>PulseDesk coordinates operational work. It is not a patient chart, EHR, clinical record, medical device, or HIPAA certification claim.</p>
-              <SettingsRow label="Identity and access" value="OperatorOS manages sign-in, entitlements, tenant selection, roles, and membership." />
+              <SettingsRow label="Team access" value="Use OperatorOS to manage sign-in, application access, roles, and organization membership." />
               <SettingsRow label="Data minimization" value="Requests and integrations must remain operational and exclude patient names, MRNs, diagnoses, treatment details, and other unnecessary PHI." />
-              <SettingsRow label="Integration authority" value="Only organization administrators can configure inbound providers. Live modes fail closed until their provider checks pass." />
+              <SettingsRow label="Available request channels" value="Protected public intake and direct request creation are ready. Mailbox import is not connected yet." />
             </section>
           )}
         </>

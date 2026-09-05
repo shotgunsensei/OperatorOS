@@ -150,7 +150,7 @@ test('native shell uses the typed API and keeps unsafe snapshot runtimes quarant
   assert.match(practice, /data-testid="ninja-pool-end-recovered-rack"/);
   assert.match(practice, /Exact ball positions stay local/);
   assert.match(practice, /discardUncertainLocalRack/);
-  assert.match(practice, /not treated as authoritative physics/);
+  assert.match(practice, /could not be verified against the saved match/);
   assert.match(practice, /@media \(max-width:680px\)/);
   assert.match(practice, /@media \(prefers-reduced-motion:reduce\)/);
   assert.match(recovery, /current\.version === pending\.expectedVersion \+ 1/);

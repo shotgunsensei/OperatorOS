@@ -5,8 +5,9 @@
  * the propagation pipeline MUST NOT run against a missing local
  * subscription row and revoke valid module access.
  *
- * Specifically: handleSubscriptionCreated should return
- * `shouldPropagate: false` when no local `subscriptions` row exists.
+ * After the forward-commerce cutover, a legacy-shaped subscription creation
+ * with no exact grandfathered provider binding is acknowledged without any
+ * local mutation or entitlement propagation.
  */
 
 import { test } from 'node:test';
@@ -16,7 +17,7 @@ process.env.NODE_ENV ??= 'test';
 process.env.DATABASE_URL ??= process.env.DATABASE_URL ?? 'postgres://localhost/operatoros_test';
 process.env.SESSION_SECRET ??= 'test-session-secret-for-out-of-order';
 
-test('subscription.created BEFORE checkout.completed -> handled but no propagate', async () => {
+test('unbound legacy subscription.created is acknowledged but cannot propagate', async () => {
   const { processWebhookEvent } = await import('../src/lib/billing-service.js');
   // A user id that has no local subscriptions row.
   const unknownUserId = '00000000-0000-0000-0000-000000000000';
@@ -39,15 +40,17 @@ test('subscription.created BEFORE checkout.completed -> handled but no propagate
     'event should be acknowledged (Stripe needs a 200) even when local row is missing');
   assert.equal(result.shouldPropagate, false,
     'propagation MUST be skipped — otherwise the recompute pass would revoke valid module access');
-  assert.equal(result.action, 'subscription_created_deferred',
-    'action should signal that propagation was deferred until checkout webhook lands');
+  assert.equal(result.action, 'legacy_subscription_created_rejected_after_cutover',
+    'action should signal that the closed legacy sale was not imported');
 });
 
-test('handleSubscriptionCreated with NO userId metadata -> not handled', async () => {
+test('subscription.created with no forward billing metadata is safely rejected after cutover', async () => {
   const { processWebhookEvent } = await import('../src/lib/billing-service.js');
   const result = await processWebhookEvent({
     type: 'customer.subscription.created',
     data: { object: { id: 'sub_test_no_meta', metadata: {} } },
   });
-  assert.equal(result.handled, false);
+  assert.equal(result.handled, true);
+  assert.equal(result.shouldPropagate, false);
+  assert.equal(result.action, 'legacy_subscription_created_rejected_after_cutover');
 });

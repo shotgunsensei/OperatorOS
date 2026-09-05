@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import { createHash } from 'node:crypto';
 import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
@@ -37,11 +38,45 @@ import {
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
 import { BRANDFORGE_COPY_MODES, BRANDFORGE_TONES, scoreCopyContent } from '../lib/brandforgeos-phase31.js';
+import { createAttachment, getAttachmentContent, getMaxAttachmentBytes, softDeleteAttachment } from '../lib/shared-attachments.js';
 
 const readGuards = [requireTenantModuleAccess('brandforgeos')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
+const brandLogoBodyLimit = Math.ceil(getMaxAttachmentBytes() * 1.38) + 16_384;
+const BRAND_LOGO_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 type Context = { tenantId: string };
 type User = { id: string };
+
+async function retireBrandLogoAttachment(input: {
+  executor: any;
+  tenantId: string;
+  moduleId: string;
+  brandId: string;
+  attachmentId: string | null | undefined;
+  actorUserId: string;
+}) {
+  if (!input.attachmentId) return;
+  const found = await input.executor.execute(sql`
+    SELECT version FROM shared_attachments
+    WHERE tenant_id=${input.tenantId} AND module_id=${input.moduleId}
+      AND id=${input.attachmentId} AND object_type='brandforge_brand_logo'
+      AND object_id=${input.brandId} AND deleted_at IS NULL
+    FOR UPDATE
+  `);
+  const row = found.rows[0] as { version?: number } | undefined;
+  if (!row) return;
+  const deleted = await softDeleteAttachment({
+    tenantId: input.tenantId,
+    moduleId: input.moduleId,
+    attachmentId: input.attachmentId,
+    deletedByUserId: input.actorUserId,
+    version: Number(row.version),
+    objectType: 'brandforge_brand_logo',
+    objectId: input.brandId,
+    retentionUntil: new Date(Date.now() + BRAND_LOGO_RETENTION_MS),
+  }, input.executor);
+  if (!deleted) throw Object.assign(new Error('The previous logo could not be retired safely'), { code: 'BRANDFORGE_LOGO_RETIRE_FAILED' });
+}
 
 function validation(reply: FastifyReply, error: unknown) {
   if (!(error instanceof BrandForgeValidationError)) return false;
@@ -410,11 +445,237 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
     return brandView(row);
   });
 
+  app.post(`${base}/brands/:id/logo`, { preHandler: writeGuards, bodyLimit: brandLogoBodyLimit }, async (request, reply) => {
+    const ctx = (request as any).tenantContext as Context;
+    const user = (request as any).user as User;
+    const brandId = String((request.params as any).id ?? '');
+    const input = request.body && typeof request.body === 'object' && !Array.isArray(request.body)
+      ? request.body as Record<string, unknown>
+      : null;
+    if (!input) return reply.code(400).send({ error: 'Choose a logo image to save.', code: 'BRANDFORGE_LOGO_BODY_INVALID' });
+    for (const field of ['tenantId', 'tenant_id', 'userId', 'moduleId', 'role']) {
+      if (field in input) return reply.code(400).send({ error: 'Workspace access is taken from your signed-in session.', code: 'BRANDFORGE_AUTHORITY_FIELD_REJECTED' });
+    }
+    const expectedVersion = Number(input.expectedVersion);
+    const fileName = typeof input.fileName === 'string' ? input.fileName.trim().slice(0, 160) : '';
+    const mimeType = typeof input.mimeType === 'string' ? input.mimeType.trim().toLowerCase() : '';
+    const contentBase64 = typeof input.contentBase64 === 'string' ? input.contentBase64.trim() : '';
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+      return reply.code(400).send({ error: 'Refresh the brand kit before saving this logo.', code: 'BRANDFORGE_LOGO_VERSION_INVALID' });
+    }
+    if (!fileName || !['image/png', 'image/jpeg', 'image/webp'].includes(mimeType) || !/^[A-Za-z0-9+/]+={0,2}$/.test(contentBase64)) {
+      return reply.code(400).send({ error: 'Save the logo as a PNG, JPEG, or WebP image.', code: 'BRANDFORGE_LOGO_FILE_INVALID' });
+    }
+    const content = Buffer.from(contentBase64, 'base64');
+    if (!content.length || content.length > getMaxAttachmentBytes()) {
+      return reply.code(413).send({ error: 'The logo image is larger than this workspace allows.', code: 'BRANDFORGE_LOGO_SIZE_INVALID' });
+    }
+    const idempotencyKey = typeof input.idempotencyKey === 'string' ? input.idempotencyKey.trim() : '';
+    if (!/^[A-Za-z0-9:_.-]{8,180}$/.test(idempotencyKey)) {
+      return reply.code(400).send({ error: 'Refresh the logo concept before saving it.', code: 'BRANDFORGE_LOGO_IDEMPOTENCY_INVALID' });
+    }
+    const contentSha256 = createHash('sha256').update(content).digest('hex');
+    try {
+      const result = await db.transaction(async tx => {
+        const current = await tx.execute(sql`
+          SELECT id,version,asset_summary,logo_attachment_id FROM brandforge_brands
+          WHERE tenant_id=${ctx.tenantId} AND id=${brandId} AND deleted_at IS NULL
+          FOR UPDATE
+        `);
+        const brand = current.rows[0] as Record<string, any> | undefined;
+        if (!brand) return { state: 'not_found' as const };
+        const moduleResult = await tx.execute(sql`SELECT id FROM modules WHERE slug='brandforgeos' AND archived_at IS NULL LIMIT 1`);
+        const moduleId = String(moduleResult.rows[0]?.id ?? '');
+        if (!moduleId) throw Object.assign(new Error('BrandForgeOS is not available'), { code: 'BRANDFORGE_MODULE_UNAVAILABLE' });
+        const promote = async (attachment: Record<string, any>, duplicate: boolean) => {
+          const promoted = await tx.execute(sql`
+            UPDATE shared_attachments
+            SET object_type='brandforge_brand_logo', updated_at=NOW(), version=version+1
+            WHERE tenant_id=${ctx.tenantId} AND module_id=${moduleId} AND id=${attachment.id}
+              AND object_type='brandforge_brand_logo_candidate' AND object_id=${brandId}
+              AND scan_status='clean' AND deleted_at IS NULL
+            RETURNING id
+          `);
+          if (!promoted.rows[0]) {
+            throw Object.assign(new Error('Logo candidate did not pass its required safety scan'), { code: 'ATTACHMENT_SCAN_NOT_CLEAN' });
+          }
+          const existingSummary = Array.isArray(brand.asset_summary) ? brand.asset_summary.map(String) : [];
+          const assetSummary = [...existingSummary.filter(item => !item.startsWith('Primary logo:')), `Primary logo: ${fileName}`].slice(-30);
+          const [updated] = await tx.update(brandforgeBrands).set({
+            logoAttachmentId: String(attachment.id),
+            assetSummary,
+            version: sql`${brandforgeBrands.version}+1`,
+            updatedAt: new Date(),
+          }).where(and(
+            eq(brandforgeBrands.tenantId, ctx.tenantId),
+            eq(brandforgeBrands.id, brandId),
+            eq(brandforgeBrands.version, expectedVersion),
+            isNull(brandforgeBrands.deletedAt),
+          )).returning();
+          if (!updated) throw Object.assign(new Error('Brand changed while the logo was being saved'), { code: 'BRANDFORGE_VERSION_CONFLICT' });
+          if (brand.logo_attachment_id && String(brand.logo_attachment_id) !== String(attachment.id)) {
+            await retireBrandLogoAttachment({
+              executor: tx,
+              tenantId: ctx.tenantId,
+              moduleId,
+              brandId,
+              attachmentId: String(brand.logo_attachment_id),
+              actorUserId: user.id,
+            });
+          }
+          return {
+            state: 'promoted' as const,
+            brand: updated,
+            duplicate,
+            logo: { id: String(attachment.id), fileName: String(attachment.original_name), mimeType: String(attachment.detected_mime_type), scanStatus: 'clean' },
+          };
+        };
+        const replay = await tx.execute(sql`
+          SELECT id,object_type,original_name,detected_mime_type,scan_status,sha256,deleted_at FROM shared_attachments
+          WHERE tenant_id=${ctx.tenantId} AND module_id=${moduleId}
+            AND object_type IN ('brandforge_brand_logo','brandforge_brand_logo_candidate') AND object_id=${brandId}
+            AND client_mutation_id=${idempotencyKey}
+          LIMIT 1
+        `);
+        const replayedLogo = replay.rows[0] as Record<string, any> | undefined;
+        if (replayedLogo) {
+          if (String(replayedLogo.sha256) !== contentSha256) {
+            throw Object.assign(new Error('Logo idempotency key was already used for different content'), { code: 'ATTACHMENT_IDEMPOTENCY_MISMATCH' });
+          }
+          if (replayedLogo.deleted_at) {
+            throw Object.assign(new Error('Logo idempotency key belongs to a retired logo'), { code: 'ATTACHMENT_IDEMPOTENCY_RETIRED' });
+          }
+          if (String(replayedLogo.object_type) === 'brandforge_brand_logo') {
+            if (String(brand.logo_attachment_id ?? '') === String(replayedLogo.id)) {
+              return {
+                state: 'replayed' as const,
+                duplicate: true,
+                logo: { id: String(replayedLogo.id), fileName: String(replayedLogo.original_name), mimeType: String(replayedLogo.detected_mime_type), scanStatus: String(replayedLogo.scan_status) },
+              };
+            }
+            throw Object.assign(new Error('Logo idempotency key is not the current brand logo'), { code: 'ATTACHMENT_IDEMPOTENCY_RETIRED' });
+          }
+          if (Number(brand.version) !== expectedVersion) return { state: 'conflict' as const };
+          const scanStatus = String(replayedLogo.scan_status);
+          if (scanStatus === 'clean') return promote(replayedLogo, true);
+          if (scanStatus === 'pending') {
+            return {
+              state: 'staged' as const,
+              duplicate: true,
+              logo: { id: String(replayedLogo.id), fileName: String(replayedLogo.original_name), mimeType: String(replayedLogo.detected_mime_type), scanStatus },
+            };
+          }
+          const code = scanStatus === 'infected' ? 'ATTACHMENT_QUARANTINED' : scanStatus === 'unavailable' ? 'ATTACHMENT_SCANNER_UNAVAILABLE' : 'ATTACHMENT_SCAN_FAILED';
+          throw Object.assign(new Error('Logo candidate did not pass its required safety scan'), { code });
+        }
+        if (Number(brand.version) !== expectedVersion) return { state: 'conflict' as const };
+        const attachment = await createAttachment({
+          tenantId: ctx.tenantId,
+          moduleId,
+          objectType: 'brandforge_brand_logo_candidate',
+          objectId: brandId,
+          originalName: fileName,
+          declaredMimeType: mimeType,
+          content,
+          createdByUserId: user.id,
+          idempotencyKey,
+          correlationId: request.id,
+        }, tx);
+        return {
+          state: 'staged' as const,
+          duplicate: false,
+          logo: { id: String(attachment.id), fileName: String(attachment.original_name), mimeType: String(attachment.detected_mime_type), scanStatus: String(attachment.scan_status) },
+        };
+      });
+      if (result.state === 'not_found') return notFound(reply, 'brand');
+      if (result.state === 'conflict') return versionConflict(reply, 'Brand');
+      const responseBrand = result.state === 'promoted' ? result.brand : await scopedBrand(ctx.tenantId, brandId);
+      if (!responseBrand) return notFound(reply, 'brand');
+      return reply.code(result.state === 'staged' ? 202 : result.state === 'replayed' ? 200 : 201).send({
+        brand: brandView(responseBrand),
+        logo: result.logo,
+        duplicate: result.duplicate,
+        pendingSafetyCheck: result.state === 'staged',
+      });
+    } catch (error: any) {
+      const code = String(error?.code ?? 'BRANDFORGE_LOGO_SAVE_FAILED');
+      const status = code === 'BRANDFORGE_VERSION_CONFLICT'
+        ? 409
+        : code === 'ATTACHMENT_QUARANTINED'
+          ? 422
+          : ['ATTACHMENT_SCANNER_UNAVAILABLE', 'ATTACHMENT_SCAN_FAILED', 'ATTACHMENT_SCAN_NOT_CLEAN'].includes(code)
+            ? 503
+            : code.startsWith('ATTACHMENT_')
+              ? 400
+              : 503;
+      const safetyMessage = code === 'ATTACHMENT_QUARANTINED'
+        ? 'The file did not pass the required safety scan. Your existing logo was not changed.'
+        : ['ATTACHMENT_SCANNER_UNAVAILABLE', 'ATTACHMENT_SCAN_FAILED', 'ATTACHMENT_SCAN_NOT_CLEAN'].includes(code)
+          ? 'The file format was accepted, but the required safety scan could not be completed. Your existing logo was not changed.'
+          : null;
+      return reply.code(status).send({
+        error: status === 409 ? 'The brand kit changed. Refresh it before saving the logo.' : safetyMessage ?? 'The logo could not be saved. Your existing brand kit was not changed.',
+        code,
+      });
+    }
+  });
+
+  app.get(`${base}/brands/:id/logo`, { preHandler: readGuards }, async (request, reply) => {
+    const ctx = (request as any).tenantContext as Context;
+    const brandId = String((request.params as any).id ?? '');
+    const brand = await scopedBrand(ctx.tenantId, brandId);
+    if (!brand) return notFound(reply, 'brand');
+    if (!brand.logoAttachmentId) return reply.code(404).send({ error: 'This brand kit does not have a saved logo yet.', code: 'BRANDFORGE_LOGO_NOT_FOUND' });
+    const moduleRow = await db.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'brandforgeos')).limit(1);
+    try {
+      const stored = await getAttachmentContent({
+        tenantId: ctx.tenantId,
+        moduleId: String(moduleRow[0]?.id ?? ''),
+        attachmentId: brand.logoAttachmentId,
+        objectType: 'brandforge_brand_logo',
+        objectId: brandId,
+      });
+      if (!stored) return reply.code(404).send({ error: 'The saved logo is no longer available.', code: 'BRANDFORGE_LOGO_NOT_FOUND' });
+      return reply.type(String(stored.metadata.detected_mime_type)).header('Cache-Control', 'private, no-store').send(stored.content);
+    } catch (error: any) {
+      if (error?.code === 'ATTACHMENT_SCAN_PENDING') {
+        return reply.code(409).send({ error: 'The saved logo is still being checked. Try again in a moment.', code: error.code });
+      }
+      return reply.code(404).send({ error: 'The saved logo is not available.', code: String(error?.code ?? 'BRANDFORGE_LOGO_NOT_FOUND') });
+    }
+  });
+
   app.delete(`${base}/brands/:id`, { preHandler: writeGuards }, async (request, reply) => {
     const ctx = (request as any).tenantContext as Context;
-    const [row] = await db.update(brandforgeBrands).set({ deletedAt: new Date(), updatedAt: new Date(), version: sql`${brandforgeBrands.version}+1` }).where(and(
-      eq(brandforgeBrands.tenantId, ctx.tenantId), eq(brandforgeBrands.id, (request.params as any).id), isNull(brandforgeBrands.deletedAt),
-    )).returning();
+    const user = (request as any).user as User;
+    const brandId = String((request.params as any).id ?? '');
+    const row = await db.transaction(async tx => {
+      const current = await tx.execute(sql`
+        SELECT id,logo_attachment_id FROM brandforge_brands
+        WHERE tenant_id=${ctx.tenantId} AND id=${brandId} AND deleted_at IS NULL
+        FOR UPDATE
+      `);
+      const brand = current.rows[0] as Record<string, any> | undefined;
+      if (!brand) return null;
+      const [updated] = await tx.update(brandforgeBrands).set({ deletedAt: new Date(), updatedAt: new Date(), version: sql`${brandforgeBrands.version}+1` }).where(and(
+        eq(brandforgeBrands.tenantId, ctx.tenantId), eq(brandforgeBrands.id, brandId), isNull(brandforgeBrands.deletedAt),
+      )).returning();
+      if (!updated) return null;
+      if (brand.logo_attachment_id) {
+        const moduleResult = await tx.execute(sql`SELECT id FROM modules WHERE slug='brandforgeos' AND archived_at IS NULL LIMIT 1`);
+        const moduleId = String(moduleResult.rows[0]?.id ?? '');
+        if (!moduleId) throw Object.assign(new Error('BrandForgeOS is not available'), { code: 'BRANDFORGE_MODULE_UNAVAILABLE' });
+        await retireBrandLogoAttachment({
+          executor: tx,
+          tenantId: ctx.tenantId,
+          moduleId,
+          brandId,
+          attachmentId: String(brand.logo_attachment_id),
+          actorUserId: user.id,
+        });
+      }
+      return updated;
+    });
     return row ? { ok: true } : notFound(reply, 'brand');
   });
 
@@ -621,6 +882,12 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
     )).limit(1);
     if (!current) return notFound(reply, 'calendar item');
     if (current.version !== input.expectedVersion) return versionConflict(reply, 'Calendar item');
+    if (input.status === 'published') {
+      return reply.code(409).send({
+        error: 'Use Record external publication and include the provider URL, post ID, or release reference.',
+        code: 'BRANDFORGE_PUBLICATION_CONFIRMATION_REQUIRED',
+      });
+    }
     if (!transitionAllowed(current.status, input.status, calendarTransitions)) return reply.code(409).send({ error: 'Calendar status transition is not allowed', code: 'BRANDFORGE_STATUS_TRANSITION_INVALID' });
     const invalid = await validateReferences(reply, ctx.tenantId, input);
     if (invalid) return invalid;
@@ -630,6 +897,98 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
       eq(brandforgeCalendarItems.version, expectedVersion!), isNull(brandforgeCalendarItems.deletedAt),
     )).returning();
     return row ? calendarView(row) : versionConflict(reply, 'Calendar item');
+  });
+
+  app.post(`${base}/calendar-items/:id/record-publication`, { preHandler: writeGuards }, async (request, reply) => {
+    const ctx = (request as any).tenantContext as Context;
+    const user = (request as any).user as User;
+    const calendarItemId = String((request.params as any).id ?? '');
+    const input = request.body && typeof request.body === 'object' && !Array.isArray(request.body)
+      ? request.body as Record<string, unknown>
+      : null;
+    if (!input) return reply.code(400).send({ error: 'Publication confirmation is required.', code: 'BRANDFORGE_PUBLICATION_INPUT_INVALID' });
+    for (const field of ['tenantId', 'tenant_id', 'userId', 'moduleId', 'role']) {
+      if (field in input) return reply.code(400).send({ error: 'Workspace access is taken from your signed-in session.', code: 'BRANDFORGE_AUTHORITY_FIELD_REJECTED' });
+    }
+    const expectedVersion = Number(input.expectedVersion);
+    const externalReference = typeof input.externalReference === 'string' ? input.externalReference.trim() : '';
+    const idempotencyKey = typeof input.idempotencyKey === 'string' ? input.idempotencyKey.trim() : '';
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+      return reply.code(400).send({ error: 'Refresh this calendar item before recording publication.', code: 'BRANDFORGE_PUBLICATION_VERSION_INVALID' });
+    }
+    if (input.externalPublicationConfirmed !== true || externalReference.length < 8 || externalReference.length > 500) {
+      return reply.code(400).send({ error: 'Confirm publication outside OperatorOS and enter the provider URL, post ID, or release reference.', code: 'BRANDFORGE_PUBLICATION_CONFIRMATION_REQUIRED' });
+    }
+    if (!/^[A-Za-z0-9:_.-]{8,180}$/.test(idempotencyKey)) {
+      return reply.code(400).send({ error: 'Refresh this calendar item before recording publication.', code: 'BRANDFORGE_PUBLICATION_IDEMPOTENCY_INVALID' });
+    }
+    const [moduleRow] = await db.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'brandforgeos')).limit(1);
+    if (!moduleRow) return reply.code(503).send({ error: 'BrandForgeOS is not available.', code: 'BRANDFORGE_MODULE_UNAVAILABLE' });
+    const operation = await beginIdempotentOperation({
+      tenantId: ctx.tenantId,
+      moduleId: moduleRow.id,
+      scope: `brandforge-calendar-publication:${calendarItemId}`,
+      idempotencyKey,
+      request: { calendarItemId, expectedVersion, externalReference, externalPublicationConfirmed: true },
+    });
+    if (operation.state === 'replay') return reply.code(operation.responseStatus).send({ ...(operation.responseJson as Record<string, unknown>), replayed: true });
+    if (operation.state === 'conflict') return reply.code(409).send({ error: 'That confirmation key was already used for different publication details.', code: 'BRANDFORGE_IDEMPOTENCY_CONFLICT' });
+    if (operation.state === 'in_progress') return reply.code(409).send({ error: 'Publication confirmation is already being recorded.', code: 'BRANDFORGE_PUBLICATION_IN_PROGRESS' });
+    try {
+      const response = await db.transaction(async tx => {
+        const currentResult = await tx.execute(sql`
+          SELECT * FROM brandforge_calendar_items
+          WHERE tenant_id=${ctx.tenantId} AND id=${calendarItemId} AND deleted_at IS NULL
+          FOR UPDATE
+        `);
+        const current = currentResult.rows[0] as Record<string, any> | undefined;
+        if (!current) throw Object.assign(new Error('Calendar item not found'), { code: 'BRANDFORGE_CALENDAR_ITEM_NOT_FOUND', statusCode: 404 });
+        if (Number(current.version) !== expectedVersion) throw Object.assign(new Error('Calendar item changed'), { code: 'BRANDFORGE_VERSION_CONFLICT', statusCode: 409 });
+        if (String(current.status) !== 'scheduled') throw Object.assign(new Error('Only scheduled content can be recorded as externally published'), { code: 'BRANDFORGE_STATUS_TRANSITION_INVALID', statusCode: 409 });
+        const [updated] = await tx.update(brandforgeCalendarItems).set({
+          status: 'published',
+          version: sql`${brandforgeCalendarItems.version}+1`,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(brandforgeCalendarItems.tenantId, ctx.tenantId),
+          eq(brandforgeCalendarItems.id, calendarItemId),
+          eq(brandforgeCalendarItems.version, expectedVersion),
+          isNull(brandforgeCalendarItems.deletedAt),
+        )).returning();
+        if (!updated) throw Object.assign(new Error('Calendar item changed'), { code: 'BRANDFORGE_VERSION_CONFLICT', statusCode: 409 });
+        const recordedAt = new Date().toISOString();
+        await appendActivityEvent({
+          tenantId: ctx.tenantId,
+          moduleId: moduleRow.id,
+          actorUserId: user.id,
+          objectType: 'brandforge_calendar_item',
+          objectId: calendarItemId,
+          eventType: 'external_publication.confirmed',
+          summary: 'Recorded externally completed publication',
+          metadata: { externalReference, recordedAt, externalActionPerformedByOperatorOS: false },
+        }, tx);
+        const payload = { calendarItem: calendarView(updated), externalPublication: { reference: externalReference, recordedAt, performedByOperatorOS: false }, replayed: false };
+        await completeIdempotentOperation({
+          tenantId: ctx.tenantId,
+          id: operation.id,
+          leaseExpiresAt: operation.leaseExpiresAt,
+          responseStatus: 200,
+          responseJson: payload,
+        }, tx);
+        return payload;
+      });
+      return response;
+    } catch (error: any) {
+      await failIdempotentOperation({ tenantId: ctx.tenantId, id: operation.id, leaseExpiresAt: operation.leaseExpiresAt }).catch(() => undefined);
+      const status = Number(error?.statusCode ?? 503);
+      if (status >= 400 && status < 500) {
+        return reply.code(status).send({
+          error: status === 404 ? 'Calendar item not found' : status === 409 ? 'This calendar item changed or is no longer scheduled. Refresh it before recording publication.' : 'Publication confirmation was not accepted.',
+          code: String(error?.code ?? 'BRANDFORGE_PUBLICATION_FAILED'),
+        });
+      }
+      throw error;
+    }
   });
 
   app.delete(`${base}/calendar-items/:id`, { preHandler: writeGuards }, async (request, reply) => {

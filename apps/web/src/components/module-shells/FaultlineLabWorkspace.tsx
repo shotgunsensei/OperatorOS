@@ -25,7 +25,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
-import { useTenant } from '../TenantProvider';
 import {
   moduleShellApi,
   type FaultlineAssignment,
@@ -33,6 +32,7 @@ import {
   type FaultlineSessionBundle,
 } from '@/lib/auth';
 import type { FaultlineLabRouteArea } from './FaultlineLabRoute.contract';
+import FaultlineGuidedAuthoring from './FaultlineGuidedAuthoring';
 
 type WorkspaceView = Exclude<FaultlineLabRouteArea, 'settings'>;
 type Tab = 'overview' | 'catalog' | 'session' | 'assignments' | 'progress' | 'evidence' | 'authoring' | 'reports';
@@ -42,6 +42,9 @@ interface FaultlineLabWorkspaceProps {
   recordId?: string;
   challengeId?: string;
   hrefFor?: (path: string) => string;
+  canWrite?: boolean;
+  canManage?: boolean;
+  canAdmin?: boolean;
 }
 
 const AUTHOR_TEMPLATE = {
@@ -54,12 +57,12 @@ const AUTHOR_TEMPLATE = {
   ],
   rootCause: {
     id: 'root-cause-correct',
-    title: 'Canonical root cause',
+    title: 'Confirmed root cause',
     description: 'Explain the actual failure mechanism.',
     technicalDetail: 'Document the technical chain of causation and why alternatives do not fit.',
   },
   rootCauseOptions: [
-    { id: 'root-cause-correct', title: 'Canonical root cause' },
+    { id: 'root-cause-correct', title: 'Confirmed root cause' },
     { id: 'root-cause-alternative', title: 'Plausible alternative' },
   ],
   evidence: [
@@ -118,10 +121,17 @@ async function fileBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-export default function FaultlineLabWorkspace({ view, recordId, challengeId, hrefFor = path => path }: FaultlineLabWorkspaceProps) {
+export default function FaultlineLabWorkspace({
+  view,
+  recordId,
+  challengeId,
+  hrefFor = path => path,
+  canWrite = false,
+  canManage = false,
+  canAdmin = false,
+}: FaultlineLabWorkspaceProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { activeRole } = useTenant();
   const tab: Tab = view === 'challenges' ? 'catalog' : view === 'runs' ? 'progress' : view;
   const [challenges, setChallenges] = useState<FaultlineChallengeSummary[]>([]);
   const [catalogFacets, setCatalogFacets] = useState<{
@@ -145,16 +155,17 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   const [challengeAttachments, setChallengeAttachments] = useState<Array<Record<string, any>>>([]);
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
   const [authorContent, setAuthorContent] = useState(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
+  const [authorValidation, setAuthorValidation] = useState<{
+    valid: boolean;
+    validation?: {
+      errors?: Array<{ code?: string; path?: string; message?: string }>;
+      warnings?: Array<{ code?: string; path?: string; message?: string }>;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-
-  const canManage =
-    user?.platformRole === 'super_admin' ||
-    activeRole === 'owner' ||
-    activeRole === 'admin';
-  const canAttempt = activeRole !== 'viewer';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,27 +184,53 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
       if (view === 'overview' || view === 'assignments') tasks.push(moduleShellApi.faultlinelab.listAssignments().then(next => setAssignments(next.assignments)));
       if (view === 'overview' || view === 'challenges') tasks.push(moduleShellApi.faultlinelab.daily().then(next => setDaily(next)));
       if (view === 'overview' || view === 'reports') tasks.push(moduleShellApi.faultlinelab.analytics().then(setAnalytics).catch(() => setAnalytics(null)));
-      if (view === 'assignments') tasks.push(moduleShellApi.faultlinelab.listMembers().then(next => setMembers(next.members)).catch(() => setMembers([])));
+      if (view === 'assignments' && canAdmin) tasks.push(moduleShellApi.faultlinelab.listMembers().then(next => setMembers(next.members)).catch(() => setMembers([])));
       await Promise.all(tasks);
     } catch (next) {
       setError(errorText(next));
     } finally {
       setLoading(false);
     }
-  }, [view]);
+  }, [canAdmin, view]);
+
+  const openDraft = useCallback(async (id: string) => {
+    setBusy('draft');
+    setError('');
+    try {
+      const next = await moduleShellApi.faultlinelab.getAuthoringChallenge(id);
+      setDraft(next);
+      setAuthorContent(JSON.stringify(next.content, null, 2));
+      setAuthorValidation(null);
+      const files = await moduleShellApi.faultlinelab.listChallengeAttachments(id).catch(() => ({ attachments: [] }));
+      setChallengeAttachments(files.attachments);
+      if (view !== 'authoring' || challengeId !== id) router.replace(hrefFor(`/authoring/${id}`));
+      return true;
+    } catch (next) {
+      setError(errorText(next));
+      return false;
+    } finally {
+      setBusy('');
+    }
+  }, [challengeId, hrefFor, router, view]);
 
   const openChallenge = useCallback(async (id: string) => {
     setBusy('challenge');
     setError('');
     try {
-      setChallengeDetail(await moduleShellApi.faultlinelab.getChallenge(id));
+      const next = await moduleShellApi.faultlinelab.getChallenge(id);
+      if (next.challenge.status !== 'published') {
+        await openDraft(id);
+        return;
+      }
+      setChallengeDetail(next);
       if (challengeId !== id) router.push(hrefFor(`/challenges/${id}`));
     } catch (next) {
-      setError(errorText(next));
+      const openedDraft = await openDraft(id);
+      if (!openedDraft) setError(errorText(next));
     } finally {
       setBusy('');
     }
-  }, [challengeId, hrefFor, router]);
+  }, [challengeId, hrefFor, openDraft, router]);
 
   const openSession = useCallback(async (id: string) => {
     setBusy('session');
@@ -214,9 +251,10 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    if (challengeId) void openChallenge(challengeId);
+    if (canWrite && challengeId && view === 'authoring') void openDraft(challengeId);
+    else if (challengeId) void openChallenge(challengeId);
     else if (view === 'session' && recordId) void openSession(recordId);
-  }, [challengeId, openChallenge, openSession, recordId, view]);
+  }, [canWrite, challengeId, openChallenge, openDraft, openSession, recordId, view]);
 
   const allPublished = useMemo(
     () => challenges.filter((item) => item.status === 'published'),
@@ -251,6 +289,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   const drafts = useMemo(() => challenges.filter((item) => item.status !== 'published'), [challenges]);
 
   async function startSession(input: Record<string, unknown>) {
+    if (!canWrite) return;
     setBusy('start');
     setError('');
     setNotice('');
@@ -262,7 +301,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
       setSession(bundle);
       setAttachments([]);
       router.push(hrefFor(`/sessions/${bundle.session.id}`));
-      setNotice('Investigation started. Every action and score is recorded by the server.');
+      setNotice('Investigation started. Your actions, evidence, and score will be saved here.');
       await load();
     } catch (next) {
       setError(errorText(next));
@@ -272,7 +311,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   }
 
   async function runAction(kind: 'command' | 'event' | 'ticket' | 'hint', target: string | number) {
-    if (!session) return;
+    if (!canWrite || !session) return;
     setBusy(`action-${kind}-${target}`);
     setError('');
     try {
@@ -292,7 +331,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
 
   async function submitInvestigation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session) return;
+    if (!canWrite || !session) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setBusy('submit');
@@ -308,7 +347,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
         proofNote: data.get('proofNote'),
       });
       setSession(result);
-      setNotice('Submission scored from the immutable challenge version and server-recorded evidence.');
+      setNotice('Submission scored against the challenge version you opened and the evidence you collected.');
       await load();
     } catch (next) {
       setError(errorText(next));
@@ -318,7 +357,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   }
 
   async function abandonSession() {
-    if (!session || !window.confirm('Abandon this investigation? Recorded evidence remains in the audit trail.')) return;
+    if (!canWrite || !session || !window.confirm('Leave this investigation? Your completed steps and evidence will remain in its history.')) return;
     setBusy('abandon');
     try {
       await moduleShellApi.faultlinelab.abandon(session.session.id, session.session.version);
@@ -333,7 +372,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
 
   async function uploadProof(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session) return;
+    if (!canWrite || !session) return;
     const form = event.currentTarget;
     const input = form.elements.namedItem('proof') as HTMLInputElement;
     const file = input.files?.[0];
@@ -361,24 +400,9 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
     }
   }
 
-  async function openDraft(id: string) {
-    setBusy('draft');
-    setError('');
-    try {
-      const next = await moduleShellApi.faultlinelab.getAuthoringChallenge(id);
-      setDraft(next);
-      setAuthorContent(JSON.stringify(next.content, null, 2));
-      const files = await moduleShellApi.faultlinelab.listChallengeAttachments(id).catch(() => ({ attachments: [] }));
-      setChallengeAttachments(files.attachments);
-    } catch (next) {
-      setError(errorText(next));
-    } finally {
-      setBusy('');
-    }
-  }
-
   async function saveDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canWrite) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setBusy('save-draft');
@@ -402,7 +426,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
         : await moduleShellApi.faultlinelab.createChallenge(payload);
       await load();
       await openDraft(result.challenge.id);
-      setNotice(draft ? 'Immutable challenge version created.' : 'Personal challenge draft created.');
+      setNotice(draft ? 'New challenge revision saved.' : 'Personal challenge draft created.');
     } catch (next) {
       setError(next instanceof SyntaxError ? 'Challenge content must be valid JSON.' : errorText(next));
     } finally {
@@ -411,7 +435,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   }
 
   async function publishDraft() {
-    if (!draft) return;
+    if (!canAdmin || !draft) return;
     setBusy('publish');
     try {
       await moduleShellApi.faultlinelab.publishChallenge(
@@ -421,6 +445,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
       );
       setDraft(null);
       setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
+      setAuthorValidation(null);
       setNotice('Challenge published to this organization. Existing sessions remain pinned to their original version.');
       await load();
       router.push(hrefFor('/challenges'));
@@ -432,12 +457,17 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   }
 
   async function validateDraft() {
+    if (!canWrite) return;
     setBusy('validate');
     setError('');
     try {
       const content = JSON.parse(authorContent);
       const result = await moduleShellApi.faultlinelab.validateChallenge(content);
-      setNotice(`Validation passed. Content hash ${result.contentHash.slice(0, 12)}…`);
+      setAuthorValidation(result);
+      const warningCount = result.validation?.warnings?.length ?? 0;
+      setNotice(warningCount > 0
+        ? `Required checks passed. Review ${warningCount} quality recommendation${warningCount === 1 ? '' : 's'} before publishing.`
+        : 'Required checks passed. Save the draft, then run a learner preview before publishing.');
     } catch (next) {
       setError(next instanceof SyntaxError ? 'Challenge content must be valid JSON.' : errorText(next));
     } finally {
@@ -446,6 +476,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   }
 
   async function previewDraft() {
+    if (!canWrite) return;
     if (!draft) {
       setError('Save the draft before starting a version-pinned preview.');
       return;
@@ -468,13 +499,14 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   }
 
   async function retireDraft() {
-    if (!draft || !window.confirm('Retire this published challenge? Existing attempt evidence remains immutable.')) return;
+    if (!canAdmin || !draft || !window.confirm('Retire this published challenge? Evidence from past attempts will remain unchanged.')) return;
     setBusy('retire');
     try {
       await moduleShellApi.faultlinelab.retireChallenge(draft.challenge.id, draft.challenge.version);
       setDraft(null);
       setChallengeAttachments([]);
       setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
+      setAuthorValidation(null);
       setNotice('Challenge retired. Existing sessions and scores remain available.');
       await load();
     } catch (next) {
@@ -485,6 +517,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
   }
 
   async function importDraftFile(event: React.ChangeEvent<HTMLInputElement>) {
+    if (!canWrite) return;
     const file = event.currentTarget.files?.[0];
     if (!file) return;
     setError('');
@@ -495,7 +528,8 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
       setDraft(null);
       setChallengeAttachments([]);
       setAuthorContent(JSON.stringify(content, null, 2));
-      setNotice('Validated challenge JSON imported into a new draft. Review metadata, then save to persist it.');
+      setAuthorValidation(null);
+      setNotice('Validated challenge file imported into a new draft. Review the details, then save it.');
     } catch (next) {
       setError(next instanceof SyntaxError ? 'Imported challenge must be valid JSON.' : errorText(next));
     } finally {
@@ -505,7 +539,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
 
   async function uploadAuthorAsset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft) return;
+    if (!canWrite || !draft) return;
     const form = event.currentTarget;
     const input = form.elements.namedItem('authorAsset') as HTMLInputElement;
     const file = input.files?.[0];
@@ -530,6 +564,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
 
   async function createAssignment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canAdmin) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setBusy('assignment');
@@ -566,10 +601,11 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
     <section className="fl-shell" data-testid="faultlinelab-route-workspace" data-workspace-view={view}>
       <style>{styles}</style>
       <div className="fl-wrap">
-        <div className="fl-route-toolbar"><span>SERVER-RECORDED WORKSPACE</span><button onClick={() => void load()} disabled={loading}><RefreshCw size={15} /> Refresh route</button></div>
+        <div className="fl-route-toolbar"><span>INVESTIGATION WORKSPACE</span><button onClick={() => void load()} disabled={loading}><RefreshCw size={15} /> Refresh route</button></div>
 
         {error && <div className="fl-alert error" role="alert"><AlertTriangle size={18} /> {error}</div>}
         {notice && <div className="fl-alert success" role="status"><CheckCircle2 size={18} /> {notice}</div>}
+        {!canWrite && <div className="fl-alert" role="status" data-testid="faultlinelab-read-only" style={{ border: '1px solid rgba(251,191,36,.38)', background: 'rgba(120,53,15,.18)', color: '#fde68a' }}><ShieldCheck size={18} /> Read-only access: you can review published challenges, saved investigations, evidence, and results. Starting attempts, uploading proof, authoring, assignments, and publication are disabled.</div>}
         {loading && <div className="fl-card fl-loading">Loading your FaultlineLab workspace…</div>}
 
         {!loading && tab === 'overview' && (
@@ -577,14 +613,14 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
             <div className="fl-metrics">
               <article><span>Playable cases</span><b>{catalogFacets.total}</b></article>
               <article><span>Active assignments</span><b>{assignments.filter(item => ['assigned', 'in_progress'].includes(item.status)).length}</b></article>
-              <article><span>Recorded runs</span><b>{sessions.length}</b></article>
+              <article><span>Past attempts</span><b>{sessions.length}</b></article>
               <article><span>Solved</span><b>{progress.progress?.challengesSolved ?? 0}</b></article>
             </div>
             <div className="fl-overview-grid">
-              <a className="fl-card fl-route-card" href={hrefFor('/challenges')}><Beaker size={20} /><div><h2>Choose a challenge</h2><p>Browse compiler-published cases, inspect the briefing, and begin a scored investigation.</p></div></a>
-              <a className="fl-card fl-route-card" href={hrefFor('/assignments')}><ClipboardList size={20} /><div><h2>Work assignments</h2><p>Open tenant-scoped learning work assigned by an authorized manager.</p></div></a>
-              <a className="fl-card fl-route-card" href={hrefFor('/runs')}><History size={20} /><div><h2>Review runs</h2><p>See durable attempt history, scores, badges, and personal progress.</p></div></a>
-              <a className="fl-card fl-route-card" href={hrefFor('/evidence')}><ShieldCheck size={20} /><div><h2>Trace evidence</h2><p>Return to recorded action ledgers and private proof attached to an investigation.</p></div></a>
+              <a className="fl-card fl-route-card" href={hrefFor('/challenges')}><Beaker size={20} /><div><h2>Choose a challenge</h2><p>Browse ready-to-play cases, review the briefing, and begin a scored investigation.</p></div></a>
+              <a className="fl-card fl-route-card" href={hrefFor('/assignments')}><ClipboardList size={20} /><div><h2>Work assignments</h2><p>Open practice assigned by your team manager.</p></div></a>
+              <a className="fl-card fl-route-card" href={hrefFor('/runs')}><History size={20} /><div><h2>Review runs</h2><p>See past attempts, scores, badges, and personal progress.</p></div></a>
+              <a className="fl-card fl-route-card" href={hrefFor('/evidence')}><ShieldCheck size={20} /><div><h2>Trace evidence</h2><p>Return to your action history and private proof attached to an investigation.</p></div></a>
             </div>
             <article className="fl-card">
               <div className="fl-section-head"><div><span>RECENT RUNS</span><h2>Continue diagnostic work</h2></div><strong>{sessions.length}</strong></div>
@@ -597,17 +633,17 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
         {!loading && tab === 'catalog' && (
           <section id="faultlinelab-challenges" data-testid="faultlinelab-challenges-route" tabIndex={-1} className="fl-grid">
             <div className="fl-main">
-              <div className="fl-section-head"><div><span>COMPILER-PUBLISHED CONTENT</span><h2>Challenge board</h2></div><strong>{published.length} shown · {catalogFacets.total} playable</strong></div>
+              <div className="fl-section-head"><div><span>READY-TO-PLAY CONTENT</span><h2>Challenge board</h2></div><strong>{published.length} shown · {catalogFacets.total} playable</strong></div>
               <div className="fl-card fl-catalog-tools" role="search" aria-label="Filter the challenge catalog">
                 <label className="fl-search"><Search size={15} aria-hidden="true" /><span>Search cases</span><input value={catalogSearch} onChange={(event) => setCatalogSearch(event.target.value)} placeholder="Title, pack, tag, or slug" /></label>
                 <label><span>Category</span><select value={catalogCategory} onChange={(event) => setCatalogCategory(event.target.value)}><option value="">All categories ({catalogFacets.total})</option>{Object.entries(catalogFacets.categories).sort(([left], [right]) => left.localeCompare(right)).map(([value, count]) => <option value={value} key={value}>{value} ({count})</option>)}</select></label>
                 <label><span>Difficulty</span><select value={catalogDifficulty} onChange={(event) => setCatalogDifficulty(event.target.value)}><option value="">All difficulties</option>{Object.entries(catalogFacets.difficulties).map(([value, count]) => <option value={value} key={value}>{value} ({count})</option>)}</select></label>
-                <label><span>Sort</span><select value={catalogSort} onChange={(event) => setCatalogSort(event.target.value)}><option value="featured">Featured / source order</option><option value="title">Title</option><option value="difficulty">Difficulty</option><option value="best-score">My best score</option><option value="newest">Newest</option></select></label>
+                <label><span>Sort</span><select value={catalogSort} onChange={(event) => setCatalogSort(event.target.value)}><option value="featured">Featured / recommended order</option><option value="title">Title</option><option value="difficulty">Difficulty</option><option value="best-score">My best score</option><option value="newest">Newest</option></select></label>
               </div>
               {daily.challenge && (
                 <article className="fl-card fl-daily">
-                  <div><span>UTC DAILY // {daily.date}</span><h3>{daily.challenge.title}</h3><p>{daily.outcome ? `Recorded score: ${daily.outcome.score}` : 'One server-selected outcome counts per UTC day.'}</p></div>
-                  <button disabled={!canAttempt || !!daily.outcome || busy === 'start'} onClick={() => void startSession({ mode: 'daily' })}><Play size={15} /> Start daily</button>
+                  <div><span>UTC DAILY // {daily.date}</span><h3>{daily.challenge.title}</h3><p>{daily.outcome ? `Recorded score: ${daily.outcome.score}` : 'One completed score counts per UTC day.'}</p></div>
+                  <button disabled={!canWrite || !!daily.outcome || busy === 'start'} onClick={() => void startSession({ mode: 'daily' })}><Play size={15} /> Start daily</button>
                 </article>
               )}
               <div className="fl-card-grid">
@@ -619,12 +655,12 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
                       <div className="fl-card-meta"><span>{challenge.category}</span><span>{challenge.difficulty}</span></div>
                       <h3>{challenge.title}</h3>
                       <p>{challenge.shortSummary ?? `${challenge.attemptCount ?? 0} attempts recorded.`}</p>
-                      <div className="fl-card-facts"><span>{challenge.estimatedMinutes ? `~${challenge.estimatedMinutes} min` : 'Self-paced'}</span><span>{challenge.sourceProductId?.replace(/^pack-/, '') ?? 'standalone'}</span>{challenge.isFeatured && <span>featured</span>}</div>
+                      <div className="fl-card-facts"><span>{challenge.estimatedMinutes ? `~${challenge.estimatedMinutes} min` : 'Self-paced'}</span>{challenge.isFeatured && <span>featured</span>}</div>
                       <p>{challenge.attemptCount ?? 0} attempts · best {challenge.bestPercentage ?? '—'}%</p>
                       <div className="fl-actions">
                         <button onClick={() => void openChallenge(challenge.id)}><Eye size={14} /> Inspect</button>
-                        {active ? <button disabled={!canAttempt || busy === 'session'} onClick={() => void openSession(active.id)}><Play size={14} /> Resume</button> : <button disabled={!canAttempt || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'standard' })}><Play size={14} /> {previous ? 'Retry' : 'Start'}</button>}
-                        <button disabled={!canAttempt || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'chaos', chaosIntensity: 2 })}><FlaskConical size={14} /> Chaos</button>
+                        {active ? <button disabled={!canWrite || busy === 'session'} onClick={() => void openSession(active.id)}><Play size={14} /> Resume</button> : <button disabled={!canWrite || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'standard' })}><Play size={14} /> {previous ? 'Retry' : 'Start'}</button>}
+                        <button disabled={!canWrite || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'chaos', chaosIntensity: 2 })}><FlaskConical size={14} /> Chaos</button>
                       </div>
                     </article>
                   );
@@ -661,7 +697,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
                 <div className="fl-main">
                   <div className="fl-section-head"><div><span>{session.session.mode} // {session.session.state}</span><h2>{session.session.challengeTitle ?? 'Active investigation'}</h2></div><strong>v{session.session.challengeVersionNumber} · action {session.session.actionCount}</strong></div>
                   <article className="fl-card"><h3>Briefing</h3><p>{session.challenge.briefing}</p></article>
-                  {session.session.state === 'active' && (
+                  {session.session.state === 'active' && canWrite && (
                     <>
                       <article className="fl-card">
                         <h3>Terminal</h3>
@@ -676,15 +712,15 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
                     </>
                   )}
                   <article className="fl-card fl-terminal">
-                    <h3>Action ledger</h3>
+                    <h3>Investigation log</h3>
                     {session.actions.map((item) => <div key={item.id}><span>#{item.sequenceNumber} {item.kind} / {item.targetKey}</span><pre>{item.output}</pre></div>)}
                     {session.actions.length === 0 && <p>No evidence-producing actions yet.</p>}
                   </article>
-                  {session.session.state === 'active' && (
+                  {session.session.state === 'active' && canWrite && (
                     <form className="fl-card fl-form" onSubmit={submitInvestigation}>
                       <h3>Submit diagnosis</h3>
                       <label>Working hypothesis<textarea name="hypothesis" required minLength={4} rows={3} /></label>
-                      <label>Root cause<select name="rootCause" required defaultValue=""><option value="" disabled>Select the canonical cause</option>{session.challenge.rootCauseOptions.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+                      <label>Root cause<select name="rootCause" required defaultValue=""><option value="" disabled>Select the cause that best explains the evidence</option>{session.challenge.rootCauseOptions.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
                       <fieldset><legend>Unlocked evidence</legend>{session.evidence.map((item) => <label className="fl-check" key={item.id}><input type="checkbox" name="evidence" value={item.id} /> <span><b>{item.title}</b>{item.description && <small>{item.description}</small>}</span></label>)}</fieldset>
                       <label>Remediation plan<textarea name="remediation" required minLength={4} rows={4} /></label>
                       <label>Proof note<textarea name="proofNote" rows={2} /></label>
@@ -695,7 +731,7 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
                 </div>
                 <aside className="fl-side">
                   <article className="fl-card"><span>EVIDENCE LOCKER</span>{session.evidence.map((item) => <div className="fl-evidence" key={item.id}><b>{item.title}</b><small>{item.importance} · {item.category}</small>{item.description && <p>{item.description}</p>}</div>)}{session.evidence.length === 0 && <p>Evidence unlocks only through recorded actions.</p>}</article>
-                  <form className="fl-card fl-form" onSubmit={uploadProof}><h3>Private proof</h3><input name="proof" aria-label="Private investigation proof" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain" /><button disabled={busy === 'upload'}><Upload size={14} /> Upload for scanning</button>{attachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form>
+                  {canWrite ? <form className="fl-card fl-form" onSubmit={uploadProof}><h3>Private proof</h3><input name="proof" aria-label="Private investigation proof" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain" /><button disabled={busy === 'upload'}><Upload size={14} /> Upload for scanning</button>{attachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form> : <article className="fl-card"><ShieldCheck size={20} /><h3>Private proof</h3><p>Existing proof remains visible. Edit access is required to upload another file.</p>{attachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</article>}
                 </aside>
               </div>
             )}
@@ -704,8 +740,8 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
 
         {!loading && tab === 'assignments' && (
           <section id="faultlinelab-assignments" data-testid="faultlinelab-assignments-route" tabIndex={-1} className="fl-grid">
-            <div className="fl-main"><div className="fl-section-head"><div><span>TEAM QUEUE</span><h2>Assignments</h2></div><strong>{assignments.length}</strong></div>{assignments.map((item) => <article className="fl-card fl-row" key={item.id}><div><h3>{item.title || item.challengeTitle}</h3><p>{item.instructions || `${item.challengeTitle} · ${item.status}`}</p><small>{item.dueAt ? `Due ${new Date(item.dueAt).toLocaleString()}` : 'No due date'}</small></div><div className="fl-actions">{['assigned', 'in_progress'].includes(item.status) && item.assigneeUserId === user?.id && <button onClick={() => void startSession({ mode: 'assignment', assignmentId: item.id })}><Play size={14} /> Start</button>}{canManage && ['assigned', 'in_progress'].includes(item.status) && <button className="danger" onClick={async () => { await moduleShellApi.faultlinelab.cancelAssignment(item.id, item.version); await load(); }}>Cancel</button>}</div></article>)}{assignments.length === 0 && <div className="fl-card fl-empty">No assignments are waiting.</div>}</div>
-            <aside className="fl-side">{canManage ? <form className="fl-card fl-form" onSubmit={createAssignment}><span>MANAGER CONTROL</span><h3>Assign published challenge</h3><label>Challenge<select name="challengeId" required><option value="">Select challenge</option>{allPublished.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Team member<select name="assigneeUserId" required><option value="">Select member</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>Assignment title<input name="title" maxLength={200} /></label><label>Instructions<textarea name="instructions" rows={4} maxLength={5000} /></label><label>Due date<input name="dueAt" type="datetime-local" /></label><button disabled={busy === 'assignment'}><Users size={14} /> Create assignment</button></form> : <div className="fl-card"><ShieldCheck size={20} /><h3>Participant view</h3><p>Workspace owners and managers create assignments; participants can focus on completing them.</p></div>}</aside>
+            <div className="fl-main"><div className="fl-section-head"><div><span>TEAM QUEUE</span><h2>Assignments</h2></div><strong>{assignments.length}</strong></div>{assignments.map((item) => <article className="fl-card fl-row" key={item.id}><div><h3>{item.title || item.challengeTitle}</h3><p>{item.instructions || `${item.challengeTitle} · ${item.status}`}</p><small>{item.dueAt ? `Due ${new Date(item.dueAt).toLocaleString()}` : 'No due date'}</small></div><div className="fl-actions">{canWrite && ['assigned', 'in_progress'].includes(item.status) && item.assigneeUserId === user?.id && <button onClick={() => void startSession({ mode: 'assignment', assignmentId: item.id })}><Play size={14} /> Start</button>}{canAdmin && ['assigned', 'in_progress'].includes(item.status) && <button className="danger" onClick={async () => { await moduleShellApi.faultlinelab.cancelAssignment(item.id, item.version); await load(); }}>Cancel</button>}</div></article>)}{assignments.length === 0 && <div className="fl-card fl-empty">No assignments are waiting.</div>}</div>
+            <aside className="fl-side">{canAdmin ? <form className="fl-card fl-form" onSubmit={createAssignment}><span>MANAGER CONTROL</span><h3>Assign published challenge</h3><label>Challenge<select name="challengeId" required><option value="">Select challenge</option>{allPublished.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Team member<select name="assigneeUserId" required><option value="">Select member</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>Assignment title<input name="title" maxLength={200} /></label><label>Instructions<textarea name="instructions" rows={4} maxLength={5000} /></label><label>Due date<input name="dueAt" type="datetime-local" /></label><button disabled={busy === 'assignment'}><Users size={14} /> Create assignment</button></form> : <div className="fl-card"><ShieldCheck size={20} /><h3>{canWrite ? 'Participant view' : 'Read-only assignment view'}</h3><p>{canWrite ? 'Organization owners and administrators create assignments; participants can focus on completing them.' : 'You can review assigned work and its status. Edit access is required to start it, and organization administration is required to create or cancel assignments.'}</p></div>}</aside>
           </section>
         )}
 
@@ -719,11 +755,11 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
         {!loading && tab === 'evidence' && (
           <section id="faultlinelab-evidence" data-testid="faultlinelab-evidence-route" className="fl-grid" tabIndex={-1}>
             <div className="fl-main">
-              <article className="fl-card"><span>EVIDENCE REGISTER</span><h2>Recorded investigation proof</h2><p>Evidence unlocks only through allowlisted challenge actions. Private uploads remain attached to their tenant-scoped attempt and are not public proof.</p></article>
-              {sessions.map(item => <article className="fl-card fl-row" key={item.id}><div><h3>{item.challengeTitle ?? item.challengeSlug ?? 'Diagnostic run'}</h3><p>{item.state} · {item.mode} · {item.actionCount ?? 0} recorded actions</p><small>{item.completedAt ? `Completed ${new Date(item.completedAt).toLocaleString()}` : `Started ${new Date(item.startedAt).toLocaleString()}`}</small></div><button onClick={() => void openSession(item.id)}><Eye size={14} />Open ledger</button></article>)}
-              {sessions.length === 0 && <div className="fl-card fl-empty">No recorded run exists yet, so there is no evidence ledger to display.</div>}
+              <article className="fl-card"><span>EVIDENCE REGISTER</span><h2>Recorded investigation proof</h2><p>Evidence unlocks only through challenge actions. Private uploads stay with this investigation and are not public proof.</p></article>
+              {sessions.map(item => <article className="fl-card fl-row" key={item.id}><div><h3>{item.challengeTitle ?? item.challengeSlug ?? 'Diagnostic run'}</h3><p>{item.state} · {item.mode} · {item.actionCount ?? 0} recorded actions</p><small>{item.completedAt ? `Completed ${new Date(item.completedAt).toLocaleString()}` : `Started ${new Date(item.startedAt).toLocaleString()}`}</small></div><button onClick={() => void openSession(item.id)}><Eye size={14} />Open investigation log</button></article>)}
+              {sessions.length === 0 && <div className="fl-card fl-empty">Complete an investigation to build your evidence history.</div>}
             </div>
-            <aside className="fl-side"><article className="fl-card"><ShieldCheck size={20} /><h2>Evidence boundary</h2><p>Scores and proof demonstrate performance in a bounded training case. They do not authorize production access or create a certification.</p></article></aside>
+            <aside className="fl-side"><article className="fl-card"><ShieldCheck size={20} /><h2>What this evidence means</h2><p>Scores and proof demonstrate performance in this training case. They do not grant production access or create a certification.</p></article></aside>
           </section>
         )}
 
@@ -731,21 +767,32 @@ export default function FaultlineLabWorkspace({ view, recordId, challengeId, hre
           <section id="faultlinelab-analytics" data-testid="faultlinelab-reports-route" className="fl-grid" tabIndex={-1}>
             <div className="fl-main">
               <div className="fl-metrics"><article><span>Completed attempts</span><b>{progress.progress?.attemptsCompleted ?? 0}</b></article><article><span>Solved</span><b>{progress.progress?.challengesSolved ?? 0}</b></article><article><span>Current streak</span><b>{progress.progress?.currentStreak ?? 0}</b></article><article><span>Daily streak</span><b>{progress.dailyStreak ?? 0}</b></article></div>
-              <article className="fl-card"><span>PERSONAL REPORT</span><h2>Attempt history</h2><p>Download the same tenant-scoped attempt data shown in this workspace. FaultlineLab does not issue certificates.</p><button onClick={() => void exportAttempts()} disabled={busy === 'export'}><Download size={14} />Download attempts CSV</button></article>
+              <article className="fl-card"><span>PERSONAL REPORT</span><h2>Attempt history</h2><p>Download the same attempt history shown in this workspace. FaultlineLab does not issue certificates.</p><button onClick={() => void exportAttempts()} disabled={busy === 'export'}><Download size={14} />Download attempts CSV</button></article>
             </div>
-            <aside className="fl-side"><article className="fl-card"><span>TEAM OUTCOMES</span>{analytics ? <><h2>{analytics.summary?.completedAttempts ?? 0} completed</h2><p>{analytics.summary?.passedAttempts ?? 0} passed · {analytics.summary?.averagePercentage ?? 0}% average</p></> : <><h2>Manager access required</h2><p>Your personal report remains available. Tenant-wide outcomes require workspace manager authority.</p></>}</article></aside>
+            <aside className="fl-side"><article className="fl-card"><span>TEAM OUTCOMES</span>{analytics ? <><h2>{analytics.summary?.completedAttempts ?? 0} completed</h2><p>{analytics.summary?.passedAttempts ?? 0} passed · {analytics.summary?.averagePercentage ?? 0}% average</p></> : <><h2>Manager access required</h2><p>Your personal report remains available. Team-wide results require owner or manager access.</p></>}</article></aside>
           </section>
         )}
 
-        {!loading && tab === 'authoring' && (
+        {!loading && tab === 'authoring' && !canWrite && (
+          <section id="faultlinelab-authoring" data-testid="faultlinelab-authoring-route" tabIndex={-1} className="fl-grid">
+            <article className="fl-card fl-main"><ShieldCheck size={20} /><h2>Challenge authoring is read-only</h2><p>You can review published challenges from the challenge board. Edit access is required to create drafts, validate content, upload author files, or start a preview.</p></article>
+            <aside className="fl-side"><article className="fl-card"><h3>Publication control</h3><p>Only organization owners or administrators who also have FaultlineLab edit access can assign, publish, or retire team challenges.</p></article></aside>
+          </section>
+        )}
+
+        {!loading && tab === 'authoring' && canWrite && (
           <section id="faultlinelab-authoring" data-testid="faultlinelab-authoring-route" tabIndex={-1} className="fl-grid">
             <form key={draft?.challenge?.id ?? 'new'} className="fl-card fl-form fl-main" onSubmit={saveDraft}>
               <div className="fl-section-head"><div><span>CHALLENGE EDITOR</span><h2>{draft ? `Edit ${draft.challenge.title}` : 'New challenge draft'}</h2></div>{draft && <strong>revision {draft.challenge.currentVersionNumber}</strong>}</div>
-              <div className="fl-two"><label>Slug<input name="slug" required pattern="[a-z0-9][a-z0-9-]{0,119}" defaultValue={draft?.challenge?.slug ?? ''} /></label><label>Title<input name="title" required minLength={2} maxLength={200} defaultValue={draft?.challenge?.title ?? ''} /></label><label>Category<select name="category" defaultValue={draft?.challenge?.category ?? 'mixed'}>{['windows-ad','networking','automotive','electronics','servers','mixed','healthcare-imaging'].map((value) => <option key={value}>{value}</option>)}</select></label><label>Difficulty<select name="difficulty" defaultValue={draft?.challenge?.difficulty ?? 'intermediate'}>{['beginner','intermediate','advanced','expert'].map((value) => <option key={value}>{value}</option>)}</select></label><label>Scope<select name="scope" defaultValue={draft?.challenge?.scope ?? 'personal'}><option value="personal">Personal draft</option>{canManage && <option value="tenant">Team draft</option>}</select></label><label>Change note<input name="changeNote" maxLength={500} placeholder="What changed in this revision?" /></label></div>
-              <label>Challenge JSON<textarea className="fl-json" value={authorContent} onChange={(event) => setAuthorContent(event.target.value)} rows={26} spellCheck={false} /></label>
-              <div className="fl-actions"><button disabled={busy === 'save-draft'}><FileJson2 size={14} /> {draft ? 'Save revision' : 'Create draft'}</button><button type="button" onClick={() => void validateDraft()} disabled={busy === 'validate'}><ShieldCheck size={14} /> Validate</button>{draft && <button type="button" onClick={() => void previewDraft()} disabled={busy === 'start'}><Eye size={14} /> Preview</button>}{draft && <button type="button" onClick={() => void exportDraft()} disabled={busy === 'export-draft'}><Download size={14} /> Export</button>}{draft && canManage && <button type="button" onClick={() => void publishDraft()} disabled={busy === 'publish'}><CheckCircle2 size={14} /> Publish current revision</button>}{draft?.challenge?.status === 'published' && canManage && <button type="button" className="danger" onClick={() => void retireDraft()} disabled={busy === 'retire'}><Archive size={14} /> Retire</button>}<label className="fl-import"><Upload size={14} /> Import JSON<input type="file" accept="application/json,.json" onChange={(event) => void importDraftFile(event)} /></label><button type="button" onClick={() => { setDraft(null); setChallengeAttachments([]); setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2)); }}>Reset editor</button></div>
+              <div className="fl-two"><label>Web address <small>Lowercase letters, numbers, and dashes only</small><input name="slug" required pattern="[a-z0-9][a-z0-9-]{0,119}" defaultValue={draft?.challenge?.slug ?? ''} placeholder="afternoon-network-outage" /></label><label>Challenge title<input name="title" required minLength={2} maxLength={200} defaultValue={draft?.challenge?.title ?? ''} /></label><label>Skill area<select name="category" defaultValue={draft?.challenge?.category ?? 'mixed'}>{['windows-ad','networking','automotive','electronics','servers','mixed','healthcare-imaging'].map((value) => <option key={value}>{value}</option>)}</select></label><label>Learner level<select name="difficulty" defaultValue={draft?.challenge?.difficulty ?? 'intermediate'}>{['beginner','intermediate','advanced','expert'].map((value) => <option key={value}>{value}</option>)}</select></label><label>Who can use this draft<select name="scope" defaultValue={draft?.challenge?.scope ?? 'personal'}><option value="personal">Only me while drafting</option>{canManage && <option value="tenant">My organization after publication</option>}</select></label><label>Revision note<input name="changeNote" maxLength={500} placeholder="Summarize what improved in this revision" /></label></div>
+              <FaultlineGuidedAuthoring
+                rawContent={authorContent}
+                onChange={(value) => { setAuthorContent(value); setAuthorValidation(null); }}
+                serverValidation={authorValidation}
+              />
+              <div className="fl-actions"><button disabled={busy === 'save-draft'}><FileJson2 size={14} /> {draft ? 'Save revision' : 'Create draft'}</button><button type="button" onClick={() => void validateDraft()} disabled={busy === 'validate'}><ShieldCheck size={14} /> Run quality check</button>{draft && <button type="button" onClick={() => void previewDraft()} disabled={busy === 'start'}><Eye size={14} /> Test as a learner</button>}{draft && <button type="button" onClick={() => void exportDraft()} disabled={busy === 'export-draft'}><Download size={14} /> Export backup</button>}{draft && canAdmin && <button type="button" onClick={() => void publishDraft()} disabled={busy === 'publish'}><CheckCircle2 size={14} /> Publish current revision</button>}{draft?.challenge?.status === 'published' && canAdmin && <button type="button" className="danger" onClick={() => void retireDraft()} disabled={busy === 'retire'}><Archive size={14} /> Retire</button>}<label className="fl-import"><Upload size={14} /> Import challenge file<input type="file" accept="application/json,.json" onChange={(event) => void importDraftFile(event)} /></label><button type="button" onClick={() => { setDraft(null); setChallengeAttachments([]); setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2)); setAuthorValidation(null); }}>Start a fresh challenge</button></div>
             </form>
-            <aside className="fl-side"><article className="fl-card"><span>DRAFTS</span>{drafts.map((item) => <button className="fl-list-button" key={item.id} onClick={() => void openDraft(item.id)}><span>{item.title}</span><b>{item.status} · revision {item.currentVersionNumber}</b></button>)}{drafts.length === 0 && <p>No drafts are available.</p>}</article><article className="fl-card"><History size={20} /><h3>Revision history</h3><p>Every save preserves the previous content. Publishing locks the selected revision for active attempts.</p>{(draft?.versions ?? []).map((item: any) => <small key={item.id}>Revision {item.versionNumber} · {item.changeNote || 'No change note'}</small>)}</article>{draft && <form className="fl-card fl-form" onSubmit={uploadAuthorAsset}><span>PRIVATE AUTHOR ASSETS</span><h3>Attach proof material</h3><p>Assets remain tenant-private and unavailable until the shared storage malware scan passes.</p><input name="authorAsset" aria-label="Private challenge author asset" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json" /><button disabled={busy === 'author-asset'}><Upload size={14} /> Upload for scanning</button>{challengeAttachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form>}</aside>
+            <aside className="fl-side"><article className="fl-card"><span>DRAFTS</span>{drafts.map((item) => <button className="fl-list-button" key={item.id} onClick={() => void openDraft(item.id)} data-selected-draft={draft?.challenge?.id === item.id ? 'true' : undefined} aria-current={draft?.challenge?.id === item.id ? 'true' : undefined}><span>{item.title}</span><b>{item.status} · revision {item.currentVersionNumber}</b></button>)}{drafts.length === 0 && <p>No drafts are available.</p>}</article><article className="fl-card"><History size={20} /><h3>Revision history</h3><p>Every save preserves the previous content. Publishing locks the selected revision for active attempts.</p>{(draft?.versions ?? []).map((item: any) => <small key={item.id}>Revision {item.versionNumber} · {item.changeNote || 'No change note'}</small>)}</article>{draft && <form className="fl-card fl-form" onSubmit={uploadAuthorAsset}><span>PRIVATE AUTHOR ASSETS</span><h3>Attach proof material</h3><p>Files remain private to your organization and unavailable until the malware scan passes.</p><input name="authorAsset" aria-label="Private challenge author asset" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json" /><button disabled={busy === 'author-asset'}><Upload size={14} /> Upload for scanning</button>{challengeAttachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form>}</aside>
           </section>
         )}
       </div>

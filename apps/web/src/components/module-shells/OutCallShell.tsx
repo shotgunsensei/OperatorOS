@@ -8,6 +8,7 @@ import { Activity, Grid2X2, LifeBuoy, PhoneCall, ShieldCheck, UserRound } from '
 import { useAuth } from '@/components/AuthProvider';
 import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
+import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { OUTCALL_NAVIGATION, OUTCALL_THEME, resolveOutCallRoute } from './OutCallRoute.contract';
@@ -30,7 +31,11 @@ export default function OutCallShell({ routePath }: OutCallShellProps) {
     ...group, items: group.items.map(item => ({ ...item, canonicalPath: hrefFor(item.canonicalPath) })),
   })), [hrefFor]);
   const platformAdmin = user?.platformRole === 'super_admin';
-  const roleLabel = platformAdmin ? 'Platform administrator' : activeRole === 'owner' ? 'Organization owner' : activeRole === 'admin' ? 'Organization administrator' : activeRole === 'viewer' ? 'Read-only observer' : 'OutCall user';
+  const moduleAccessLevel = useModuleAccessLevel();
+  const canWriteModule = platformAdmin || (activeRole !== 'viewer' && (moduleAccessLevel
+    ? moduleAccessLevel === 'user' || moduleAccessLevel === 'manager'
+    : Boolean(activeRole)));
+  const roleLabel = platformAdmin ? 'Platform administrator' : !canWriteModule ? 'Read-only access' : activeRole === 'owner' ? 'Organization owner' : activeRole === 'admin' ? 'Organization administrator' : 'OutCall user';
   return <ModuleApplicationShell
     moduleId="outcall"
     moduleName="OutCall"
@@ -38,7 +43,7 @@ export default function OutCallShell({ routePath }: OutCallShellProps) {
     currentPath={hrefFor(route.canonicalPath)}
     navigation={navigation}
     brand={<Link href={hrefFor('/')} className="outcall-brand"><span><PhoneCall size={20}/></span><strong>OutCall</strong></Link>}
-    organization={{ label: 'Organization', value: activeTenant?.name ?? tenantId ?? 'No organization selected', testId: 'outcall-tenant-badge' }}
+    organization={{ label: 'Organization', value: activeTenant?.name ?? (tenantId ? 'Selected organization' : 'No organization selected'), testId: 'outcall-tenant-badge' }}
     accessContext={{ label: 'Access', value: roleLabel, testId: 'outcall-role-badge' }}
     utilityActions={[
       { label: 'My Apps', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, icon: Grid2X2, testId: 'outcall-return-command-center' },
@@ -47,14 +52,14 @@ export default function OutCallShell({ routePath }: OutCallShellProps) {
     ]}
     page={{ eyebrow: route.eyebrow, title: route.title, subtitle: route.subtitle, actions: route.area === 'compliance' ? null : <Link className="outcall-action" href={hrefFor('/compliance')}><ShieldCheck size={15}/>Safety and privacy</Link>, detailLabel: route.recordId }}
     state={authLoading || tenantLoading ? 'loading' : !tenantId ? 'empty' : 'ready'}
-    stateMessage={!tenantId ? 'Choose an organization in My Apps before opening tenant-scoped OutCall data.' : undefined}
+    stateMessage={!tenantId ? 'Choose an organization in My Apps before opening its OutCall workspace.' : undefined}
     pageHeaderTestId="outcall-module-header"
     mobileNavigation="drawer"
     testId="outcall-module-shell"
     dataAttributes={{ 'data-outcall-route': route.area }}
   >
     <style>{routeCss}</style>
-    {tenantId && <OutCallWorkspace key={`${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} hrefFor={hrefFor}/>}
+    {tenantId && <OutCallWorkspace key={`${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} hrefFor={hrefFor} canWrite={canWriteModule}/>}
   </ModuleApplicationShell>;
 }
 

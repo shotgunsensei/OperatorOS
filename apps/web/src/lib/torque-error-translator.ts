@@ -136,9 +136,9 @@ const DEFINITIONS: Readonly<Record<string, ErrorDefinition>> = Object.freeze({
     administratorAction: 'Correct the exact TorqueShed public origin and relative return route.',
   },
   TORQUE_RELEASE_IDENTITY_MISMATCH: {
-    message: 'Credit checkout is unavailable while the deployed release identity is unverified.',
+    message: 'Credit checkout is temporarily unavailable while the payment setup is being verified.',
     retryable: false,
-    administratorAction: 'Deploy and verify one matching build and database release identity.',
+    administratorAction: 'Verify that the application build and database release match before reopening checkout.',
   },
   TORQUE_PURCHASE_NOT_FOUND: {
     message: 'The payment reference is unavailable in this tenant.',

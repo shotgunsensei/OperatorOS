@@ -55,14 +55,14 @@ test('session refresh preserves scope and revokes the replaced token', async () 
 
 test('TechDeck presents active workflows without migration or runtime notes', () => {
   const shell = read('apps/web/src/components/module-shells/TechDeckShell.tsx');
-  assert.match(shell, /Triage assignment, SLA pressure, and technician ownership/);
+  assert.match(shell, /Triage assignment, response deadlines, and technician ownership/);
   assert.match(shell, /Loading this TechDeck route/);
   assert.doesNotMatch(shell, /Migration pending|shared runtime|module entitlement state/i);
 });
 
 test('TradeFlowKit and PulseDesk present customer workflows without migration notes', () => {
   const completedShells = [
-    ['TradeFlowKitShell.tsx', /Move leads into customers, jobs, quotes, invoices, payments/],
+    ['TradeFlowKitShell.tsx', /See what needs to be quoted, scheduled, completed, invoiced, or collected next/],
     ['PulseDeskShell.tsx', /PulseDeskServiceDeskWorkspace/],
   ] as const;
 

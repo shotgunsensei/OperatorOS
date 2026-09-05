@@ -1,5 +1,141 @@
 # OperatorOS ecosystem final E2E acceptance report
 
+## Module outcome/value upgrade overlay — 2026-09-05
+
+Verdict: **NO NEW DEPLOYED E2E ACCEPTANCE — SOURCE/LOCAL RELEASE GATES GREEN;
+PRODUCTION V60 APPLY, REDEPLOYMENT, PROVIDERS, AND DEPLOYED E2E OPEN**.
+
+The current release candidate adds customer-result contracts for all 13
+canonical applications and improves the active applications' first-value
+workflows: TradeFlowKit, PulseDesk,
+TechDeck, TorqueShed, FaultlineLab, Operator Pool Hall, BrandForgeOS,
+SnapProofOS, StudyForge AI, Deploy Ops, CallCommand AI, Script Ops, and
+OutCall. It also contains ten registered handoffs: TradeFlowKit to SnapProofOS;
+SnapProofOS PDF back to the exact TradeFlowKit job; CallCommand to each of
+TradeFlowKit, PulseDesk, and TechDeck; resolved TechDeck or PulseDesk work to
+FaultlineLab; TorqueShed to SnapProofOS; TorqueShed to FaultlineLab;
+BrandForgeOS to Deploy Ops; and Script Ops to TechDeck. This overlay does not
+supersede or extend any historical acceptance result below.
+
+Local evidence is substantial but does not establish a deployed customer
+journey. The final forward-commerce source run passed **14/14**, with zero
+failures, skips, or todos, in **357.7742 ms**. The eight-file commerce
+compatibility slice passed **43/43**, with zero failures or skips, in
+**11,499.8255 ms**. A brand-new disposable PostgreSQL **16.14** database then
+passed the dynamic commerce suite **8/8**, with zero failures or skips, in
+**20,010.6101 ms**. That database run proves the one-shot v60 grandfather
+marker, owner-only and monthly-only changes, one flagship per tenant,
+tenant-owned Stripe customer persistence and portal reuse, resumable open
+Checkout, exact signed-webhook binding, replay safety, all purchased
+entitlements and seats, legacy-sale closure with existing-access compatibility,
+and the exact six-companion pricing/readiness allowlist.
+
+The final full API aggregate ran on a new disposable PostgreSQL 16 database and
+reported **1,440 tests: 1,434 passed, 0 failed, 6 intentional HTTP-only skips,
+and 0 todos** in **713,438.7749 ms**. The six skips require a separately running
+Next server; their static route contracts and the production web build passed.
+All four workspaces pass typecheck, and the repository lint gate passes with
+zero warnings. A separate empty PostgreSQL 16 rehearsal planned **v60/60** in
+798 ms, clean-applied and verified it in 18,916 ms, reapplied idempotently in
+2,907 ms, and independently verified current v60/60 in 1,860 ms. The production
+build passed deployment-scope verification, the 56-case FaultlineLab catalog,
+4/4 compiler tests, API/runner compilation, and Next 15.5.23 generation of
+35/35 pages.
+
+The final core production preflight correctly failed closed because production database,
+secret/environment, exact 13-host URL, `TRUST_PROXY`, and `RUNNER_MODE` values
+are absent from this local shell. Therefore no production runtime/preflight
+acceptance, production database apply, authenticated exact-host desktop/mobile
+run, live deployment identity check, provider call, Stripe/billing operation,
+DNS change, customer-data operation, or rollback rehearsal is claimed. Local
+SVG/PNG creation in BrandForgeOS does not prove Canva or Figma connectivity:
+those products remain manual import destinations only. Operator Pool Hall
+remains a free benefit, and OutCall explicitly remains coming soon and is not
+sale-ready or launch-ready.
+
+This evidence certifies the source/local release-v60 candidate only. Its
+source-publication gate remains open until an exact commit and successful push
+are recorded. Live production remains the accepted v59/59 release ending in
+`core_suite_trial_tables`; no production database apply or Replit redeploy
+occurred during this verification. The production supervisor remains
+verify-only, so a reviewed production backup, separate one-shot v60 apply, and
+v60 verification must precede the user-initiated Replit redeploy. A v60
+artifact presented to the current v59 database is expected to fail closed.
+
+The data-fabric proof includes HMAC-SHA-256 signature-envelope v2 events that
+bind the workflow contract and source deep link as well as tenant, actor, source
+record, payload, sequencing, idempotency, and correlation/causation fields.
+Existing signature-envelope v1 rows remain verifiable only during the
+controlled current/previous-signing-material compatibility window; new workflow
+events use v2. Activity-list visibility is limited to tenant/platform
+administrators and also requires access to both applications. Full exact-run
+detail is available to the creator, tenant/platform administrators, and people
+with manager access in both applications. For nine tenant-owned outcomes, an
+additional person with write access in both applications may open the already-
+created shared result with actor, request/idempotency key, and fingerprint
+redacted. BrandForgeOS-to-Deploy Ops remains actor-owned. Unauthorized exact
+run identifiers return not-found.
+
+The dual-model pricing blocker is resolved in current source and disposable-
+database behavior. Application Stack is now the sole forward-sale path:
+TradeFlowKit and PulseDesk are $149/month, TechDeck is $99/month, five seats and
+one eligible tenant-wide companion are included, additional eligible companions
+are $29/month, and additional seats are $15/month. Sales are monthly-only,
+limited to one flagship per tenant, and restricted to the tenant owner. The
+exact paid-companion set is SnapProofOS, BrandForgeOS, StudyForge AI, Deploy Ops,
+CallCommand AI, and Script Ops; core applications, TorqueShed, FaultlineLab,
+Operator Pool Hall, and coming-soon OutCall are excluded.
+
+Starter, Pro, Elite, and per-application purchase routes now reject new sales
+explicitly while v60-marked active/trialing legacy records retain read and
+cancellation compatibility. New legacy-shaped rows do not inherit access. The
+new tenant application-subscription record owns the Stripe customer, Checkout
+intent, and provider subscription, and the portal prefers that same customer.
+Pricing administration is a read-only six-item shared-price readiness surface;
+retained per-module mutation endpoints fail closed. These are source/local
+results only: no live Stripe catalog, customer, payment, webhook endpoint,
+Billing Portal, or production legacy reconciliation was exercised.
+
+Before this upgrade can receive deployed E2E acceptance, fresh evidence must
+prove:
+
+1. the customer-language promise, first useful action, loading/empty/error
+   states, and exact deep links for every one of the 13 applications across
+   supported desktop and mobile layouts;
+2. the ten already-proven disposable-database writes through authenticated
+   exact-host UI journeys, including exact source/destination navigation,
+   completion state, and retry presentation;
+3. deployed queue-time and delivery-time tenant, application, and role denial,
+   including a regular member being unable to transfer another member's private
+   TorqueShed diagnostic;
+4. deployed activity-list and exact-run visibility for the creator,
+   tenant/platform administrator, dual-application manager, dual-application
+   writer, ordinary reader, and cross-tenant user, with the required redaction
+   and unauthorized exact identifiers returning not-found;
+5. CallCommand automatic rules binding the analyzed call's current source
+   version, simulator-call rejection, and the per-call-only privacy confirmation
+   for PulseDesk;
+6. BrandForgeOS SVG and PNG download, safe private PNG save, replacement and
+   30-day recovery behavior, plus honest manual Canva/Figma import wording;
+7. the absence of false publication, deployment, customer-contact, billing,
+   payment, provider, or script-execution success states.
+
+Commercial sale readiness is now blocked by external configuration and deployed
+acceptance rather than an unresolved product model or local release failure. It
+still requires the approved Stripe Products and shared prices, webhook and
+portal configuration, backup/reconciliation/rollback evidence, exact-host
+authenticated owner and non-owner journeys, and the exact deployed release
+identity.
+
+Until the remaining publication, production-promotion, and deployed-acceptance
+gates pass, the 2026-09-03 acceptance below applies only to the v59 revision and
+scope it names.
+
+---
+
+> Historical evidence boundary: every section below records an earlier revision
+> and scope. None certifies the current v60 module-outcome release candidate.
+
 ## Autoscale startup/readiness overlay — 2026-09-03
 
 Verdict: **RELEASE CANDIDATE ACCEPTED — PUBLISH PENDING**.

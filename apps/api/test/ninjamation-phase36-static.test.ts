@@ -43,8 +43,8 @@ test('Phase 36 preserves the hard no-execution boundary in API and web processes
   }
   assert.match(route, /executionSupported: false/);
   assert.match(shell, /never executes script source/);
-  assert.match(shell, /runner-gateway/);
-  assert.match(shell, /No execution claim or command interpolation/);
+  assert.match(shell, /browser, web server, or API process/);
+  assert.match(shell, /Never executes a script/i);
 });
 
 test('Phase 36 release v45 is retained additively and contains every new persisted domain', () => {
@@ -64,7 +64,7 @@ test('Phase 36 release v45 is retained additively and contains every new persist
 });
 
 test('Phase 36 premium product shell and exact-host routes cover every source page and honest plan state', () => {
-  for (const phrase of ['Script Ops','AI drafting','GitHub Sync','Account','Admin','AutomationPacks','OperatorOS owns identity']) {
+  for (const phrase of ['Script Ops','AI drafting','GitHub Sync','Account','Admin','AutomationPacks','Application Stack','organization access, grandfathered plan, and billing are managed']) {
     assert.match(`${shell}\n${publicPage}`, new RegExp(phrase));
   }
   for (const path of ['/library','/generate','/account','/admin','/checkout/success','/checkout/cancel']) {

@@ -662,7 +662,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
     }
   });
 
-  app.post('/v1/modules/studyforge-ai/quizzes/:id/attempts', { preHandler: readGuards }, async (request, reply) => {
+  app.post('/v1/modules/studyforge-ai/quizzes/:id/attempts', { preHandler: writeGuards }, async (request, reply) => {
     try {
       const answers = parseAttempt(request.body);
       const { tenantId, userId } = context(request);
@@ -707,7 +707,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
     }
   });
 
-  app.post('/v1/modules/studyforge-ai/cards/:id/reviews', { preHandler: readGuards }, async (request, reply) => {
+  app.post('/v1/modules/studyforge-ai/cards/:id/reviews', { preHandler: writeGuards }, async (request, reply) => {
     try {
       const input = parseReview(request.body);
       const { tenantId, userId } = context(request);
@@ -745,7 +745,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
     }
   });
 
-  app.patch('/v1/modules/studyforge-ai/plan-sessions/:id', { preHandler: readGuards }, async (request, reply) => {
+  app.patch('/v1/modules/studyforge-ai/plan-sessions/:id', { preHandler: writeGuards }, async (request, reply) => {
     try {
       const input = parseSessionCompletion(request.body);
       const { tenantId, userId } = context(request);

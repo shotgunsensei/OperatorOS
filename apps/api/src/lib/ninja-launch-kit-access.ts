@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { resolveEntitlements } from './entitlement-resolver.js';
+import { tenantHasActiveApplicationStackCompanion } from './product-entitlements.js';
 import { NINJA_LAUNCH_PLAN_LIMITS, type NinjaLaunchPlan } from './ninja-launch-kit-phase34.js';
 
 type Executor = Pick<typeof db, 'execute'>;
@@ -8,12 +9,19 @@ type Executor = Pick<typeof db, 'execute'>;
 export interface NinjaLaunchAccess {
   plan: NinjaLaunchPlan;
   limits: (typeof NINJA_LAUNCH_PLAN_LIMITS)[NinjaLaunchPlan];
-  source: 'module_feature' | 'tenant_entitlement' | 'default';
+  source: 'application_stack' | 'module_feature' | 'tenant_entitlement' | 'default';
 }
 
 export async function resolveNinjaLaunchAccess(userId: string, tenantId: string): Promise<NinjaLaunchAccess> {
   const snapshot = await resolveEntitlements(userId, tenantId);
   const module = snapshot?.modules.find((entry) => entry.slug === 'ninja-launch-kit');
+  if (module?.enabled && await tenantHasActiveApplicationStackCompanion(tenantId, 'ninja-launch-kit')) {
+    return {
+      plan: 'agency',
+      limits: NINJA_LAUNCH_PLAN_LIMITS.agency,
+      source: 'application_stack',
+    };
+  }
   const configured = module?.features.ninjaLaunchKitPlan;
   let plan: NinjaLaunchPlan = configured === 'agency' || configured === 'pro' || configured === 'free' ? configured : 'free';
   let source: NinjaLaunchAccess['source'] = configured === plan ? 'module_feature' : 'default';

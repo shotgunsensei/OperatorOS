@@ -73,6 +73,11 @@ test('success path: claim persists metadata.rawEvent and processAddonWebhookEven
   assert.equal(isDuplicate, false);
   assert.ok(claimedRowId, 'claim should return a row id');
 
+  const concurrent = await claimStripeEvent(event, cls);
+  assert.equal(concurrent.isDuplicate, true, 'an unexpired processing lease cannot be double-dispatched');
+  assert.equal(concurrent.duplicateState, 'in_flight');
+  assert.equal(concurrent.claimedRowId, null);
+
   const [claimRow] = await db.select().from(billingEvents).where(eq(billingEvents.id, claimedRowId!));
   const md = (claimRow.metadata ?? {}) as any;
   assert.deepEqual(md.rawEvent, event, 'rawEvent must be persisted on claim');
@@ -123,6 +128,34 @@ test('failure path: unknown module slug — claim still persists rawEvent and ma
   assert.ok(afterMd.lastFailureAt, 'lastFailureAt should be merged into metadata');
   assert.equal(afterRow.errorMessage, result.error ?? 'not_handled');
   assert.equal(afterRow.processedAt, null, 'failed event must remain in DLQ (processedAt=null)');
+
+  const reclaimed = await claimStripeEvent(event, cls);
+  assert.equal(reclaimed.isDuplicate, false, 'a failed delivery must be retryable by Stripe');
+  assert.equal(reclaimed.claimedRowId, claimedRowId, 'retry must reuse the original event row');
+  const [reclaimedRow] = await db.select().from(billingEvents).where(eq(billingEvents.id, claimedRowId!));
+  assert.equal(reclaimedRow.stripeEventId, event.id, 'retry must preserve provider event identity');
+  assert.equal(reclaimedRow.retryCount, 1);
+  assert.deepEqual((reclaimedRow.metadata as any)?.rawEvent, event);
+  await markStripeEventFailed(claimedRowId!, 'still_not_handled');
+});
+
+test('untrusted webhook user metadata cannot poison the durable claim foreign key', async () => {
+  const event = buildAddonCheckoutEvent({
+    userId: '00000000-0000-0000-0000-000000000000',
+    moduleSlug,
+  });
+  const cls = classifyWebhookEvent(event);
+  const claim = await claimStripeEvent(event, cls);
+  assert.equal(claim.isDuplicate, false);
+  assert.ok(claim.claimedRowId);
+  try {
+    const [row] = await db.select().from(billingEvents).where(eq(billingEvents.id, claim.claimedRowId!));
+    assert.equal(row.userId, null, 'unknown metadata user must be stored as unattributed');
+    assert.equal(row.stripeEventId, event.id);
+    assert.deepEqual((row.metadata as any)?.rawEvent, event);
+  } finally {
+    await db.delete(billingEvents).where(eq(billingEvents.id, claim.claimedRowId!));
+  }
 });
 
 test('POST /v1/platform/billing/events/:id/retry performs true replay; second retry returns duplicate_ignored', async () => {
@@ -166,6 +199,8 @@ test('POST /v1/platform/billing/events/:id/retry performs true replay; second re
   const [rowAfterReplay] = await db.select().from(billingEvents).where(eq(billingEvents.id, claimedRowId!));
   assert.ok(rowAfterReplay.processedAt, 'replay must set processedAt');
   assert.equal(rowAfterReplay.errorMessage, null);
+  assert.equal(rowAfterReplay.stripeEventId, event.id, 'admin replay must never clear provider identity');
+  assert.equal(rowAfterReplay.retryCount, 1);
   const replayMd = (rowAfterReplay.metadata ?? {}) as any;
   assert.deepEqual(replayMd.rawEvent, event, 'rawEvent must remain after replay');
   assert.ok(replayMd.replayedAt, 'replayedAt should be recorded');

@@ -10,7 +10,9 @@ import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
 import { hasPlatformAdminAuthority } from './rbac.js';
 import { resolveTenantModuleAccess } from './tenant-entitlements.js';
-import { getCanonicalModuleDisplayName } from '@operatoros/sdk';
+import { subscriptionHasLegacyApplicationAccess } from './application-stack-billing-db-init.js';
+import type { TenantModuleAccessLevel } from './tenant-entitlements.js';
+import { getCanonicalModuleDisplayName, getModuleProductValue } from '@operatoros/sdk';
 
 /**
  * Access-source taxonomy — the single source of truth for how a user got
@@ -39,6 +41,7 @@ export interface ModuleAccess {
   moduleSlug: string;
   hasAccess: boolean;
   source: AccessSource;
+  accessLevel: TenantModuleAccessLevel;
   reason?: string;
   expiresAt?: Date | null;
 }
@@ -77,6 +80,8 @@ export interface UserModuleSummary {
   upgrade_target_plan: string | null;
   addon_price_cents: number | null;
   access_expires_at: string | null;
+  /** Server-resolved role for this user in this tenant and module. */
+  module_access_level: TenantModuleAccessLevel;
   reason?: string;
 }
 
@@ -150,8 +155,29 @@ export async function getActiveSubscription(userId: string) {
   return sub ?? null;
 }
 
-async function getUserPlanSlug(userId: string): Promise<string | null> {
-  const sub = await getActiveSubscription(userId);
+/**
+ * Resolve the currently-effective legacy subscription for one exact tenant.
+ *
+ * Unlike `getActiveSubscription`, this authorization helper never falls back
+ * to a canceled or expired row and never lets an owner's contract for one
+ * organization influence another organization they happen to own.
+ */
+export async function getActiveSubscriptionForTenant(userId: string, tenantId: string) {
+  const [sub] = await db.select().from(subscriptions)
+    .where(and(
+      eq(subscriptions.userId, userId),
+      eq(subscriptions.tenantId, tenantId),
+      sql`${subscriptions.status} IN ('active','trialing')`,
+    ))
+    .orderBy(desc(subscriptions.createdAt))
+    .limit(1);
+  return sub ?? null;
+}
+
+async function getUserPlanSlug(userId: string, tenantId?: string): Promise<string | null> {
+  const sub = tenantId
+    ? await getActiveSubscriptionForTenant(userId, tenantId)
+    : await getActiveSubscription(userId);
   if (!sub) return null;
   if (!['active', 'trialing'].includes(sub.status)) return null;
   const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
@@ -165,20 +191,22 @@ async function planGrantsModule(planId: string, moduleId: string): Promise<boole
   return rows.length > 0;
 }
 
-async function activeAddonForUser(userId: string, moduleId: string) {
+async function activeAddonForUser(userId: string, moduleId: string, tenantId?: string) {
   const rows = await db.select().from(addonSubscriptions)
     .where(and(
       eq(addonSubscriptions.userId, userId),
       eq(addonSubscriptions.moduleId, moduleId),
+      ...(tenantId ? [eq(addonSubscriptions.tenantId, tenantId)] : []),
     ));
   return rows.find(r => ['active', 'trialing'].includes(r.status)) ?? null;
 }
 
-async function activeOverrideForUser(userId: string, moduleId: string) {
+async function activeOverrideForUser(userId: string, moduleId: string, tenantId?: string) {
   const rows = await db.select().from(entitlementOverrides)
     .where(and(
       eq(entitlementOverrides.userId, userId),
       eq(entitlementOverrides.moduleId, moduleId),
+      ...(tenantId ? [eq(entitlementOverrides.tenantId, tenantId)] : []),
     ));
   const now = new Date();
   const valid = rows
@@ -197,19 +225,23 @@ async function activeOverrideForUser(userId: string, moduleId: string) {
  * Returns the AccessSource that won, or null when the user has no
  * entitlement (or has been explicitly revoked).
  */
-export async function evaluateUserEntitlement(userId: string, moduleId: string): Promise<AccessSource> {
+export async function evaluateUserEntitlement(
+  userId: string,
+  tenantId: string,
+  moduleId: string,
+): Promise<AccessSource> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user || user.status !== 'active') return null;
   if (hasPlatformAdminAuthority(user)) return 'admin_role';
 
-  const override = await activeOverrideForUser(userId, moduleId);
+  const override = await activeOverrideForUser(userId, moduleId, tenantId);
   if (override) return override.grant ? 'override' : null;
 
-  const addon = await activeAddonForUser(userId, moduleId);
+  const addon = await activeAddonForUser(userId, moduleId, tenantId);
   if (addon) return 'addon';
 
-  const sub = await getActiveSubscription(userId);
-  if (sub && ['active', 'trialing'].includes(sub.status)) {
+  const sub = await getActiveSubscriptionForTenant(userId, tenantId);
+  if (sub && await subscriptionHasLegacyApplicationAccess(sub.id)) {
     if (await planGrantsModule(sub.planId, moduleId)) return 'plan';
   }
   return null;
@@ -289,20 +321,21 @@ export async function getUserModules(userId: string, tenantId: string): Promise<
     const access = await hasModuleAccess(userId, tenantId, m.slug);
     const upgradeTarget = await smallestUpgradeTarget(m.id);
     const addonPriceCents = readAddonPriceCents(m);
+    const addonPurchasable = isAddonPurchasable(m);
     const cta = pickCta({
       moduleStatus: m.status,
       hasAccess: access.hasAccess,
       hasBaseUrl: !!m.baseUrl,
       upgradeTarget,
       addonPriceCents,
-      addonPurchasable: isAddonPurchasable(m),
+      addonPurchasable,
     });
     out.push({
       module: {
         id: m.id,
         slug: m.slug,
         name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
-        description: m.description,
+        description: getModuleProductValue(m.slug)?.promise ?? m.description,
         iconUrl: m.iconUrl,
         category: m.category,
         status: m.status,
@@ -315,8 +348,9 @@ export async function getUserModules(userId: string, tenantId: string): Promise<
       access_source: access.source,
       cta,
       upgrade_target_plan: upgradeTarget,
-      addon_price_cents: addonPriceCents,
+      addon_price_cents: addonPurchasable ? addonPriceCents : null,
       access_expires_at: access.expiresAt?.toISOString() ?? null,
+      module_access_level: access.accessLevel,
       reason: access.reason,
     });
   }
@@ -332,20 +366,21 @@ export async function getModuleForUser(userId: string, tenantId: string, moduleS
   const access = await hasModuleAccess(userId, tenantId, moduleSlug);
   const upgradeTarget = await smallestUpgradeTarget(m.id);
   const addonPriceCents = readAddonPriceCents(m);
+  const addonPurchasable = isAddonPurchasable(m);
   const cta = pickCta({
     moduleStatus: m.status,
     hasAccess: access.hasAccess,
     hasBaseUrl: !!m.baseUrl,
     upgradeTarget,
     addonPriceCents,
-    addonPurchasable: isAddonPurchasable(m),
+    addonPurchasable,
   });
   const component = m.componentId ? await loadComponentRef(m.componentId) : null;
   return {
     module: {
       id: m.id, slug: m.slug,
       name: getCanonicalModuleDisplayName(m.slug) ?? m.name,
-      description: m.description,
+      description: getModuleProductValue(m.slug)?.promise ?? m.description,
       iconUrl: m.iconUrl, category: m.category, status: m.status,
       planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord, component,
     },
@@ -353,8 +388,9 @@ export async function getModuleForUser(userId: string, tenantId: string, moduleS
     access_source: access.source,
     cta,
     upgrade_target_plan: upgradeTarget,
-    addon_price_cents: addonPriceCents,
+    addon_price_cents: addonPurchasable ? addonPriceCents : null,
     access_expires_at: access.expiresAt?.toISOString() ?? null,
+    module_access_level: access.accessLevel,
     reason: access.reason,
   };
 }
@@ -368,14 +404,16 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
   if (!mod) return null;
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  const planSlug = await getUserPlanSlug(userId);
-  const sub = await getActiveSubscription(userId);
-  const planGrants = sub ? await planGrantsModule(sub.planId, mod.id) : false;
+  const planSlug = await getUserPlanSlug(userId, tenantId);
+  const sub = await getActiveSubscriptionForTenant(userId, tenantId);
+  const planGrants = sub && await subscriptionHasLegacyApplicationAccess(sub.id)
+    ? await planGrantsModule(sub.planId, mod.id)
+    : false;
 
-  const addon = await activeAddonForUser(userId, mod.id);
+  const addon = await activeAddonForUser(userId, mod.id, tenantId);
   const addonGrants = !!addon;
 
-  const override = await activeOverrideForUser(userId, mod.id);
+  const override = await activeOverrideForUser(userId, mod.id, tenantId);
   const overrideGrants = override ? override.grant : null;
 
   const access = await hasModuleAccess(userId, tenantId, moduleSlug);
@@ -401,32 +439,39 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
  * size. The aggregate IS the contract — `/v1/modules/debug` returns this
  * shape verbatim.
  */
-export async function getAccessBreakdown(userId: string): Promise<AccessBreakdown> {
+export async function getAccessBreakdown(userId: string, tenantId: string): Promise<AccessBreakdown> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   const isAdmin = hasPlatformAdminAuthority(user);
-  const planSlug = await getUserPlanSlug(userId);
+  const planSlug = await getUserPlanSlug(userId, tenantId);
 
   const allModules = await db.select().from(modules);
   const modById = Object.fromEntries(allModules.map(m => [m.id, m]));
   const launchable = (m: { status: string }) => m.status !== 'disabled' && m.status !== 'coming_soon';
 
   // Plan inclusions (bulk) — must match getUserPlanSlug's row choice.
-  const sub = await getActiveSubscription(userId);
+  const sub = await getActiveSubscriptionForTenant(userId, tenantId);
   let planModuleSlugs: string[] = [];
-  if (sub && ['active', 'trialing'].includes(sub.status)) {
+  if (sub && ['active', 'trialing'].includes(sub.status)
+      && await subscriptionHasLegacyApplicationAccess(sub.id)) {
     const mappings = await db.select().from(planModules).where(eq(planModules.planId, sub.planId));
     planModuleSlugs = mappings.map(m => modById[m.moduleId]?.slug).filter((s): s is string => !!s);
   }
 
   // Active addons (bulk)
-  const allAddons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, userId));
+  const allAddons = await db.select().from(addonSubscriptions).where(and(
+    eq(addonSubscriptions.userId, userId),
+    eq(addonSubscriptions.tenantId, tenantId),
+  ));
   const addonModuleSlugs = allAddons
     .filter(a => ['active', 'trialing'].includes(a.status))
     .map(a => modById[a.moduleId]?.slug)
     .filter((s): s is string => !!s);
 
   // Overrides (bulk; latest wins per module)
-  const allOverrides = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.userId, userId));
+  const allOverrides = await db.select().from(entitlementOverrides).where(and(
+    eq(entitlementOverrides.userId, userId),
+    eq(entitlementOverrides.tenantId, tenantId),
+  ));
   const now = new Date();
   const latestOverrideByMod = new Map<string, typeof allOverrides[number]>();
   for (const o of allOverrides) {
@@ -524,12 +569,13 @@ async function hasModuleAccessTenantScoped(
       moduleSlug: decision.moduleSlug,
       hasAccess: decision.hasAccess,
       source: decision.source,
+      accessLevel: decision.accessLevel,
       reason: decision.reason,
       expiresAt: decision.expiresAt ?? null,
     };
   } catch (err) {
     console.error('[entitlement] hasModuleAccess (tenant-scoped) error:', err);
-    return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };
+    return { moduleSlug, hasAccess: false, source: null, accessLevel: 'none', reason: 'evaluation_error' };
   }
 }
 

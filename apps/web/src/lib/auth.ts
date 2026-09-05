@@ -177,6 +177,7 @@ export const billingApi = {
     freeCompanionModule: string;
     additionalModules: string[];
     additionalSeats: number;
+    interval?: 'month';
   }) => apiFetch('/billing/stack/checkout', { method: 'POST', body: JSON.stringify(selection) }),
   changeFreeCompanion: (moduleKey: string) =>
     apiFetch('/billing/stack/free-companion', { method: 'POST', body: JSON.stringify({ moduleKey }) }),
@@ -300,6 +301,27 @@ export const sharedPlatformApi = {
     apiFetch(`/tenants/${tenantId}/shared-platform/exports`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(data) }),
   createDownloadGrant: (tenantId: string, attachmentId: string, moduleSlug: string) =>
     apiFetch(`/tenants/${tenantId}/shared-platform/attachments/${attachmentId}/download-grant`, { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
+  startDataFabricWorkflow: (
+    tenantId: string,
+    workflowKey: string,
+    input: {
+      aggregateId: string;
+      sourceDeepLink: string;
+      idempotencyKey: string;
+      sourceModuleSlug?: string;
+      sourceType?: string;
+      sourceKind?: string;
+      expectedSourceVersion: string | number;
+      payload?: Record<string, unknown>;
+    },
+  ) => apiFetch(`/tenants/${tenantId}/data-fabric/workflows/${encodeURIComponent(workflowKey)}`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }),
+  dataFabricWorkflowReadiness: (tenantId: string, workflowKey: string, sourceModuleSlug?: string) => {
+    const query = sourceModuleSlug ? `?sourceModuleSlug=${encodeURIComponent(sourceModuleSlug)}` : '';
+    return apiFetch(`/tenants/${tenantId}/data-fabric/workflows/${encodeURIComponent(workflowKey)}/readiness${query}`);
+  },
   dataFabricActivity: (tenantId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/activity`),
   dataFabricRun: (tenantId: string, runId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/runs/${runId}`),
   replayDataFabricInbox: (tenantId: string, inboxId: string) =>
@@ -1272,8 +1294,20 @@ export interface TechDeckDocument {
 export interface TechDeckEvidence {
   id: string; title: string; evidenceType: string; summary: string | null; configurationItemId: string | null; documentId: string | null; ticketId: string | null; observedAt: string | null; createdAt: string;
 }
+export interface TechDeckReportSnapshot {
+  reportType?: string;
+  configurationItems?: {
+    total?: number;
+    byType?: Record<string, number>;
+    byStatus?: Record<string, number>;
+    byHealth?: Record<string, number>;
+  };
+  tickets?: { total?: number; byStatus?: Record<string, number>; byPriority?: Record<string, number> };
+  evidenceCount?: number;
+  time?: { entries?: number; minutes?: number; billableMinutes?: number };
+}
 export interface TechDeckReport {
-  id: string; name: string; reportType: string; sha256: string; snapshot: Record<string, unknown>; createdAt: string;
+  id: string; name: string; reportType: string; sha256: string; snapshot: TechDeckReportSnapshot; createdAt: string;
 }
 export interface TechDeckTimeEntry {
   id: string; ticketId: string | null; configurationItemId: string | null; workedAt: string; minutes: number; billable: boolean; notes: string | null;
@@ -1302,7 +1336,18 @@ export interface TechDeckLiteralWorkspaceResponse {
   intakeRequests: Array<Record<string, any>>;
   apiTokens: Array<Record<string, any>>;
   webhooks: Array<Record<string, any>>;
-  exports: Array<Record<string, any>>;
+  exports: Array<{
+    id: string;
+    export_type: string;
+    format: string;
+    status: 'pending' | 'processing' | 'retry' | 'completed' | 'dead_letter' | 'cancelled';
+    result_attachment_id: string | null;
+    attachment_scan_status: 'pending' | 'clean' | 'unavailable' | 'infected' | 'error' | null;
+    last_error_code: string | null;
+    created_at: string;
+    completed_at: string | null;
+    expires_at: string | null;
+  }>;
 }
 export interface TradeFlowKitPayment { id: string; invoiceId: string; amountCents: number; method: string; status: string; paidAt: string; }
 export interface TradeFlowKitSettings {
@@ -1560,6 +1605,8 @@ export const moduleShellApi = {
       apiFetch('/modules/brandforgeos/brands', { method: 'POST', body: JSON.stringify(input) }) as Promise<BrandForgeBrand>,
     updateBrand: (id: string, input: Record<string, unknown>): Promise<BrandForgeBrand> =>
       apiFetch(`/modules/brandforgeos/brands/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<BrandForgeBrand>,
+    saveLogo: (id: string, input: { expectedVersion: number; fileName: string; mimeType: 'image/png' | 'image/jpeg' | 'image/webp'; contentBase64: string; idempotencyKey: string }): Promise<{ brand: BrandForgeBrand; logo: { id: string; fileName: string; mimeType: string; scanStatus: string }; duplicate: boolean; pendingSafetyCheck: boolean }> =>
+      apiFetch(`/modules/brandforgeos/brands/${encodeURIComponent(id)}/logo`, { method: 'POST', body: JSON.stringify(input) }) as Promise<{ brand: BrandForgeBrand; logo: { id: string; fileName: string; mimeType: string; scanStatus: string }; duplicate: boolean; pendingSafetyCheck: boolean }>,
     deleteBrand: (id: string): Promise<{ ok: true }> =>
       apiFetch(`/modules/brandforgeos/brands/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
     listPersonas: (): Promise<{ personas: BrandForgePersona[] }> =>
@@ -1594,6 +1641,8 @@ export const moduleShellApi = {
       apiFetch('/modules/brandforgeos/calendar-items', { method: 'POST', body: JSON.stringify(input) }) as Promise<BrandForgeCalendarItem>,
     updateCalendar: (id: string, input: Record<string, unknown>): Promise<BrandForgeCalendarItem> =>
       apiFetch(`/modules/brandforgeos/calendar-items/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<BrandForgeCalendarItem>,
+    recordCalendarPublication: (id: string, input: Record<string, unknown>): Promise<{ calendarItem: BrandForgeCalendarItem; externalPublication: { reference: string; recordedAt: string; performedByOperatorOS: false }; replayed: boolean }> =>
+      apiFetch(`/modules/brandforgeos/calendar-items/${encodeURIComponent(id)}/record-publication`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     deleteCalendar: (id: string): Promise<{ ok: true }> =>
       apiFetch(`/modules/brandforgeos/calendar-items/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
     listGenerations: (): Promise<{ generations: BrandForgeGeneration[]; provider: { name: string; configured: boolean } }> =>
@@ -2138,6 +2187,14 @@ export const moduleShellApi = {
   techdeck: {
     getWorkspace: (): Promise<TechDeckWorkspaceResponse> =>
       apiFetch('/modules/techdeck/workspace') as Promise<TechDeckWorkspaceResponse>,
+    getConfigurationItem: (id: string): Promise<TechDeckAsset> =>
+      apiFetch(`/modules/techdeck/configuration-items/${encodeURIComponent(id)}`) as Promise<TechDeckAsset>,
+    getDocument: (id: string): Promise<TechDeckDocument> =>
+      apiFetch(`/modules/techdeck/documents/${encodeURIComponent(id)}`) as Promise<TechDeckDocument>,
+    getEvidence: (id: string): Promise<TechDeckEvidence> =>
+      apiFetch(`/modules/techdeck/evidence/${encodeURIComponent(id)}`) as Promise<TechDeckEvidence>,
+    getReport: (id: string): Promise<TechDeckReport> =>
+      apiFetch(`/modules/techdeck/reports/${encodeURIComponent(id)}`) as Promise<TechDeckReport>,
     getLiteralWorkspace: (): Promise<TechDeckLiteralWorkspaceResponse> =>
       apiFetch('/modules/techdeck/literal-workspace') as Promise<TechDeckLiteralWorkspaceResponse>,
     literalAction: (
@@ -2163,6 +2220,10 @@ export const moduleShellApi = {
       apiFetch('/modules/techdeck/evidence', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckEvidence>,
     generateReport: (name: string, reportType: string): Promise<TechDeckReport> =>
       apiFetch('/modules/techdeck/reports', { method: 'POST', body: JSON.stringify({ name, reportType }) }) as Promise<TechDeckReport>,
+    downloadReport: (id: string, format: 'json' | 'csv'): Promise<Blob> =>
+      apiDownload(`/modules/techdeck/reports/${encodeURIComponent(id)}/download?format=${format}`),
+    downloadCompliancePacket: (id: string): Promise<Blob> =>
+      apiDownload(`/modules/techdeck/compliance-packets/${encodeURIComponent(id)}/download`),
     addTime: (input: { workedAt: string; minutes: number; billable?: boolean; ticketId?: string; configurationItemId?: string; notes?: string }): Promise<TechDeckTimeEntry> =>
       apiFetch('/modules/techdeck/time', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckTimeEntry>,
     getOps: (): Promise<TechDeckOpsResponse> =>

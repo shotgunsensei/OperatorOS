@@ -77,11 +77,13 @@ export default function NinjaPoolHallShell({
   routePath,
   embedded = false,
   gameActive = false,
+  canWrite,
 }: {
   baseUrl?: string;
   routePath?: string;
   embedded?: boolean;
   gameActive?: boolean;
+  canWrite: boolean;
 }) {
   const router = useRouter();
   const initial = routeState(routePath);
@@ -192,10 +194,10 @@ export default function NinjaPoolHallShell({
                 <Gamepad2 size={14} /> Four playable modes
               </span>
               <span>
-                <Wifi size={14} /> Authenticated online rooms
+                <Wifi size={14} /> Private online rooms
               </span>
               <span>
-                <ShieldCheck size={14} /> Server-verified deterministic results
+                <ShieldCheck size={14} /> Results checked against the same game rules
               </span>
             </div>
           </header>
@@ -249,11 +251,11 @@ export default function NinjaPoolHallShell({
         ) : view === 'home' ? (
           <section className="nph-home" data-testid="ninja-pool-dashboard">
             <div className="nph-home-hero">
-              <span>SYS::TABLE_READY</span>
+              <span>TABLE READY</span>
               <h2>Choose your game</h2>
               <p>
                 Practice at your own pace, challenge the CPU, pass the table locally, or finish a
-                durable online rack with another authorized tenant member.
+                reconnect-safe online rack with another member of your organization.
               </p>
               <div className="nph-home-stats">
                 <span>
@@ -286,7 +288,7 @@ export default function NinjaPoolHallShell({
               <button type="button" onClick={() => navigate('online')}>
                 <Wifi size={24} />
                 <strong>Online rooms</strong>
-                <span>Host or join a reconnect-safe, server-verified match.</span>
+                <span>Host or join a match that survives a dropped connection.</span>
               </button>
               <button type="button" onClick={() => navigate('profile')}>
                 <Settings size={24} />
@@ -297,27 +299,29 @@ export default function NinjaPoolHallShell({
             <div className="nph-online-disabled">
               <Wifi size={20} />
               <div>
-                <strong>Room authority is active</strong>
+                <strong>Match verification is active</strong>
                 <p>
-                  Guests submit shot intents; the host simulates the visible table and OperatorOS
-                  independently verifies and persists every result.
+                  Online matches are verified, saved, and reconnectable so both players return to
+                  the same confirmed table state.
                 </p>
               </div>
             </div>
           </section>
         ) : view === 'practice' ? (
-          <NinjaPoolHallPractice />
+          <NinjaPoolHallPractice canWrite={canWrite} />
         ) : view === 'bot' ? (
           <NinjaPoolHallMatch
             mode="bot"
             profile={profileData.profile}
             onMatchPath={updateMatchPath}
+            canWrite={canWrite}
           />
         ) : view === 'local' ? (
           <NinjaPoolHallMatch
             mode="local"
             profile={profileData.profile}
             onMatchPath={updateMatchPath}
+            canWrite={canWrite}
           />
         ) : view === 'online' || view === 'host' || view === 'join' ? (
           <NinjaPoolHallOnline
@@ -325,11 +329,13 @@ export default function NinjaPoolHallShell({
             roomId={roomId}
             profile={profileData.profile}
             onRoomPath={updateRoomPath}
+            canWrite={canWrite}
           />
         ) : view === 'profile' ? (
           <NinjaPoolHallProfile
             value={profileData.profile}
             progression={profileData.progression}
+            canWrite={canWrite}
             onSaved={(profile) =>
               setProfileData((current) => (current ? { ...current, profile } : current))
             }
