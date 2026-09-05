@@ -1,6 +1,6 @@
 # Module product outcome upgrade
 
-Status: **source/local release gates green; production v60 apply, redeployment, providers, and deployed acceptance open**<br>
+Status: **implementation source-published and source/local release gates green; production v60 apply, redeployment, providers, and deployed acceptance open**<br>
 Date: 2026-09-05
 
 ## Current release-candidate integrity clarification
@@ -48,9 +48,11 @@ customer-data, DNS, or authenticated browser operation was performed for this
 upgrade. Workflow persistence and database release v60 were exercised only on
 disposable PostgreSQL, and the production artifact was built locally. Exact-host
 browser and mobile, deployed identity, live-provider, monitoring,
-backup/restore, and rollback evidence remain open. The owner approved the
-single flagship-stack model and source publication; production database and
-provider mutations remain separate gates.
+  backup/restore, and rollback evidence remain open. The owner approved the
+  single flagship-stack model, and implementation commit
+  `5024bfce4a16cd5fd7d47143d5057879316f3981` was successfully source-published
+  to GitHub `main`. Production database and provider mutations remain separate
+  gates.
 
 ## Fresh local verification
 

@@ -15,10 +15,11 @@ clean-applied it in 18,916 ms, reapplied it idempotently in 2,907 ms, and
 independently verified it in 1,860 ms; and the Next 15.5.23 production build
 generated all 35 of 35 pages.
 
-It remains a source candidate until exact commit and push evidence is recorded.
-Production remains live and accepted at v59. Production backup, manual v60
-apply/verify, Replit redeploy, live identity, authenticated exact-host,
-provider/billing, monitoring, restore, and rollback acceptance remain open.
+Implementation commit `5024bfce4a16cd5fd7d47143d5057879316f3981` was
+successfully pushed to GitHub `main` under owner authorization. Production
+remains live and accepted at v59. Production backup, manual v60 apply/verify,
+Replit redeploy, live identity, authenticated exact-host, provider/billing,
+monitoring, restore, and rollback acceptance remain open.
 
 ## Autoscale startup/readiness status
 
@@ -115,8 +116,8 @@ slice is not parity.
 
 ## Immediate next gate
 
-1. Commit and push the exact reviewed v60 candidate, then record the commit SHA
-   and remote CI result without changing the production-v59 claim.
+1. Confirm remote CI for the final source-publication commit without changing
+   the production-v59 claim.
 2. Before database promotion, complete the reviewed production backup and
    rollback preparation in `docs/DATABASE_BACKUP_RESTORE.md`.
 3. Run the separately authorized one-shot production v60 apply and verify

@@ -2,8 +2,9 @@
 
 ## Module outcome/value upgrade overlay — 2026-09-05
 
-Verdict: **NO NEW DEPLOYED E2E ACCEPTANCE — SOURCE/LOCAL RELEASE GATES GREEN;
-PRODUCTION V60 APPLY, REDEPLOYMENT, PROVIDERS, AND DEPLOYED E2E OPEN**.
+Verdict: **NO NEW DEPLOYED E2E ACCEPTANCE — SOURCE PUBLISHED AND SOURCE/LOCAL
+RELEASE GATES GREEN; PRODUCTION V60 APPLY, REDEPLOYMENT, PROVIDERS, AND DEPLOYED
+E2E OPEN**.
 
 The current release candidate adds customer-result contracts for all 13
 canonical applications and improves the active applications' first-value
@@ -53,11 +54,12 @@ those products remain manual import destinations only. Operator Pool Hall
 remains a free benefit, and OutCall explicitly remains coming soon and is not
 sale-ready or launch-ready.
 
-This evidence certifies the source/local release-v60 candidate only. Its
-source-publication gate remains open until an exact commit and successful push
-are recorded. Live production remains the accepted v59/59 release ending in
-`core_suite_trial_tables`; no production database apply or Replit redeploy
-occurred during this verification. The production supervisor remains
+This evidence certifies the source/local release-v60 candidate only.
+Implementation commit `5024bfce4a16cd5fd7d47143d5057879316f3981` was
+successfully pushed to GitHub `main` under owner authorization. Source
+publication is complete; live production remains the accepted v59/59 release
+ending in `core_suite_trial_tables`, and no production database apply or Replit
+redeploy occurred during this verification. The production supervisor remains
 verify-only, so a reviewed production backup, separate one-shot v60 apply, and
 v60 verification must precede the user-initiated Replit redeploy. A v60
 artifact presented to the current v59 database is expected to fail closed.

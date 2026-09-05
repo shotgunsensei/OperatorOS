@@ -2,9 +2,9 @@
 
 ## Module outcome/value workflow overlay (2026-09-05)
 
-Verdict: **NOT DEPLOYED OR PRODUCTION-ACCEPTED — FINAL SOURCE/LOCAL V60 RELEASE
-GATES PASS; SOURCE PUBLICATION, PRODUCTION DATABASE PROMOTION, REPLIT REDEPLOY,
-AND DEPLOYED ACCEPTANCE REMAIN OPEN**.
+Verdict: **NOT DEPLOYED OR PRODUCTION-ACCEPTED — SOURCE PUBLISHED AND FINAL
+SOURCE/LOCAL V60 RELEASE GATES PASS; PRODUCTION DATABASE PROMOTION, REPLIT
+REDEPLOY, AND DEPLOYED ACCEPTANCE REMAIN OPEN**.
 
 The current release candidate moves the highest-value connections out of an
 administrator-only activity view and places a preview, explicit confirmation,
@@ -130,11 +130,12 @@ shared-price administrator view is limited to the exact six eligible
 companions; per-module Price creation and synchronization are closed.
 
 This resolves the source-level commercial contradiction and the final local
-release gates, but does not prove or authorize live billing. After source
-publication, release v60 still requires a fresh production backup and separate
-one-shot database apply and verification before Replit redeployment. Live Stripe catalog validation,
-signed sandbox checkout/webhook/portal acceptance, production deployment, and
-reconciliation remain open.
+release gates, but does not prove or authorize live billing. Implementation
+commit `5024bfce4a16cd5fd7d47143d5057879316f3981` was successfully pushed to
+GitHub `main`. Release v60 still requires a fresh production backup and separate
+one-shot database apply and verification before Replit redeployment. Live
+Stripe catalog validation, signed sandbox checkout/webhook/portal acceptance,
+production deployment, and reconciliation remain open.
 
 See `docs/modules/MODULE_PRODUCT_OUTCOME_UPGRADE.md` for the customer-outcome
 contract and detailed provider boundaries.

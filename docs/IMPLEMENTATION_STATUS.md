@@ -1,6 +1,6 @@
 # OperatorOS implementation status
 
-## Module product outcome/value upgrade - SOURCE/LOCAL RELEASE GATES GREEN / DEPLOYED E2E AND PRODUCTION APPLY OPEN (2026-09-05)
+## Module product outcome/value upgrade - SOURCE-PUBLISHED / SOURCE-LOCAL RELEASE GATES GREEN / DEPLOYED E2E AND PRODUCTION APPLY OPEN (2026-09-05)
 
 - The current release candidate gives each of the 13 canonical applications
   one shared customer-value contract: a plain-language promise, buyer, first
@@ -173,11 +173,12 @@
   environment block, not production acceptance.
 - No production provider was called; no Canva or Figma account was connected;
   no Twilio call, OpenAI Realtime session, Stripe payment, number purchase,
-  email, ad, publication, deployment, DNS change, production database apply,
-  authenticated exact-host browser acceptance, customer-data operation, or
-  rollback rehearsal was performed by this work. Source publication is a
-  separate authorized Git operation and is not a Replit deployment or database
-  promotion claim.
+  email, ad or content publication, deployment, DNS change, production database
+  apply, authenticated exact-host browser acceptance, customer-data operation,
+  or rollback rehearsal was performed by this work. Implementation commit
+  `5024bfce4a16cd5fd7d47143d5057879316f3981` was successfully source-published
+  to GitHub `main` under owner authorization. That Git operation is not a Replit
+  deployment or database-promotion claim.
 - The former dual-model pricing blocker is resolved in current source and
   disposable-database behavior, not in production. Actual Stripe Products and
   Prices, webhook configuration, tenant customer/portal behavior, legacy-row

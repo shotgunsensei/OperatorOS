@@ -1,6 +1,6 @@
 # OperatorOS current release gate
 
-## Module outcome and release-v60 candidate - FINAL SOURCE/LOCAL GATES PASS / UNPUBLISHED (2026-09-05)
+## Module outcome and release-v60 candidate - SOURCE-PUBLISHED / FINAL SOURCE-LOCAL GATES PASS / PRODUCTION PROMOTION OPEN (2026-09-05)
 
 The source/local candidate now plans 60 ordered database-release entries ending
 in `forward_commerce_contract`. Fresh final verification passed the full
@@ -10,8 +10,10 @@ lint; disposable PostgreSQL 16 v60 plan in 798 ms, clean apply in 18,916 ms,
 immediate idempotent reapply in 2,907 ms, and verify-current in 1,860 ms; and the
 Next 15.5.23 production build with all 35 of 35 generated pages.
 
-This is an unpublished release candidate until its exact commit and successful
-push are recorded. It is not the live release. Live production remains Replit
+Implementation commit `5024bfce4a16cd5fd7d47143d5057879316f3981` was
+successfully pushed to GitHub `main` under the owner's authorization. This
+source-published candidate is not the live release, and this documentation-only
+evidence follow-up changes no runtime behavior. Live production remains Replit
 deployment `0a1f03b4`, application commit
 `2b385f56a3ff04e319b8448e41d995fd52feb10d`, immutable build
 `9c6511f9dc457a180839112f`, and database release v59/59 ending in

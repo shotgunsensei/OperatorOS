@@ -2,8 +2,8 @@
 
 ## Module outcome/value release-candidate overlay (2026-09-05)
 
-Status: **FINAL SOURCE/LOCAL V60 RELEASE GATES PASS — PARITY STATES UNCHANGED /
-CANDIDATE UNPUBLISHED / DEPLOYED ACCEPTANCE OPEN**.
+Status: **SOURCE PUBLISHED AND FINAL SOURCE/LOCAL V60 RELEASE GATES PASS —
+PARITY STATES UNCHANGED / DEPLOYED ACCEPTANCE OPEN**.
 
 The current release candidate gives every canonical application a
 customer-result contract and replaces prominent engineering-first copy with
@@ -114,9 +114,10 @@ through server-validated audited platform authority, and per-module Stripe
 Price mutation is closed in favor of the shared companion Price.
 
 The commerce change is an additive shared-platform release and does not alter
-any module's feature-parity state. Production still requires source publication,
-a verified backup, one-shot release-v60 apply/verify, Replit redeployment, exact
-release identity,
+any module's feature-parity state. Implementation commit
+`5024bfce4a16cd5fd7d47143d5057879316f3981` is source-published on GitHub
+`main`. Production still requires a verified backup, one-shot release-v60
+apply/verify, Replit redeployment, exact release identity,
 live or sandbox Stripe checkout/webhook/portal acceptance, reconciliation,
 monitoring, and rollback readiness. See
 `docs/modules/MODULE_PRODUCT_OUTCOME_UPGRADE.md`.
