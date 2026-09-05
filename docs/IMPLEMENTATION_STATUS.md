@@ -1,6 +1,56 @@
 # OperatorOS implementation status
 
-## Module product outcome/value upgrade - SOURCE-PUBLISHED / SOURCE-LOCAL RELEASE GATES GREEN / DEPLOYED E2E AND PRODUCTION APPLY OPEN (2026-09-05)
+## Module product outcome/value upgrade - SOURCE PUBLISHED / FINAL FOLLOW-UP LOCAL GUARDS, BUILD, FULL EXACT-HOST, AND VISUAL GATES GREEN / FINAL GITHUB, PRODUCTION V60, AND DEPLOYED ACCEPTANCE OPEN (2026-09-05)
+
+### Follow-up browser-gate remediation
+
+- GitHub release-gate run `33949354505` passed 13/14 stages for documentation
+  commit `3967a9bbda90f2dee7e3eaf925da320fd79d0065` and failed only the combined
+  exact-host/visual/accessibility stage. The failure was retained as a release
+  block. The parity fixture selected the obsolete module status `active` and
+  created a post-v60 legacy-shaped subscription without the explicit
+  grandfather marker. Production authorization correctly returned
+  `TENANT_MODULE_DISABLED`; no BrandForgeOS or TradeFlowKit denial page from
+  that failed run was approved as a visual baseline.
+- The fixture is now explicitly a tenant-scoped grandfathered pre-v60 SSO and
+  presentation identity, limited to current `live` catalog modules and
+  deterministic if a disabled fixture row already exists. The shared visual
+  helper verifies BrandForgeOS and TradeFlowKit access through `/me/modules`.
+  Both local Playwright configs, the runner, and the mutating helpers reject an
+  unsafe database, API, web, proxy target/listener, exact-host root, or supported
+  navigation override before application requests. The standalone proxy
+  independently refuses a non-loopback upstream/listener or invalid port and
+  needs no database access. The dedicated Phase 17 deployed config accepts only
+  canonical production and cannot inherit the local resolver.
+- The exact labels, required form values, expanded technical-detail controls,
+  customer-facing credit terminology, and immediate asynchronous states were
+  aligned for PulseDesk, TechDeck, TorqueShed, BrandForgeOS, Deploy Ops,
+  CallCommand AI, and SnapProofOS. In the optimized production artifact used
+  for browser acceptance, PulseDesk's deterministic mailbox adapter and Deploy
+  Ops deterministic drafting require all of `CI=true`, explicit deterministic
+  provider mode, the disposable marker, and a `DATABASE_URL` independently
+  validated as a marked loopback PostgreSQL database. Ordinary test shortcuts
+  are disabled whenever either `APP_ENV` or `NODE_ENV` signals production, and
+  deployed production remains truthfully unavailable without a real provider.
+- The entitlement/selector revision's focused optimized-production runs pass
+  all eight previously failed or masked workflows. On the settled guard diff,
+  normal Windows visual comparison passes **4/4 in 1.6 minutes**. All 78
+  platform/viewport entries remain reviewed and hash-bound, and the static
+  verifier reports 13 modules with zero failures. The full optimized exact-host
+  suite passes **21/21 in 5.7 minutes**, including one-credential launch across
+  all 12 available child applications, direct and sibling-tab SSO, host-only
+  logout, deep-link reauthentication, tenant denials, persisted workflows,
+  accessibility, responsive layouts, and public compliance routes. The earlier
+  Linux comparison passes **4/4** as supporting evidence; GitHub must still
+  repeat the complete Linux browser/visual matrix on the immutable commit.
+  OutCall remains unavailable under its source-recovery lock.
+- These grandfathered browser fixtures prove exact-host SSO, entitled route,
+  workflow, persistence, accessibility, and presentation acceptance. They are
+  not evidence of forward-commerce checkout, the one-core invariant, Stripe
+  webhook activation, or live billing. Those behaviors retain their separate
+  dynamic disposable-database tests and still require deployed sandbox/live
+  acceptance. The follow-up candidate remains unpromoted until its fresh
+  GitHub release gate is terminal green.
 
 - The current release candidate gives each of the 13 canonical applications
   one shared customer-value contract: a plain-language promise, buyer, first
@@ -114,15 +164,17 @@
   keep access only when the v60 one-time grandfather marker is present; a
   legacy-shaped row created after cutover is not silently treated as a sale.
   Legacy visibility and cancellation remain available.
-- Stack checkout, included-companion changes, and the billing portal require
-  the tenant owner. Checkout is monthly-only, enforces one flagship per tenant,
+- In source and disposable-database contract tests, stack checkout, included-
+  companion changes, and the billing portal require the tenant owner. Checkout
+  is monthly-only, enforces one flagship per tenant,
   resumes the same still-open Checkout Session rather than duplicating it, and
   persists the tenant-owned Stripe customer and subscription intent in
   `tenant_application_subscriptions`. The portal prefers that exact tenant
   customer. Signed webhook processing validates the tenant, customer, checkout
   session, internal billing row, and subscription metadata before activating
   the flagship, free applications, selected/paid companions, and seat capacity;
-  stale or foreign metadata grants nothing.
+  stale or foreign metadata grants nothing. No Stripe-hosted session, portal
+  redirect, provider-delivered webhook, or charge was exercised by those tests.
 - Platform pricing and readiness are now a read-only six-item shared-price
   surface. The former plan-mapping, per-module amount, Stripe Price-ID, provider
   sync, and price-creation controls no longer appear in the UI, and their
@@ -130,11 +182,12 @@
   `APPLICATION_STACK_SHARED_PRICE_REQUIRED`.
 - `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1
   test/commerce-forward-model-static.test.ts
-  test/forward-commerce-contract-static.test.ts` passed **14/14**, with zero
-  failures, skips, or todos, in **357.7742 ms**. This is the final forward-
-  commerce source contract run.
-- The focused eight-file commerce compatibility slice passed **43/43**, with
-  zero failures or skips, in **11,499.8255 ms**. It includes public/signed-in
+  test/forward-commerce-contract-static.test.ts` passed **16/16**, with zero
+  failures, skips, or todos, in **213.6605 ms** on the final local guard diff.
+  This is focused source-contract evidence, not the complete release aggregate.
+- The implementation revision's earlier eight-file commerce compatibility
+  slice passed **43/43**, with zero failures or skips, in **11,499.8255 ms**. It
+  includes public/signed-in
   pricing copy, retired-admin-route RBAC and no-mutation behavior, read-only
   legacy diagnostics, one-flagship enforcement, and defensive cancellation of
   grandfathered multi-core data without permitting a second forward grant.
@@ -146,20 +199,22 @@
   webhook binding and replay safety, entitlement/seat activation, legacy sales
   closure with existing-access compatibility, and the exact six-item pricing
   and readiness allowlist.
-- The final complete API aggregate ran on a brand-new disposable PostgreSQL 16
-  database and reported **1,440 tests: 1,434 passed, 0 failed, 6 intentional
-  HTTP-only skips, and 0 todos** in **713,438.7749 ms**. The six skips require a
-  separately running Next server; no failure was converted to a skip. The same
-  registered aggregate includes the customer-language, workflow, access,
-  deep-link, commerce, billing, security, release-drift, and module-domain
-  regressions above.
+- The final complete API aggregate on the settled guard diff ran on disposable
+  PostgreSQL 16 and reported **1,444 tests: 1,444 passed, 0 failed, 0 skipped,
+  0 cancelled, and 0 todos** in **629,733.0017 ms**. It includes the provider-
+  isolation, browser-safety, commerce, billing, tenant, RBAC, SSO, persistence,
+  and module-domain regressions. The final GitHub run must repeat the aggregate
+  against the immutable published commit before release acceptance.
 - `corepack pnpm typecheck` passed for `apps/api`, `apps/runner-gateway`,
   `apps/web`, and `apps/torqueshed-native`. The repository-defined
-  `corepack pnpm lint` gate also passed with `--max-warnings=0`.
-- On a separate empty PostgreSQL 16 database, `db:plan` reported **v60/60** with
-  `forward_commerce_contract` last in **798 ms**. Clean `db:apply` completed and
-  verified in **18,916 ms**, immediate idempotent reapply in **2,907 ms**, and
-  independent read-only `db:verify` in **1,860 ms**. The first 59 manifest
+  `corepack pnpm lint` gate also passed with `--max-warnings=0`. The final root
+  unit/compiler gate passed **52/52** with zero failures, skips, or todos. The
+  release-safety quality gate passed **20/20** with zero failures or skips, and
+  `git diff --check` reported no whitespace errors.
+- On a reset disposable PostgreSQL 16 database, the integration gate passed
+  **31/31**. Clean v60 apply completed in **18,253 ms**, immediate idempotent
+  reapply in **1,867 ms**, and independent verify-current in **956 ms** with
+  `forward_commerce_contract` last. The first 59 manifest
   entries and their order retain SHA-256
   `8538083fe1ebbeaa54f7d11031f30d57c03118089e597f5c5314e0a1c08af746`.
 - `corepack pnpm build:production` passed deployment-scope verification, the
@@ -171,11 +226,11 @@
   application URLs, disabled-runner declaration, and trusted-proxy declaration
   are intentionally absent. It printed no secret values. This is an expected
   environment block, not production acceptance.
-- No production provider was called; no Canva or Figma account was connected;
+- No external or live provider was called; no Canva or Figma account was connected;
   no Twilio call, OpenAI Realtime session, Stripe payment, number purchase,
   email, ad or content publication, deployment, DNS change, production database
-  apply, authenticated exact-host browser acceptance, customer-data operation,
-  or rollback rehearsal was performed by this work. Implementation commit
+  apply, deployed authenticated exact-host browser acceptance, customer-data
+  operation, or rollback rehearsal was performed by this work. Implementation commit
   `5024bfce4a16cd5fd7d47143d5057879316f3981` was successfully source-published
   to GitHub `main` under owner authorization. That Git operation is not a Replit
   deployment or database-promotion claim.

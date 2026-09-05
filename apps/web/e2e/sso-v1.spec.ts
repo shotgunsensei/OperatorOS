@@ -3,6 +3,7 @@ import { Client } from 'pg';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertLocalBrowserTestEnvironment } from '../../../scripts/parity/lib/database.mjs';
 
 const ROOT = process.env.E2E_ROOT_URL || 'https://operatoros.net';
 const API = process.env.E2E_API_URL || 'http://127.0.0.1:5001';
@@ -119,14 +120,15 @@ async function registerAndSeed(
 
   await pg.query(
     `insert into subscriptions
-       (user_id, plan_id, status, current_period_start, current_period_end, tenant_id, scope_type)
-     values ($1, $2, 'active', now(), now() + interval '30 days', $3, 'tenant')`,
+       (user_id, plan_id, status, current_period_start, current_period_end, tenant_id, scope_type,
+        legacy_access_grandfathered_at)
+     values ($1, $2, 'active', now(), now() + interval '30 days', $3, 'tenant', clock_timestamp())`,
     [userId, elite.rows[0].id, tenantId],
   );
 
   for (const module of ENABLED_MODULES) {
     const moduleRow = await pg.query<{ id: string }>(
-      `select id from modules where slug = $1 limit 1`,
+      `select id from modules where slug = $1 and status = 'live' limit 1`,
       [module.slug],
     );
     expect(moduleRow.rows, `seeded module ${module.slug}`).toHaveLength(1);
@@ -134,7 +136,8 @@ async function registerAndSeed(
       `insert into tenant_modules
          (tenant_id, module_id, status, source, allow_all_members)
        values ($1, $2, 'enabled', 'included', true)
-       on conflict do nothing`,
+       on conflict (tenant_id, module_id) do update
+       set status = 'enabled', source = 'included', allow_all_members = true, updated_at = now()`,
       [tenantId, moduleRow.rows[0].id],
     );
   }
@@ -453,8 +456,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
   });
 
   test.beforeAll(async () => {
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) throw new Error('DATABASE_URL is required for the SSO v1 browser gate');
+    const { database: { url: databaseUrl } } = assertLocalBrowserTestEnvironment(
+      process.env,
+      { requireExactHosts: true },
+    );
     pg = new Client({ connectionString: databaseUrl });
     await pg.connect();
   });
@@ -689,7 +694,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await sibling.goto(`https://pulsedesk.operatoros.net/assets/${asset.body.id}/report-issue`);
     await expect(sibling.getByTestId('pulsedesk-service-ticket-create')).toBeVisible({ timeout: 30_000 });
-    await expect(sibling.getByRole('status').filter({ hasText: 'Reporting an issue for the equipment selected by this deep link' })).toBeVisible();
+    await expect(sibling.getByRole('status').filter({ hasText: 'Reporting an issue for the selected equipment' })).toBeVisible();
     await expect(sibling.locator('select[name="assetId"]')).toHaveValue(asset.body.id);
     const ticketSummary = `E2E operational equipment issue ${Date.now()}`;
     const createForm = sibling.getByTestId('pulsedesk-service-ticket-create');
@@ -729,13 +734,12 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const connectorLabel = `E2E SendGrid ${Date.now()}`;
     const connectorConsole = sibling.getByTestId('pulsedesk-connector-console');
     await expect(connectorConsole).toBeVisible({ timeout: 30_000 });
-    await connectorConsole.locator('input[name="label"]').fill(connectorLabel);
-    await connectorConsole.locator('input[name="mailboxAddress"]').fill(`phase27-${Date.now()}@example.invalid`);
-    await connectorConsole.locator('input[name="secretReference"]').fill('e2e-encrypted-reference-only');
-    await connectorConsole.getByRole('button', { name: 'Save connector' }).click();
+    await connectorConsole.getByLabel('Connection name').fill(connectorLabel);
+    await connectorConsole.getByLabel('Mailbox address').fill(`phase27-${Date.now()}@example.invalid`);
+    await connectorConsole.getByRole('button', { name: 'Add sample connection' }).click();
     await expect(connectorConsole.getByText(connectorLabel, { exact: true })).toBeVisible({ timeout: 30_000 });
     await connectorConsole.getByRole('button', { name: 'Try sample request' }).click();
-    await expect(connectorConsole.getByRole('status')).toContainText('Deterministic ingestion completed.', { timeout: 30_000 });
+    await expect(connectorConsole.locator('.pdc-notice')).toContainText('Sample request completed.', { timeout: 30_000 });
 
     const publicPolicy = await sibling.evaluate(async () => {
       const response = await fetch('/api/modules/pulsedesk/public-intake-policies', {
@@ -816,16 +820,16 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const firewallName = `E2E Edge Firewall ${suffix}`;
     const subnetName = `E2E Clinical VLAN ${suffix}`;
     const configurationForm = page.getByTestId('techdeck-configuration-create-form');
-    await configurationForm.locator('input[placeholder="Name"]').fill(firewallName);
+    await configurationForm.getByLabel('Asset name').fill(firewallName);
     await configurationForm.locator('select').first().selectOption('firewall');
     await configurationForm.locator('input[placeholder="Hostname"]').fill(`edge-${suffix}.example.test`);
     await configurationForm.locator('input[placeholder="IP address"]').fill('10.77.29.1');
     await configurationForm.getByRole('button', { name: 'Add item' }).click();
     await expect(page.locator('.td-row').filter({ hasText: firewallName })).toBeVisible({ timeout: 30_000 });
 
-    await configurationForm.locator('input[placeholder="Name"]').fill(subnetName);
+    await configurationForm.getByLabel('Asset name').fill(subnetName);
     await configurationForm.locator('select').first().selectOption('subnet');
-    await configurationForm.locator('input[placeholder^="CIDR"]').fill('10.77.29.0/24');
+    await configurationForm.getByLabel('Asset network range').fill('10.77.29.0/24');
     await configurationForm.locator('input[placeholder="VLAN"]').fill('729');
     await configurationForm.getByRole('button', { name: 'Add item' }).click();
     await expect(page.locator('.td-row').filter({ hasText: subnetName })).toBeVisible({ timeout: 30_000 });
@@ -1060,9 +1064,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     literal = await openLiteralRoute('/api-tokens', ['techdeck-api-tokens']);
     const tokens = page.locator('#techdeck-api-tokens');
-    await tokens.getByPlaceholder('Service identity').fill(`phase26-agent-${suffix}`);
-    await tokens.getByPlaceholder('Token label').fill('Exact-host read token');
-    await tokens.getByRole('button', { name: 'Issue read token' }).click();
+    await tokens.getByLabel('Automation identity').fill(`phase26-agent-${suffix}`);
+    await tokens.getByLabel('Access key label').fill('Exact-host read token');
+    await tokens.getByRole('button', { name: 'Issue read-only key' }).click();
     await expect(literal.locator('.tdl-secret code')).not.toBeEmpty({ timeout: 30_000 });
 
     const intakeName = `Phase 26 Intake ${suffix}`;
@@ -1088,8 +1092,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await openLiteralRoute('/compliance', ['techdeck-secure-intake', 'techdeck-compliance']);
     const compliance = page.locator('#techdeck-compliance');
-    await compliance.getByRole('button', { name: 'Build verified ZIP package' }).click();
-    await expect(compliance).toContainText(/queued|download ready/i, { timeout: 30_000 });
+    await compliance.getByRole('button', { name: 'Build compliance package' }).click();
+    await expect(compliance).toContainText(/preparing package|started|queued|download ready/i, { timeout: 30_000 });
 
     const anonymous = await browser.newContext({ ignoreHTTPSErrors: true });
     try {
@@ -1215,7 +1219,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const purchaseResponse = page.waitForResponse(response =>
       response.request().method() === 'POST'
       && new URL(response.url()).pathname === '/api/modules/torqueshed/token-purchases/checkout');
-    await creditPurchase.getByRole('button', { name: /Roadside.*25,000 units/ }).click();
+    await creditPurchase.getByRole('button', { name: /Roadside.*25,000 credits/ }).click();
     const purchaseReply = await purchaseResponse;
     expect(purchaseReply.status(), await purchaseReply.text()).toBe(201);
     const purchaseBody = await purchaseReply.json() as {
@@ -1292,7 +1296,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const assistBody = await assistReply.json() as { actualUnits: number; result: { disclaimer: string } };
     expect(assistBody.actualUnits).toBeGreaterThan(0);
     expect(assistBody.result.disclaimer).toContain('not a verified repair');
-    await expect(refreshedAssist).toContainText('Accepted result recorded.');
+    await expect(refreshedAssist).toContainText(/Diagnostic plan created\..*credits used/);
     await expect(refreshedAssist).toContainText('Recommended tests');
 
     const ledger = await browserJson<{
@@ -1822,7 +1826,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await modulePage.getByRole('link', { name: 'Campaigns', exact: true }).click();
     await modulePage.getByLabel('Campaign name').fill(campaignName);
-    await modulePage.getByLabel('Objective').fill('Prove the durable OperatorOS creative workflow');
+    await modulePage.getByLabel('Business objective', { exact: true }).fill('Prove the durable OperatorOS creative workflow');
+    await modulePage.getByLabel('Target audience').fill('Technical operators responsible for repeatable campaign delivery');
+    await modulePage.getByLabel('Offer', { exact: true }).fill('A review-ready OperatorOS campaign package');
+    await modulePage.getByLabel('Core message / desired action').fill('Review and approve the complete campaign package');
+    await modulePage.getByLabel('Channels (comma-separated)').fill('Email, LinkedIn');
     await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
     await modulePage.getByLabel('Persona').selectOption({ label: personaName });
     await modulePage.getByRole('button', { name: 'Create campaign' }).click();
@@ -1877,7 +1885,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
         && response.status() === 201),
       modulePage.getByRole('button', { name: 'Generate material' }).click(),
     ]);
-    await expect(modulePage.getByText(/test · [1-9]\d* tokens/)).toBeVisible();
+    const generationCard = modulePage.locator('article').filter({ hasText: 'AI-assisted · Saved · Ready to review' }).first();
+    await expect(generationCard).toBeVisible();
+    await generationCard.locator('summary').filter({ hasText: 'Technical details' }).click();
+    await expect(generationCard.getByText(/test · .* · [1-9]\d* usage units/)).toBeVisible();
 
     const usage = await pg.query<{ events: string; units: string }>(
       `select count(*)::text as events, coalesce(sum(units),0)::text as units
@@ -1892,7 +1903,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await modulePage.reload();
     await expect(modulePage).toHaveURL('https://brandforgeos.operatoros.net/ai-workflows');
-    await expect(modulePage.getByText(/test · [1-9]\d* tokens/)).toBeVisible();
+    const reloadedGenerationCard = modulePage.locator('article').filter({ hasText: 'AI-assisted · Saved · Ready to review' }).first();
+    await reloadedGenerationCard.locator('summary').filter({ hasText: 'Technical details' }).click();
+    await expect(reloadedGenerationCard.getByText(/test · .* · [1-9]\d* usage units/)).toBeVisible();
     await modulePage.setViewportSize({ width: 390, height: 844 });
     await expect(modulePage.getByRole('button', { name: 'Open BrandForgeOS navigation', exact: true })).toBeVisible();
 
@@ -2143,7 +2156,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.locator('#launchkit-dashboard')).toBeVisible();
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('link', { name: 'Readiness', exact: true }).click();
+    await modulePage.getByRole('link', { name: 'Launch review', exact: true }).click();
     await expect(modulePage.getByTestId('input-launchkit-title')).toBeVisible();
     await modulePage.getByTestId('input-launchkit-title').fill(launchTitle);
     await modulePage.getByTestId('input-launchkit-product-type').fill('SaaS service');
@@ -2290,7 +2303,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: /Forward Existing/ }).click();
     await modulePage.getByTestId('input-callcommand-channel-phone').fill(phone);
     await modulePage.getByTestId('button-callcommand-connect-number').click();
-    await expect(modulePage.getByText('Provider action required', { exact: true })).toBeVisible();
+    await expect(modulePage.getByText('Carrier action required', { exact: true })).toBeVisible();
 
     await modulePage.getByRole('link', { name: 'Call workflows', exact: true }).click();
     await modulePage.getByRole('button', { name: /Support desk/ }).click();
@@ -2407,7 +2420,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('link', { name: 'File verification', exact: true }).click();
     await modulePage.getByLabel('Evidence type').selectOption('note');
     await modulePage.getByLabel('Title', { exact: true }).fill(noteTitle);
-    await modulePage.getByLabel('Source type').fill('acceptance_test');
+    await modulePage.getByLabel('Where it came from').fill('acceptance_test');
     await modulePage.getByLabel('Description / note').fill('Persisted evidence note created by the Phase 11B production-host browser gate.');
     await modulePage.getByRole('button', { name: 'Add evidence note' }).click();
     const noteCard = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: noteTitle }) });
@@ -2415,7 +2428,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await modulePage.getByLabel('Evidence type').selectOption('document');
     await modulePage.getByLabel('Title', { exact: true }).fill(fileTitle);
-    await modulePage.getByLabel('Source type').fill('acceptance_test');
+    await modulePage.getByLabel('Where it came from').fill('acceptance_test');
     await modulePage.getByLabel('Description / note').fill('Private attachment used to prove signature, scan, hashing, and authorized download behavior.');
     await modulePage.getByLabel('Private file').setInputFiles({
       name: 'phase-11b-evidence.txt',
@@ -2425,6 +2438,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: 'Upload evidence' }).click();
     const fileCard = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: fileTitle }) });
     await expect(fileCard).toBeVisible();
+    await fileCard.locator('summary').filter({ hasText: 'Technical file-verification details' }).click();
     await expect(fileCard.getByText(/SHA-256 [a-f0-9]{64}/)).toBeVisible();
 
     await expect.poll(async () => {
@@ -2445,7 +2459,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByLabel('Severity').selectOption('high');
     await modulePage.getByRole('button', { name: 'Record finding' }).click();
     await expect(modulePage.getByText(findingTitle, { exact: true })).toBeVisible();
-    await modulePage.getByLabel('Append-only internal note').fill('Internal reviewer context is append-only and custody linked.');
+    await modulePage.getByLabel('Internal note', { exact: true }).fill('Internal reviewer context is append-only and custody linked.');
     await modulePage.getByRole('button', { name: 'Add internal note' }).click();
     await expect(modulePage.getByText('Internal reviewer context is append-only and custody linked.')).toBeVisible();
 

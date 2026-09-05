@@ -9,6 +9,7 @@ test('email is explicitly disabled when provider configuration is incomplete', a
     apiKey: process.env.RESEND_API_KEY,
     emailFrom: process.env.EMAIL_FROM,
     inviteFrom: process.env.INVITE_FROM_EMAIL,
+    deterministicProviderMode: process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE,
   };
   try {
     process.env.NODE_ENV = 'production';
@@ -16,6 +17,7 @@ test('email is explicitly disabled when provider configuration is incomplete', a
     process.env.RESEND_API_KEY = 'test-key-that-must-not-be-used';
     delete process.env.EMAIL_FROM;
     delete process.env.INVITE_FROM_EMAIL;
+    delete process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE;
 
     assert.deepEqual(getEmailFromHealth(), { configured: false, provider: 'disabled' });
     const result = await sendInviteEmail({
@@ -39,6 +41,7 @@ test('email is explicitly disabled when provider configuration is incomplete', a
       RESEND_API_KEY: previous.apiKey,
       EMAIL_FROM: previous.emailFrom,
       INVITE_FROM_EMAIL: previous.inviteFrom,
+      OPERATOROS_DETERMINISTIC_PROVIDER_MODE: previous.deterministicProviderMode,
     })) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;

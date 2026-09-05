@@ -9,7 +9,14 @@ import {
   validateControlIntegrity,
   validateVisualContracts,
 } from './lib/quality.mjs';
-import { assertDisposableDatabaseEnvironment, resetDisposablePublicSchema } from './lib/database.mjs';
+import {
+  assertDisposableDatabaseEnvironment,
+  assertDeployedBrowserTestEnvironment,
+  assertLocalBrowserTestEnvironment,
+  assertLocalProxyEnvironment,
+  resetDisposablePublicSchema,
+  stripExternalProviderEnvironment,
+} from './lib/database.mjs';
 import { REPOSITORY_ROOT } from './lib/compiler.mjs';
 import { PNPM, parseNodeTestSummary, requiredTestExitCode, runCaptured, waitForPort } from './lib/process.mjs';
 
@@ -108,6 +115,10 @@ test('database reset guard accepts only marked loopback test databases', () => {
     PARITY_DATABASE_IS_DISPOSABLE: '1',
     DATABASE_URL: 'postgresql://postgres:synthetic@127.0.0.1:5432/operatoros_phase21_release',
   }).database, 'operatoros_phase21_release');
+  assert.equal(assertDisposableDatabaseEnvironment({
+    PARITY_DATABASE_IS_DISPOSABLE: '1',
+    DATABASE_URL: 'postgresql://postgres:synthetic@localhost:5432/operatoros_test',
+  }).database, 'operatoros_test');
   assert.throws(() => assertDisposableDatabaseEnvironment({
     PARITY_DATABASE_IS_DISPOSABLE: '1',
     DATABASE_URL: 'postgresql://operator:secret@db.operatoros.net:5432/operatoros',
@@ -116,6 +127,215 @@ test('database reset guard accepts only marked loopback test databases', () => {
     PARITY_DATABASE_IS_DISPOSABLE: '1',
     DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros',
   }), /database name/u);
+  assert.throws(() => assertDisposableDatabaseEnvironment({
+    PARITY_DATABASE_IS_DISPOSABLE: '1',
+    DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros_test?host=db.operatoros.net',
+  }), /query or fragment overrides/u);
+  assert.throws(() => assertDisposableDatabaseEnvironment({
+    PARITY_DATABASE_IS_DISPOSABLE: '1',
+    DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros_test#host=db.operatoros.net',
+  }), /query or fragment overrides/u);
+  for (const unsafeName of ['operatoros_latest', 'operatoros_contest', 'operatoros_circular']) {
+    assert.throws(() => assertDisposableDatabaseEnvironment({
+      PARITY_DATABASE_IS_DISPOSABLE: '1',
+      DATABASE_URL: `postgresql://operator:secret@127.0.0.1:5432/${unsafeName}`,
+    }), /database name/u, `${unsafeName} must not pass on a marker substring`);
+  }
+});
+
+test('browser fixture guard rejects unsafe API, web, root, and exact-host targets before use', () => {
+  const safe = {
+    PARITY_DATABASE_IS_DISPOSABLE: '1',
+    DATABASE_URL: 'postgresql://postgres:synthetic@127.0.0.1:5432/operatoros_test',
+    E2E_API_URL: 'http://127.0.0.1:5001',
+    E2E_WEB_URL: 'http://localhost:5000',
+  };
+  assert.equal(assertLocalBrowserTestEnvironment(safe).exactHosts, false);
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, E2E_API_URL: 'https://api.operatoros.net' }),
+    /non-loopback E2E_API_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, E2E_WEB_URL: 'https://operatoros.net' }),
+    /non-loopback E2E_WEB_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, INTERNAL_API_URL: 'https://api.operatoros.net' }),
+    /non-loopback INTERNAL_API_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, NEXT_PUBLIC_API_URL: 'https://api.operatoros.net' }),
+    /non-loopback NEXT_PUBLIC_API_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, E2E_PROXY_TARGET: 'https://api.operatoros.net' }),
+    /non-loopback E2E_PROXY_TARGET/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, E2E_PROXY_HOST: '0.0.0.0' }),
+    /non-loopback E2E_PROXY_HOST/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, E2E_BRANDFORGEOS_URL: 'https://example.com' }),
+    /unmapped E2E_BRANDFORGEOS_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, HELP_CENTER_E2E_URL: 'https://operatoros.net' }),
+    /unmapped HELP_CENTER_E2E_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, OPERATOROS_APPS_URL: 'https://app.operatoros.net' }),
+    /unmapped OPERATOROS_APPS_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, E2E_TORQUESHED_URL: 'https://torqueshed.operatoros.net' }),
+    /unmapped E2E_TORQUESHED_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({ ...safe, E2E_ROOT_URL: 'https://operatoros.net' }),
+    /non-loopback E2E_ROOT_URL/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment(safe, { requireExactHosts: true }),
+    /E2E_PRODUCTION_HOSTS=1/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({
+      ...safe,
+      E2E_PRODUCTION_HOSTS: '1',
+      E2E_PROXY_TARGET: 'http://127.0.0.1:5999',
+    }, { requireExactHosts: true }),
+    /must match E2E_WEB_URL/u,
+  );
+  const exact = assertLocalBrowserTestEnvironment({
+    ...safe,
+    E2E_PRODUCTION_HOSTS: '1',
+    E2E_ROOT_URL: 'https://operatoros.net',
+    E2E_BRANDFORGEOS_URL: 'https://brandforgeos.operatoros.net',
+  }, { requireExactHosts: true });
+  assert.equal(exact.rootUrl, 'https://operatoros.net');
+  assert.equal(exact.overrideUrls.E2E_BRANDFORGEOS_URL, 'https://brandforgeos.operatoros.net');
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({
+      ...safe,
+      E2E_PRODUCTION_HOSTS: '1',
+      E2E_ROOT_URL: 'https://auth.operatoros.net',
+    }, { requireExactHosts: true }),
+    /canonical/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({
+      ...safe,
+      E2E_PRODUCTION_HOSTS: '1',
+      E2E_BRANDFORGEOS_URL: 'https://brandforgeos.operatoros.net/workspace',
+    }, { requireExactHosts: true }),
+    /origin-only/u,
+  );
+  assert.throws(
+    () => assertLocalBrowserTestEnvironment({
+      ...safe,
+      E2E_PRODUCTION_HOSTS: '1',
+      E2E_BRANDFORGEOS_URL: 'https://brandforgeos.operatoros.net:444',
+    }, { requireExactHosts: true }),
+    /unmapped/u,
+  );
+});
+
+test('browser runtime strips inherited live-provider credentials and activation switches', () => {
+  const inherited = {
+    Path: 'C:\\safe-tools',
+    APP_URL: 'https://unsafe-inherited.example.test',
+    OPENAI_API_KEY: 'sk-live-must-be-removed',
+    OpenAi_Webhook_Secret: 'mixed-case-must-be-removed',
+    OPENAI_WEBHOOK_SECRET: 'whsec-must-be-removed',
+    RESEND_API_KEY: 're_must_be_removed',
+    EMAIL_FROM: 'live@example.test',
+    STRIPE_SECRET_KEY: 'sk_live_must_be_removed',
+    Stripe_Price_Pro_Monthly: 'mixed-case-price-must-be-removed',
+    STRIPE_PRICE_PRO_MONTHLY: 'price_live_must_be_removed',
+    TWILIO_AUTH_TOKEN: 'must-be-removed',
+    Twilio_Account_Sid: 'mixed-case-must-be-removed',
+    REPLIT_CONNECTORS_HOSTNAME: 'connectors.example.test',
+    REPL_IDENTITY: 'must-be-removed',
+    NEXT_PUBLIC_API_URL: 'https://unsafe-api.example.test',
+    TRADEFLOWKIT_PAYMENT_PROVIDER: 'stripe_connect',
+    OUTCALL_LIVE_PROVIDER: 'enabled',
+    GH_TOKEN: 'must-be-removed',
+    hTtPs_PrOxY: 'http://proxy.example.test:8080',
+  };
+  const isolated = stripExternalProviderEnvironment(inherited);
+  assert.equal(isolated.Path, inherited.Path);
+  for (const name of Object.keys(inherited).filter((name) => name !== 'Path')) {
+    assert.equal(isolated[name], undefined, `${name} must not reach the production-artifact child process`);
+  }
+  assert.equal(inherited.OPENAI_API_KEY, 'sk-live-must-be-removed', 'the parent environment must not be mutated');
+});
+
+test('local browser configs pin Chromium to direct loopback resolution and preserve deployed acceptance', () => {
+  const localConfig = readFileSync(join(REPOSITORY_ROOT, 'apps', 'web', 'playwright.config.ts'), 'utf8');
+  const visualConfig = readFileSync(join(REPOSITORY_ROOT, 'apps', 'web', 'playwright.visual.config.ts'), 'utf8');
+  const deployedConfig = readFileSync(join(REPOSITORY_ROOT, 'apps', 'web', 'playwright.deployed.config.ts'), 'utf8');
+  const runner = readFileSync(join(REPOSITORY_ROOT, 'scripts', 'parity', 'run-browser-tests.mjs'), 'utf8');
+
+  assert.match(localConfig, /'--no-proxy-server'/u);
+  assert.match(visualConfig, /'--no-proxy-server'/u);
+  assert.doesNotMatch(deployedConfig, /--no-proxy-server|host-resolver-rules/u);
+  assert.match(runner, /CI: 'true'/u);
+  assert.match(runner, /ALLOW_LEGACY_SSO_ROLLBACK: 'false'/u);
+  assert.match(runner, /OPERATOROS_SELF_SERVICE_TRIALS_ENABLED: 'false'/u);
+  assert.doesNotMatch(runner, /^\s+APP_URL:/mu);
+  assert.doesNotMatch(runner, /^\s+NEXT_PUBLIC_API_URL:/mu);
+  assert.match(runner, /OPERATOROS_APPS_URL: 'https:\/\/app\.operatoros\.net\/'/u);
+});
+
+test('API aggregate does not inherit the production-artifact provider opt-in', () => {
+  const runner = readFileSync(join(REPOSITORY_ROOT, 'scripts', 'parity', 'run-api-tests.mjs'), 'utf8');
+  assert.match(runner, /delete env\.OPERATOROS_DETERMINISTIC_PROVIDER_MODE/u);
+});
+
+test('standalone exact-host proxy refuses remote targets and unsafe listeners', () => {
+  assert.deepEqual(assertLocalProxyEnvironment({}), {
+    targetUrl: 'http://127.0.0.1:5000',
+    host: '127.0.0.1',
+    port: 443,
+  });
+  assert.throws(
+    () => assertLocalProxyEnvironment({ E2E_PROXY_TARGET: 'https://api.operatoros.net' }),
+    /non-loopback E2E_PROXY_TARGET/u,
+  );
+  assert.throws(
+    () => assertLocalProxyEnvironment({ E2E_PROXY_HOST: '0.0.0.0' }),
+    /non-loopback E2E_PROXY_HOST/u,
+  );
+  assert.throws(
+    () => assertLocalProxyEnvironment({ E2E_PROXY_PORT: '70000' }),
+    /1 through 65535/u,
+  );
+});
+
+test('deployed browser gate accepts only canonical production without the local resolver', () => {
+  assert.equal(assertDeployedBrowserTestEnvironment({}).rootUrl, 'https://operatoros.net');
+  assert.throws(
+    () => assertDeployedBrowserTestEnvironment({
+      E2E_PRODUCTION_HOSTS: '1',
+    }),
+    /local exact-host resolver/u,
+  );
+  assert.throws(
+    () => assertDeployedBrowserTestEnvironment({
+      E2E_ROOT_URL: 'https://staging.operatoros.net',
+    }),
+    /canonical/u,
+  );
+  for (const unsafeRoot of [
+    'https://operatoros.net/app',
+    'https://operatoros.net/?token=nope',
+  ]) {
+    assert.throws(
+      () => assertDeployedBrowserTestEnvironment({ E2E_ROOT_URL: unsafeRoot }),
+      /canonical/u,
+    );
+  }
 });
 
 test('disposable database reset releases locks between foreign keys and relations', async () => {

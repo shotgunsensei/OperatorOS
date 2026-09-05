@@ -1,19 +1,79 @@
 # OperatorOS current release gate
 
-## Module outcome and release-v60 candidate - SOURCE-PUBLISHED / FINAL SOURCE-LOCAL GATES PASS / PRODUCTION PROMOTION OPEN (2026-09-05)
+## Module outcome and release-v60 candidate - SOURCE PUBLISHED / FINAL FOLLOW-UP LOCAL GUARDS, BUILD, FULL EXACT-HOST, AND VISUAL GATES GREEN / FINAL GITHUB GATE OPEN / PRODUCTION BACKUP-V60 APPLY-VERIFY-REDEPLOY PENDING (2026-09-05)
 
-The source/local candidate now plans 60 ordered database-release entries ending
-in `forward_commerce_contract`. Fresh final verification passed the full
-**1,440-test API aggregate with 1,434 passed, 0 failed, 6 intentional Next-server
-HTTP-only skips, 0 todos, and a duration of 713,438.7749 ms**; root typecheck and
-lint; disposable PostgreSQL 16 v60 plan in 798 ms, clean apply in 18,916 ms,
-immediate idempotent reapply in 2,907 ms, and verify-current in 1,860 ms; and the
-Next 15.5.23 production build with all 35 of 35 generated pages.
+GitHub release-gate run `33949354505` for documentation commit
+`3967a9bbda90f2dee7e3eaf925da320fd79d0065` passed 13 of 14 stages and
+correctly blocked release in `exact-host-visual-accessibility`. The application
+had failed closed: the shared browser fixture still selected module rows with
+the retired `active` status and created an unmarked post-v60 legacy
+subscription, so the browser received the real organization-level entitlement
+denial. The same run also exposed eight stale or masked workflow assertions after the deliberate
+customer-language redesign. The denied pages were not accepted as new visual
+baselines.
+
+The follow-up candidate makes the browser identity an explicit simulated
+pre-v60 grandfathered organization, grants only current `live` catalog rows,
+and deterministically repairs a disabled fixture row. Both local Playwright
+configs, the browser runner, and the mutating helpers now fail before
+application requests unless the database is a marked loopback PostgreSQL
+database and the API, web, proxy target/listener, and supported navigation
+overrides are locally bounded. The standalone proxy independently rejects a
+non-loopback upstream/listener or invalid port without requiring database
+access. Exact-host mode additionally accepts
+only the canonical OperatorOS HTTPS origins mapped through the local resolver.
+The separate Phase 17 deployed config requires the canonical production root,
+does not inherit the local resolver, and remains fail-on-skip. In a production-
+mode artifact, deterministic providers require `CI=true`, explicit deterministic
+provider mode, the disposable marker, and an independently validated marked
+loopback PostgreSQL URL. These fixtures provide local optimized-artifact SSO,
+route, persistence, and presentation evidence. Separate disposable-database
+contracts exercise internal checkout, one-core, signed-webhook, entitlement,
+and seat behavior; none is Stripe-hosted Checkout, portal, webhook-delivery, or
+live-billing acceptance.
+
+The entitlement and selector repair produced focused passing production-
+artifact runs for all eight workflows previously failed or masked in GitHub:
+PulseDesk, TechDeck, TorqueShed, BrandForgeOS, the TechDeck literal workflow,
+Deploy Ops, CallCommand AI, and SnapProofOS. On the settled guard diff, the
+normal Windows visual comparison passed **4/4 in 1.6 minutes**. All 78 approved
+baseline entries remain hash-bound, and the 13-module static visual contract
+reports zero failures. The complete optimized exact-host suite passed **21/21
+in 5.7 minutes**, including one-credential launch across all 12 available child
+applications, host-only logout, direct and sibling-tab SSO, deep-link
+reauthentication, tenant denials, persisted module workflows, accessibility,
+responsive layouts, and public compliance routes. The earlier Linux comparison
+passed **4/4** as supporting evidence; the exact-revision GitHub gate remains
+decisive for the final Linux browser/visual matrix. OutCall remains the explicit
+fail-closed source-recovery exception and is not represented as working or
+sellable.
+
+The current follow-up patch is locally accepted but is not the final published
+release until the fresh GitHub release gate reaches a terminal green result.
+Production remains at v59. No Replit redeploy, production-database apply,
+Stripe operation, external/live provider operation, DNS change, or customer-
+data operation was authorized or performed.
+
+The source/local candidate plans 60 ordered database-release entries ending in
+`forward_commerce_contract`. The final complete API aggregate on the settled
+guard diff reported **1,444 tests: 1,444 passed, 0 failed, 0 skipped, 0
+cancelled, and 0 todos in 629,733.0017 ms** on disposable PostgreSQL 16. Root
+lint passed with zero warnings, all four workspaces passed typecheck, the root
+unit/compiler gate passed **52/52**, and the release-safety quality gate passed
+**20/20**. The disposable integration gate passed **31/31**, including clean
+v60 apply in 18,253 ms, idempotent reapply in 1,867 ms, and verify-current in
+956 ms. A fresh production build on the settled local diff passed deployment
+scope, the 56-case FaultlineLab catalog and **4/4** compiler tests, all four
+typechecks, API/runner compilation, and all **35/35** Next 15.5.23 pages. The
+exact final Git commit still requires the terminal-green GitHub aggregate and
+Linux visual comparison.
 
 Implementation commit `5024bfce4a16cd5fd7d47143d5057879316f3981` was
 successfully pushed to GitHub `main` under the owner's authorization. This
-source-published candidate is not the live release, and this documentation-only
-evidence follow-up changes no runtime behavior. Live production remains Replit
+source-published candidate is not the live release. The follow-up hardens
+deterministic-provider gating and corrects optimized-browser feature detection
+as well as its acceptance fixtures; it is not documentation-only. Live
+production remains Replit
 deployment `0a1f03b4`, application commit
 `2b385f56a3ff04e319b8448e41d995fd52feb10d`, immutable build
 `9c6511f9dc457a180839112f`, and database release v59/59 ending in

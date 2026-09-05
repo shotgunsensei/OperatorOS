@@ -46,7 +46,10 @@ import {
   storeEncryptedSecretReference,
 } from '../lib/shared-secret-vault.js';
 import { appendActivityEvent } from '../lib/shared-usage-activity.js';
-import { safeFailureCode } from '../lib/shared-service-safety.js';
+import {
+  isOperatorOSProductionArtifactTestEnvironment,
+  safeFailureCode,
+} from '../lib/shared-service-safety.js';
 import { validateCallCommandAutomationActions } from '../lib/callcommand-automation-policy.js';
 
 const MODULE_SLUG = 'callcommand-ai';
@@ -163,8 +166,8 @@ async function activity(request: FastifyRequest, eventType: string, objectType: 
   });
 }
 
-function webhookConfiguration() {
-  const configured = String(process.env.TWILIO_PUBLIC_BASE_URL || process.env.APP_URL || '').trim();
+function webhookConfiguration(env: NodeJS.ProcessEnv = process.env) {
+  const configured = String(env.TWILIO_PUBLIC_BASE_URL || env.APP_URL || '').trim();
   let url: URL;
   try {
     url = new URL(configured);
@@ -190,10 +193,26 @@ function webhookConfiguration() {
   };
 }
 
+export type CommercialNumberProviderFactory = (allowedWebhookOrigins: string[]) => CommercialNumberProvider;
+
+export function createCallCommandCommercialNumberProvider(
+  env: NodeJS.ProcessEnv = process.env,
+  factory: CommercialNumberProviderFactory = allowedWebhookOrigins => new TwilioCallCommandNumberProvider({ allowedWebhookOrigins }),
+): CommercialNumberProvider {
+  if (isOperatorOSProductionArtifactTestEnvironment(env)) {
+    throw new CallCommandCommercialError(
+      'Commercial telephony provider actions are disabled during deterministic acceptance',
+      'CALLCOMMAND_PROVIDER_ACTION_DISABLED_DURING_ACCEPTANCE',
+      503,
+    );
+  }
+  const webhook = webhookConfiguration(env);
+  return factory([webhook.origin]);
+}
+
 function numberProvider(): CommercialNumberProvider {
   if (numberProviderTestOverride) return numberProviderTestOverride;
-  const webhook = webhookConfiguration();
-  return new TwilioCallCommandNumberProvider({ allowedWebhookOrigins: [webhook.origin] });
+  return createCallCommandCommercialNumberProvider();
 }
 
 async function parentTwilioCredentials(): Promise<TwilioProviderCredentials> {

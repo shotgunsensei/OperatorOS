@@ -42,6 +42,17 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
       const response = await page.goto(`${WEB}${contract.criticalRoute}`, { waitUntil: 'domcontentloaded', timeout: 45_000 });
       expect(response?.status(), `${contract.moduleSlug}/${viewport.name}`).toBeLessThan(400);
       await expect(page.locator('body')).toContainText(contract.moduleName);
+      if (contract.moduleSlug === 'outcall') {
+        await expect(
+          page.locator('body'),
+          'OutCall remains source-recovery locked and must fail closed',
+        ).toContainText('OutCall is not available for this organization');
+      } else {
+        await expect(
+          page.locator('body'),
+          `${contract.moduleSlug}/${viewport.name} must render an entitled module workspace`,
+        ).not.toContainText(/is not available for this organization/i);
+      }
       await page.waitForFunction(() => {
         const text = document.body.innerText;
         const productWorkspaceLoading = /(?:loading|preparing)\s+(?:your\s+)?[\w -]+(?:workspace|dashboard|operations|garage|data)(?:\.{3}|…)?/i;

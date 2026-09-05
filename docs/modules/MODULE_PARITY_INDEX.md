@@ -2,8 +2,34 @@
 
 ## Module outcome/value release-candidate overlay (2026-09-05)
 
-Status: **SOURCE PUBLISHED AND FINAL SOURCE/LOCAL V60 RELEASE GATES PASS —
-PARITY STATES UNCHANGED / DEPLOYED ACCEPTANCE OPEN**.
+Status: **SOURCE PUBLISHED; FINAL FOLLOW-UP LOCAL GUARDS, BUILD, FULL EXACT-HOST,
+AND VISUAL GATES GREEN — FINAL GITHUB GATE OPEN / PARITY STATES UNCHANGED /
+DEPLOYED ACCEPTANCE OPEN**.
+
+GitHub release-gate run `33949354505` passed 13/14 and correctly stopped at the
+browser gate because its shared fixture no longer had valid v60 module access.
+The application failed closed with `TENANT_MODULE_DISABLED`; an obsolete
+`active` module filter and an unmarked post-cutover legacy row were repaired in
+test setup, not in production authorization. Both local Playwright configs, the
+runner, and the mutating helpers now reject unsafe database, API, web, proxy
+target/listener, root, supported override, or non-live-module targets before
+application requests. The standalone proxy independently rejects a non-loopback
+upstream/listener or invalid port without database authority. Exact-host mode accepts only canonical
+OperatorOS HTTPS origins through the local resolver. The dedicated deployed
+config is separately canonical-production-only and fail-on-skip.
+
+The entitlement/selector repair produced passing focused runs for all eight
+formerly failing or masked workflows. On the settled guard diff, Windows visual
+comparison passed 4/4 in 1.6 minutes. All 78 approvals stay hash-bound and the
+13-module static contract remains green. The complete optimized exact-host
+suite passed 21/21 in 5.7 minutes, including one-credential launch across all 12
+available child applications, direct and sibling-tab SSO, host-only logout,
+deep-link reauthentication, tenant denials, persisted workflows, accessibility,
+responsive layouts, and public compliance routes. The prior Linux comparison
+passed 4/4 as supporting evidence. These grandfathered fixtures provide no v60
+purchase, Stripe activation, live-provider, or deployed-acceptance evidence.
+OutCall remains intentionally unavailable, no parity row is promoted, and the
+exact-revision GitHub matrix is still required.
 
 The current release candidate gives every canonical application a
 customer-result contract and replaces prominent engineering-first copy with
@@ -74,33 +100,37 @@ The existing logo remains active until that explicit save. Canva and Figma
 remain manual import destinations; no authenticated provider connection or
 provider-side design result is claimed.
 
-The final aggregate on a new disposable PostgreSQL 16 database reported
-**1,440 tests: 1,434 passed, 0 failed, 6 intentional HTTP-only skips, and 0
-todos** in **713,438.7749 ms**. The six skips require a separately running Next
-server; no failure was converted to a skip. The registered aggregate covers the
-ten destination writes, authorization and tenant isolation, source freshness,
-tenant-wide versus actor-scoped deduplication, event-signature tamper rejection,
-run-detail redaction, commerce, billing, and release drift.
+The final complete aggregate on the settled guard diff ran on disposable
+PostgreSQL 16 and reported **1,444 tests: 1,444 passed, 0 failed, 0 skipped, 0
+cancelled, and 0 todos** in **629,733.0017 ms**. The immutable final commit's
+GitHub aggregate remains decisive. The aggregate covers the ten destination
+writes, provider isolation, authorization and tenant isolation, source
+freshness, deduplication, signature tamper rejection, run-detail redaction,
+commerce, billing, and release drift.
 
 All four workspaces (`apps/api`, `apps/runner-gateway`, `apps/web`, and
 `apps/torqueshed-native`) pass typecheck, and repository lint passes with zero
-warnings. Release v60 plans 60 steps with `forward_commerce_contract` last; a
-clean disposable apply completed in 18,916 ms, idempotent reapply in 2,907 ms,
-and independent read-only verify in 1,860 ms. The production build passes
+warnings. The root unit/compiler gate passes 52/52, and the release-safety
+quality gate passes 20/20. Release v60 plans 60 steps
+with `forward_commerce_contract` last; the disposable integration gate passes
+31/31, including clean apply in 18,253 ms, idempotent reapply in 1,867 ms, and
+independent verify-current in 956 ms. The production build passes
 deployment-scope verification, FaultlineLab's 56-case catalog and four compiler
 tests, API/runner compilation, and all 35 generated Next 15.5.23 pages.
 Production preflight correctly fails closed because the
 local worktree does not contain real production values. This evidence does not
-promote a parity row without current exact-host browser, deployment identity,
+promote a parity row without deployed exact-host browser, deployment identity,
 live-provider, production-database, monitoring, backup/restore, and rollback
 acceptance.
 
 This overlay records no live provider, production deployment, Stripe/billing,
-production-database, DNS, customer-data, or authenticated browser result. The
-owner has, however, approved one forward-sale contract and the source candidate
-now carries it consistently through catalog, customer screens, checkout,
-tenant-owned subscription persistence, signed webhook entitlements, portal,
-permissions, and administrator readiness. OperatorOS and the three free apps
+production-database, DNS, customer-data, or deployed authenticated browser
+result. The owner approved one forward-sale contract. Static and disposable-
+database tests exercise its internal catalog, customer-screen, checkout-intent,
+tenant-subscription, signed-webhook, entitlement, portal, permission, and
+readiness paths. No Stripe-hosted Checkout Session, portal visit, provider-
+delivered webhook, charge, or deployed billing result was exercised or
+accepted. OperatorOS and the three free apps
 remain $0; one monthly $149 TradeFlowKit, $149 PulseDesk, or $99 TechDeck
 flagship includes five tenant seats and one of exactly six eligible companions;
 additional companions are $29 and additional seats are $15. OutCall is

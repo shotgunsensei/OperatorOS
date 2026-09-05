@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
+import { isOperatorOSProductionArtifactTestEnvironment } from './lib/shared-service-safety.js';
 
 const AGENT_TOOLS: ChatCompletionTool[] = [
   {
@@ -93,6 +94,10 @@ export async function runAgentLoop(
   onEvent: (event: AgentEvent) => Promise<void>,
   executeTool: ToolHandler,
 ): Promise<{ success: boolean; iterations: number; totalTokens: number; changedFiles: string[] }> {
+  if (isOperatorOSProductionArtifactTestEnvironment()) {
+    await onEvent({ type: 'ERROR', payload: { error: 'AI agent execution is disabled during deterministic acceptance' } });
+    return { success: false, iterations: 0, totalTokens: 0, changedFiles: [] };
+  }
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     await onEvent({ type: 'ERROR', payload: { error: 'OPENAI_API_KEY not configured' } });

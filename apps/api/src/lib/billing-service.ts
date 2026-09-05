@@ -31,6 +31,7 @@ import {
   changeFreeCompanionModule,
 } from './product-entitlements.js';
 import { writeAudit } from './audit.js';
+import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 
 // Task #66: `apps/api/package.json` is `"type":"module"`, so the previous
 // `require('stripe')` inside `getStripe()` was undefined and every checkout
@@ -110,6 +111,7 @@ export function isStripeEnabled(): boolean {
   if (__stripeTestOverride && typeof __stripeTestOverride.enabled === 'boolean') {
     return __stripeTestOverride.enabled;
   }
+  if (isOperatorOSProductionArtifactTestEnvironment()) return false;
   return !!STRIPE_SECRET_KEY && (STRIPE_MODE === 'test' || STRIPE_MODE === 'live');
 }
 

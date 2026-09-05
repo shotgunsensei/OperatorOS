@@ -3,10 +3,12 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import { dirname, join, resolve } from 'node:path';
+import { assertLocalProxyEnvironment } from '../../../scripts/parity/lib/database.mjs';
 
-const listenHost = process.env.E2E_PROXY_HOST || '127.0.0.1';
-const listenPort = Number(process.env.E2E_PROXY_PORT || '443');
-const target = new URL(process.env.E2E_PROXY_TARGET || 'http://127.0.0.1:5000');
+const proxySafety = assertLocalProxyEnvironment(process.env);
+const listenHost = proxySafety.host;
+const listenPort = proxySafety.port;
+const target = new URL(proxySafety.targetUrl);
 const artifactDir = resolve(process.env.E2E_ARTIFACT_DIR || 'test-results/sso-e2e');
 const certPath = resolve(process.env.E2E_TLS_CERT || `${artifactDir}/operatoros.test.crt`);
 const keyPath = resolve(process.env.E2E_TLS_KEY || `${artifactDir}/operatoros.test.key`);

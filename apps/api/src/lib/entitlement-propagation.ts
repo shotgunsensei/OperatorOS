@@ -36,6 +36,7 @@ import {
 } from './entitlement-adapters.js';
 import { selectPlanModuleReconciliation } from './free-account-apps.js';
 import { subscriptionHasLegacyApplicationAccess } from './application-stack-billing-db-init.js';
+import { isOperatorOSDeterministicProviderTestEnvironment } from './shared-service-safety.js';
 
 function getSigningSecret(): string | null {
   const secret = process.env.MODULE_SSO_SECRET;
@@ -43,20 +44,55 @@ function getSigningSecret(): string | null {
   return secret;
 }
 
-async function executeRequest(req: AdapterRequest): Promise<{ ok: boolean; status?: number; error?: string }> {
+export interface EntitlementPushDispatchResult {
+  ok: boolean;
+  disposition: 'recorded_not_delivered' | 'delivered' | 'failed';
+  networkAttempted: boolean;
+  externalDelivery: boolean;
+  status?: number;
+  error?: string;
+}
+
+type FetchImplementation = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+export async function dispatchEntitlementPushRequest(
+  req: AdapterRequest,
+  env: NodeJS.ProcessEnv = process.env,
+  fetchImplementation: FetchImplementation = fetch,
+): Promise<EntitlementPushDispatchResult> {
+  if (isOperatorOSDeterministicProviderTestEnvironment(env)) {
+    return {
+      ok: true,
+      disposition: 'recorded_not_delivered',
+      networkAttempted: false,
+      externalDelivery: false,
+    };
+  }
   try {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch(req.url, {
+      const res = await fetchImplementation(req.url, {
         method: req.method, headers: req.headers, body: req.body, signal: controller.signal,
       });
-      return { ok: res.ok, status: res.status };
+      return {
+        ok: res.ok,
+        disposition: res.ok ? 'delivered' : 'failed',
+        networkAttempted: true,
+        externalDelivery: res.ok,
+        status: res.status,
+      };
     } finally {
       clearTimeout(t);
     }
   } catch (err: any) {
-    return { ok: false, error: err?.message || String(err) };
+    return {
+      ok: false,
+      disposition: 'failed',
+      networkAttempted: true,
+      externalDelivery: false,
+      error: err?.message || String(err),
+    };
   }
 }
 
@@ -66,6 +102,7 @@ export interface PropagationResult {
   membersComputed: number;
   receiversPushed: number;
   pushAttempts: number;
+  pushRecorded: number;
   pushSucceeded: number;
   pushFailed: number;
   droppedModuleSlugs: string[];
@@ -85,6 +122,7 @@ export async function recomputeAndPropagateEntitlements(
     membersComputed: 0,
     receiversPushed: 0,
     pushAttempts: 0,
+    pushRecorded: 0,
     pushSucceeded: 0,
     pushFailed: 0,
     droppedModuleSlugs: [],
@@ -339,9 +377,11 @@ export async function recomputeAndPropagateEntitlements(
       continue;
     }
     for (const req of outcome.requests) {
-      const r = await executeRequest(req);
+      const r = await dispatchEntitlementPushRequest(req);
       result.pushAttempts += 1;
-      if (r.ok) result.pushSucceeded += 1; else result.pushFailed += 1;
+      if (r.disposition === 'recorded_not_delivered') result.pushRecorded += 1;
+      else if (r.ok) result.pushSucceeded += 1;
+      else result.pushFailed += 1;
     }
   }
 
@@ -356,6 +396,7 @@ export async function recomputeAndPropagateEntitlements(
         members: result.membersComputed,
         receivers: result.receiversPushed,
         pushAttempts: result.pushAttempts,
+        pushRecorded: result.pushRecorded,
         pushSucceeded: result.pushSucceeded,
         pushFailed: result.pushFailed,
         skipped: skips,

@@ -42,6 +42,6 @@ test('deployed acceptance covers enabled-host SSO, logout, denial, and the OutCa
   assert.match(spec, /assertNoBrowserCredentialStorage/);
   assert.equal(
     packageJson.scripts?.['test:e2e:phase17-deployed'],
-    'playwright test e2e/phase17-deployed-acceptance.spec.ts',
+    'playwright test --config playwright.deployed.config.ts',
   );
 });

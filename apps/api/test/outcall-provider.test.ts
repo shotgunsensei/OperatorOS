@@ -29,6 +29,8 @@ async function withLiveEnv(run: () => Promise<void>) {
     before.set(key, process.env[key]);
     process.env[key] = value;
   }
+  before.set('OPERATOROS_DETERMINISTIC_PROVIDER_MODE', process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE);
+  delete process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE;
   const originalFetch = globalThis.fetch;
   try {
     await run();

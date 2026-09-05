@@ -16,10 +16,10 @@ test('Phase 27 connector routes preserve tenant authority, encrypted credentials
   assert.match(routes,/test-ingest/);
   assert.match(routes,/PULSEDESK_TEST_ADAPTER_REQUIRED/);
   assert.match(routes,/x-pulsedesk-test-adapter/);
-  assert.match(routes,/connector\.mode === 'test' && isOperatorOSTestEnvironment\(\)/);
+  assert.match(routes,/connector\.mode === 'test' && isOperatorOSDeterministicProviderTestEnvironment\(\)/);
   assert.match(routes,/PULSEDESK_INBOUND_AUTH_FAILED/);
-  assert.match(routes,/connector\.mode !== 'test' \|\| !isOperatorOSTestEnvironment\(\)/);
-  assert.match(routes,/mode === 'live' \|\| \(mode === 'test' && !isOperatorOSTestEnvironment\(\)\)/);
+  assert.match(routes,/connector\.mode !== 'test' \|\| !isOperatorOSDeterministicProviderTestEnvironment\(\)/);
+  assert.match(routes,/mode === 'live' \|\| \(mode === 'test' && !isOperatorOSDeterministicProviderTestEnvironment\(\)\)/);
   assert.match(routes,/PULSEDESK_ATTACHMENT_SCAN_REJECTED/);
   assert.ok(routes.indexOf("status='processed'")>routes.indexOf('if (!scanClean)'));
   assert.doesNotMatch(routes,/console\.log|request\.body.*log/);

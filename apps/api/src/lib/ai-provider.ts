@@ -489,15 +489,15 @@ let currentProvider: AiProvider | null = null;
 let currentProviderKey = '';
 
 export function getAiProvider(): AiProvider {
-  const apiKey = process.env.OPENAI_API_KEY;
   const testEnvironment = isOperatorOSDeterministicProviderTestEnvironment();
-  const providerKey = apiKey ? `openai:${process.env.OPENAI_MODEL || 'gpt-4o-mini'}` : (testEnvironment ? 'test' : 'disabled');
+  const apiKey = process.env.OPENAI_API_KEY;
+  const providerKey = testEnvironment ? 'test' : (apiKey ? `openai:${process.env.OPENAI_MODEL || 'gpt-4o-mini'}` : 'disabled');
   if (currentProvider && currentProviderKey === providerKey) return currentProvider;
 
-  if (apiKey) {
-    currentProvider = new OpenAiProvider(apiKey);
-  } else if (testEnvironment) {
+  if (testEnvironment) {
     currentProvider = new MockAiProvider();
+  } else if (apiKey) {
+    currentProvider = new OpenAiProvider(apiKey);
   } else {
     currentProvider = new DisabledAiProvider();
   }
@@ -506,10 +506,10 @@ export function getAiProvider(): AiProvider {
 }
 
 export function getProviderInfo(): { name: 'openai' | 'test' | 'disabled'; configured: boolean } {
-  const apiKey = process.env.OPENAI_API_KEY;
   const testEnvironment = isOperatorOSDeterministicProviderTestEnvironment();
+  const apiKey = process.env.OPENAI_API_KEY;
   return {
-    name: apiKey ? 'openai' : (testEnvironment ? 'test' : 'disabled'),
-    configured: !!apiKey,
+    name: testEnvironment ? 'test' : (apiKey ? 'openai' : 'disabled'),
+    configured: !testEnvironment && !!apiKey,
   };
 }

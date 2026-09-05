@@ -35,6 +35,13 @@ async function assertNoUnlabelledFormControls(page: Page) {
   expect(failures, 'every visible form control must have a programmatic label').toEqual([]);
 }
 
+async function assertTradeFlowKitShell(page: Page, route: string) {
+  await expect(
+    page.getByTestId('tradeflowkit-module-shell'),
+    `${route} must render the entitled TradeFlowKit shell`,
+  ).toBeVisible();
+}
+
 async function createPublicInvoice(request: APIRequestContext) {
   const customerResponse = await request.post(`${API}/modules/tradeflowkit/customers`, {
     data: { name: 'Phase 23 Visual Customer', email: 'visual@example.com' },
@@ -75,6 +82,7 @@ test.describe('Phase 23 TradeFlowKit visual identity and route restoration', () 
     for (const [route, heading] of activeRoutes) {
       const response = await page.goto(`${WEB}${route}`, { waitUntil: 'domcontentloaded' });
       expect(response?.status(), route).toBeLessThan(400);
+      await assertTradeFlowKitShell(page, route);
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
       await expect(page.locator('[data-testid="tradeflowkit-module-shell"]')).toHaveCSS('--tfk-primary', 'hsl(25 95% 36%)');
       await expect(page.locator('body')).not.toContainText(/coming soon|not implemented|todo-only/i);
@@ -98,6 +106,7 @@ test.describe('Phase 23 TradeFlowKit visual identity and route restoration', () 
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto(`${WEB}/modules/tradeflowkit/dashboard`, { waitUntil: 'domcontentloaded' });
+      await assertTradeFlowKitShell(page, `/modules/tradeflowkit/dashboard (${viewport.name})`);
       if (viewport.name === 'desktop') {
         await expect(page.locator('img[alt="TradeFlowKit"]')).toBeVisible();
       } else {
@@ -122,6 +131,7 @@ test.describe('Phase 23 TradeFlowKit visual identity and route restoration', () 
     const publicPath = await createPublicInvoice(page.request);
     await page.addInitScript(() => localStorage.setItem('tradeflowkit-theme-v1', 'dark'));
     await page.goto(`${WEB}/modules/tradeflowkit/dashboard`, { waitUntil: 'domcontentloaded' });
+    await assertTradeFlowKitShell(page, '/modules/tradeflowkit/dashboard (dark)');
     await expect(page.locator('[data-testid="tradeflowkit-module-shell"]')).toHaveAttribute('data-theme', 'dark');
     await expect(page.locator('[data-testid="tradeflowkit-module-shell"]')).toHaveCSS('--tfk-primary', 'hsl(25 95% 52%)');
     const response = await page.goto(`${WEB}${publicPath}`, { waitUntil: 'domcontentloaded' });

@@ -1,6 +1,10 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BUILD_ROOT, REPOSITORY_ROOT } from './lib/compiler.mjs';
+import {
+  assertLocalBrowserTestEnvironment,
+  stripExternalProviderEnvironment,
+} from './lib/database.mjs';
 import { runCaptured, spawnLogged, stopChild, waitForHttp, waitForPort } from './lib/process.mjs';
 
 const suiteIndex = process.argv.indexOf('--suite');
@@ -8,12 +12,54 @@ const suite = suiteIndex >= 0 ? process.argv[suiteIndex + 1] : 'all';
 const webRoot = join(REPOSITORY_ROOT, 'apps/web');
 const playwrightCli = join(webRoot, 'node_modules', '@playwright', 'test', 'cli.js');
 if (!['e2e', 'visual', 'all'].includes(suite)) throw new Error('--suite must be e2e, visual, or all');
-if (process.env.PARITY_DATABASE_IS_DISPOSABLE !== '1') throw new Error('PARITY_DATABASE_IS_DISPOSABLE=1 is required');
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
+const browserEnv = {
+  ...stripExternalProviderEnvironment(process.env),
+  CI: 'true',
+  ALLOW_LEGACY_SSO_ROLLBACK: 'false',
+  OPERATOROS_SELF_SERVICE_TRIALS_ENABLED: 'false',
+  E2E_PRODUCTION_HOSTS: '1',
+  E2E_ROOT_URL: 'https://operatoros.net',
+  E2E_API_URL: 'http://127.0.0.1:5001',
+  E2E_WEB_URL: 'http://127.0.0.1:5000',
+  E2E_PROXY_HOST: '127.0.0.1',
+  E2E_PROXY_TARGET: 'http://127.0.0.1:5000',
+  INTERNAL_API_URL: 'http://127.0.0.1:5001',
+  APP_BASE_URL: 'https://app.operatoros.net',
+  WEB_BASE_URL: 'https://operatoros.net',
+  INVITE_ACCEPT_BASE_URL: 'https://app.operatoros.net',
+  OPERATOROS_BASE_URL: 'https://operatoros.net',
+  OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
+  E2E_APP_URL: 'https://app.operatoros.net',
+  E2E_WEB_BASE_URL: 'https://operatoros.net',
+  E2E_MESSENGER_ROOT_URL: 'https://app.operatoros.net',
+  HELP_CENTER_E2E_URL: 'https://operatoros.net',
+  BRAND_E2E_BASE_URL: 'https://brandforgeos.operatoros.net',
+  E2E_BRANDFORGEOS_URL: 'https://brandforgeos.operatoros.net',
+  E2E_TORQUESHED_URL: 'https://torqueshed.operatoros.net',
+  E2E_SNAPPROOFOS_URL: 'https://snapproofos.operatoros.net',
+  E2E_STUDYFORGE_URL: 'https://studyforge-ai.operatoros.net',
+  TRADEFLOWKIT_URL: 'https://tradeflowkit.operatoros.net',
+  TORQUESHED_URL: 'https://torqueshed.operatoros.net',
+  TECHDECK_URL: 'https://techdeck.operatoros.net',
+  PULSEDESK_URL: 'https://pulsedesk.operatoros.net',
+  FAULTLINELAB_URL: 'https://faultlinelab.operatoros.net',
+  OPERATOR_POOL_HALL_URL: 'https://operatorpoolhall.operatoros.net',
+  NINJA_POOL_HALL_URL: 'https://operatorpoolhall.operatoros.net',
+  BRANDFORGEOS_URL: 'https://brandforgeos.operatoros.net',
+  SNAPPROOFOS_URL: 'https://snapproofos.operatoros.net',
+  STUDYFORGE_AI_URL: 'https://studyforge-ai.operatoros.net',
+  DEPLOY_OPS_URL: 'https://deployops.operatoros.net',
+  NINJA_LAUNCH_KIT_URL: 'https://deployops.operatoros.net',
+  CALLCOMMAND_AI_URL: 'https://callcommand-ai.operatoros.net',
+  SCRIPT_OPS_URL: 'https://scriptops.operatoros.net',
+  NINJAMATION_URL: 'https://scriptops.operatoros.net',
+  OUTCALL_URL: 'https://outcall.operatoros.net',
+};
+assertLocalBrowserTestEnvironment(browserEnv, { requireExactHosts: true });
 mkdirSync(BUILD_ROOT, { recursive: true });
 
 const runtimeEnv = {
-  ...process.env,
+  ...browserEnv,
   APP_ENV: 'production',
   NODE_ENV: 'production',
   INTERNAL_API_URL: 'http://localhost:5001',
@@ -58,13 +104,7 @@ try {
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);
     const browserResult = await runCaptured(process.execPath, [playwrightCli, ...browserArgs], {
       cwd: webRoot,
-      env: {
-        ...runtimeEnv,
-        E2E_PRODUCTION_HOSTS: '1',
-        E2E_ROOT_URL: 'https://operatoros.net',
-        E2E_API_URL: 'http://127.0.0.1:5001',
-        E2E_WEB_URL: 'http://127.0.0.1:5000',
-      },
+      env: runtimeEnv,
     });
     exitCode = browserResult.status;
   }
@@ -73,12 +113,7 @@ try {
     if (process.env.PARITY_UPDATE_SNAPSHOTS === '1') visualArgs.push('--update-snapshots');
     const visualResult = await runCaptured(process.execPath, [playwrightCli, ...visualArgs], {
       cwd: webRoot,
-      env: {
-        ...runtimeEnv,
-        E2E_PRODUCTION_HOSTS: '1',
-        E2E_API_URL: 'http://127.0.0.1:5001',
-        E2E_WEB_URL: 'http://127.0.0.1:5000',
-      },
+      env: runtimeEnv,
     });
     if (exitCode === 0) exitCode = visualResult.status;
   }

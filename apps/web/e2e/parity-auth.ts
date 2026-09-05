@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 import { Client } from 'pg';
+import { assertLocalBrowserTestEnvironment } from '../../../scripts/parity/lib/database.mjs';
 
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:5001';
 
@@ -11,6 +12,7 @@ export interface ParitySession {
 }
 
 export async function establishParitySession(request: APIRequestContext): Promise<ParitySession> {
+  const browserSafety = assertLocalBrowserTestEnvironment(process.env);
   const productionHosts = process.env.E2E_PRODUCTION_HOSTS === '1';
   // Production sessions are Secure. Route setup through the local TLS proxy so
   // Playwright stores and reuses that cookie without weakening production
@@ -41,8 +43,7 @@ export async function establishParitySession(request: APIRequestContext): Promis
   const switched = await request.post(`${apiBase}/tenants/${tenantId}/switch`);
   expect(switched.ok(), `tenant switch: ${switched.status()} ${await switched.text()}`).toBeTruthy();
 
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error('DATABASE_URL is required for parity browser setup');
+  const databaseUrl = browserSafety.database.url;
   const pg = new Client({ connectionString: databaseUrl });
   await pg.connect();
   try {
@@ -55,19 +56,40 @@ export async function establishParitySession(request: APIRequestContext): Promis
     );
     const plan = await pg.query<{ id: string }>(`select id from subscription_plans where slug = 'elite' limit 1`);
     if (!plan.rows[0]) throw new Error('Elite plan is not seeded');
+    // The parity account intentionally represents a customer whose Elite
+    // contract existed before the v60 commerce cutover. New legacy-shaped
+    // rows must not gain application access, so the fixture has to carry the
+    // explicit one-time grandfather marker and trusted tenant scope.
     await pg.query(
-      `insert into subscriptions (user_id, plan_id, status, current_period_start, current_period_end)
-       values ($1, $2, 'active', now(), now() + interval '30 days')`,
-      [loginBody.user.id, plan.rows[0].id],
+      `insert into subscriptions
+         (user_id, plan_id, status, current_period_start, current_period_end,
+          tenant_id, scope_type, legacy_access_grandfathered_at)
+       values ($1, $2, 'active', now(), now() + interval '30 days',
+          $3, 'tenant', clock_timestamp())`,
+      [loginBody.user.id, plan.rows[0].id, tenantId],
     );
     await pg.query(
       `insert into tenant_modules (tenant_id, module_id, status, source, allow_all_members)
-       select $1, id, 'enabled', 'included', true from modules where status = 'active'
-       on conflict do nothing`,
+       select $1, id, 'enabled', 'included', true from modules where status = 'live'
+       on conflict (tenant_id, module_id) do update
+       set status = 'enabled',
+           source = 'included',
+           allow_all_members = true,
+           updated_at = now()`,
       [tenantId],
     );
   } finally {
     await pg.end();
   }
+  const moduleAccess = await request.get(`${apiBase}/me/modules`);
+  expect(
+    moduleAccess.ok(),
+    `parity module access: ${moduleAccess.status()} ${await moduleAccess.text()}`,
+  ).toBeTruthy();
+  const moduleAccessBody = await moduleAccess.json() as { modules?: Array<{ slug: string }> };
+  expect(
+    moduleAccessBody.modules?.map(module => module.slug),
+    'parity fixture must grant the flagship and companion modules used by visual acceptance',
+  ).toEqual(expect.arrayContaining(['brandforgeos', 'tradeflowkit']));
   return { userId: loginBody.user.id, tenantId, email, password };
 }

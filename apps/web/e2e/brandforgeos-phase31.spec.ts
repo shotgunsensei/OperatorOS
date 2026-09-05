@@ -61,11 +61,11 @@ async function establishExactHostSession(page: Page) {
     );
     expect(elite.rows).toHaveLength(1);
     await pg.query(
-      "insert into subscriptions (user_id,plan_id,status,current_period_start,current_period_end,tenant_id,scope_type) values ($1,$2,'active',now(),now()+interval '30 days',$3,'tenant')",
+      "insert into subscriptions (user_id,plan_id,status,current_period_start,current_period_end,tenant_id,scope_type,legacy_access_grandfathered_at) values ($1,$2,'active',now(),now()+interval '30 days',$3,'tenant',clock_timestamp())",
       [identity.rows[0].user_id, elite.rows[0].id, identity.rows[0].tenant_id],
     );
     await pg.query(
-      "insert into tenant_modules (tenant_id,module_id,status,source,allow_all_members) select $1,id,'enabled','included',true from modules where slug='brandforgeos' on conflict do nothing",
+      "insert into tenant_modules (tenant_id,module_id,status,source,allow_all_members) select $1,id,'enabled','included',true from modules where slug='brandforgeos' and status='live' on conflict do nothing",
       [identity.rows[0].tenant_id],
     );
   } finally {

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { normalizeE164 } from './callcommand.js';
+import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 
 export type OutCallProviderName = 'test' | 'twilio' | 'disabled';
 
@@ -41,6 +42,7 @@ function testAdapterEnabled(): boolean {
 }
 
 function readTwilioConfig(): OutCallTwilioConfig | null {
+  if (isOperatorOSProductionArtifactTestEnvironment()) return null;
   const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim() ?? '';
   const signingToken = process.env.TWILIO_AUTH_TOKEN?.trim() ?? '';
   const apiKeySid = process.env.TWILIO_API_KEY_SID?.trim() ?? '';

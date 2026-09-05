@@ -2,10 +2,11 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertDeployedBrowserTestEnvironment } from '../../../scripts/parity/lib/database.mjs';
 
 test.use({ trace: 'off', screenshot: 'off', video: 'off' });
 
-const ROOT = process.env.E2E_ROOT_URL || 'https://operatoros.net';
+const { rootUrl: ROOT } = assertDeployedBrowserTestEnvironment(process.env);
 
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();

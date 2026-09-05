@@ -157,3 +157,122 @@ test('all legacy plan-to-application authority requires the grandfather marker',
     );
   }
 });
+
+test('browser parity fixtures model an explicitly grandfathered tenant contract', () => {
+  for (const path of [
+    'apps/web/e2e/parity-auth.ts',
+    'apps/web/e2e/sso-v1.spec.ts',
+    'apps/web/e2e/brandforgeos-phase31.spec.ts',
+    'apps/web/e2e/torqueshed-phase28.spec.ts',
+  ]) {
+    const source = read(path);
+    assert.match(source, /tenant_id[\s\S]*scope_type[\s\S]*legacy_access_grandfathered_at/, path);
+    assert.match(source, /'tenant'[\s\S]*clock_timestamp\(\)/, path);
+  }
+
+  assert.doesNotMatch(
+    read('apps/web/e2e/ninja-pool-hall-phase30.spec.ts'),
+    /insert into subscriptions/iu,
+    'the free Pool Hall exact-host fixture must not manufacture paid legacy access',
+  );
+
+  assert.match(
+    read('apps/web/e2e/parity-auth.ts'),
+    /from modules where status = 'live'/,
+    'the visual fixture must grant the canonical live module catalog rather than the retired active status',
+  );
+  assert.match(
+    read('apps/web/e2e/sso-v1.spec.ts'),
+    /where slug = \$1 and status = 'live'/,
+    'the exact-host fixture must reject a deployment registration that is not live',
+  );
+  for (const path of [
+    'apps/web/e2e/brandforgeos-phase31.spec.ts',
+    'apps/web/e2e/torqueshed-phase28.spec.ts',
+    'apps/web/e2e/ninja-pool-hall-phase30.spec.ts',
+  ]) {
+    assert.match(
+      read(path),
+      /where slug\s*=\s*['"][^'"]+['"]\s+and status\s*=\s*['"]live['"]/iu,
+      `${path} must select only a live module registration`,
+    );
+  }
+  for (const path of [
+    'scripts/parity/run-browser-tests.mjs',
+    'apps/web/e2e/parity-auth.ts',
+    'apps/web/e2e/sso-v1.spec.ts',
+  ]) {
+    assert.match(read(path), /assertLocalBrowserTestEnvironment/, `${path} must reject unsafe browser and database targets`);
+  }
+  const visualFixture = read('apps/web/e2e/parity-auth.ts');
+  assert.ok(
+    visualFixture.indexOf('assertLocalBrowserTestEnvironment(process.env)')
+      < visualFixture.indexOf('request.post'),
+    'the visual fixture safety guard must run before its first request',
+  );
+  const ssoFixture = read('apps/web/e2e/sso-v1.spec.ts');
+  const ssoGuard = ssoFixture.indexOf(
+    'const { database: { url: databaseUrl } } = assertLocalBrowserTestEnvironment(',
+  );
+  assert.ok(ssoGuard >= 0, 'the exact-host fixture must invoke its local safety guard');
+  assert.ok(
+    ssoGuard < ssoFixture.indexOf('new Client({ connectionString: databaseUrl })'),
+    'the exact-host fixture safety guard must run before its database connection',
+  );
+  assert.ok(
+    ssoGuard < ssoFixture.indexOf('await registerAndSeed(request, pg)'),
+    'the exact-host fixture safety guard must run before its first identity mutation',
+  );
+  for (const path of [
+    'apps/web/playwright.config.ts',
+    'apps/web/playwright.visual.config.ts',
+  ]) {
+    assert.match(read(path), /assertLocalBrowserTestEnvironment/, `${path} must fail before starting an unsafe browser suite`);
+  }
+
+  assert.match(
+    read('apps/web/playwright.deployed.config.ts'),
+    /assertDeployedBrowserTestEnvironment/,
+    'deployed acceptance must use its dedicated canonical-production guard',
+  );
+  assert.match(
+    read('apps/web/playwright.deployed.config.ts'),
+    /fail-on-skipped-reporter\.ts/,
+    'the deployed acceptance gate must fail closed when any required scenario is skipped',
+  );
+  assert.match(
+    read('apps/web/playwright.config.ts'),
+    /testIgnore:\s*\/phase17-deployed-acceptance\\\.spec\\\.ts\//,
+    'the local default config must never collect the deployed acceptance spec',
+  );
+  const localConfig = read('apps/web/playwright.config.ts');
+  assert.match(localConfig, /process\.env\.E2E_ROOT_URL \?\?= browserSafety\.rootUrl/);
+  assert.match(localConfig, /process\.env\.E2E_APP_URL \?\?=/);
+  assert.match(localConfig, /process\.env\.INTERNAL_API_URL \?\?= browserSafety\.apiUrl/);
+  assert.match(
+    localConfig,
+    /launchOptions:[\s\S]*host-resolver-rules=MAP operatoros\.net 127\.0\.0\.1/,
+    'the local config must map even hard-coded canonical product hosts to loopback',
+  );
+  assert.match(
+    read('apps/web/package.json'),
+    /test:e2e:phase17-deployed[^\n]+playwright\.deployed\.config\.ts/,
+    'the deployed package command must not inherit the local mutating-suite config',
+  );
+  const runner = read('scripts/parity/run-browser-tests.mjs');
+  for (const binding of [
+    "E2E_PROXY_HOST: '127.0.0.1'",
+    "E2E_PROXY_TARGET: 'http://127.0.0.1:5000'",
+    "E2E_BRANDFORGEOS_URL: 'https://brandforgeos.operatoros.net'",
+    "E2E_TORQUESHED_URL: 'https://torqueshed.operatoros.net'",
+  ]) {
+    assert.match(runner, new RegExp(binding.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')));
+  }
+  assert.match(runner, /assertLocalBrowserTestEnvironment\(browserEnv/);
+  assert.match(runner, /const runtimeEnv = \{\s*\.\.\.browserEnv,/u);
+  assert.match(
+    read('apps/web/e2e/production-host-proxy.mjs'),
+    /assertLocalProxyEnvironment\(process\.env\)/,
+    'the proxy process itself must reject a remote upstream or public listener',
+  );
+});

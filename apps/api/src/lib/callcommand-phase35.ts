@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { getAiProvider, type AiProvider } from './ai-provider.js';
+import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 
 export const CALLCOMMAND_PHASE35_SOURCE_COMMIT = 'd49434e1d641d62cc141591c7208539a7afbf11e';
 export const CALLCOMMAND_LIVE_BEHAVIORS = ['record_only', 'forward_only', 'voicemail_only', 'ai_receptionist', 'ai_screen_then_transfer', 'ai_after_hours_intake'] as const;
@@ -345,6 +346,9 @@ export async function analyzeTranscript(transcript: string, mode: 'auto' | 'ai' 
 }
 
 export async function transcribeCallAudio(content: Buffer, fileName = 'recording.mp3'): Promise<{ transcript: string; provider: string; model: string }> {
+  if (isOperatorOSProductionArtifactTestEnvironment()) {
+    throw Object.assign(new Error('Audio transcription provider is unavailable'), { code: 'CALLCOMMAND_TRANSCRIPTION_UNAVAILABLE' });
+  }
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw Object.assign(new Error('Audio transcription provider is unavailable'), { code: 'CALLCOMMAND_TRANSCRIPTION_UNAVAILABLE' });
   if (!content.length || content.length > 52_428_800) throw new CallCommandPhase35Error('Recording is outside the supported size limit');

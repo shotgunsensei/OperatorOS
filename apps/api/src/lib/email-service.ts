@@ -15,6 +15,7 @@
  * route handlers.
  */
 import { resolveAppBaseUrl } from './public-url.js';
+import { isOperatorOSDeterministicProviderTestEnvironment } from './shared-service-safety.js';
 
 export interface InviteEmailInput {
   to: string;
@@ -117,13 +118,13 @@ function getFromAddress(): string {
 
 /** Public probe used by /v1/platform/health. Booleans only — never the value. */
 export function getEmailFromHealth(): { configured: boolean; provider: 'resend' | 'test' | 'disabled' } {
-  const testEnvironment = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
+  const testEnvironment = isOperatorOSDeterministicProviderTestEnvironment();
   const resendConfigured = Boolean(
     process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL),
   );
   return {
-    configured: resendConfigured,
-    provider: resendConfigured ? 'resend' : (testEnvironment ? 'test' : 'disabled'),
+    configured: !testEnvironment && resendConfigured,
+    provider: testEnvironment ? 'test' : (resendConfigured ? 'resend' : 'disabled'),
   };
 }
 
@@ -169,23 +170,19 @@ function sendViaTest(input: TransactionalEmail): SendResult {
 }
 
 async function sendTransactionalEmail(input: TransactionalEmail): Promise<SendResult> {
+  const provider = getEmailFromHealth().provider;
   try {
-    const resendConfigured = Boolean(
-      process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL),
-    );
-    if (resendConfigured) {
-      return await sendViaResend(input);
-    }
-    if (process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test') {
+    if (provider === 'test') {
       return sendViaTest(input);
+    }
+    if (provider === 'resend') {
+      return await sendViaResend(input);
     }
     return { ok: false, provider: 'disabled', error: 'EMAIL_PROVIDER_DISABLED' };
   } catch (err: any) {
     return {
       ok: false,
-      provider: process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL)
-        ? 'resend'
-        : ((process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test') ? 'test' : 'disabled'),
+      provider,
       error: String(err?.message ?? err).slice(0, 240),
     };
   }

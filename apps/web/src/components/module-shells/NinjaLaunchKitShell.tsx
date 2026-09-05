@@ -130,7 +130,8 @@ export default function NinjaLaunchKitShell({
 
   const readiness = workspace?.readiness;
   const selected = workspace?.selected;
-  const draftingAvailable = workspace?.ai?.configured === true && workspace.ai.name !== 'disabled';
+  const draftingAvailable = workspace?.ai?.name === 'test'
+    || (workspace?.ai?.configured === true && workspace.ai.name !== 'disabled');
   const channels = useMemo(
     () =>
       form.channels

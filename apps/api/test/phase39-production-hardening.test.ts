@@ -5,7 +5,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectRunnerMode } from '../../runner-gateway/src/provisioner.js';
 import { evaluateSharedServiceWorkerReadiness } from '../src/lib/shared-service-worker.js';
-import { isOperatorOSDeterministicProviderTestEnvironment } from '../src/lib/shared-service-safety.js';
+import {
+  isOperatorOSDeterministicProviderTestEnvironment,
+  isOperatorOSProductionArtifactTestEnvironment,
+} from '../src/lib/shared-service-safety.js';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -40,13 +43,42 @@ test('Phase 39 deterministic providers require CI plus an explicitly disposable 
     APP_ENV: 'production', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
   }), false);
   assert.equal(isOperatorOSDeterministicProviderTestEnvironment({
+    APP_ENV: 'test', NODE_ENV: 'production',
+  }), false);
+  assert.equal(isOperatorOSDeterministicProviderTestEnvironment({
     APP_ENV: 'production', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
     PARITY_DATABASE_IS_DISPOSABLE: '1',
   }), false);
   assert.equal(isOperatorOSDeterministicProviderTestEnvironment({
     APP_ENV: 'production', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
     PARITY_DATABASE_IS_DISPOSABLE: '1', CI: 'true',
+    DATABASE_URL: 'postgresql://operator:secret@db.operatoros.net:5432/operatoros_production',
+  }), false);
+  assert.equal(isOperatorOSDeterministicProviderTestEnvironment({
+    APP_ENV: 'production', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
+    PARITY_DATABASE_IS_DISPOSABLE: '1', CI: 'true',
+    DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros_latest',
+  }), false);
+  assert.equal(isOperatorOSDeterministicProviderTestEnvironment({
+    APP_ENV: 'production', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
+    PARITY_DATABASE_IS_DISPOSABLE: '1', CI: 'true',
+    DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros_test?host=db.operatoros.net',
+  }), false);
+  assert.equal(isOperatorOSDeterministicProviderTestEnvironment({
+    APP_ENV: 'production', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
+    PARITY_DATABASE_IS_DISPOSABLE: '1', CI: 'true',
+    DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros_test#host=db.operatoros.net',
+  }), false);
+  assert.equal(isOperatorOSDeterministicProviderTestEnvironment({
+    APP_ENV: 'production', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
+    PARITY_DATABASE_IS_DISPOSABLE: '1', CI: 'true',
+    DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros_phase21_release',
   }), true);
+  assert.equal(isOperatorOSProductionArtifactTestEnvironment({
+    APP_ENV: 'test', NODE_ENV: 'test', OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
+    PARITY_DATABASE_IS_DISPOSABLE: '1', CI: 'true',
+    DATABASE_URL: 'postgresql://operator:secret@127.0.0.1:5432/operatoros_phase21_release',
+  }), false);
 });
 
 test('Phase 39 worker readiness rejects stale, failed, disabled, and missing heartbeats', () => {

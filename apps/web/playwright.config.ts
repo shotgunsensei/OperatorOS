@@ -1,9 +1,25 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertLocalBrowserTestEnvironment } from '../../scripts/parity/lib/database.mjs';
 
 const productionHosts = process.env.E2E_PRODUCTION_HOSTS === '1';
+const browserSafety = assertLocalBrowserTestEnvironment(
+  process.env,
+  { requireExactHosts: productionHosts },
+);
+process.env.E2E_API_URL ??= browserSafety.apiUrl;
+process.env.E2E_WEB_URL ??= browserSafety.webUrl;
+process.env.E2E_ROOT_URL ??= browserSafety.rootUrl;
+process.env.E2E_APP_URL ??= productionHosts
+  ? 'https://app.operatoros.net'
+  : browserSafety.webUrl;
+process.env.HELP_CENTER_E2E_URL ??= productionHosts
+  ? 'https://operatoros.net'
+  : browserSafety.webUrl;
+process.env.INTERNAL_API_URL ??= browserSafety.apiUrl;
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: /phase17-deployed-acceptance\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
@@ -32,13 +48,16 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    ...(productionHosts ? {
-      launchOptions: {
-        args: [
-          '--host-resolver-rules=MAP operatoros.net 127.0.0.1, MAP *.operatoros.net 127.0.0.1, EXCLUDE localhost',
-          '--ignore-certificate-errors',
-        ],
-      },
-    } : {}),
+    // This is the local-only config. Map every canonical product hostname to
+    // the loopback proxy even when a particular spec uses a hard-coded URL;
+    // without a local proxy the request fails closed instead of reaching the
+    // deployed service. Production acceptance uses the separate deployed config.
+    launchOptions: {
+      args: [
+        '--no-proxy-server',
+        '--host-resolver-rules=MAP operatoros.net 127.0.0.1, MAP *.operatoros.net 127.0.0.1, EXCLUDE localhost',
+        '--ignore-certificate-errors',
+      ],
+    },
   },
 });

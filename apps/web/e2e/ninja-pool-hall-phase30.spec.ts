@@ -39,16 +39,9 @@ async function prepareExactHost(page: Page): Promise<{ userId: string; tenantId:
     );
     expect(identity.rows).toHaveLength(1);
     ({ user_id: userId, tenant_id: tenantId } = identity.rows[0]);
-    const elite = await pg.query<{ id: string }>(`select id from subscription_plans where slug = 'elite' and is_active = true limit 1`);
-    expect(elite.rows).toHaveLength(1);
-    await pg.query(
-      `insert into subscriptions (user_id, plan_id, status, current_period_start, current_period_end, tenant_id, scope_type)
-       values ($1, $2, 'active', now(), now() + interval '30 days', $3, 'tenant')`,
-      [userId, elite.rows[0].id, tenantId],
-    );
     await pg.query(
       `insert into tenant_modules (tenant_id, module_id, status, source, allow_all_members)
-       select $1, id, 'enabled', 'included', true from modules where slug = 'ninja-pool-hall'
+       select $1, id, 'enabled', 'included', true from modules where slug = 'ninja-pool-hall' and status = 'live'
        on conflict do nothing`,
       [tenantId],
     );

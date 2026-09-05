@@ -81,18 +81,54 @@ export function isOperatorOSTestEnvironment(): boolean {
   return process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
 }
 
+const DETERMINISTIC_DATABASE_MARKER = /(?:^|[_-])(?:test|phase21|ci|disposable)(?:[_-]|$)/iu;
+const DETERMINISTIC_LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
+
+function hasValidatedDisposableDatabaseUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    const database = decodeURIComponent(parsed.pathname.replace(/^\//u, ''));
+    return ['postgres:', 'postgresql:'].includes(parsed.protocol)
+      && !parsed.search
+      && !parsed.hash
+      && DETERMINISTIC_LOOPBACK_HOSTS.has(parsed.hostname)
+      && DETERMINISTIC_DATABASE_MARKER.test(database);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Production-artifact acceptance may use deterministic AI/payment adapters,
- * but only inside CI against a database explicitly declared disposable. The
- * three-part gate prevents a lone production environment variable from ever
- * activating test provider behavior in a deployed runtime.
+ * but only inside CI against a database explicitly declared disposable and
+ * independently validated as a marked loopback PostgreSQL target. The complete
+ * gate prevents production flags alone from activating test-provider behavior.
  */
 export function isOperatorOSDeterministicProviderTestEnvironment(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return env.NODE_ENV === 'test' || env.APP_ENV === 'test' || (
-    env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE === '1'
+  const productionSignaled = env.NODE_ENV === 'production' || env.APP_ENV === 'production';
+  const ordinaryTestEnvironment = !productionSignaled
+    && (env.NODE_ENV === 'test' || env.APP_ENV === 'test');
+  return ordinaryTestEnvironment || isOperatorOSProductionArtifactTestEnvironment(env);
+}
+
+/**
+ * The production build may be exercised with deterministic providers only
+ * inside the repository's explicitly opted-in, disposable acceptance harness.
+ * Keep this stricter predicate separate from ordinary unit-test detection so
+ * provider integrations can retain their dedicated synthetic unit fixtures.
+ */
+export function isOperatorOSProductionArtifactTestEnvironment(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const productionSignaled = env.NODE_ENV === 'production' || env.APP_ENV === 'production';
+  return (
+    productionSignaled
+    && env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE === '1'
     && env.PARITY_DATABASE_IS_DISPOSABLE === '1'
     && env.CI === 'true'
+    && hasValidatedDisposableDatabaseUrl(env.DATABASE_URL)
   );
 }

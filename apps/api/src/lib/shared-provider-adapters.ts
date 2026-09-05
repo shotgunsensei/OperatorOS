@@ -145,7 +145,7 @@ class TwilioSmsAdapter implements OutboundProviderAdapter {
 }
 
 export async function getOutboundProviderAdapter(channel: 'email' | 'sms'): Promise<OutboundProviderAdapter> {
-  if (isOperatorOSTestEnvironment()) return new TestOutboundAdapter(channel);
+  if (isOperatorOSDeterministicProviderTestEnvironment()) return new TestOutboundAdapter(channel);
   if (channel === 'email') {
     return process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL)
       ? new ResendEmailAdapter()

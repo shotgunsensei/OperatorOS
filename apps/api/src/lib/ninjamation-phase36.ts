@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { analyzeScript, sha256, type NinjamationLanguage } from './ninjamation.js';
+import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 
 export const NINJAMATION_REPOSITORY = 'shotgunsensei/AutomationPacks';
 export const NINJAMATION_REPOSITORY_BRANCH = 'main';
@@ -281,6 +282,13 @@ async function githubJson(url: string, token?: string | null): Promise<unknown> 
 
 /** Fetches only the fixed public AutomationPacks repository; no caller URL reaches fetch. */
 export async function fetchAutomationPacksSnapshot(input: { commit?: string | null; token?: string | null } = {}): Promise<CatalogSnapshot> {
+  if (isOperatorOSProductionArtifactTestEnvironment()) {
+    throw new NinjamationPhase36Error(
+      'Catalog synchronization is disabled during deterministic acceptance',
+      'NINJAMATION_CATALOG_NETWORK_DISABLED',
+      503,
+    );
+  }
   const commit = input.commit ?? NINJAMATION_PHASE36_CATALOG_COMMIT;
   if (!/^[0-9a-f]{40}$/.test(commit)) throw new NinjamationPhase36Error('GitHub commit is invalid', 'NINJAMATION_CATALOG_COMMIT_INVALID');
   const root = `https://api.github.com/repos/${NINJAMATION_REPOSITORY}`;

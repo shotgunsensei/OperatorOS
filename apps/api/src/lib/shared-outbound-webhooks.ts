@@ -3,7 +3,12 @@ import { isIP } from 'node:net';
 import { lookup } from 'node:dns/promises';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
-import { boundedRetryDelayMs, isOperatorOSTestEnvironment, safeFailureCode, sanitizeSharedMetadata } from './shared-service-safety.js';
+import {
+  boundedRetryDelayMs,
+  isOperatorOSDeterministicProviderTestEnvironment,
+  safeFailureCode,
+  sanitizeSharedMetadata,
+} from './shared-service-safety.js';
 import { resolveEncryptedSecretReference, storeEncryptedSecretReference } from './shared-secret-vault.js';
 
 type Executor = Pick<typeof db, 'execute'>;
@@ -36,8 +41,8 @@ export function validateOutboundWebhookUrl(value: string): URL {
   return url;
 }
 
-async function assertPublicDns(url: URL): Promise<void> {
-  if (isOperatorOSTestEnvironment()) return;
+async function assertPublicDns(url: URL, env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  if (isOperatorOSDeterministicProviderTestEnvironment(env)) return;
   const addresses = await lookup(url.hostname, { all: true, verbatim: true });
   if (addresses.length === 0 || addresses.some(entry => isPrivateIp(entry.address))) {
     throw Object.assign(new Error('Webhook endpoint resolved to a non-public address'), { code: 'WEBHOOK_SSRF_BLOCKED' });
@@ -165,7 +170,17 @@ async function recordAttempt(row: Record<string, unknown>, input: {
   `);
 }
 
-export async function processOutboundWebhook(row: Record<string, unknown>, executor: Executor = db): Promise<void> {
+export type OutboundWebhookProcessingResult = {
+  status: 'recorded' | 'delivered' | 'retry' | 'dead_letter';
+  resultState: 'recorded_not_delivered' | 'delivered' | 'retry' | 'dead_letter';
+  externalDelivery: boolean;
+};
+
+export async function processOutboundWebhook(
+  row: Record<string, unknown>,
+  executor: Executor = db,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<OutboundWebhookProcessingResult> {
   try {
     const endpointResult = await executor.execute(sql`
       SELECT endpoint_url, secret_reference_id, enabled FROM shared_webhook_endpoints
@@ -175,15 +190,7 @@ export async function processOutboundWebhook(row: Record<string, unknown>, execu
     const endpoint = endpointResult.rows[0] as any;
     if (!endpoint?.enabled) throw Object.assign(new Error('Webhook endpoint is disabled'), { code: 'WEBHOOK_ENDPOINT_DISABLED' });
     const url = validateOutboundWebhookUrl(String(endpoint.endpoint_url));
-    await assertPublicDns(url);
-    const secret = await resolveEncryptedSecretReference({
-      tenantId: String(row.tenant_id), moduleId: String(row.module_id), id: String(endpoint.secret_reference_id),
-    }, executor);
-    if (!secret) throw Object.assign(new Error('Webhook signing secret is unavailable'), { code: 'WEBHOOK_SECRET_UNAVAILABLE' });
-    const body = JSON.stringify(row.payload_json ?? {});
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const signature = createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
-    if (isOperatorOSTestEnvironment()) {
+    if (isOperatorOSDeterministicProviderTestEnvironment(env)) {
       await recordAttempt(row, { adapterName: 'deterministic-test', externalDelivery: false, resultState: 'recorded_not_delivered' }, executor);
       await executor.execute(sql`
         UPDATE shared_webhook_deliveries SET status = 'recorded', attempt_count = attempt_count + 1,
@@ -191,8 +198,16 @@ export async function processOutboundWebhook(row: Record<string, unknown>, execu
         WHERE tenant_id = ${String(row.tenant_id)} AND id = ${String(row.id)}
           AND status = 'processing' AND lease_owner = ${String(row.lease_owner)}
       `);
-      return;
+      return { status: 'recorded', resultState: 'recorded_not_delivered', externalDelivery: false };
     }
+    await assertPublicDns(url, env);
+    const secret = await resolveEncryptedSecretReference({
+      tenantId: String(row.tenant_id), moduleId: String(row.module_id), id: String(endpoint.secret_reference_id),
+    }, executor);
+    if (!secret) throw Object.assign(new Error('Webhook signing secret is unavailable'), { code: 'WEBHOOK_SECRET_UNAVAILABLE' });
+    const body = JSON.stringify(row.payload_json ?? {});
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const signature = createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
     const response = await fetch(url, {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15_000), body,
       headers: {
@@ -213,6 +228,7 @@ export async function processOutboundWebhook(row: Record<string, unknown>, execu
       WHERE tenant_id = ${String(row.tenant_id)} AND id = ${String(row.id)}
         AND status = 'processing' AND lease_owner = ${String(row.lease_owner)}
     `);
+    return { status: 'delivered', resultState: 'delivered', externalDelivery: true };
   } catch (error) {
     const attempt = Number(row.attempt_count) + 1;
     const terminal = attempt >= Number(row.max_attempts) || safeFailureCode(error) === 'WEBHOOK_ENDPOINT_DISABLED';
@@ -227,6 +243,11 @@ export async function processOutboundWebhook(row: Record<string, unknown>, execu
       WHERE tenant_id = ${String(row.tenant_id)} AND id = ${String(row.id)}
         AND status = 'processing' AND lease_owner = ${String(row.lease_owner)}
     `);
+    return {
+      status: terminal ? 'dead_letter' : 'retry',
+      resultState: terminal ? 'dead_letter' : 'retry',
+      externalDelivery: false,
+    };
   }
 }
 

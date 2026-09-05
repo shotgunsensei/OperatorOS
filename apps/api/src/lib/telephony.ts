@@ -23,6 +23,7 @@
 
 import twilio from 'twilio';
 import { getAiProvider } from './ai-provider.js';
+import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 
 const PERSONA_SCRIPTS: Record<string, string> = {
   receptionist:
@@ -163,6 +164,9 @@ const CACHE_TTL_MS = 60_000;
 let cached: { at: number; value: TelephonyConfig | null } | null = null;
 
 export async function resolveTelephonyConfig(): Promise<TelephonyConfig | null> {
+  // The production-artifact browser harness must never resolve an inherited
+  // environment credential or query the Replit connector for live secrets.
+  if (isOperatorOSProductionArtifactTestEnvironment()) return null;
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.value;
   // Prefer the connector when present — it represents an explicit admin
   // choice via the Replit integration UI and survives credential rotation.
@@ -204,6 +208,7 @@ export async function getTelephonyInfo(): Promise<{
   accountSid: string | null;
 }> {
   const cfg = await resolveTelephonyConfig();
+  const deterministicAcceptance = isOperatorOSProductionArtifactTestEnvironment();
   return {
     configured: cfg !== null,
     provider: 'twilio',
@@ -211,7 +216,7 @@ export async function getTelephonyInfo(): Promise<{
     // `connectorAvailable` tells the UI whether the one-click Replit
     // connector path is even reachable from this environment. Self-hosted
     // installs that lack the proxy fall back to "paste env vars" guidance.
-    connectorAvailable: Boolean(
+    connectorAvailable: !deterministicAcceptance && Boolean(
       process.env.REPLIT_CONNECTORS_HOSTNAME &&
         (process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL),
     ),

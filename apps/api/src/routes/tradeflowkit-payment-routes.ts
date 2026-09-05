@@ -21,6 +21,7 @@ import {
 import {
   createTradeFlowKitStripeClient,
   getTradeFlowKitStripeConnectConfig,
+  type TradeFlowKitStripeConnectConfig,
 } from '../lib/tradeflowkit-payment-provider.js';
 import {
   receiveVerifiedWebhook,
@@ -39,6 +40,17 @@ const CHECKOUT_EVENT_TYPES = new Set([
   'checkout.session.expired',
 ]);
 let webhookHandlerRegistered = false;
+
+type StripeConnectConfigResult = {
+  config: TradeFlowKitStripeConnectConfig | null;
+  reason: string;
+  mode: 'test' | 'live' | null;
+};
+
+type TradeFlowKitPaymentRouteOptions = {
+  /** Dependency injection for bounded webhook/config tests; production uses the fail-closed environment resolver. */
+  resolveStripeConnectConfig?: () => StripeConnectConfigResult;
+};
 
 type TenantRequest = FastifyRequest & {
   tenantContext: { tenantId: string };
@@ -219,11 +231,15 @@ function stripeAccountState(account: Stripe.Account) {
   } as const;
 }
 
-export async function registerTradeFlowKitPaymentRoutes(app: FastifyInstance): Promise<void> {
+export async function registerTradeFlowKitPaymentRoutes(
+  app: FastifyInstance,
+  options: TradeFlowKitPaymentRouteOptions = {},
+): Promise<void> {
+  const resolveStripeConnectConfig = options.resolveStripeConnectConfig ?? getTradeFlowKitStripeConnectConfig;
   ensureWebhookHandler();
 
   app.get('/v1/modules/tradeflowkit/payments/provider', { preHandler: [...readGuards] }, async request => {
-    const resolved = getTradeFlowKitStripeConnectConfig();
+    const resolved = resolveStripeConnectConfig();
     const [account] = await db.select().from(tradeflowkitPaymentProviderAccounts).where(and(
       eq(tradeflowkitPaymentProviderAccounts.tenantId, tenantId(request)),
       eq(tradeflowkitPaymentProviderAccounts.provider, 'stripe_connect'),
@@ -239,7 +255,7 @@ export async function registerTradeFlowKitPaymentRoutes(app: FastifyInstance): P
   });
 
   app.get('/v1/modules/tradeflowkit/payments/connect/authorize', { preHandler: [...adminGuards] }, async (request, reply) => {
-    const resolved = getTradeFlowKitStripeConnectConfig();
+    const resolved = resolveStripeConnectConfig();
     if (!resolved.config) return reply.code(503).send({ error: resolved.reason, code: 'TRADEFLOWKIT_PAYMENT_PROVIDER_DISABLED' });
     const query = (request.query ?? {}) as Record<string, unknown>;
     const returnPath = validReturnPath(query.returnPath);
@@ -262,7 +278,7 @@ export async function registerTradeFlowKitPaymentRoutes(app: FastifyInstance): P
   });
 
   app.get('/v1/modules/tradeflowkit/payments/connect/callback', { preHandler: [...adminGuards] }, async (request, reply) => {
-    const resolved = getTradeFlowKitStripeConnectConfig();
+    const resolved = resolveStripeConnectConfig();
     if (!resolved.config) return reply.code(503).send({ error: resolved.reason, code: 'TRADEFLOWKIT_PAYMENT_PROVIDER_DISABLED' });
     const query = (request.query ?? {}) as Record<string, unknown>;
     const state = typeof query.state === 'string' ? query.state : '';
@@ -326,7 +342,7 @@ export async function registerTradeFlowKitPaymentRoutes(app: FastifyInstance): P
   });
 
   app.delete('/v1/modules/tradeflowkit/payments/connect', { preHandler: [...adminGuards] }, async (request, reply) => {
-    const resolved = getTradeFlowKitStripeConnectConfig();
+    const resolved = resolveStripeConnectConfig();
     if (!resolved.config) return reply.code(503).send({ error: resolved.reason, code: 'TRADEFLOWKIT_PAYMENT_PROVIDER_DISABLED' });
     const [account] = await db.select().from(tradeflowkitPaymentProviderAccounts).where(and(
       eq(tradeflowkitPaymentProviderAccounts.tenantId, tenantId(request)),
@@ -361,7 +377,7 @@ export async function registerTradeFlowKitPaymentRoutes(app: FastifyInstance): P
   });
 
   app.post('/v1/webhooks/tradeflowkit/stripe-connect', async (request, reply) => {
-    const resolved = getTradeFlowKitStripeConnectConfig();
+    const resolved = resolveStripeConnectConfig();
     if (!resolved.config) return reply.code(503).send({ error: 'TradeFlowKit payment webhooks are unavailable', code: 'WEBHOOK_NOT_CONFIGURED' });
     const rawBody = (request as FastifyRequest & { rawBody?: Buffer }).rawBody;
     const signatureRaw = request.headers['stripe-signature'];

@@ -1,6 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertLocalBrowserTestEnvironment } from '../../scripts/parity/lib/database.mjs';
 
 const productionHosts = process.env.E2E_PRODUCTION_HOSTS === '1';
+const browserSafety = assertLocalBrowserTestEnvironment(
+  process.env,
+  { requireExactHosts: productionHosts },
+);
+process.env.E2E_API_URL ??= browserSafety.apiUrl;
+process.env.E2E_WEB_URL ??= browserSafety.webUrl;
+process.env.E2E_ROOT_URL ??= browserSafety.rootUrl;
+process.env.INTERNAL_API_URL ??= browserSafety.apiUrl;
 
 export default defineConfig({
   testDir: './e2e',
@@ -22,13 +31,12 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    ...(productionHosts ? {
-      launchOptions: {
-        args: [
-          '--ignore-certificate-errors',
-          '--host-resolver-rules=MAP operatoros.net 127.0.0.1, MAP *.operatoros.net 127.0.0.1, EXCLUDE localhost',
-        ],
-      },
-    } : {}),
+    launchOptions: {
+      args: [
+        '--no-proxy-server',
+        '--ignore-certificate-errors',
+        '--host-resolver-rules=MAP operatoros.net 127.0.0.1, MAP *.operatoros.net 127.0.0.1, EXCLUDE localhost',
+      ],
+    },
   },
 });

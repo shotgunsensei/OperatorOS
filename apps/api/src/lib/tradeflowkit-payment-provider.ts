@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { isOperatorOSDeterministicProviderTestEnvironment } from './shared-service-safety.js';
 
 export type TradeFlowKitStripeMode = 'test' | 'live';
 
@@ -54,6 +55,9 @@ function exactHttpsUrl(value: string | undefined, expectedPath?: string): string
 export function getTradeFlowKitStripeConnectConfig(
   env: Record<string, string | undefined> = process.env,
 ): { config: TradeFlowKitStripeConnectConfig | null; reason: string; mode: TradeFlowKitStripeMode | null } {
+  if (isOperatorOSDeterministicProviderTestEnvironment(env)) {
+    return { config: null, reason: 'Stripe Connect is disabled in the deterministic acceptance environment.', mode: 'test' };
+  }
   const mode = env.STRIPE_MODE === 'live' ? 'live' : env.STRIPE_MODE === 'test' ? 'test' : null;
   if (env.TRADEFLOWKIT_PAYMENT_PROVIDER !== 'stripe_connect') {
     return { config: null, reason: 'TRADEFLOWKIT_PAYMENT_PROVIDER is not stripe_connect.', mode };
@@ -174,7 +178,7 @@ export function getTradeFlowKitPaymentProvider(
   env: Record<string, string | undefined> = process.env,
   stripeClient?: Stripe,
 ): TradeFlowKitPaymentProvider {
-  if (env.NODE_ENV === 'test' && env.TRADEFLOWKIT_PAYMENT_PROVIDER === 'test') {
+  if (isOperatorOSDeterministicProviderTestEnvironment(env)) {
     return new TestTradeFlowKitPaymentProvider();
   }
   const resolved = getTradeFlowKitStripeConnectConfig(env);

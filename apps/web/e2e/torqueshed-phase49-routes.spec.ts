@@ -174,7 +174,7 @@ test.describe('Phase 49 TorqueShed route application', () => {
     expect(torqueApiCalls.some(path => path.endsWith('/token-ledger'))).toBeTruthy();
     expect(torqueApiCalls.some(path => path.endsWith('/torque-assist/status'))).toBeTruthy();
     expect(torqueApiCalls.some(path => /\/builds|\/reminders|\/vendors|\/diagnostic-templates/u.test(path))).toBeFalsy();
-    await expect(page.getByRole('button', { name: /Roadside 25,000 units · \$5\.00/iu })).toBeEnabled();
+    await expect(page.getByRole('button', { name: /Roadside 25,000 credits · \$5\.00/iu })).toBeEnabled();
     await expect(page.getByTestId('torqueshed-route-header')).toContainText('test-mode credit packs');
 
     for (const path of ['/', `/diagnostics/${diagnostic.id}/assist`, '/billing/credits', '/settings']) {

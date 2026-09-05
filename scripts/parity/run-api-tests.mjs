@@ -47,6 +47,10 @@ const env = {
   NODE_ENV: 'test',
   WEB_BASE_URL: webBaseUrl,
 };
+// API suites use the ordinary deterministic unit-test path. Production-artifact
+// acceptance is exercised only by tests that opt themselves into a production
+// signal, preventing an inherited browser opt-in from changing unrelated tests.
+delete env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE;
 let web;
 let result;
 try {

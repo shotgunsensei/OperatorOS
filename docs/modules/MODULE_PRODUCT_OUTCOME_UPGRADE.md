@@ -1,14 +1,57 @@
 # Module product outcome upgrade
 
-Status: **implementation source-published and source/local release gates green; production v60 apply, redeployment, providers, and deployed acceptance open**<br>
+Status: **implementation source-published; final follow-up local guards, build, full exact-host, and visual gates green; final GitHub gate, production v60 apply, redeployment, providers, Stripe, and deployed acceptance open**<br>
 Date: 2026-09-05
+
+## Follow-up exact-host and visual acceptance
+
+GitHub release-gate run `33949354505` passed 13 of 14 stages and blocked on the
+combined browser gate. This was not a product authorization defect: v60 had
+removed the fixture's accidental legacy-plan access, the fixture queried the
+obsolete module status `active`, and OperatorOS correctly rendered an
+organization-level entitlement denial. Eight selectors also still described
+the pre-alignment engineering copy. The denied screens were rejected rather
+than recorded as new baselines.
+
+The corrected browser profiles use explicit tenant-scoped, grandfathered pre-
+v60 compatibility identities and grant only current `live` modules. Both local
+Playwright configs, the runner, and the mutating helpers invoke the shared local-
+browser guard before application requests. It requires a marked loopback
+PostgreSQL database and bounded API, web, proxy, listener, root, and supported
+navigation targets. The standalone proxy independently rejects an unsafe
+upstream, listener, or port without database authority. Production-artifact deterministic
+adapters additionally require `CI=true`, explicit deterministic-provider mode,
+the disposable marker, and the independently validated loopback database URL.
+
+The entitlement and customer-language repair produced passing focused workflows
+for PulseDesk, TechDeck, TorqueShed, BrandForgeOS, Deploy Ops, CallCommand AI,
+and SnapProofOS, including the TechDeck literal path. On the settled guard diff,
+Windows visual comparison passed 4/4 in 1.6 minutes. All 78 approvals remain
+hash-bound, and the 13-module static contract reports zero failures. The full
+optimized exact-host suite passed 21/21 in 5.7 minutes, including one-credential
+launch across every available child application, direct and sibling-tab SSO,
+host-only logout, deep-link reauthentication, tenant denials, persisted
+workflows, accessibility, responsive layouts, and public compliance routes. The
+prior Linux comparison passed 4/4 as supporting evidence. OutCall remains
+intentionally denied by its source-recovery lock, and the exact-revision GitHub
+Linux matrix remains the final source-publication gate, including a fresh Linux
+comparison.
+
+This browser identity is suitable for SSO, route, workflow, persistence,
+accessibility, and visual compatibility. It is not a simulated v60 purchase and
+does not prove Application Stack checkout, one-core enforcement, Stripe
+customer or webhook behavior, or seat activation. Those remain covered by the
+separate forward-commerce database contracts and require deployed Stripe
+acceptance. A fresh terminal-green GitHub release gate is still required before
+this follow-up source is called release-ready.
 
 ## Current release-candidate integrity clarification
 
-“Present” means the release-candidate source, complete aggregate, and disposable
-PostgreSQL release tests express the intended product behavior. It does not
-mean the current production release, production database, live providers, or an
-authenticated deployed browser has accepted the change.
+“Present” means the described path exists in source and passed the cited local
+or disposable-database checks on the revision named. An earlier result does not
+silently certify a later follow-up diff. “Present” never means that production,
+its database, a live provider, Stripe, or an authenticated deployed browser has
+accepted the change.
 
 Every connected-workflow request must include the reviewed source version, and
 delivery reloads and compares the exact organization-owned source before
@@ -43,31 +86,34 @@ The existing primary logo remains active until a person explicitly saves the
 reviewed candidate. Canva and Figma are manual import destinations, not
 connected providers.
 
-No provider, production deployment, billing/Stripe, production-database,
-customer-data, DNS, or authenticated browser operation was performed for this
-upgrade. Workflow persistence and database release v60 were exercised only on
-disposable PostgreSQL, and the production artifact was built locally. Exact-host
-browser and mobile, deployed identity, live-provider, monitoring,
-  backup/restore, and rollback evidence remain open. The owner approved the
-  single flagship-stack model, and implementation commit
-  `5024bfce4a16cd5fd7d47143d5057879316f3981` was successfully source-published
-  to GitHub `main`. Production database and provider mutations remain separate
-  gates.
+No external or live provider, production deployment, billing/Stripe,
+production-database, customer-data, DNS, or deployed authenticated browser
+operation was performed
+for this upgrade. Workflow persistence, authenticated exact-host workflows, and
+database release v60 were exercised only against local disposable PostgreSQL,
+and the production artifact was built locally. Deployed exact-host browser and
+mobile, deployed identity, live-provider, monitoring, backup/restore, and
+rollback evidence remain open. The owner approved the single flagship-stack
+model, and implementation commit `5024bfce4a16cd5fd7d47143d5057879316f3981`
+was successfully source-published to GitHub `main`. Production database and
+provider mutations remain separate gates.
 
 ## Fresh local verification
 
-- The authoritative complete API aggregate on a new disposable PostgreSQL 16
-  database reported **1,440 tests: 1,434 passed, 0 failed, 6 intentional
-  HTTP-only skips, and 0 todos** in **713,438.7749 ms**. The skips require a
-  separately running Next server; no failure was converted to a skip.
+- The final complete API aggregate on the settled guard diff ran on a disposable
+  PostgreSQL 16 database and reported **1,444 tests: 1,444 passed, 0 failed, 0
+  skipped, 0 cancelled, and 0 todos** in **629,733.0017 ms**. It includes the
+  provider-isolation and browser-safety regressions; the immutable final commit's
+  GitHub aggregate remains decisive.
 - `corepack pnpm typecheck` passed for `apps/api`, `apps/runner-gateway`,
   `apps/web`, and `apps/torqueshed-native`.
 - `corepack pnpm lint` passed the repository-defined ESLint scope with
   `--max-warnings=0`.
-- `corepack pnpm db:plan` reported ordered, non-destructive release **v60/60**
-  with `forward_commerce_contract` last in 798 ms. Clean apply and verification
-  passed in 18,916 ms, immediate idempotent reapply in 2,907 ms, and independent
-  read-only verify in 1,860 ms on a second fresh disposable PostgreSQL database.
+- The root unit/compiler gate passed **52/52**, the release-safety quality gate
+  passed **20/20**, and `git diff --check` reported no whitespace errors.
+- The disposable PostgreSQL 16 integration gate passed **31/31**. Clean v60
+  apply passed in 18,253 ms, immediate idempotent reapply in 1,867 ms, and
+  independent verify-current in 956 ms with `forward_commerce_contract` last.
 - `corepack pnpm build:production` passed deployment-scope verification, the
   56-case FaultlineLab catalog check and its four compiler tests, all four
   typechecks, API/runner compilation, and Next 15.5.23 production generation of
@@ -78,8 +124,8 @@ browser and mobile, deployed identity, live-provider, monitoring,
   declaration, or trusted-proxy declaration. No secret value was printed.
 
 These results are source/local and disposable-database evidence. They are not
-production-database, live-provider, Stripe, DNS, deployment, or authenticated
-exact-host browser evidence.
+production-database, live-provider, Stripe, DNS, deployment, or deployed
+authenticated exact-host browser evidence.
 
 ## Why this change exists
 

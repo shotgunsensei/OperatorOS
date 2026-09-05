@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import OpenAI from 'openai';
 import WebSocket from 'ws';
+import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 
 const OPENAI_API_ORIGIN = 'https://api.openai.com';
 const OPENAI_REALTIME_WS_URL = 'wss://api.openai.com/v1/realtime';
@@ -85,8 +86,6 @@ function validSecret(value: string | undefined, prefix: string | null, minimum: 
 export function inspectCallCommandRealtimeReadiness(
   env: CallCommandRealtimeEnvironment = process.env,
 ): CallCommandRealtimeReadiness {
-  const missing: string[] = [];
-  const invalidValues: string[] = [];
   const required = [
     'OPENAI_API_KEY',
     'OPENAI_PROJECT_ID',
@@ -94,6 +93,11 @@ export function inspectCallCommandRealtimeReadiness(
     'CALLCOMMAND_SIP_ROUTE_SECRET',
     'CALLCOMMAND_REALTIME_MODEL',
   ] as const;
+  if (isOperatorOSProductionArtifactTestEnvironment(env)) {
+    return { ready: false, model: null, missing: [...required], invalid: [] };
+  }
+  const missing: string[] = [];
+  const invalidValues: string[] = [];
   for (const name of required) if (!env[name]?.trim()) missing.push(name);
   if (env.OPENAI_API_KEY && !validSecret(env.OPENAI_API_KEY, 'sk-', 20)) invalidValues.push('OPENAI_API_KEY');
   if (env.OPENAI_PROJECT_ID && !/^proj_[A-Za-z0-9_-]{8,128}$/.test(env.OPENAI_PROJECT_ID)) invalidValues.push('OPENAI_PROJECT_ID');

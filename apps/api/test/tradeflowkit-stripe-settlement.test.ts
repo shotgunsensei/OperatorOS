@@ -105,7 +105,20 @@ before(async () => {
     try { done(null, JSON.parse(body.toString('utf8'))); } catch (error) { done(error); }
   });
   const { registerTradeFlowKitPaymentRoutes } = await import('../src/routes/tradeflowkit-payment-routes.js');
-  await registerTradeFlowKitPaymentRoutes(app);
+  await registerTradeFlowKitPaymentRoutes(app, {
+    resolveStripeConnectConfig: () => ({
+      config: {
+        mode: 'test',
+        secretKey: 'sk_test_not-a-real-secret',
+        clientId: 'ca_test_client',
+        webhookSecret,
+        redirectUri: 'https://tradeflowkit.example.test/v1/modules/tradeflowkit/payments/connect/callback',
+        publicBaseUrl: 'https://tradeflowkit.example.test',
+      },
+      reason: '',
+      mode: 'test',
+    }),
+  });
   await app.ready();
 });
 
