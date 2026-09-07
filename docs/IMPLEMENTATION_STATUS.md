@@ -1,6 +1,27 @@
 # OperatorOS implementation status
 
-## Module product outcome/value upgrade - SOURCE PUBLISHED / FINAL FOLLOW-UP LOCAL GUARDS, BUILD, FULL EXACT-HOST, AND VISUAL GATES GREEN / FINAL GITHUB, PRODUCTION V60, AND DEPLOYED ACCEPTANCE OPEN (2026-09-05)
+## Module product outcome/value upgrade - SOURCE ON GITHUB MAIN / BASELINE CI GREEN / PR GATE PENDING / PRODUCTION V60 AND DEPLOYED ACCEPTANCE OPEN (verified 2026-09-06)
+
+- Fresh Git/GitHub reconciliation confirms local `main` and `origin/main` at
+  baseline `cb2ddb88b903b3a3070382274e60b00b6809d913`, with accepted v60 commit
+  `0ffa95bc0b1f3433b37e969c171ca99802ba4f5d` in its ancestry. The latest
+  baseline repairs the Replit promote-time release verifier with null-safe
+  `to_regclass(...)` lookups, validates two v60 data-fabric constraints after
+  converging rows, and adds focused contract coverage. The synchronization
+  branch additionally makes `db:verify` require both constraints to be
+  validated and adds disposable-database drift cases for the `NOT VALID`
+  state. Read-only `db:plan`
+  still reports exactly 60 non-destructive ordered entries ending in
+  `forward_commerce_contract`. GitHub release-gate runs `33960836790`,
+  `33967412073`, `33968536242`, and exact-main-head run `34075815089` are
+  terminal green. The additional synchronization-branch verifier change still
+  requires its PR gate.
+- GitHub reports no associated PR for the original direct-pushed v60 commit or
+  the current direct-pushed hardening baseline. A dedicated v60 GitHub-sync
+  attestation and these status corrections are therefore being taken through a
+  real pull request and merge without rewriting the accepted migration
+  ancestry. Exact evidence and the production boundary are recorded in
+  `docs/V60_GITHUB_SYNC_VERIFICATION.md`.
 
 ### Follow-up browser-gate remediation
 
@@ -41,16 +62,18 @@
   all 12 available child applications, direct and sibling-tab SSO, host-only
   logout, deep-link reauthentication, tenant denials, persisted workflows,
   accessibility, responsive layouts, and public compliance routes. The earlier
-  Linux comparison passes **4/4** as supporting evidence; GitHub must still
-  repeat the complete Linux browser/visual matrix on the immutable commit.
-  OutCall remains unavailable under its source-recovery lock.
+  Linux comparison passes **4/4** as supporting evidence. The immutable v60
+  commit and current `main` verifier-hardening baseline repeated the complete
+  GitHub release matrix successfully. The synchronization branch's exact-SHA
+  PR gate is pending. OutCall remains unavailable under its source-recovery
+  lock.
 - These grandfathered browser fixtures prove exact-host SSO, entitled route,
   workflow, persistence, accessibility, and presentation acceptance. They are
   not evidence of forward-commerce checkout, the one-core invariant, Stripe
   webhook activation, or live billing. Those behaviors retain their separate
   dynamic disposable-database tests and still require deployed sandbox/live
-  acceptance. The follow-up candidate remains unpromoted until its fresh
-  GitHub release gate is terminal green.
+  acceptance. The source baseline is published and CI-green; the synchronization
+  PR gate, production database, and deployment promotion remain open.
 
 - The current release candidate gives each of the 13 canonical applications
   one shared customer-value contract: a plain-language promise, buyer, first
@@ -203,8 +226,9 @@
   PostgreSQL 16 and reported **1,444 tests: 1,444 passed, 0 failed, 0 skipped,
   0 cancelled, and 0 todos** in **629,733.0017 ms**. It includes the provider-
   isolation, browser-safety, commerce, billing, tenant, RBAC, SSO, persistence,
-  and module-domain regressions. The final GitHub run must repeat the aggregate
-  against the immutable published commit before release acceptance.
+  and module-domain regressions. The immutable published v60 commit and current
+  `main` hardening baseline passed the GitHub release aggregate; the
+  synchronization branch's aggregate remains pending.
 - `corepack pnpm typecheck` passed for `apps/api`, `apps/runner-gateway`,
   `apps/web`, and `apps/torqueshed-native`. The repository-defined
   `corepack pnpm lint` gate also passed with `--max-warnings=0`. The final root

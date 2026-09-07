@@ -1,6 +1,30 @@
 # OperatorOS current release gate
 
-## Module outcome and release-v60 candidate - SOURCE PUBLISHED / FINAL FOLLOW-UP LOCAL GUARDS, BUILD, FULL EXACT-HOST, AND VISUAL GATES GREEN / FINAL GITHUB GATE OPEN / PRODUCTION BACKUP-V60 APPLY-VERIFY-REDEPLOY PENDING (2026-09-05)
+## Module outcome and release-v60 candidate - SOURCE ON GITHUB MAIN / BASELINE CI GREEN / PR GATE PENDING / PRODUCTION BACKUP-V60 APPLY-VERIFY-REDEPLOY PENDING (verified 2026-09-06)
+
+Fresh Git/GitHub reconciliation on 2026-09-06 confirmed that local `main` and
+`origin/main` matched verification baseline
+`cb2ddb88b903b3a3070382274e60b00b6809d913`, and accepted v60 commit
+`0ffa95bc0b1f3433b37e969c171ca99802ba4f5d` is its ancestor. In addition to the
+Replit environment marker, the current baseline contains a null-safe
+`to_regclass(...)` verifier repair, convergence validation for two v60 data-
+fabric constraints, and focused contract tests. Those changes match the
+Replit promote-failure diagnosis: a direct `::regclass` cast could throw when
+the commerce table was absent and the two constraints could remain `NOT
+VALID`. The synchronization branch also closes the remaining release-truth
+gap by requiring `pg_constraint.convalidated`; a correct-looking but unvalidated
+check can no longer satisfy `db:verify`. Read-only `db:plan` still reports
+non-destructive release v60 with 60
+ordered entries and `forward_commerce_contract` last. GitHub release-gate runs
+`33960836790`, `33967412073`, and `33968536242` are terminal green; run
+`34075815089` for the current `main` baseline is also terminal green. The
+additional synchronization-branch verifier change remains subject to its PR
+gate. The original v60
+delivery used an owner-authorized direct push and has no associated pull
+request; the dedicated synchronization attestation is therefore being
+delivered through a real review-and-merge PR without rewriting or reapplying
+the migration history. See
+[V60_GITHUB_SYNC_VERIFICATION.md](./V60_GITHUB_SYNC_VERIFICATION.md).
 
 GitHub release-gate run `33949354505` for documentation commit
 `3967a9bbda90f2dee7e3eaf925da320fd79d0065` passed 13 of 14 stages and
@@ -48,11 +72,13 @@ decisive for the final Linux browser/visual matrix. OutCall remains the explicit
 fail-closed source-recovery exception and is not represented as working or
 sellable.
 
-The current follow-up patch is locally accepted but is not the final published
-release until the fresh GitHub release gate reaches a terminal green result.
-Production remains at v59. No Replit redeploy, production-database apply,
-Stripe operation, external/live provider operation, DNS change, or customer-
-data operation was authorized or performed.
+The follow-up source is published. The accepted v60 commit and current `main`
+hardening baseline have terminal-green release gates; the synchronization
+branch remains subject to its exact-SHA PR gate. Production database promotion
+remains separate. This source-
+control verification performs no Replit redeploy, development- or production-
+database DDL/apply, Stripe operation, external/live provider operation, DNS
+change, or customer-data operation.
 
 The source/local candidate plans 60 ordered database-release entries ending in
 `forward_commerce_contract`. The final complete API aggregate on the settled
@@ -65,8 +91,9 @@ v60 apply in 18,253 ms, idempotent reapply in 1,867 ms, and verify-current in
 956 ms. A fresh production build on the settled local diff passed deployment
 scope, the 56-case FaultlineLab catalog and **4/4** compiler tests, all four
 typechecks, API/runner compilation, and all **35/35** Next 15.5.23 pages. The
-exact final Git commit still requires the terminal-green GitHub aggregate and
-Linux visual comparison.
+accepted v60 commit and current `main` hardening baseline have terminal-green
+GitHub aggregates and Linux visual comparisons; the synchronization branch's
+exact-SHA aggregate remains pending.
 
 Implementation commit `5024bfce4a16cd5fd7d47143d5057879316f3981` was
 successfully pushed to GitHub `main` under the owner's authorization. This

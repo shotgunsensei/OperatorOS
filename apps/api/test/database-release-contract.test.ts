@@ -346,6 +346,7 @@ test('database release plan is explicit, ordered, additive, and reusable by star
 
 test('data-fabric repair constraints converge to validated catalog objects', () => {
   const dataFabricInit = read('apps/api/src/lib/cross-module-data-fabric-db-init.ts');
+  const releaseSource = read('apps/api/src/lib/database-release.ts');
   assert.match(
     dataFabricInit,
     /ALTER TABLE shared_workflow_runs\s+VALIDATE CONSTRAINT shared_workflow_run_idempotency_scope_check/,
@@ -353,6 +354,14 @@ test('data-fabric repair constraints converge to validated catalog objects', () 
   assert.match(
     dataFabricInit,
     /ALTER TABLE shared_domain_events\s+VALIDATE CONSTRAINT shared_domain_event_signature_envelope_check/,
+  );
+  assert.match(
+    releaseSource,
+    /conname='shared_workflow_run_idempotency_scope_check'[\s\S]*?constraint_row\.contype='c'\s+AND constraint_row\.convalidated/,
+  );
+  assert.match(
+    releaseSource,
+    /conname='shared_domain_event_signature_envelope_check'[\s\S]*?constraint_row\.contype='c'\s+AND constraint_row\.convalidated/,
   );
 });
 

@@ -51,12 +51,38 @@ const driftCases: DriftCase[] = [
     expectedMissing: ['shared_workflow_run_idempotency_scope_check_v2'],
   },
   {
+    name: 'idempotency ownership check validation state',
+    breakStatements: [
+      'ALTER TABLE shared_workflow_runs DROP CONSTRAINT IF EXISTS shared_workflow_run_idempotency_scope_check',
+      `ALTER TABLE shared_workflow_runs
+        ADD CONSTRAINT shared_workflow_run_idempotency_scope_check
+        CHECK (idempotency_scope IN ('tenant','actor')) NOT VALID`,
+    ],
+    cleanupStatements: [
+      'ALTER TABLE shared_workflow_runs DROP CONSTRAINT IF EXISTS shared_workflow_run_idempotency_scope_check',
+    ],
+    expectedMissing: ['shared_workflow_run_idempotency_scope_check_v2'],
+  },
+  {
     name: 'signature-envelope check definition',
     breakStatements: [
       'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS shared_domain_event_signature_envelope_check',
       `ALTER TABLE shared_domain_events
         ADD CONSTRAINT shared_domain_event_signature_envelope_check
         CHECK (signature_envelope_version >= 0) NOT VALID`,
+    ],
+    cleanupStatements: [
+      'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS shared_domain_event_signature_envelope_check',
+    ],
+    expectedMissing: ['shared_domain_event_signature_envelope_check_v2'],
+  },
+  {
+    name: 'signature-envelope check validation state',
+    breakStatements: [
+      'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS shared_domain_event_signature_envelope_check',
+      `ALTER TABLE shared_domain_events
+        ADD CONSTRAINT shared_domain_event_signature_envelope_check
+        CHECK (signature_envelope_version >= 1) NOT VALID`,
     ],
     cleanupStatements: [
       'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS shared_domain_event_signature_envelope_check',

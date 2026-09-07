@@ -2,9 +2,25 @@
 
 ## Module outcome/value release-candidate overlay (2026-09-05)
 
-Status: **SOURCE PUBLISHED; FINAL FOLLOW-UP LOCAL GUARDS, BUILD, FULL EXACT-HOST,
-AND VISUAL GATES GREEN — FINAL GITHUB GATE OPEN / PARITY STATES UNCHANGED /
-DEPLOYED ACCEPTANCE OPEN**.
+Status: **SOURCE ON GITHUB MAIN; BASELINE CI GREEN / PR GATE PENDING / PARITY STATES UNCHANGED
+/ PRODUCTION DATABASE AND DEPLOYED ACCEPTANCE OPEN**.
+
+Fresh 2026-09-06 reconciliation confirms accepted v60 commit
+`0ffa95bc0b1f3433b37e969c171ca99802ba4f5d` in the ancestry of matching local
+and remote `main` baseline `cb2ddb88b903b3a3070382274e60b00b6809d913`.
+The baseline adds null-safe release verification, convergence validation for
+two v60 data-fabric constraints, and focused tests matching the Replit promote-
+failure diagnosis. The synchronization branch additionally rejects those
+constraints from `db:verify` unless PostgreSQL reports them validated and adds
+disposable drift coverage for the `NOT VALID` state. Read-only `db:plan`
+remains a non-destructive 60-step
+contract ending in `forward_commerce_contract`. The accepted v60 commit's gate
+and all three later main gates are green, including exact-head run
+`34075815089`. The synchronization branch's PR gate remains pending. The
+original direct push has no associated GitHub PR; the dedicated
+synchronization attestation is being delivered through a real PR and merge
+without changing migration ordering. See
+`docs/V60_GITHUB_SYNC_VERIFICATION.md`.
 
 GitHub release-gate run `33949354505` passed 13/14 and correctly stopped at the
 browser gate because its shared fixture no longer had valid v60 module access.
@@ -28,8 +44,10 @@ deep-link reauthentication, tenant denials, persisted workflows, accessibility,
 responsive layouts, and public compliance routes. The prior Linux comparison
 passed 4/4 as supporting evidence. These grandfathered fixtures provide no v60
 purchase, Stripe activation, live-provider, or deployed-acceptance evidence.
-OutCall remains intentionally unavailable, no parity row is promoted, and the
-exact-revision GitHub matrix is still required.
+OutCall remains intentionally unavailable and no parity row is promoted. The
+accepted v60 commit and current `main` hardening baseline have terminal-green
+exact-revision GitHub matrices; the synchronization branch's PR matrix is
+pending.
 
 The current release candidate gives every canonical application a
 customer-result contract and replaces prominent engineering-first copy with
@@ -102,8 +120,10 @@ provider-side design result is claimed.
 
 The final complete aggregate on the settled guard diff ran on disposable
 PostgreSQL 16 and reported **1,444 tests: 1,444 passed, 0 failed, 0 skipped, 0
-cancelled, and 0 todos** in **629,733.0017 ms**. The immutable final commit's
-GitHub aggregate remains decisive. The aggregate covers the ten destination
+cancelled, and 0 todos** in **629,733.0017 ms**. The immutable accepted v60
+commit and current `main` hardening baseline passed the GitHub release
+aggregate; the synchronization branch's aggregate is pending. The aggregate
+covers the ten destination
 writes, provider isolation, authorization and tenant isolation, source
 freshness, deduplication, signature tamper rejection, run-detail redaction,
 commerce, billing, and release drift.
