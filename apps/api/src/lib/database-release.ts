@@ -329,6 +329,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
         WHERE constraint_row.conname='shared_workflow_run_idempotency_scope_check'
           AND constraint_row.conrelid=to_regclass('public.shared_workflow_runs')
           AND constraint_row.contype='c'
+          AND constraint_row.convalidated
           AND lower(regexp_replace(
             replace(replace(replace(
               pg_get_constraintdef(constraint_row.oid,TRUE),
@@ -337,9 +338,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
             '[[:space:]()]','','g'
           )) IN (
             'checkidempotency_scope=anyarray[''tenant'',''actor'']',
-            'checkidempotency_scope=anyarray[''actor'',''tenant'']',
-            'checkidempotency_scope=anyarray[''tenant'',''actor'']notvalid',
-            'checkidempotency_scope=anyarray[''actor'',''tenant'']notvalid'
+            'checkidempotency_scope=anyarray[''actor'',''tenant'']'
           )
       ) AS shared_workflow_run_idempotency_scope_check_v2
       ,EXISTS (
@@ -348,12 +347,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
         WHERE constraint_row.conname='shared_domain_event_signature_envelope_check'
           AND constraint_row.conrelid=to_regclass('public.shared_domain_events')
           AND constraint_row.contype='c'
+          AND constraint_row.convalidated
           AND lower(regexp_replace(
             pg_get_constraintdef(constraint_row.oid,TRUE),
             '[[:space:]()]','','g'
           )) IN (
-            'checksignature_envelope_version>=1',
-            'checksignature_envelope_version>=1notvalid'
+            'checksignature_envelope_version>=1'
           )
       ) AS shared_domain_event_signature_envelope_check_v2
       ,EXISTS (

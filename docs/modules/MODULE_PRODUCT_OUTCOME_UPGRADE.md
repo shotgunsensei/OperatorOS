@@ -1,7 +1,25 @@
 # Module product outcome upgrade
 
-Status: **implementation source-published; final follow-up local guards, build, full exact-host, and visual gates green; final GitHub gate, production v60 apply, redeployment, providers, Stripe, and deployed acceptance open**<br>
-Date: 2026-09-05
+Status: **source on GitHub main and baseline CI green; synchronization PR gate, production v60 apply, redeployment, providers, Stripe, and deployed acceptance open**<br>
+Last source-control verification: 2026-09-06
+
+Accepted v60 commit `0ffa95bc0b1f3433b37e969c171ca99802ba4f5d`
+is an ancestor of matching local and remote `main` baseline
+`cb2ddb88b903b3a3070382274e60b00b6809d913`. The current baseline repairs the
+Replit promote-time verifier with null-safe `to_regclass(...)` lookups,
+validates two v60 data-fabric constraints after row convergence, and tests both
+behaviors. The synchronization branch further requires PostgreSQL's
+`convalidated` catalog flag and adds disposable drift cases proving a `NOT
+VALID` check fails verification. Read-only `db:plan` still reports the
+non-destructive 60-step
+contract with `forward_commerce_contract` last. GitHub release-gate runs for
+the accepted v60 commit and two later `main` commits are green; current-head run
+`34075815089` is also terminal green. The additional synchronization-branch
+verifier change still requires its PR gate. The original owner-authorized
+direct push has no associated PR, so the dedicated synchronization attestation
+and these status updates are being delivered through a real PR and merge
+without rewriting migration history. See
+`docs/V60_GITHUB_SYNC_VERIFICATION.md`.
 
 ## Follow-up exact-host and visual acceptance
 
@@ -33,17 +51,19 @@ launch across every available child application, direct and sibling-tab SSO,
 host-only logout, deep-link reauthentication, tenant denials, persisted
 workflows, accessibility, responsive layouts, and public compliance routes. The
 prior Linux comparison passed 4/4 as supporting evidence. OutCall remains
-intentionally denied by its source-recovery lock, and the exact-revision GitHub
-Linux matrix remains the final source-publication gate, including a fresh Linux
-comparison.
+intentionally denied by its source-recovery lock. The accepted v60 commit
+passed the exact-revision GitHub Linux matrix; the current hardening baseline's
+matrix is also terminal green. The synchronization branch's PR matrix remains
+pending.
 
 This browser identity is suitable for SSO, route, workflow, persistence,
 accessibility, and visual compatibility. It is not a simulated v60 purchase and
 does not prove Application Stack checkout, one-core enforcement, Stripe
 customer or webhook behavior, or seat activation. Those remain covered by the
 separate forward-commerce database contracts and require deployed Stripe
-acceptance. A fresh terminal-green GitHub release gate is still required before
-this follow-up source is called release-ready.
+acceptance. The source baseline is published and CI-green; the synchronization
+PR gate, production database, deployment, Stripe, and live-provider acceptance
+remain separate open gates.
 
 ## Current release-candidate integrity clarification
 
@@ -103,8 +123,9 @@ provider mutations remain separate gates.
 - The final complete API aggregate on the settled guard diff ran on a disposable
   PostgreSQL 16 database and reported **1,444 tests: 1,444 passed, 0 failed, 0
   skipped, 0 cancelled, and 0 todos** in **629,733.0017 ms**. It includes the
-  provider-isolation and browser-safety regressions; the immutable final commit's
-  GitHub aggregate remains decisive.
+  provider-isolation and browser-safety regressions. The immutable accepted v60
+  commit and current `main` hardening baseline passed the GitHub aggregate; the
+  synchronization branch's aggregate remains pending.
 - `corepack pnpm typecheck` passed for `apps/api`, `apps/runner-gateway`,
   `apps/web`, and `apps/torqueshed-native`.
 - `corepack pnpm lint` passed the repository-defined ESLint scope with
