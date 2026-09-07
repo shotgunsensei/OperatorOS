@@ -331,9 +331,29 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.email_verification_tokens'\)/);
   assert.match(releaseSource, /to_regclass\('public\.account_trials'\)/);
   assert.match(releaseSource, /table_name='email_verification_tokens' AND column_name='email_fingerprint'/);
+  assert.equal(
+    releaseSource.match(/conrelid=to_regclass\('public\.tenant_application_subscriptions'\)/g)?.length,
+    3,
+  );
+  assert.doesNotMatch(
+    releaseSource,
+    /conrelid='public\.tenant_application_subscriptions'::regclass/,
+  );
   const saasInit = read('apps/api/src/lib/saas-db-init.ts');
   assert.match(saasInit, /ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
+});
+
+test('data-fabric repair constraints converge to validated catalog objects', () => {
+  const dataFabricInit = read('apps/api/src/lib/cross-module-data-fabric-db-init.ts');
+  assert.match(
+    dataFabricInit,
+    /ALTER TABLE shared_workflow_runs\s+VALIDATE CONSTRAINT shared_workflow_run_idempotency_scope_check/,
+  );
+  assert.match(
+    dataFabricInit,
+    /ALTER TABLE shared_domain_events\s+VALIDATE CONSTRAINT shared_domain_event_signature_envelope_check/,
+  );
 });
 
 test('database release CLI separates read-only verification from explicit apply authority', () => {

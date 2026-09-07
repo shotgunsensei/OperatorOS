@@ -635,7 +635,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       AND to_regclass('public.uq_tenant_application_subscriptions_checkout_session') IS NOT NULL
       AND EXISTS (
         SELECT 1 FROM pg_constraint
-        WHERE conrelid='public.tenant_application_subscriptions'::regclass
+        WHERE conrelid=to_regclass('public.tenant_application_subscriptions')
           AND conname='tenant_application_subscriptions_tenant_unique'
           AND contype='u'
       )
@@ -647,7 +647,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
           ('tenant_application_subscriptions_initiated_by_user_id_fkey','f')
         ) AS required(name,kind)
         LEFT JOIN pg_constraint actual
-          ON actual.conrelid='public.tenant_application_subscriptions'::regclass
+          ON actual.conrelid=to_regclass('public.tenant_application_subscriptions')
          AND actual.conname=required.name
          AND actual.contype=required.kind::"char"
         WHERE actual.oid IS NULL
@@ -662,7 +662,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
           ('tenant_application_subscriptions_status_check')
         ) AS required(name)
         LEFT JOIN pg_constraint actual
-          ON actual.conrelid='public.tenant_application_subscriptions'::regclass
+          ON actual.conrelid=to_regclass('public.tenant_application_subscriptions')
          AND actual.conname=required.name
          AND actual.contype='c'
         WHERE actual.oid IS NULL

@@ -192,10 +192,14 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       ALTER TABLE shared_workflow_runs ADD CONSTRAINT shared_workflow_run_idempotency_scope_check
         CHECK (idempotency_scope IN ('tenant','actor')) NOT VALID;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    ALTER TABLE shared_workflow_runs
+      VALIDATE CONSTRAINT shared_workflow_run_idempotency_scope_check;
     DO $$ BEGIN
       ALTER TABLE shared_domain_events ADD CONSTRAINT shared_domain_event_signature_envelope_check
         CHECK (signature_envelope_version >= 1) NOT VALID;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    ALTER TABLE shared_domain_events
+      VALIDATE CONSTRAINT shared_domain_event_signature_envelope_check;
 
     -- Composite route keys let PostgreSQL reject newly inserted event/inbox
     -- rows that pair an otherwise valid event with the wrong run or consumer.
