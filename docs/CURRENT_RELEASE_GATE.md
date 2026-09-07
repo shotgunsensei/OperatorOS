@@ -1,6 +1,35 @@
 # OperatorOS current release gate
 
-## Module outcome and release-v60 candidate - SOURCE ON GITHUB MAIN / BASELINE CI GREEN / PR GATE PENDING / PRODUCTION BACKUP-V60 APPLY-VERIFY-REDEPLOY PENDING (verified 2026-09-06)
+## Module outcome and release-v60 candidate - GITHUB MAIN CI GREEN / PRODUCTION V60 VERIFIED / REPLIT SCHEMA-CONTRACT REPAIR IN REVIEW (verified 2026-09-07)
+
+GitHub PR #95 is merged at
+`013bf4c273563a4d73e6443b67956bd1f6841f3e`; post-merge release-gate run
+`34078325613` passed for that exact commit, and the Replit editor checkout was
+fast-forwarded cleanly to the same revision. A masked fresh-session production
+check then reported current database release v60/60. Read-only reconciliation
+confirmed one active/trialing subscription, one explicit legacy grandfather
+marker, zero Stripe-linked subscription rows, zero application-stack rows, two
+validated data-fabric checks, 931 live/trial/purchased/beta tenant-module
+grants out of 931 rows, and zero open or failed shared webhook deliveries.
+
+The first authorized republish attempt kept development-data overwrite off and
+restored Replit sandbox-to-live Stripe synchronization to the documented off
+state. Replit's pre-promotion schema validator nevertheless generated the
+`shared_domain_event_source_run_route_fk` before a referenced three-column
+unique constraint and rejected its own migration with PostgreSQL's "no unique
+constraint matching given keys" error. The safe cancel-and-repair option was
+selected; no generated migration, development-data copy, Stripe sync, or
+production DDL from that attempt was approved.
+
+The repair candidate promotes the three existing routed data-fabric unique
+indexes to named PostgreSQL UNIQUE constraints before creating their dependent
+foreign keys. `db:verify` now rejects the former index-only catalog shape so a
+provider migration generator cannot silently reintroduce it. Focused static
+release-contract tests pass 4/4, API typecheck passes, and `git diff --check`
+passes. Disposable PostgreSQL drift/reapply, the exact-SHA GitHub gate,
+development convergence, reviewed production reapply, and Replit republish
+remain pending; no module parity state changes from this deployment-boundary
+repair.
 
 Fresh Git/GitHub reconciliation on 2026-09-06 confirmed that local `main` and
 `origin/main` matched verification baseline

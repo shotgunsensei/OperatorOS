@@ -1,5 +1,27 @@
 # OperatorOS module parity index
 
+## Replit schema-contract compatibility overlay (2026-09-07)
+
+Status: **PARITY STATES UNCHANGED / GITHUB MAIN CI GREEN / PRODUCTION V60
+VERIFIED / DEPLOYMENT-BOUNDARY REPAIR IN REVIEW**.
+
+PR #95 is merged at `013bf4c273563a4d73e6443b67956bd1f6841f3e`, and
+post-merge release-gate run `34078325613` passed for that exact revision. A
+fresh masked production verification reported v60/60; aggregate reconciliation
+confirmed the one eligible subscription is grandfathered, all 931
+tenant-module rows remain granted, both repaired data-fabric checks are
+validated, and there are no open or failed shared webhook deliveries.
+
+Replit's first authorized republish attempt was canceled before apply after its
+schema generator placed a routed foreign key ahead of the standalone unique
+index it references. Development-data overwrite and sandbox-to-live Stripe
+synchronization were both off. The candidate repair promotes the three routed
+unique indexes to named UNIQUE constraints before dependent foreign keys and
+makes `db:verify` reject index-only catalogs. Focused static tests pass 4/4 and
+API typecheck passes; disposable PostgreSQL, GitHub, development, production,
+and deployed acceptance remain open. This is a shared schema/publishing
+boundary correction and does not change any module workflow or parity row.
+
 ## Module outcome/value release-candidate overlay (2026-09-05)
 
 Status: **SOURCE ON GITHUB MAIN; BASELINE CI GREEN / PR GATE PENDING / PARITY STATES UNCHANGED
