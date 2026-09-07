@@ -1,6 +1,37 @@
 # OperatorOS module parity index
 
-## Replit schema-contract compatibility overlay (2026-09-07)
+## Release v60 live-deployment overlay (2026-09-07)
+
+Status: **PARITY STATES UNCHANGED / SOURCE AND DATABASE V60 SYNCHRONIZED /
+REPLIT LIVE READY / AUTHENTICATED WORKFLOW ACCEPTANCE OPEN**.
+
+PR #95 merged the customer-outcome implementation at
+`013bf4c273563a4d73e6443b67956bd1f6841f3e`, and exact-merge run
+`34078325613` passed. PR #96 merged the routed UNIQUE-constraint repair at
+`f864bed869372fed3c1295b7ca048f06ac7a9a65`; PR run `34125791407` and
+post-merge run `34127904461` passed. Local and remote `main` match the latter
+merge after deployment.
+
+Both Replit development and production databases independently verify v60/60.
+The production cutover was paused and backup-gated; the supported 60-step apply
+completed, and reconciliation preserved 5 legacy active/trialing subscriptions
+as 5 explicit grandfathered rows, all 75 existing tenant-module grants, and
+zero open/failed webhook deliveries. The final publish left development-data
+overwrite and Stripe sandbox-to-live synchronization off.
+
+The public deployment is ready at commit
+`f864bed869372fed3c1295b7ca048f06ac7a9a65`, build
+`570ecdc6285790ae91f1333e`, and database v60/60 ending in
+`forward_commerce_contract`. Representative exact-host module roots and deep
+links return either the intended public product page or the correct 307 SSO
+initiation with the original return path. This moves the shared source,
+database, deployment, readiness, and unauthenticated routing gates to green.
+It does not promote an individual module parity row because a signed-in
+production tenant workflow, live provider operation, Stripe-hosted billing
+journey, restore drill, and authenticated deployed browser matrix were not run
+as part of this cutover.
+
+## Historical Replit schema-contract compatibility overlay before final cutover (2026-09-07)
 
 Status: **PARITY STATES UNCHANGED / GITHUB MAIN CI GREEN / PRODUCTION V60
 VERIFIED / DEPLOYMENT-BOUNDARY REPAIR IN REVIEW**.

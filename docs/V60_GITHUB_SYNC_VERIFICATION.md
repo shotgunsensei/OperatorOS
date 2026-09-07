@@ -1,9 +1,43 @@
 # Release v60 GitHub synchronization verification
 
-Status: **SOURCE CONTROL VERIFIED — PRODUCTION DATABASE APPLY IS A SEPARATE OPEN GATE**<br>
-Verification date: 2026-09-06
+Status: **SOURCE CONTROL, PRODUCTION DATABASE V60, AND REPLIT DEPLOYMENT VERIFIED — AUTHENTICATED AND PROVIDER ACCEPTANCE OPEN**<br>
+Verification date: 2026-09-07
 
-## Verified outcome
+## Final synchronized outcome
+
+- PR #95 merged the v60 customer-outcome release at
+  `013bf4c273563a4d73e6443b67956bd1f6841f3e`; exact-merge release-gate run
+  `34078325613` passed.
+- PR #96 merged the Replit routed-constraint correction at
+  `f864bed869372fed3c1295b7ca048f06ac7a9a65`; PR run `34125791407` and
+  post-merge `main` run `34127904461` passed. A fresh fetch after Replit
+  publication confirmed local and remote `main` still match that commit.
+- Replit development was converged and verified at v60/60. The three routed
+  data-fabric keys are named, validated PostgreSQL UNIQUE constraints.
+- The actual production database was explicitly selected, public traffic was
+  paused, and a private custom-format logical backup was created and validated
+  (2,233,007 bytes; 3,524 restore-list entries). The repository-owned one-shot
+  apply completed all 60 steps; independent verification returned v60/60.
+- Aggregate reconciliation preserved 5 active/trialing legacy subscriptions as
+  5 explicit grandfathered rows, 75 of 75 existing module grants, zero
+  Stripe-linked subscriptions, zero Application Stack rows, and zero
+  open/failed webhook deliveries. Both data-fabric checks and all three routed
+  UNIQUE constraints are validated. The temporary logical backup was deleted
+  and masked connection cleared after success as authorized; Replit PITR
+  remains available.
+- The final Replit publish kept development-data overwrite and Stripe
+  sandbox-to-live sync off. Security, build, bundle, and Autoscale promotion
+  completed. Public readiness identifies exact commit
+  `f864bed869372fed3c1295b7ca048f06ac7a9a65`, build
+  `570ecdc6285790ae91f1333e`, and database v60/60 ending in
+  `forward_commerce_contract`.
+- Main, API, and API-host health/readiness return HTTP 200. Representative
+  public module pages and protected deep links prove exact-host routing and SSO
+  initiation. Signed-in production workflows, Stripe-hosted billing, live
+  provider operations, scheduled-backup configuration, and a restore drill
+  remain separate open acceptance scopes.
+
+## Source verification baseline (2026-09-06)
 
 - GitHub repository `shotgunsensei/OperatorOS` uses `main` as its default branch.
 - Local `main` and `origin/main` both resolved to verification baseline
@@ -92,7 +126,7 @@ gh api repos/shotgunsensei/OperatorOS/commits/0ffa95bc0b1f3433b37e969c171ca99802
 gh run list --branch main --workflow release-gate.yml
 ```
 
-## Production boundary
+## Historical production boundary before the 2026-09-07 cutover
 
 This verification concerns Git commits, GitHub synchronization, pull-request
 lineage, the read-only release plan, and CI evidence. It does not show that the

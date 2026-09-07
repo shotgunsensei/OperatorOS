@@ -1,6 +1,64 @@
 # OperatorOS current release gate
 
-## Module outcome and release-v60 candidate - GITHUB MAIN CI GREEN / PRODUCTION V60 VERIFIED / REPLIT SCHEMA-CONTRACT REPAIR IN REVIEW (verified 2026-09-07)
+## Release v60 outcome/value deployment - LIVE READY / DATABASE AND SOURCE SYNCHRONIZED / AUTHENTICATED ACCEPTANCE OPEN (verified 2026-09-07)
+
+The customer-outcome release and its Replit schema-contract repair are merged
+to GitHub `main`. PR #95 merged the outcome/value implementation at
+`013bf4c273563a4d73e6443b67956bd1f6841f3e`; exact-merge release-gate run
+`34078325613` passed. PR #96 merged the routed-constraint repair at
+`f864bed869372fed3c1295b7ca048f06ac7a9a65`; PR run `34125791407` and
+post-merge `main` run `34127904461` both passed. A fresh fetch after
+publication confirmed local `main` and `origin/main` still match
+`f864bed869372fed3c1295b7ca048f06ac7a9a65`.
+
+The Replit development database was converged through the repository-owned
+v60 apply path and independently verified current at v60/60. PostgreSQL
+catalog verification confirmed the three routed data-fabric objects are named,
+validated UNIQUE constraints, not standalone indexes. The actual production
+database was then selected explicitly and showed the expected pre-cutover v59
+shape: 5 active/trialing subscriptions, zero Stripe-linked subscriptions, 75
+of 75 tenant-module grants, zero open or failed webhook deliveries, no forward
+commerce table, and no grandfather column.
+
+Public traffic was paused before the production change. A private custom-format
+logical backup was created with owner/ACL metadata excluded, its restore table
+of contents was readable, and its 2,233,007-byte artifact contained 3,524 TOC
+entries. The supported one-shot `db:apply` completed all 60 ordered steps and
+verified in 14,071 ms; a separate `db:verify` confirmed v60/60 in 639 ms.
+Post-apply aggregate reconciliation reported 5 active/trialing subscriptions,
+5 grandfathered legacy subscriptions, zero Stripe-linked rows, zero
+Application Stack rows, 2 validated data-fabric checks, 3 routed UNIQUE
+constraints, 75 of 75 tenant-module grants, and zero open or failed webhook
+deliveries. The temporary logical backup and masked production connection were
+deleted/cleared after success as authorized. Replit point-in-time recovery
+remains available; scheduled backups remain off and were not changed.
+
+The final Replit publish kept both destructive development-data overwrite and
+Stripe sandbox-to-live synchronization off. Security scan, production build,
+bundle, and Autoscale promotion completed, and Replit returned the service to
+public status. Live `/readyz`, `/api/health`, and the API-host `/readyz` all
+return HTTP 200 with commit
+`f864bed869372fed3c1295b7ca048f06ac7a9a65`, immutable build
+`570ecdc6285790ae91f1333e`, built at `2026-09-07T14:03:15.676Z`, deployed at
+`2026-09-07T14:10:39.832Z`, and database release v60/60 ending in
+`forward_commerce_contract`. Database, auth, SSO-code encryption, module
+registry, worker, queues, shared-secret encryption, and release identity report
+healthy/ready; the optional shared provider control plane remains explicitly
+`not_configured`.
+
+Public checks also confirmed Deploy Ops and Script Ops landing pages return
+HTTP 200. Protected BrandForgeOS `/brands`, StudyForge AI `/sources`,
+SnapProofOS `/jobs`, Deploy Ops `/dashboard`, Script Ops `/library`, and
+TradeFlowKit `/quotes` deep links return the expected exact-host 307 SSO
+redirect with the correct client, callback, and original return path. This
+proves live deployment identity, readiness, host routing, and unauthenticated
+SSO initiation. It does not constitute a signed-in production workflow,
+Stripe-hosted checkout/portal/webhook, live Twilio/email/OpenAI operation,
+provider-side publication, DNS change, scheduled-backup test, or restore drill.
+Those acceptance scopes remain open and must not be inferred from configured
+dependency status.
+
+## Historical module outcome and release-v60 candidate before final cutover (verified 2026-09-07)
 
 GitHub PR #95 is merged at
 `013bf4c273563a4d73e6443b67956bd1f6841f3e`; post-merge release-gate run
