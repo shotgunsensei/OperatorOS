@@ -1,6 +1,65 @@
 # OperatorOS implementation status
 
-## Module product outcome/value upgrade - GITHUB MAIN CI GREEN / PRODUCTION V60 VERIFIED / REPLIT SCHEMA-CONTRACT REPAIR IN REVIEW (verified 2026-09-07)
+## Module outcome/value upgrade - LIVE READY / V60 CUTOVER COMPLETE / AUTHENTICATED WORKFLOW ACCEPTANCE OPEN (verified 2026-09-07)
+
+### Source and GitHub
+
+- PR #95 merged the customer-language, sellable-workflow, cross-module handoff,
+  and v60 commerce release at
+  `013bf4c273563a4d73e6443b67956bd1f6841f3e`; exact merge run `34078325613`
+  passed.
+- PR #96 merged the Replit routed-constraint compatibility repair at
+  `f864bed869372fed3c1295b7ca048f06ac7a9a65`. PR run `34125791407` and
+  post-merge `main` run `34127904461` passed. After deployment, local `main`
+  and `origin/main` still match that exact merge commit.
+- The repair promotes all three routed data-fabric indexes to named PostgreSQL
+  UNIQUE constraints before their dependent foreign keys. `db:verify` now
+  rejects an index-only catalog. This closes the migration-generator ordering
+  failure that caused the earlier Replit promote attempt to be canceled.
+
+### Database cutover
+
+- The Replit development database was applied and independently verified at
+  v60/60, including all three named routed UNIQUE constraints.
+- The actual production database was explicitly reselected before change. Its
+  pre-cutover aggregate was 5 active/trialing subscriptions, zero Stripe-linked
+  rows, 75 of 75 tenant-module grants, zero open/failed webhook deliveries, and
+  no forward-commerce table or grandfather column.
+- Public traffic was paused. A private custom-format logical backup was created
+  and validated by `pg_restore --list` (2,233,007 bytes; 3,524 TOC entries).
+  The repository-owned apply path completed all 60 steps and verified in
+  14,071 ms. Independent verification confirmed v60/60 in 639 ms.
+- Post-apply reconciliation found 5 active/trialing and 5 grandfathered legacy
+  subscriptions, zero Stripe-linked and zero Application Stack rows, 2
+  validated data-fabric checks, 3 routed UNIQUE constraints, 75 of 75 module
+  grants, and zero open/failed webhook deliveries. The temporary logical backup
+  was deleted and the masked connection cleared after success as authorized.
+  Replit PITR remains on; scheduled backups remain off.
+
+### Replit publication and live evidence
+
+- The final publish kept development-to-production database overwrite off and
+  Stripe sandbox-to-live synchronization off. Replit security scan, build,
+  bundle, and Autoscale promotion completed successfully; production returned
+  to public status.
+- `https://operatoros.net/readyz`, `https://operatoros.net/api/health`, and
+  `https://api.operatoros.net/readyz` return HTTP 200 with application commit
+  `f864bed869372fed3c1295b7ca048f06ac7a9a65`, immutable build
+  `570ecdc6285790ae91f1333e`, built `2026-09-07T14:03:15.676Z`, deployed
+  `2026-09-07T14:10:39.832Z`, and database release v60/60 with 60 steps ending
+  in `forward_commerce_contract`.
+- Deploy Ops and Script Ops public landing pages return HTTP 200. Representative
+  protected deep links across BrandForgeOS, StudyForge AI, SnapProofOS, Deploy
+  Ops, Script Ops, and TradeFlowKit return exact-host 307 SSO redirects with the
+  correct client, callback, and return path.
+- No Stripe object synchronization, checkout, charge, portal, or live webhook
+  was performed. No live Twilio/email/OpenAI call, external publication, DNS
+  change, scheduled-backup change, or restore drill was performed. A signed-in
+  production workflow was not exercised in this cutover, so authenticated
+  tenant/RBAC/persistence and provider acceptance remain open despite green
+  public readiness and SSO initiation.
+
+## Historical module product outcome/value candidate before final cutover (verified 2026-09-07)
 
 - GitHub PR #95 merged the hardened v60 source at
   `013bf4c273563a4d73e6443b67956bd1f6841f3e`; post-merge release-gate run
