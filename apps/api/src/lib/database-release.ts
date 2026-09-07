@@ -360,10 +360,15 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
         FROM pg_class index_relation
         JOIN pg_namespace index_namespace ON index_namespace.oid=index_relation.relnamespace
         JOIN pg_index index_row ON index_row.indexrelid=index_relation.oid
+        JOIN pg_constraint key_constraint ON key_constraint.conindid=index_row.indexrelid
         WHERE index_namespace.nspname='public'
           AND index_relation.relname='uq_shared_workflow_run_source_route'
           AND index_relation.relkind='i'
           AND index_row.indrelid=to_regclass('public.shared_workflow_runs')
+          AND key_constraint.conrelid=index_row.indrelid
+          AND key_constraint.conname='uq_shared_workflow_run_source_route'
+          AND key_constraint.contype='u'
+          AND key_constraint.convalidated
           AND index_row.indisunique
           AND index_row.indisvalid
           AND index_row.indisready
@@ -386,10 +391,15 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
         FROM pg_class index_relation
         JOIN pg_namespace index_namespace ON index_namespace.oid=index_relation.relnamespace
         JOIN pg_index index_row ON index_row.indexrelid=index_relation.oid
+        JOIN pg_constraint key_constraint ON key_constraint.conindid=index_row.indexrelid
         WHERE index_namespace.nspname='public'
           AND index_relation.relname='uq_shared_workflow_run_destination_route'
           AND index_relation.relkind='i'
           AND index_row.indrelid=to_regclass('public.shared_workflow_runs')
+          AND key_constraint.conrelid=index_row.indrelid
+          AND key_constraint.conname='uq_shared_workflow_run_destination_route'
+          AND key_constraint.contype='u'
+          AND key_constraint.convalidated
           AND index_row.indisunique
           AND index_row.indisvalid
           AND index_row.indisready
@@ -412,10 +422,15 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
         FROM pg_class index_relation
         JOIN pg_namespace index_namespace ON index_namespace.oid=index_relation.relnamespace
         JOIN pg_index index_row ON index_row.indexrelid=index_relation.oid
+        JOIN pg_constraint key_constraint ON key_constraint.conindid=index_row.indexrelid
         WHERE index_namespace.nspname='public'
           AND index_relation.relname='uq_shared_domain_event_run_route'
           AND index_relation.relkind='i'
           AND index_row.indrelid=to_regclass('public.shared_domain_events')
+          AND key_constraint.conrelid=index_row.indrelid
+          AND key_constraint.conname='uq_shared_domain_event_run_route'
+          AND key_constraint.contype='u'
+          AND key_constraint.convalidated
           AND index_row.indisunique
           AND index_row.indisvalid
           AND index_row.indisready

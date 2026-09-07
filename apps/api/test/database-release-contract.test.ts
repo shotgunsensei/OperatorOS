@@ -347,6 +347,20 @@ test('database release plan is explicit, ordered, additive, and reusable by star
 test('data-fabric repair constraints converge to validated catalog objects', () => {
   const dataFabricInit = read('apps/api/src/lib/cross-module-data-fabric-db-init.ts');
   const releaseSource = read('apps/api/src/lib/database-release.ts');
+  for (const routeKey of [
+    'uq_shared_workflow_run_source_route',
+    'uq_shared_workflow_run_destination_route',
+    'uq_shared_domain_event_run_route',
+  ]) {
+    assert.match(
+      dataFabricInit,
+      new RegExp(`ADD CONSTRAINT ${routeKey}\\s+UNIQUE USING INDEX ${routeKey}`),
+    );
+    assert.match(
+      releaseSource,
+      new RegExp(`key_constraint\\.conname='${routeKey}'[\\s\\S]*?key_constraint\\.contype='u'[\\s\\S]*?key_constraint\\.convalidated`),
+    );
+  }
   assert.match(
     dataFabricInit,
     /ALTER TABLE shared_workflow_runs\s+VALIDATE CONSTRAINT shared_workflow_run_idempotency_scope_check/,

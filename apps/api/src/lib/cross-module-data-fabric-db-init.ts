@@ -210,6 +210,46 @@ export async function ensureCrossModuleDataFabricTables(): Promise<void> {
       ON shared_workflow_runs(tenant_id,id,destination_module_id,workflow_key);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_domain_event_run_route
       ON shared_domain_events(tenant_id,id,workflow_run_id);
+    -- Existing databases originally received these route keys as standalone
+    -- unique indexes. Promote them to named UNIQUE constraints so schema
+    -- introspection and migration generators preserve the dependency order:
+    -- referenced key first, then the foreign key that consumes it.
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid='shared_workflow_runs'::regclass
+          AND conname='uq_shared_workflow_run_source_route'
+          AND contype='u'
+      ) THEN
+        ALTER TABLE shared_workflow_runs
+          ADD CONSTRAINT uq_shared_workflow_run_source_route
+          UNIQUE USING INDEX uq_shared_workflow_run_source_route;
+      END IF;
+    END $$;
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid='shared_workflow_runs'::regclass
+          AND conname='uq_shared_workflow_run_destination_route'
+          AND contype='u'
+      ) THEN
+        ALTER TABLE shared_workflow_runs
+          ADD CONSTRAINT uq_shared_workflow_run_destination_route
+          UNIQUE USING INDEX uq_shared_workflow_run_destination_route;
+      END IF;
+    END $$;
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid='shared_domain_events'::regclass
+          AND conname='uq_shared_domain_event_run_route'
+          AND contype='u'
+      ) THEN
+        ALTER TABLE shared_domain_events
+          ADD CONSTRAINT uq_shared_domain_event_run_route
+          UNIQUE USING INDEX uq_shared_domain_event_run_route;
+      END IF;
+    END $$;
     DO $$ BEGIN
       ALTER TABLE shared_domain_events ADD CONSTRAINT shared_domain_event_source_run_route_fk
         FOREIGN KEY (tenant_id,workflow_run_id,source_module_id)

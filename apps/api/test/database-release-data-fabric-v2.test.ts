@@ -109,6 +109,25 @@ const driftCases: DriftCase[] = [
     ],
   },
   {
+    name: 'workflow source-route key must be a named unique constraint',
+    breakStatements: [
+      'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS shared_domain_event_source_run_route_fk',
+      'ALTER TABLE shared_workflow_runs DROP CONSTRAINT IF EXISTS uq_shared_workflow_run_source_route',
+      'DROP INDEX IF EXISTS uq_shared_workflow_run_source_route',
+      `CREATE UNIQUE INDEX uq_shared_workflow_run_source_route
+        ON shared_workflow_runs(tenant_id,id,source_module_id)`,
+    ],
+    cleanupStatements: [
+      'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS shared_domain_event_source_run_route_fk',
+      'ALTER TABLE shared_workflow_runs DROP CONSTRAINT IF EXISTS uq_shared_workflow_run_source_route',
+      'DROP INDEX IF EXISTS uq_shared_workflow_run_source_route',
+    ],
+    expectedMissing: [
+      'shared_workflow_run_source_route_unique_v2',
+      'shared_domain_event_source_run_route_fk_v2',
+    ],
+  },
+  {
     name: 'workflow destination-route unique key definition',
     breakStatements: [
       'ALTER TABLE shared_event_inbox DROP CONSTRAINT IF EXISTS shared_event_inbox_destination_run_route_fk',
@@ -128,6 +147,25 @@ const driftCases: DriftCase[] = [
     ],
   },
   {
+    name: 'workflow destination-route key must be a named unique constraint',
+    breakStatements: [
+      'ALTER TABLE shared_event_inbox DROP CONSTRAINT IF EXISTS shared_event_inbox_destination_run_route_fk',
+      'ALTER TABLE shared_workflow_runs DROP CONSTRAINT IF EXISTS uq_shared_workflow_run_destination_route',
+      'DROP INDEX IF EXISTS uq_shared_workflow_run_destination_route',
+      `CREATE UNIQUE INDEX uq_shared_workflow_run_destination_route
+        ON shared_workflow_runs(tenant_id,id,destination_module_id,workflow_key)`,
+    ],
+    cleanupStatements: [
+      'ALTER TABLE shared_event_inbox DROP CONSTRAINT IF EXISTS shared_event_inbox_destination_run_route_fk',
+      'ALTER TABLE shared_workflow_runs DROP CONSTRAINT IF EXISTS uq_shared_workflow_run_destination_route',
+      'DROP INDEX IF EXISTS uq_shared_workflow_run_destination_route',
+    ],
+    expectedMissing: [
+      'shared_workflow_run_destination_route_unique_v2',
+      'shared_event_inbox_destination_run_route_fk_v2',
+    ],
+  },
+  {
     name: 'domain-event run-route unique key definition',
     breakStatements: [
       'ALTER TABLE shared_event_inbox DROP CONSTRAINT IF EXISTS shared_event_inbox_event_run_route_fk',
@@ -135,6 +173,25 @@ const driftCases: DriftCase[] = [
       'DROP INDEX IF EXISTS uq_shared_domain_event_run_route',
       `CREATE UNIQUE INDEX uq_shared_domain_event_run_route
         ON shared_domain_events(id,tenant_id,workflow_run_id)`,
+    ],
+    cleanupStatements: [
+      'ALTER TABLE shared_event_inbox DROP CONSTRAINT IF EXISTS shared_event_inbox_event_run_route_fk',
+      'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS uq_shared_domain_event_run_route',
+      'DROP INDEX IF EXISTS uq_shared_domain_event_run_route',
+    ],
+    expectedMissing: [
+      'shared_domain_event_run_route_unique_v2',
+      'shared_event_inbox_event_run_route_fk_v2',
+    ],
+  },
+  {
+    name: 'domain-event run-route key must be a named unique constraint',
+    breakStatements: [
+      'ALTER TABLE shared_event_inbox DROP CONSTRAINT IF EXISTS shared_event_inbox_event_run_route_fk',
+      'ALTER TABLE shared_domain_events DROP CONSTRAINT IF EXISTS uq_shared_domain_event_run_route',
+      'DROP INDEX IF EXISTS uq_shared_domain_event_run_route',
+      `CREATE UNIQUE INDEX uq_shared_domain_event_run_route
+        ON shared_domain_events(tenant_id,id,workflow_run_id)`,
     ],
     cleanupStatements: [
       'ALTER TABLE shared_event_inbox DROP CONSTRAINT IF EXISTS shared_event_inbox_event_run_route_fk',

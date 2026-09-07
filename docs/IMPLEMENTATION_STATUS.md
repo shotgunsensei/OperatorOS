@@ -1,6 +1,30 @@
 # OperatorOS implementation status
 
-## Module product outcome/value upgrade - SOURCE ON GITHUB MAIN / BASELINE CI GREEN / PR GATE PENDING / PRODUCTION V60 AND DEPLOYED ACCEPTANCE OPEN (verified 2026-09-06)
+## Module product outcome/value upgrade - GITHUB MAIN CI GREEN / PRODUCTION V60 VERIFIED / REPLIT SCHEMA-CONTRACT REPAIR IN REVIEW (verified 2026-09-07)
+
+- GitHub PR #95 merged the hardened v60 source at
+  `013bf4c273563a4d73e6443b67956bd1f6841f3e`; post-merge release-gate run
+  `34078325613` passed for that exact revision. Local, `origin/main`, and the
+  clean Replit editor checkout were reconciled to the same commit.
+- A masked production shell session ran the repository-owned read-only verifier
+  and reported current v60/60. Aggregate-only reconciliation found one
+  active/trialing subscription and one grandfather marker, zero Stripe-linked
+  subscription rows, zero application-stack rows, both data-fabric checks
+  validated, 931 granted tenant-module rows out of 931 total, and zero open or
+  failed shared webhook deliveries. The temporary production connection was
+  cleared without displaying it.
+- The authorized republish kept development-data overwrite off and Stripe
+  sandbox-to-live synchronization off. Replit generated an invalid migration
+  that attempted `shared_domain_event_source_run_route_fk` before a matching
+  three-column unique constraint. Its validation failed before apply. The
+  destructive copy-development-data choice was rejected and the attempt was
+  canceled; production was not changed by Replit.
+- The repair candidate attaches the three routed unique indexes as named UNIQUE
+  constraints before dependent foreign keys and requires those constraint
+  objects in `db:verify`. Three disposable drift cases cover a definitionally
+  correct but index-only catalog. Focused static tests pass 4/4, API typecheck
+  passes, and whitespace verification passes. Disposable database execution,
+  GitHub CI, development/production convergence, and republish are still open.
 
 - Fresh Git/GitHub reconciliation confirms local `main` and `origin/main` at
   baseline `cb2ddb88b903b3a3070382274e60b00b6809d913`, with accepted v60 commit
