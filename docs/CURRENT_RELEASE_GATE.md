@@ -13,7 +13,15 @@ steps. Prior local focused results are recorded in
 [the investigation](callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md).
 Those checks ran in a checkout that also contains separately uncommitted module
 polish/security work; the scoped PR must pass the exact committed revision's
-CI before merge/deployment. Preserve that unrelated work outside this PR.
+CI before merge/deployment. Preserve unrelated interface work outside this PR.
+
+The isolated candidate reproduced 13 unresolved dependency advisories (including
+critical findings) in the older main lock. The release therefore includes the
+necessary Next.js, sharp, xmldom, qs, js-yaml, decode-uri-component, and uuid
+dependency repairs. Its fresh frozen install, production build/typechecks,
+6 release-identity tests, and Phase 39 hardening gate pass. The audit reports
+zero unresolved advisories and zero critical findings; the two existing patched
+high advisory records remain disclosed. No audit exception was added or widened.
 
 Before publication, establish a private production backup/recovery point, inspect
 aggregate state, apply through the supported one-shot release path, unset apply

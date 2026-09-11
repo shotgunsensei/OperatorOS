@@ -107,7 +107,7 @@ test('Replit npm preinstall can parse root overrides while pnpm retains scoped o
   assert.equal(pkg.overrides.vite, '$vite');
   assert.equal(pkg.overrides.ws, '$ws');
   assert.match(workspace, /"express>router": ">=2\.2\.0"/);
-  assert.match(workspace, /"next>sharp": ">=0\.35\.0"/);
+  assert.match(workspace, /"sharp": ">=0\.35\.4"/);
   assert.match(workspace, /"vite>esbuild": ">=0\.28\.1"/);
   assert.match(
     read('.replit'),

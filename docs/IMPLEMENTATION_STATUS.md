@@ -2,12 +2,23 @@
 
 ## CallCommand three-step tenant setup and billing recovery (2026-09-10)
 
-Status: **LOCAL SOURCE CANDIDATE / FOCUSED LOCAL VERIFICATION PASSED /
-NOT PUSHED OR DEPLOYED**. Branch `codex/callcommand-guided-setup`, based on
+Status: **PR #98 OPEN / PUBLICATION AUTHORIZED / EXACT COMMIT CI PENDING**.
+Branch `codex/callcommand-guided-setup`, based on
 `b14e94a`, preserves the pre-existing module clarity/security changes below.
 The detailed investigation, remaining gaps, files, exact commands, pricing,
 rollback, and platform-owned launch handoff are in
 [the CallCommand setup report](callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md).
+
+The authorized PR's isolated checkout reproduced 13 unresolved dependency
+advisories in the previous main lock. Included the required framework and
+transitive dependency repairs without the separate interface-polish work.
+From `C:\Dev\OperatorOS-callcommand-release`, frozen install and
+`corepack pnpm build:production` pass, including all workspace typechecks and
+35 Next pages. `corepack pnpm verify:hardening:phase39` passes with zero runtime
+findings, zero unresolved advisories, zero critical findings, and the same two
+disclosed patched high advisory records. Release-identity coverage passes 6/6,
+zero skips. Exact PR and merge CI plus production database/publication evidence
+remain required; these local checks do not assert deployed acceptance.
 
 CallCommand setup now guides an entitled tenant administrator through business
 information, a priced number selection, and answering activation/test call.
