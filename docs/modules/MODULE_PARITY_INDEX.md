@@ -1,6 +1,18 @@
 # OperatorOS module parity index
 
-## CallCommand guided-setup source overlay (2026-09-10)
+## CallCommand v61 delivery overlay (2026-09-11)
+
+Status: **PARITY UNCHANGED / SOURCE MERGED / DATABASE V61 VERIFIED /
+APPLICATION PUBLISHED / AUTHENTICATED SETUP VERIFIED / PROVIDER ACCEPTANCE OPEN**.
+
+| Module | New evidence | Production parity decision |
+| --- | --- | --- |
+| CallCommand AI | PR #98 merged and published at `cb47800`, build `9c9632bb7f9a1a34945bc028`; PR and exact-merge release/native CI passed; both databases independently verified v61/61 after backup/reconciliation; 47/47 public runtime checks; existing authenticated owner reached the new three-step setup | Unchanged. Deployment and authenticated page acceptance are proven. Actual provider call, hosted billing, persisted buyer workflow, and usage-invoicing acceptance remain open. |
+
+See [release evidence](../callcommand/CALLCOMMAND_V61_RELEASE_EVIDENCE.md).
+No synthetic payment return or compiled build is presented as a live purchase.
+
+## Historical CallCommand guided-setup source overlay (2026-09-10)
 
 Status: **CALLCOMMAND PARITY UNCHANGED / LOCAL CANDIDATE VERIFIED /
 LIVE ACCEPTANCE OPEN**. Branch `codex/callcommand-guided-setup` adds the tenant

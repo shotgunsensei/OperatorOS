@@ -1,6 +1,31 @@
 # OperatorOS implementation status
 
-## CallCommand three-step tenant setup and billing recovery (2026-09-10)
+## CallCommand v61 delivery - published and live verified; provider acceptance open (2026-09-11)
+
+PR #98 is merged at `cb47800fc1476825949a9476c7f3a5fe1a9e9312`; local `main`
+and the Replit checkout contain that source. Exact-head CI passed all 14 release
+stages with 1,467 API tests, 52 unit tests, 32 integration tests, 24 browser
+journeys, and 4 visual cases; native CI passed. Exact-merge release run
+`34563859024` and native run `34563858982` also passed. No failed or skipped test was
+waived. Frozen Replit install passed. Both persistent databases independently
+verify v61/61 after the supported backed-up apply. Production aggregate counts
+were unchanged and its three new composite foreign keys are valid.
+
+The new application is published at that exact merge, immutable build
+`9c9632bb7f9a1a34945bc028`, deployed `2026-09-11T05:20:01.487Z`, and v61/61.
+`OPERATOROS_EXPECTED_RELEASE_COMMIT=cb47800fc1476825949a9476c7f3a5fe1a9e9312 node
+scripts/verify-production-runtime.mjs` passed 47/47 public runtime/routing checks.
+The existing authenticated owner session reached the new three-step setup page;
+advanced controls were collapsed and the empty form could not advance. No tenant
+business record was changed. Replit's intermediate preparation/Stripe guidance
+did not require a new Stripe login or permission grant; publication completed
+with existing billing configuration and production data preserved.
+No provider access grant, live charge, phone purchase, or actual AI call occurred.
+See [v61 delivery evidence](callcommand/CALLCOMMAND_V61_RELEASE_EVIDENCE.md) for
+exact commands, environment, pass counts, backup/reconciliation, and remaining
+configuration. Unrelated local interface/help/security work is preserved.
+
+## Historical CallCommand three-step tenant setup and billing recovery (2026-09-10)
 
 Status: **PR #98 OPEN / PUBLICATION AUTHORIZED / EXACT COMMIT CI PENDING**.
 Branch `codex/callcommand-guided-setup`, based on

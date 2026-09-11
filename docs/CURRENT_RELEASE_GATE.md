@@ -1,6 +1,36 @@
 # OperatorOS current release gate
 
-## CallCommand v61 release - AUTHORIZED / PR AND DEPLOYMENT PENDING (2026-09-10)
+## CallCommand v61 - LIVE READY / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER ACCEPTANCE OPEN (2026-09-11)
+
+PR #98 merged at `cb47800fc1476825949a9476c7f3a5fe1a9e9312` after exact-head
+release CI passed all 14 stages (1,467 API, 52 unit, 32 integration, 24 browser
+journeys, and 4 visual cases) and native CI passed all jobs. Exact-merge release
+run `34563859024` and native run `34563858982` also passed. The Replit clean
+checkout pulled that exact merge and completed the frozen install. Both its
+development and explicitly selected production database independently verify
+v61/61. Production apply followed a fresh encrypted logical backup with public
+traffic paused; tenant/subscription/grant/webhook aggregates were unchanged,
+and all three new tenant-composite foreign keys are validated.
+
+Replit publication completed through its workspace UI after a preparation delay.
+Public readiness now reports that exact merge, new immutable build
+`9c9632bb7f9a1a34945bc028`, built `2026-09-11T05:12:19.218Z`, deployed
+`2026-09-11T05:20:01.487Z`, and v61/61 ending in `callcommand_guided_setup`.
+The repository public runtime verifier passed 47/47 checks. The existing signed-in
+owner session reached the new three-step setup page with its advanced controls
+collapsed. No tenant business record was changed during this inspection.
+
+Production-data overwrite stayed off, no Stripe connection or catalog was
+changed, and no live purchase or provider permission grant occurred. Replit's
+empty post-publish marker `915b0cd` was preserved on
+`codex/replit-v61-publish-marker`; the clean active checkout tracks GitHub `main`.
+Subsequent evidence-only commits do not change the live code identity above.
+Missing CallCommand Realtime/Stripe-price configuration and real-call/payment
+acceptance remain open. Full commands, counts, recovery evidence, CI links,
+and the platform configuration handoff are in
+[the v61 release evidence](callcommand/CALLCOMMAND_V61_RELEASE_EVIDENCE.md).
+
+## Historical CallCommand v61 candidate authorization (2026-09-10)
 
 The owner authorized commit, PR to main, Replit GitHub pull, and publication of
 the reviewed CallCommand guided-setup candidate. The scope includes the required
