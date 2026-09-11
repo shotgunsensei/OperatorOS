@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CreditCard, Grid2X2, LifeBuoy, LogOut, UserRound } from 'lucide-react';
+import { CreditCard, Grid2X2, LifeBuoy, UserRound } from 'lucide-react';
+import OperatorOSAccountMenu from '@/components/OperatorOSAccountMenu';
 import { useAuth } from '@/components/AuthProvider';
 import OperatorLogo from '@/components/brand/OperatorLogo';
 import TenantMessenger from '@/components/TenantMessenger';
@@ -53,7 +54,8 @@ export default function OperatorOSEcosystemHeader({
         .operatoros-ecosystem-header__link:hover, .operatoros-ecosystem-header__link:focus-visible { color:#fff; background:#202b38; border-color:#435269; }
         .operatoros-ecosystem-header__link:disabled { cursor:wait; opacity:.6; }
         .operatoros-ecosystem-header__error { max-width:1320px; margin:8px auto 0; color:#fca5a5; font-size:12px; }
-        @media (max-width:760px) { .operatoros-ecosystem-header { padding:10px 12px; } .operatoros-ecosystem-header__nav { width:100%; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; } .operatoros-ecosystem-header__link { min-height:44px; justify-content:center; white-space:normal; text-align:center; } }
+        .operatoros-ecosystem-header__link { min-height:44px; }
+        @media (max-width:760px) { .operatoros-ecosystem-header { padding:10px 12px; } .operatoros-ecosystem-header__nav { width:100%; display:flex; justify-content:flex-end; gap:6px; } .operatoros-ecosystem-header__context { flex-basis:100%; } .operatoros-ecosystem-header__link { justify-content:center; white-space:normal; text-align:center; } }
       `}</style>
       <header className="operatoros-ecosystem-header" data-testid={`${moduleSlug}-ecosystem-header`}>
         <div className="operatoros-ecosystem-header__row">
@@ -69,20 +71,15 @@ export default function OperatorOSEcosystemHeader({
           </div>
           <nav className="operatoros-ecosystem-header__nav" aria-label="OperatorOS account">
             <TenantMessenger />
-            {links.map(({ label, href, Icon }) => (
+            {links.filter(item => item.label === 'My Apps' || item.label === 'Help and support').map(({ label, href, Icon }) => (
               <a key={label} className="operatoros-ecosystem-header__link" href={href}>
                 <Icon size={14} aria-hidden="true" /> {label}
               </a>
             ))}
-            <button
-              type="button"
-              className="operatoros-ecosystem-header__link"
-              onClick={() => void globalLogout()}
-              disabled={loggingOut}
-              data-testid={`${moduleSlug}-global-logout`}
-            >
-              <LogOut size={14} aria-hidden="true" /> {loggingOut ? 'Signing out…' : 'Sign out'}
-            </button>
+            <OperatorOSAccountMenu items={[
+              ...links.filter(item => item.label !== 'My Apps' && item.label !== 'Help and support').map(({ label, href }) => ({ label, href })),
+              { label: loggingOut ? 'Signing out…' : 'Sign out everywhere', disabled: loggingOut, onSelect: () => void globalLogout(), testId: `${moduleSlug}-global-logout` },
+            ]} />
           </nav>
         </div>
         {logoutError && <div className="operatoros-ecosystem-header__error" role="alert">{logoutError}</div>}

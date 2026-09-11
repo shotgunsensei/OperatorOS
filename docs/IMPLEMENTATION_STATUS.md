@@ -1,5 +1,53 @@
 # OperatorOS implementation status
 
+## Ecosystem, OperatorOS, admin, and messenger polish (2026-09-11)
+
+Status: **LOCAL CANDIDATE VERIFIED / NO DEPLOYMENT OR PARITY PROMOTION**.
+Branch `codex/ecosystem-guided-polish` starts from clean `main` at `dd49a95`
+(`mainmodulespass`), which contains the previous three-module pass.
+
+Nine additional available modules receive linked workflow stages, simpler
+secondary navigation, compact priority briefs where present, and optional
+workspace totals/details. OutCall retains its existing unavailable boundary;
+its shared journey configuration does not activate it. OperatorOS and Platform
+Command gain searchable navigation, accessible account/mobile menus, explicit
+admin attention/review controls, overview retry/refresh, and a fully visible
+phone tenant selector. Bookmarked console routes survive initial auth loading.
+Organization owners can start a team conversation or review members and tool
+access directly from the overview.
+
+The existing tenant messenger gains conversation/unread search, participant
+inspection, separate in-memory drafts, same-ID send retries, late-response
+isolation, message-load recovery, fallback polling for an open conversation,
+explicit recipient selection, and accessible destructive confirmations.
+Membership, sender ownership, idempotency, provider, and entitlement authority
+remain server-owned; no API/schema/auth-provider/billing change or new production
+environment variable is introduced.
+
+Final local evidence: **29/29 browser cases** (1.8 minutes), including 11 prior
+Core Suite regressions, 9 authenticated disposable-tenant module presentations,
+1 OutCall boundary, and 8 synthetic messenger/admin/organization interactions.
+The audited visible desktop/tablet/phone regions had no serious/critical axe
+findings. Focused source checks passed **26/26**, and additional admin/client,
+role/navigation, central-auth and overlay contracts passed **32/32**. The real
+isolated PostgreSQL messenger suite passed **14/14**, including 11 database/API
+cases and 3 source contracts. Every final suite had zero failures/skips.
+
+`corepack pnpm build:production` passed all four workspace typechecks, API,
+runner and web compilation, 4 catalog checks, and 35 Next pages. The final
+confirmation-dialog adjustment was rebuilt through the web production build;
+web typecheck and root lint passed afterward. Phase 39 scan found zero runtime
+findings or unresolved advisories and validated the two existing disclosed
+high advisory patch exceptions; `pnpm audit --prod` exited 0 with those two
+ignored/disclosed records. Full source scope, exact commands, synthetic versus
+real evidence, intermediate fixes, artifacts, and rollback are recorded in
+[the ecosystem polish report](modules/ECOSYSTEM_GUIDED_POLISH.md).
+
+This is local compiled-runtime evidence, not CI, exact-host production
+supervisor/SSO acceptance, deployed acceptance, or external provider delivery.
+No customer messages/data, production database apply, provider call, live
+billing operation, commit, push, merge, or deployment occurred.
+
 ## Three main modules: guided workflow and visual polish (2026-09-11)
 
 Status: **LOCAL SOURCE CANDIDATE / NO DEPLOYMENT OR PARITY PROMOTION**.

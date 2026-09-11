@@ -2,6 +2,11 @@
 
 import { getActiveTenantId } from './auth';
 
+/** Opens the mounted, active-tenant composer. It never sends a message. */
+export function openTenantMessengerComposer() {
+  window.dispatchEvent(new Event('operatoros:compose-message'));
+}
+
 export interface MessengerMember {
   id: string;
   name: string;

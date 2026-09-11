@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart3, CalendarDays, Copy, Download, LayoutDashboard, Megaphone, Palette, Plus, Settings, Sparkles, Trash2, Users, Gift, LayoutTemplate, PlugZap, FileText, Activity, ShieldCheck } from 'lucide-react';
@@ -375,7 +377,8 @@ function DashboardPanel({ dashboard, campaigns, calendar, navigate, hrefFor }: {
       <div style={{ marginBottom: space.lg }}>
         <CoreSuiteWorkdayBrief moduleId="brandforgeos" eyebrow="Next best campaign actions" brief={brief} hrefFor={hrefFor} />
       </div>
-      <div
+      <CoreSuiteSection title="Creative workspace totals" description="Expand the detailed counts when reviewing your workspace.">
+<div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))',
@@ -396,6 +399,7 @@ function DashboardPanel({ dashboard, campaigns, calendar, navigate, hrefFor }: {
           </div>
         ))}
       </div>
+</CoreSuiteSection>
       <div
         style={{
           display: 'grid',

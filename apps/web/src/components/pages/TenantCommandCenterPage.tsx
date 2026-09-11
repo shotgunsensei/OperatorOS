@@ -11,6 +11,10 @@ import {
   semantic, space, fontSize,
 } from '@/lib/design-tokens';
 import { tenantApi, meApi, billingApi } from '@/lib/auth';
+import { useTenant } from '../TenantProvider';
+import { openTenantMessengerComposer } from '@/lib/messenger';
+import CoreSuiteSection from '../module-shells/CoreSuiteSection';
+import styles from '../platform/PlatformWorkspace.module.css';
 
 interface Props {
   onNavigate: (page: string) => void;
@@ -71,6 +75,9 @@ function formatCurrency(cents: number): string {
 }
 
 export default function TenantCommandCenterPage({ onNavigate }: Props) {
+  const { activeTenant } = useTenant();
+  const [error, setError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string>('');
   const [tenantStatus, setTenantStatus] = useState<string>('');
@@ -84,6 +91,9 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
+    setError(null);
+    setTenantId(null);
     (async () => {
       try {
         const me = await meApi.tenants();
@@ -96,11 +106,11 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
           setTenantStatus(t.status ?? 'active');
         }
         const [users, mods, invites, sub, act] = await Promise.all([
-          tenantApi.listUsers(current).catch(() => ({ users: [] })),
-          tenantApi.listModules(current).catch(() => ({ modules: [] })),
-          tenantApi.listInvites(current).catch(() => ({ invites: [] })),
-          billingApi.getSubscription().catch(() => null),
-          tenantApi.getActivity(current).catch(() => null),
+          tenantApi.listUsers(current),
+          tenantApi.listModules(current),
+          tenantApi.listInvites(current),
+          billingApi.getSubscription(),
+          tenantApi.getActivity(current),
         ]);
         if (!alive) return;
         setMemberCount(users.users?.length ?? 0);
@@ -111,12 +121,14 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
         setPlanSlug(sub?.subscription?.planSlug ?? sub?.plan?.slug ?? sub?.planSlug ?? 'starter');
         setPlanStatus(sub?.subscription?.status ?? sub?.status ?? 'unknown');
         setActivity(act);
+      } catch {
+        if (alive) setError('The organization overview could not load. Refresh to retrieve the current team, access, and billing information.');
       } finally {
         if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [activeTenant?.id, refresh]);
 
   const planBadge =
     planStatus === 'active'   ? badgeStyles.success
@@ -154,15 +166,14 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
   );
 
   return (
-    <div style={{ padding: space.xxl, maxWidth: 1200, margin: '0 auto' }} data-testid="page-command-center">
+    <div className={styles.workspace} style={{ maxWidth: 1200, margin: '0 auto' }} data-testid="page-command-center">
       <header
         style={{
           marginBottom: space.xl,
           padding: '24px 24px 22px',
           borderRadius: 16,
           border: `1px solid ${semantic.border}`,
-          background:
-            'linear-gradient(135deg, rgba(88,166,255,0.12), rgba(63,185,80,0.08)), linear-gradient(180deg, #0d1117, #010409)',
+          background: '#121b28',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: 18,
@@ -185,7 +196,7 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
             <Building2 size={24} color={semantic.accent} />
           </span>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: fontSize.xs, color: semantic.accent, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+            <div style={{ fontSize: fontSize.xs, color: '#8bb9ff', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
               Organization overview
             </div>
             <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, color: '#fff', letterSpacing: 0 }}>{tenantName || 'Organization overview'}</h1>
@@ -195,9 +206,6 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-          <span style={{ ...badgeStyles.info, textAlign: 'center' }}>Role gated</span>
-          <span style={{ ...badgeStyles.success, textAlign: 'center' }}>Organization data only</span>
-          <span style={{ ...badgeStyles.neutral, textAlign: 'center' }}>Audit aware</span>
           {tenantStatus && tenantStatus !== 'active' && (
             <span data-testid="tenant-status-badge" style={{ ...badgeStyles.warning, gridColumn: '1 / -1', textAlign: 'center' }}>
               <AlertTriangle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} /> {tenantStatus}
@@ -238,13 +246,27 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
       </section>
 
       {loading ? (
-        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="cc-loading">Loading organization overview…</div>
+        <div role="status" aria-busy="true" style={{ color: semantic.textMuted, padding: space.xl }} data-testid="cc-loading">Loading organization overview…</div>
+      ) : error ? (
+        <div role="alert" style={cardStyle}>{error}<button type="button" style={{ ...buttonStyles.secondary, marginTop: 12 }} onClick={() => setRefresh(value => value + 1)}>Refresh overview</button></div>
       ) : !tenantId ? (
         <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="cc-no-tenant">
           No organization is selected. Choose an organization before managing tools, billing, or team members.
         </div>
       ) : (
         <>
+          <section className={styles.attention} data-testid="tenant-coordination-controls">
+            <h2>Keep your team moving</h2>
+            <p>{pendingInvites > 0 ? `${pendingInvites} pending invitation${pendingInvites === 1 ? '' : 's'}. Review team access before the next handoff.` : 'Start a conversation with current organization members, then review who has access to each tool.'}</p>
+            <div className={styles.quickActions}>
+              <button type="button" style={buttonStyles.primary} onClick={openTenantMessengerComposer}>Start team conversation</button>
+              <button type="button" style={buttonStyles.secondary} onClick={() => onNavigate('tenant-users')}>Review members and invitations</button>
+              <button type="button" style={buttonStyles.secondary} onClick={() => onNavigate('tenant-modules')}>Review tool access</button>
+              <button type="button" style={buttonStyles.secondary} onClick={() => setRefresh(value => value + 1)}>Refresh overview</button>
+            </div>
+            <p>Messages stay within the selected organization. Group recipients are chosen explicitly before a conversation starts.</p>
+          </section>
+          <CoreSuiteSection title="Organization totals" description="Team size, available tools, plan, and recent usage.">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: space.lg, marginBottom: space.xl }}>
             {stat('Members', memberCount, UsersIcon, { page: 'tenant-users', label: 'Manage members' })}
             {stat('Pending invites', pendingInvites, UserPlus, { page: 'tenant-users', label: 'Review invites' })}
@@ -264,6 +286,8 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
             </div>
             {activity && stat('AI actions (30d)', activity.aiActions30d, Activity)}
           </div>
+
+          </CoreSuiteSection>
 
           {/* Billing summary */}
           {activity && (

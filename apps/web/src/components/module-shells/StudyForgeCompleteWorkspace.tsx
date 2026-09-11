@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Archive, BookMarked, Brain, CalendarClock, Check, ChevronLeft, ChevronRight,
@@ -148,7 +150,8 @@ function CompleteDashboard({ workspace, hrefFor }: { workspace: CompleteWorkspac
     <div style={{ marginBottom: 16 }}>
       <CoreSuiteWorkdayBrief moduleId="studyforge-ai" eyebrow="Next best learning actions" brief={brief} hrefFor={hrefFor} />
     </div>
-    <article data-testid="studyforge-next-completed-outcome" style={{ ...shellCard, marginBottom: 16, borderColor: 'rgba(167,139,250,.55)' }}>
+    <CoreSuiteSection title="Study plan and deliverables" description="Review the material and practice options for your next session.">
+<article data-testid="studyforge-next-completed-outcome" style={{ ...shellCard, marginBottom: 16, borderColor: 'rgba(167,139,250,.55)' }}>
       <div style={{ color: '#c4b5fd', textTransform: 'uppercase', letterSpacing: '.13em', fontSize: 11, fontWeight: 850 }}>
         {nextSet ? 'Continue a saved set' : 'Your first finished outcome'}
       </div>
@@ -171,6 +174,7 @@ function CompleteDashboard({ workspace, hrefFor }: { workspace: CompleteWorkspac
         <Play size={16} /> {nextSet ? 'Continue this set' : 'Create my complete study set'}
       </a>
     </article>
+</CoreSuiteSection>
     <div style={grid}>{metrics.map(([label, value, Icon]) => <article key={label} style={{ ...shellCard, position: 'relative', overflow: 'hidden' }}>
       <Icon size={18} color="#a78bfa" /><div style={{ color: semantic.textMuted, fontSize: 13, marginTop: 12 }}>{label}</div><strong style={{ fontSize: 26, display: 'block', marginTop: 4 }}>{value}</strong>
     </article>)}</div>

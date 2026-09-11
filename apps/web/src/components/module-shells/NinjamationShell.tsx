@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -678,7 +680,8 @@ export default function NinjamationShell({
                     hrefFor={routeHref}
                   />
                 )}
-                <div
+                <CoreSuiteSection title="Script library totals" description="Expand the detailed counts when reviewing your workspace.">
+<div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))',
@@ -702,6 +705,7 @@ export default function NinjamationShell({
                     </article>
                   ))}
                 </div>
+</CoreSuiteSection>
                 <div
                   style={{
                     display: 'grid',

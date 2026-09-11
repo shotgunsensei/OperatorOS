@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import OperatorOSAccountMenu from './OperatorOSAccountMenu';
+import chrome from './OperatorOSChrome.module.css';
 import { Menu, X, ChevronLeft, Grid2X2, LifeBuoy } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import TenantMessenger from './TenantMessenger';
@@ -56,7 +59,8 @@ interface SaasLayoutProps {
 export default function SaasLayout({ activePage, onNavigate, children, tenantRole }: SaasLayoutProps) {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [navigationSearch, setNavigationSearch] = useState('');
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -74,7 +78,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
 
   const userIsSuperAdmin = isSuperAdmin((user as any)?.platformRole);
   const userIsTenantAdmin = isTenantAdmin(tenantRole, (user as any)?.platformRole);
-  const sections = buildNavSections({ isSuperAdmin: userIsSuperAdmin, isTenantAdmin: userIsTenantAdmin });
+  const sections = buildNavSections({ isSuperAdmin: userIsSuperAdmin, isTenantAdmin: userIsTenantAdmin }).map(section => ({ ...section, items: section.items.filter(item => item.label.toLowerCase().includes(navigationSearch.trim().toLowerCase())) })).filter(section => section.items.length);
   const currentPage = pageLabels[activePage] ?? { section: 'Workspace', label: 'OperatorOS' };
 
   const sidebarWidth = isMobile ? 260 : (collapsed ? 64 : 240);
@@ -90,13 +94,13 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         borderRight: `1px solid ${colors.border}`,
         display: 'flex',
         flexDirection: 'column',
-        transition: isMobile ? 'none' : 'width 0.2s, min-width 0.2s',
+
         overflow: 'hidden',
         ...(isMobile ? {
           position: 'fixed' as const, top: 0, left: 0, bottom: 0, zIndex: 1001,
           transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
           visibility: mobileOpen ? 'visible' as const : 'hidden' as const,
-          transition: 'transform 0.25s ease, visibility 0.25s ease',
+
         } : {}),
       }}
     >
@@ -150,7 +154,10 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         )}
       </div>
 
+      {isMobile && <Dialog.Title className="ops-visually-hidden">OperatorOS navigation</Dialog.Title>}
+      {(isMobile || !collapsed) && <div style={{ padding: 12 }}><input className={chrome.navSearch} aria-label="Find a workspace page" placeholder="Find a page" value={navigationSearch} onChange={event => setNavigationSearch(event.target.value)} /></div>}
       <div style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
+        {sections.length === 0 && <p style={{ padding: 12, color: colors.textMuted }}>No matching pages.</p>}
         {sections.map((section, sIdx) => (
           <div
             key={section.label}
@@ -178,6 +185,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
               const Icon = item.Icon;
               const itemStyle = {
                 width: '100%',
+                minHeight: 44,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
@@ -239,100 +247,33 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         ))}
       </div>
 
-      <div style={{ padding: '12px 8px', borderTop: `1px solid ${colors.border}`, position: 'relative' }}>
-        {showUserMenu && (
-          <div style={{
-            position: 'absolute', bottom: '100%', left: 8, right: 8,
-            background: colors.bgSecondary, border: `1px solid ${colors.border}`,
-             borderRadius: 8, padding: 4, marginBottom: 4, zIndex: 100,
-          }} role="menu" aria-label="Account actions">
-            <button
-              role="menuitem"
-              data-testid="menu-settings"
-              onClick={() => { handleNavigate('settings'); setShowUserMenu(false); }}
-              style={{
-                width: '100%', padding: '8px 12px', border: 'none', borderRadius: 6,
-                background: 'transparent', color: colors.text, cursor: 'pointer', textAlign: 'left', fontSize: 13,
-              }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = colors.bgHover}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-            >Settings</button>
-            <button
-              role="menuitem"
-              data-testid="menu-logout"
-              onClick={async () => {
-                await logout();
-                setShowUserMenu(false);
-                // Marketing redesign: signing out from the console drops the
-                // user on the new public marketing surface at `/` rather than
-                // re-rendering an embedded login screen in place.
-                if (typeof window !== 'undefined') window.location.href = '/';
-              }}
-              style={{
-                width: '100%', padding: '8px 12px', border: 'none', borderRadius: 6,
-                background: 'transparent', color: colors.accentRed, cursor: 'pointer', textAlign: 'left', fontSize: 13,
-              }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = colors.bgHover}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-            >Sign out</button>
-          </div>
-        )}
-        <button
-          type="button"
-          data-testid="user-menu-button"
-          onClick={() => setShowUserMenu(!showUserMenu)}
-          aria-expanded={showUserMenu}
-          aria-haspopup="menu"
-          aria-label={`Account menu for ${user?.name || user?.email || 'current user'}`}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '8px 12px', border: 'none', borderRadius: 8,
-            background: 'transparent', color: colors.text, cursor: 'pointer',
-          }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = colors.bgHover}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-        >
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: colors.accent, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#fff', flexShrink: 0,
-          }}>
-            {user?.name?.charAt(0).toUpperCase() || '?'}
-          </div>
-          {(isMobile || !collapsed) && (
-            <div style={{ overflow: 'hidden', textAlign: 'left' }}>
-              <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
-              <div style={{ fontSize: 11, color: colors.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
-            </div>
-          )}
-        </button>
+      <div style={{ padding: 12, borderTop: `1px solid ${colors.border}` }}>
+        <OperatorOSAccountMenu triggerTestId="user-menu-button" compact={collapsed && !isMobile} label={user?.name || 'Account'} items={[
+          { label: 'Profile and security', onSelect: () => handleNavigate('settings'), testId: 'menu-settings' },
+          { label: 'Workspace plan', onSelect: () => handleNavigate('billing') },
+          { label: 'Sign out', testId: 'menu-logout', onSelect: () => { void logout().then(() => { window.location.href = '/'; }).catch(() => setLogoutError('Sign out could not be confirmed. Please try again.')); } },
+        ]} />
+        {logoutError && <p role="alert" style={{ color: colors.accentRed, fontSize: 13 }}>{logoutError}</p>}
       </div>
     </nav>
   );
 
   return (
-    <div style={{ display: 'flex', minHeight: '100dvh', height: '100dvh', background: colors.bg, color: colors.text }}>
+    <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
+    <div className={chrome.workspace} style={{ display: 'flex', minHeight: '100dvh', height: '100dvh', background: colors.bg, color: colors.text }}>
       <a className="ops-skip-link" href="#workspace-main">Skip to main content</a>
-      {isMobile && mobileOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          style={{ position: 'fixed', inset: 0, padding: 0, border: 'none', background: 'rgba(0,0,0,0.66)', zIndex: 1000, cursor: 'pointer' }}
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      {isMobile ? <Dialog.Portal><Dialog.Overlay className={chrome.overlay} /><Dialog.Content asChild aria-describedby={undefined}>{sidebar}</Dialog.Content></Dialog.Portal> : sidebar}
 
-      {sidebar}
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div
           data-testid="topbar"
           style={{
-            height: isMobile ? 48 : 52,
+            minHeight: 52,
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: '0 16px',
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            gap: isMobile ? 8 : 12,
+            padding: isMobile ? '8px 12px' : '0 16px',
             borderBottom: `1px solid ${colors.border}`,
             background: colors.bgSecondary,
             flexShrink: 0,
@@ -340,20 +281,13 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         >
           {isMobile && (
             <>
-              <button
+              <Dialog.Trigger asChild><button
                 type="button"
                 aria-label="Open navigation"
                 data-testid="button-open-sidebar"
-                onClick={() => setMobileOpen(true)}
-                style={{ background: 'none', border: 'none', color: colors.text, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
-              ><Menu size={20} /></button>
-              <div style={{
-                width: 24, height: 24, borderRadius: 6,
-                background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 800, color: '#fff',
-              }}>O</div>
-               <span aria-live="polite" style={{ minWidth: 0, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 600, color: '#fff' }}>{currentPage.label}</span>
+                style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', background: 'none', border: 'none', color: colors.text, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+              ><Menu size={20} /></button></Dialog.Trigger>
+              <span aria-live="polite" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 600, color: '#fff' }}>{currentPage.label}</span>
             </>
           )}
           {!isMobile && (
@@ -362,7 +296,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 750 }}>{currentPage.label}</div>
             </div>
           )}
-          <div style={{ flex: 1 }} />
+          {!isMobile && <div style={{ flex: 1 }} />}
           <TenantMessenger />
           <button
             type="button"
@@ -382,7 +316,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
           >
             <LifeBuoy size={16} aria-hidden="true" />
           </a>
-          <TenantSwitcher />
+          <div style={isMobile ? { flexBasis: '100%', minWidth: 0 } : { minWidth: 0 }}><TenantSwitcher /></div>
         </div>
 
         <main id="workspace-main" tabIndex={-1} style={{ flex: 1, overflow: 'auto', background: colors.bg }}>
@@ -390,6 +324,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         </main>
       </div>
     </div>
+    </Dialog.Root>
   );
 }
 

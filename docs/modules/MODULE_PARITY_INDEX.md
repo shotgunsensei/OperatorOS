@@ -1,5 +1,33 @@
 # OperatorOS module parity index
 
+## Ecosystem guided workflow and administration overlay (2026-09-11)
+
+Status: **PARITY UNCHANGED / LOCAL CANDIDATE VERIFIED**.
+
+| Module | Changed workflow/presentation | Parity decision |
+| --- | --- | --- |
+| TorqueShed | Vehicle to export journey; optional garage totals | Unchanged; local authenticated presentation verified, native/provider acceptance not added |
+| FaultlineLab | Challenge to results journey; optional training progress | Unchanged; local authenticated presentation verified |
+| Operator Pool Hall | Practice to profile journey; optional match record | Unchanged; local authenticated presentation verified; remains free |
+| BrandForgeOS | Brand to approved deliverable journey; concise priorities and optional totals | Unchanged; local authenticated presentation verified |
+| SnapProofOS | Job to evidence, report and delivery journey; concise priorities and optional totals | Unchanged; local authenticated presentation verified |
+| StudyForge AI | Source to study progress journey; optional plan/deliverables | Unchanged; local authenticated presentation verified |
+| Deploy Ops | Project to export journey; optional package details/totals | Unchanged; local authenticated presentation verified |
+| CallCommand AI | Setup to follow-up journey; optional call totals; existing guided setup retained | Unchanged; local authenticated presentation verified, provider/billing acceptance not added |
+| Script Ops | Sources to reviewed run journey; concise priorities and optional totals | Unchanged; local authenticated presentation verified |
+| OutCall | Shared journey configuration remains behind unavailable entry | Unchanged; current unavailable boundary verified, activation not exposed |
+
+OperatorOS shell, Platform Command, organization overview, and tenant messenger
+receive shared navigation, accessible menus, actionable exception review,
+recovery controls, and safer draft/send interactions. The final browser suite
+passed 29/29, including the existing 11/11 Core Suite regression cases. Source
+contracts passed 26/26 plus 32/32 additional role/navigation/admin/overlay checks;
+the isolated messenger suite passed 14/14. No final suite failed or skipped.
+Build, typecheck, lint, security exception integrity, and dependency checks pass
+locally. No source or browser fixture grants additional authorization.
+See [scope and exact evidence](ECOSYSTEM_GUIDED_POLISH.md). These checks do not
+promote any module to deployed or provider-accepted status.
+
 ## Core Suite guided workflow and polish overlay (2026-09-11)
 
 Status: **PARITY UNCHANGED / LOCAL PRESENTATION CANDIDATE**.

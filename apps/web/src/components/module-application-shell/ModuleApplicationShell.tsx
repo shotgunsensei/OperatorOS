@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
 import ModulePageGuide from '@/components/module-shells/ModulePageGuide';
+import ModuleWorkflowJourney from '@/components/module-shells/ModuleWorkflowJourney';
+import { MODULE_WORKFLOW_JOURNEYS } from '@/lib/module-workflow-journey';
 import { AlertTriangle, Ban, ChevronDown, CloudOff, Inbox, Menu, RefreshCcw, X, type LucideIcon } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -147,7 +149,9 @@ export default function ModuleApplicationShell<Capability extends string = strin
   const routeForbidden = !!currentRoute && !canAccessModuleRoute(currentRoute, access);
   const effectiveState: ModuleShellState = routeForbidden ? 'forbidden' : (props.state ?? 'ready');
   const mobileMode = props.mobileNavigation ?? 'drawer';
-  const useDrawer = mobileMode === 'drawer' || Boolean(props.collapsibleNavigation);
+  const moduleSlug = props.helpModuleSlug ?? props.moduleId;
+  const collapsibleNavigation = props.collapsibleNavigation ?? Object.hasOwn(MODULE_WORKFLOW_JOURNEYS, moduleSlug);
+  const useDrawer = mobileMode === 'drawer' || collapsibleNavigation;
   const allItems = props.navigation.flatMap(group => group.items);
   const mobileItems = props.mobileItemIds?.length
     ? allItems.filter(item => props.mobileItemIds?.includes(item.id))
@@ -224,7 +228,7 @@ export default function ModuleApplicationShell<Capability extends string = strin
           {props.organization && (props.classNames?.contextChip
             ? <div className={classes(props.classNames, 'contextChip')} data-testid={props.organization.testId}><span>{props.organization.label}</span><strong title={props.organization.title || props.organization.value}>{props.organization.value}</strong></div>
             : <ContextChip value={props.organization} />)}
-          {props.navigation.map((group, index) => props.collapsibleNavigation && index > 0 ? (
+          {props.navigation.map((group, index) => collapsibleNavigation && index > 0 ? (
             <details className={styles.navDisclosure} key={`${group.id}:${props.currentPath}`} open={group.items.some(item => isModuleRouteActive(item, props.currentPath)) || undefined}>
               <summary><span>{group.label}</span><ChevronDown size={15} aria-hidden="true" /></summary>
               <nav className={classes(props.classNames, 'navGroup')} aria-label={`${props.moduleName} ${group.label.toLowerCase()} navigation`}>
@@ -253,7 +257,7 @@ export default function ModuleApplicationShell<Capability extends string = strin
   return (
     <Dialog.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
     <main
-      className={`${classes(props.classNames, 'shell')} ${props.collapsibleNavigation ? styles.coreSuite : ''}`}
+      className={`${classes(props.classNames, 'shell')} ${collapsibleNavigation ? styles.coreSuite : ''}`}
       style={moduleThemeStyle(props.theme)}
       data-module-theme={props.theme.id}
       data-theme={props.themeMode}
@@ -313,7 +317,7 @@ export default function ModuleApplicationShell<Capability extends string = strin
               {props.page.actions}
             </header>
             {effectiveState === 'ready' && <ModulePageGuide moduleSlug={props.helpModuleSlug ?? props.moduleId} routePath={props.currentPath} />}
-            {effectiveState === 'ready' && props.workflow}
+            {effectiveState === 'ready' && (props.workflow ?? <ModuleWorkflowJourney moduleSlug={moduleSlug} path={props.currentPath} routes={allItems.filter(item => item.status !== 'disabled' && canAccessModuleRoute(item, access))} />)}
             {stateContent && StateIcon ? (
               <section className={classes(props.classNames, 'stateCard')} data-module-state={effectiveState} aria-busy={effectiveState === 'loading' || undefined} role={effectiveState === 'error' || effectiveState === 'forbidden' ? 'alert' : 'status'}>
                 <div>

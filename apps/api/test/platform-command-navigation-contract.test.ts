@@ -8,6 +8,7 @@ const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 test('Phase 47 shell keeps command routes addressable and preserves global escape links', () => {
   const shell = read('apps/web/src/components/platform/PlatformCommandShell.tsx');
+  const accountMenu = read('apps/web/src/components/OperatorOSAccountMenu.tsx');
   const route = read('apps/web/src/app/platform/[[...slug]]/page.tsx');
   const routes = read('apps/web/src/lib/platform-routes.ts');
 
@@ -18,10 +19,13 @@ test('Phase 47 shell keeps command routes addressable and preserves global escap
     assert.match(shell, new RegExp(`label: '${label}'`));
   }
   assert.match(shell, /data-testid="platform-my-apps"/);
-  assert.match(shell, />OperatorOS Home</);
-  assert.match(shell, />Profile and security</);
-  assert.match(shell, />Help and support</);
-  assert.match(shell, /data-testid="platform-global-logout"/);
+  assert.match(shell, /href=\{PLATFORM_DOMAINS.root\} aria-label="OperatorOS home"/);
+  assert.match(shell, /label: 'Profile and security', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl/);
+  assert.match(shell, /aria-label="Help and support"/);
+  assert.match(shell, /testId: 'platform-global-logout'/);
+  assert.match(shell, /onSelect: \(\) => void globalLogout\(\)/);
+  assert.match(accountMenu, /data-testid=\{item.testId\}/);
+  assert.match(accountMenu, /DropdownMenu.Content/);
   assert.doesNotMatch(shell, /target=["']_blank/);
 
   assert.match(route, /const view: PlatformView = pathToPlatformView\(slug\)/);

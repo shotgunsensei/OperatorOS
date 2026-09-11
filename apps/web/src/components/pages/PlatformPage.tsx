@@ -19,6 +19,8 @@ import { useAuth } from '../AuthProvider';
 import { platformApiCall as apiCall } from '@/lib/platform-api';
 import { adminApiCall } from '@/lib/admin-api';
 import type { PlatformView } from '@/lib/platform-routes';
+import { buildPlatformAttention } from '@/lib/platform-attention';
+import styles from '../platform/PlatformWorkspace.module.css';
 import { COMPANION_MODULES, COMPANION_MODULE_PRICE_CENTS, ELIGIBLE_COMPANION_MODULE_KEYS } from '@operatoros/sdk';
 
 const FORWARD_COMPANION_KEYS = new Set<string>(ELIGIBLE_COMPANION_MODULE_KEYS);
@@ -33,7 +35,7 @@ const colors = {
   border: '#21262d',
   text: '#c9d1d9',
   textMuted: '#8b949e',
-  textDim: '#484f58',
+  textDim: '#9baabc',
   accent: '#58a6ff',
   accentGreen: '#3fb950',
   accentRed: '#f85149',
@@ -83,7 +85,7 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
   const showNavigation = props.showNavigation !== false;
 
   return (
-    <div style={{ padding: 24, color: colors.text, background: colors.bg, minHeight: '100%' }}>
+    <div className={styles.workspace}>
       {showNavigation && (
         <>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 16 }}>
@@ -307,7 +309,7 @@ function ErrorBlock({
   const action = err.action || null;
   const remaining = body?.remaining && typeof body.remaining === 'object' ? body.remaining as Record<string, unknown> : null;
   return (
-    <div data-testid="error-block" style={{
+    <div data-testid="error-block" role="alert" style={{
       padding: 12, marginBottom: 12, borderRadius: 6,
       background: 'rgba(248,81,73,0.1)', color: colors.accentRed,
       border: `1px solid ${colors.accentRed}`, fontSize: 13,
@@ -340,79 +342,73 @@ function ErrorBlock({
 
 function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [refresh, setRefresh] = useState(0);
   useEffect(() => {
+    let active = true;
+    setError(null);
+    setData(null);
     Promise.all([
-      apiCall('/platform/stats').catch(() => null),
-      apiCall('/platform/health').catch(() => null),
-      apiCall('/platform/audit?limit=5').catch(() => ({ logs: [] })),
-    ]).then(([s, h, a]) => setData({ stats: s, health: h, recent: a.logs ?? [] }));
-  }, []);
-  if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
+      apiCall('/platform/stats'),
+      apiCall('/platform/health'),
+      apiCall('/platform/audit?limit=5'),
+    ]).then(([s, h, a]) => { if (active) setData({ stats: s, health: h, recent: a.logs ?? [], refreshedAt: new Date().toLocaleTimeString() }); }).catch(caught => { if (active) setError(caught); });
+    return () => { active = false; };
+  }, [refresh]);
+  if (error) return <ErrorBlock err={error} onRetry={() => setRefresh(value => value + 1)} />;
+  if (!data) return <div role="status" aria-busy="true" style={{ color: colors.textMuted }}>Loading platform overview…</div>;
   const s = data.stats ?? {};
   const h = data.health ?? {};
-  const warnings: { code: string; message: string }[] = Array.isArray(s.warnings) ? s.warnings : [];
+  const attention = buildPlatformAttention(s, h);
   return (
     <div>
-      {warnings.length > 0 && (
-        <div data-testid="banner-stats-warnings" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {warnings.map(w => (
-            <div
-              key={w.code}
-              data-testid={`banner-stats-warning-${w.code}`}
-              style={{
-                padding: '10px 12px',
-                border: `1px solid ${colors.accentRed}`,
-                background: 'rgba(220, 38, 38, 0.08)',
-                color: colors.text,
-                borderRadius: 6,
-                fontSize: 13,
-              }}
-            >
-              <strong style={{ color: colors.accentRed }}>{w.code}</strong>: {w.message}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className={styles.toolbar}><div><h2>Platform overview</h2><p>Review exceptions, then open the control you need. Updated {data.refreshedAt}.</p></div><Btn onClick={() => setRefresh(value => value + 1)}>Refresh overview</Btn></div>
+      <section className={styles.attention} data-testid="platform-attention">
+        <h3>{attention.length ? 'Needs your attention' : 'Manage the platform'}</h3>
+        {attention.length > 0 && <ul className={styles.attentionList}>{attention.map(item => <li key={item.id}><div><strong>{item.title}</strong><p>{item.detail}</p></div><Btn onClick={() => onNavigate({ kind: item.destination })}>Review {item.destination === 'billing' ? 'billing events' : item.destination === 'health' ? 'health' : 'audit'}</Btn></li>)}</ul>}
+        <p>Open a tenant or user to review membership, access, and existing account controls.</p>
+        <div className={styles.quickActions}><Btn onClick={() => onNavigate({ kind: 'tenants' })}>Manage tenants</Btn><Btn onClick={() => onNavigate({ kind: 'users' })}>Review user access</Btn><Btn onClick={() => onNavigate({ kind: 'modules' })}>Manage module availability</Btn><Btn onClick={() => onNavigate({ kind: 'audit' })}>Review audit history</Btn></div>
+      </section>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
-        <Card data-testid="card-tenants" onClick={() => onNavigate({ kind: 'tenants' })} style={{ cursor: 'pointer' }}>
+        <button type="button" className={styles.metricButton} data-testid="card-tenants" onClick={() => onNavigate({ kind: 'tenants' })}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Tenants</div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{s.tenants?.byStatus?.active ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.tenants?.total ?? 0}</span></div>
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.tenants?.byStatus?.suspended ?? 0} suspended · {s.tenants?.byStatus?.archived ?? 0} archived</div>
-        </Card>
-        <Card data-testid="card-modules" onClick={() => onNavigate({ kind: 'modules' })} style={{ cursor: 'pointer' }}>
+        </button>
+        <button type="button" className={styles.metricButton} data-testid="card-modules" onClick={() => onNavigate({ kind: 'modules' })}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Modules</div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{(s.modules?.byStatus?.live ?? 0) + (s.modules?.byStatus?.active ?? 0)} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.modules?.total ?? 0}</span></div>
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.modules?.byStatus?.beta ?? 0} beta · {s.modules?.byStatus?.coming_soon ?? 0} coming soon · {s.modules?.archivedCount ?? 0} archived</div>
-        </Card>
-        <Card data-testid="card-addons" onClick={() => onNavigate({ kind: 'billing' })} style={{ cursor: 'pointer' }}>
+        </button>
+        <button type="button" className={styles.metricButton} data-testid="card-addons" onClick={() => onNavigate({ kind: 'billing' })}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Addon subs</div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{s.addonSubscriptions?.activeOrTrialing ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.addonSubscriptions?.total ?? 0}</span></div>
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.addonSubscriptions?.byStatus?.incomplete ?? 0} incomplete · {s.addonSubscriptions?.byStatus?.canceled ?? 0} canceled</div>
-        </Card>
-        <Card data-testid="card-billing-events" onClick={() => onNavigate({ kind: 'billing' })} style={{ cursor: 'pointer' }}>
+        </button>
+        <button type="button" className={styles.metricButton} data-testid="card-billing-events" onClick={() => onNavigate({ kind: 'billing' })}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Billing events</div>
           <div style={{ fontSize: 28, fontWeight: 700, color: (s.billingEvents?.failed ?? 0) > 0 ? colors.accentRed : colors.text }}>{s.billingEvents?.failed ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>failed</span></div>
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.billingEvents?.processed ?? 0} processed of {s.billingEvents?.total ?? 0}</div>
-        </Card>
+        </button>
         <Card data-testid="card-users">
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Users</div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{s.users?.active ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.users?.total ?? 0}</span></div>
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.users?.superAdmins ?? 0} super admin{(s.users?.superAdmins ?? 0) === 1 ? '' : 's'}</div>
         </Card>
-        <Card data-testid="card-stripe" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
+        <button type="button" className={styles.metricButton} data-testid="card-stripe" onClick={() => onNavigate({ kind: 'health' })}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Stripe</div>
           <div style={{ fontSize: 16 }}><Pill tone={h.stripe?.live ? 'green' : 'yellow'}>{h.stripe?.mode ?? 'unknown'}</Pill></div>
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>Last billing sync: {h.stripe?.lastSuccessfulWebhookAt ? new Date(h.stripe.lastSuccessfulWebhookAt).toLocaleString() : '—'}</div>
-        </Card>
-        <Card data-testid="card-db" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
+        </button>
+        <button type="button" className={styles.metricButton} data-testid="card-db" onClick={() => onNavigate({ kind: 'health' })}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Infrastructure</div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <Pill tone={h.db?.ok ? 'green' : 'red'}>db {h.db?.ok ? 'ok' : 'down'}</Pill>
+            <Pill tone={h.db?.ok === true ? 'green' : h.db?.ok === false ? 'red' : 'muted'}>db {h.db?.ok === true ? 'ok' : h.db?.ok === false ? 'down' : 'unknown'}</Pill>
             <Pill tone={h.auth?.sessionSecretConfigured ? 'green' : 'red'}>session</Pill>
             <Pill tone={h.ai?.openaiKeyConfigured ? 'green' : 'muted'}>openai</Pill>
           </div>
-        </Card>
-        <Card data-testid="card-callcommand-infrastructure" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
+        </button>
+        <button type="button" className={styles.metricButton} data-testid="card-callcommand-infrastructure" onClick={() => onNavigate({ kind: 'health' })}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>CallCommand numbers</div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>
             {s.callCommandInfrastructure?.activeNumbers ?? 0}{' '}
@@ -427,7 +423,7 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
             {s.callCommandInfrastructure?.orphanNumbers ?? 0} orphans · {s.callCommandInfrastructure?.routingDrift ?? 0} routing drift · {s.callCommandInfrastructure?.stripeMismatches ?? 0} billing mismatches
           </div>
-        </Card>
+        </button>
       </div>
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

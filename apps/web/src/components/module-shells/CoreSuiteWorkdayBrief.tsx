@@ -26,7 +26,7 @@ export default function CoreSuiteWorkdayBrief({
   brief: WorkdayBrief;
   hrefFor: (href: string) => string;
 }) {
-  const guided = ['tradeflowkit', 'techdeck', 'pulsedesk'].includes(moduleId);
+  const guided = true;
   const visibleActions = guided ? brief.actions.slice(0, 3) : brief.actions;
   const renderAction = (action: WorkdayBrief['actions'][number], index: number) => (
     <li key={action.id}>
