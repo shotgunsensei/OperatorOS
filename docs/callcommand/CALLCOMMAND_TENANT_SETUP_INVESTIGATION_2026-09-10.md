@@ -1,7 +1,13 @@
 # CallCommand AI: tenant setup investigation and implementation
 
 Date: 2026-09-10. Branch: `codex/callcommand-guided-setup`, based on `b14e94a`.
-Status: **LOCAL IMPLEMENTATION; DEPLOYED/PROVIDER ACCEPTANCE OPEN**.
+Current delivery status (2026-09-11): **PR #98 MERGED AND PUBLISHED;
+DATABASE V61 AND AUTHENTICATED SETUP VERIFIED; PROVIDER ACCEPTANCE OPEN**.
+PR and exact-merge CI passed all 14 release stages. Live commit `cb47800`, build
+`9c9632bb7f9a1a34945bc028`, and v61/61 are verified; 47/47 public runtime checks
+passed. The signed-in owner session reached the deployed three-step setup.
+See [the v61 release evidence](CALLCOMMAND_V61_RELEASE_EVIDENCE.md) for exact
+commits, CI, recovery, database reconciliation, and the publication handoff.
 Delivery authorization was granted after the investigation: commit, PR to main,
 Replit pull, and publish. Follow `docs/CURRENT_RELEASE_GATE.md` for the current
 delivery gate. The local evidence below is historical to the investigation;
