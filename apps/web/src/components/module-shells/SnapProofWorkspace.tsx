@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -277,7 +279,8 @@ function Dashboard({ counts, cases, evidence, reports, onOpen, navigate, hrefFor
     <div style={{ marginBottom: space.lg }}>
       <CoreSuiteWorkdayBrief moduleId="snapproofos" eyebrow="Next best proof actions" brief={brief} hrefFor={hrefFor} />
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: space.md }}>
+    <CoreSuiteSection title="Proof and job totals" description="Expand the detailed counts when reviewing your workspace.">
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: space.md }}>
       {[
         ['Cases', counts.cases ?? 0],
         ['Customers', counts.customers ?? 0],
@@ -294,6 +297,7 @@ function Dashboard({ counts, cases, evidence, reports, onOpen, navigate, hrefFor
         ['Activity (7 days)', counts.recentActivity ?? 0],
       ].map(([label, value]) => <div key={String(label)} style={{ ...cardStyle, background: '#0f172a', borderColor: '#1e3a4f' }}><div style={{ color: '#94a3b8', fontSize: 12 }}>{label}</div><div style={{ fontSize: 28, fontWeight: 800, marginTop: 5 }}>{String(value)}</div></div>)}
     </div>
+</CoreSuiteSection>
     <div style={{ ...cardStyle, background: '#0f172a', marginTop: space.lg }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}><h3 style={{ margin: 0 }}>Recently updated jobs</h3><button style={buttonStyle} onClick={() => navigate('jobs')}><Plus size={15} /> {canWrite ? 'New job' : 'View jobs'}</button></div>
       {cases.length ? cases.slice(0, 6).map(item => <button key={item.id} onClick={() => onOpen(item.id)} style={{ width: '100%', textAlign: 'left', padding: '12px 0', border: 0, borderTop: '1px solid #1e293b', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}><strong>{item.reference} · {item.title}</strong><span style={{ float: 'right', color: '#5eead4' }}>{item.status.replaceAll('_', ' ')}</span></button>) : <Empty text="No evidence cases yet. Create your first case to begin collecting proof." />}

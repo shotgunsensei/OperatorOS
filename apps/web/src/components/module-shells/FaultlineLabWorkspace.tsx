@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -610,12 +612,14 @@ export default function FaultlineLabWorkspace({
 
         {!loading && tab === 'overview' && (
           <section id="faultlinelab-dashboard" data-testid="faultlinelab-overview-route" className="fl-main">
-            <div className="fl-metrics">
+            <CoreSuiteSection title="Training progress" description="Available cases, assignments, attempts, and solved challenges.">
+<div className="fl-metrics">
               <article><span>Playable cases</span><b>{catalogFacets.total}</b></article>
               <article><span>Active assignments</span><b>{assignments.filter(item => ['assigned', 'in_progress'].includes(item.status)).length}</b></article>
               <article><span>Past attempts</span><b>{sessions.length}</b></article>
               <article><span>Solved</span><b>{progress.progress?.challengesSolved ?? 0}</b></article>
             </div>
+</CoreSuiteSection>
             <div className="fl-overview-grid">
               <a className="fl-card fl-route-card" href={hrefFor('/challenges')}><Beaker size={20} /><div><h2>Choose a challenge</h2><p>Browse ready-to-play cases, review the briefing, and begin a scored investigation.</p></div></a>
               <a className="fl-card fl-route-card" href={hrefFor('/assignments')}><ClipboardList size={20} /><div><h2>Work assignments</h2><p>Open practice assigned by your team manager.</p></div></a>

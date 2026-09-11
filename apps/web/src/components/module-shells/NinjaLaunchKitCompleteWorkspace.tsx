@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Archive,
@@ -446,7 +448,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
         colorScheme: 'dark',
       }}
     >
-      <style>{`.nlk-workday-slot{min-width:0;min-height:382px}.nlk-workday-loading{min-height:382px;display:flex;align-items:center;justify-content:center;gap:8px;color:#a1a1aa}@media(max-width:1023px){.nlk-grid{grid-template-columns:1fr!important}.nlk-pad{padding:18px!important}.nlk-nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;flex-wrap:nowrap!important}.nlk-workday-slot,.nlk-workday-loading{min-height:820px}} .nlk-button:focus-visible,.nlk-input:focus-visible{outline:3px solid #67e8f9;outline-offset:2px}[data-launchkit-view] #launchkit-dashboard,[data-launchkit-view] #launchkit-builder,[data-launchkit-view] #launchkit-templates,[data-launchkit-view] #launchkit-kits,[data-launchkit-view] #launchkit-visual-promos,[data-launchkit-view] #launchkit-outputs,[data-launchkit-view] #launchkit-brands,[data-launchkit-view] #launchkit-exports,[data-launchkit-view] #launchkit-account,[data-launchkit-view] #launchkit-execution{display:none}[data-launchkit-view="overview"] #launchkit-dashboard,[data-launchkit-view="projects"] #launchkit-builder,[data-launchkit-view="projects"] #launchkit-kits,[data-launchkit-view="templates"] #launchkit-templates,[data-launchkit-view="brief"] #launchkit-builder,[data-launchkit-view="brief"] #launchkit-brands,[data-launchkit-view="deliverables"] #launchkit-visual-promos,[data-launchkit-view="deliverables"] #launchkit-outputs,[data-launchkit-view="review"] #launchkit-execution,[data-launchkit-view="exports"] #launchkit-exports,[data-launchkit-view="settings"] #launchkit-account{display:block}`}</style>
+      <style>{`.nlk-workday-slot{min-width:0}.nlk-workday-loading{min-height:382px;display:flex;align-items:center;justify-content:center;gap:8px;color:#a1a1aa}@media(max-width:1023px){.nlk-grid{grid-template-columns:1fr!important}.nlk-pad{padding:18px!important}.nlk-nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;flex-wrap:nowrap!important}.nlk-workday-loading{min-height:382px}} .nlk-button:focus-visible,.nlk-input:focus-visible{outline:3px solid #67e8f9;outline-offset:2px}[data-launchkit-view] #launchkit-dashboard,[data-launchkit-view] #launchkit-builder,[data-launchkit-view] #launchkit-templates,[data-launchkit-view] #launchkit-kits,[data-launchkit-view] #launchkit-visual-promos,[data-launchkit-view] #launchkit-outputs,[data-launchkit-view] #launchkit-brands,[data-launchkit-view] #launchkit-exports,[data-launchkit-view] #launchkit-account,[data-launchkit-view] #launchkit-execution{display:none}[data-launchkit-view="overview"] #launchkit-dashboard,[data-launchkit-view="projects"] #launchkit-builder,[data-launchkit-view="projects"] #launchkit-kits,[data-launchkit-view="templates"] #launchkit-templates,[data-launchkit-view="brief"] #launchkit-builder,[data-launchkit-view="brief"] #launchkit-brands,[data-launchkit-view="deliverables"] #launchkit-visual-promos,[data-launchkit-view="deliverables"] #launchkit-outputs,[data-launchkit-view="review"] #launchkit-execution,[data-launchkit-view="exports"] #launchkit-exports,[data-launchkit-view="settings"] #launchkit-account{display:block}`}</style>
       <div
         className="nlk-pad"
         style={{ maxWidth: 1380, margin: '0 auto', padding: '30px clamp(18px,4vw,52px) 72px' }}
@@ -626,7 +628,8 @@ export default function NinjaLaunchKitCompleteWorkspace({
               : <div className="nlk-workday-loading" role="status"><Loader2 size={18} /> Preparing your next campaign actions…</div>}
           </div>
           {overview && (
-            <article
+            <CoreSuiteSection title="Campaign package details" description="Review the deliverables and export options.">
+<article
               data-testid="deployops-release-handoff"
               style={{ ...panel, padding: 20, marginBottom: 18, borderColor: 'rgba(103,232,249,.55)' }}
             >
@@ -658,8 +661,10 @@ export default function NinjaLaunchKitCompleteWorkspace({
                 Deploy Ops creates and exports the campaign materials. It does not publish ads, send campaigns, purchase media, or deploy a website.
               </p>
             </article>
+</CoreSuiteSection>
           )}
-          <div
+          <CoreSuiteSection title="Campaign workspace totals" description="Saved kits, generation usage, and available templates.">
+<div
             className="nlk-grid"
             style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', gap: 12 }}
           >
@@ -689,6 +694,7 @@ export default function NinjaLaunchKitCompleteWorkspace({
               Icon={BarChart3}
             />
           </div>
+</CoreSuiteSection>
         </section>
 
         <section

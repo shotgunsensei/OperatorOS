@@ -89,3 +89,31 @@
 }
 
 @media (prefers-reduced-motion: reduce) { .panel,.toast { scroll-behavior: auto; } }
+
+.panel { color-scheme: dark; font-variant-numeric: tabular-nums; }
+.trigger,.iconButton,.primaryButton,.secondaryButton,.dangerButton { min-height: 44px; }
+.iconButton { min-width: 44px; padding: 8px; }
+.conversationName,.memberMeta strong { font-size: 14px; font-weight: 650; }
+.preview,.subtle,.state,.input,.textarea { font-size: 13px; }
+.conversationTime,.messageHeader time,.edited,.characterCount { color: #9aaec6; font-size: 11px; }
+.messageBubble { font-size: 14px; line-height: 1.6; }
+.filterRow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.filterRow [aria-pressed="true"] { border-color: #83b4ff; background: #20344f; }
+.draftBadge { color: #fcd34d; font-size: 11px; }
+.people { border-bottom: 1px solid #263448; padding: 0 14px; color: #b9c9dc; font-size: 12px; }
+.people summary { cursor: pointer; padding: 12px 0; }
+.people ul { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 8px; max-height: 180px; overflow: auto; }
+.people li { display: flex; justify-content: space-between; gap: 12px; }
+.people li span { color: #9aaec6; }
+.confirmBackdrop { position: fixed; inset: 0; z-index: 12030; background: #010409aa; }
+.confirmPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 12040; width: min(440px,calc(100vw - 32px)); box-sizing: border-box; padding: 24px; border: 1px solid #435269; border-radius: 14px; background: #101c29; color: #eef5ff; }
+.confirmPanel h2 { margin: 0; font-size: 20px; }
+.confirmPanel p { color: #b9c9dc; line-height: 1.6; }
+.panel :focus-visible,.confirmPanel :focus-visible { outline: 2px solid #83b4ff; outline-offset: 3px; }
+@media (hover: none) { .messageActions { opacity: 1; } .textButton { min-height: 36px; } }
+@media (max-width: 760px) {
+  .panel { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
+  .chatHeader { flex-wrap: wrap; }
+  .chatActions { margin-left: auto; }
+  .composerActions { flex-wrap: wrap; }
+}

@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
@@ -499,7 +501,8 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
               </Link>
             </article>
           )}
-          <div
+          <CoreSuiteSection title="Garage totals" description="Vehicle history, diagnostic activity, reminders, and recorded costs.">
+<div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit,minmax(155px,1fr))',
@@ -520,6 +523,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
               </article>
             ))}
           </div>
+</CoreSuiteSection>
           <div
             style={{
               display: 'grid',

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import * as Dialog from '@radix-ui/react-dialog';
+import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { useAuth } from './AuthProvider';
 import { useTenant } from './TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
@@ -62,6 +64,16 @@ export default function TenantMessenger() {
   const { user } = useAuth();
   const { activeTenant } = useTenant();
   const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
+  // Remount all transient data on an identity/tenant change. Pending responses
+  // from the old workspace cannot populate the new workspace's messenger.
+  if (!user || !tenantId) return null;
+  return <TenantMessengerWorkspace key={`${user.id}:${tenantId}`} />;
+}
+
+function TenantMessengerWorkspace() {
+  const { user } = useAuth();
+  const { activeTenant } = useTenant();
+  const tenantId = activeTenant?.id ?? user?.currentTenantId ?? getActiveTenantId();
   const [open, setOpen] = useState(false);
   const [conversations, setConversations] = useState<MessengerConversation[]>([]);
   const [members, setMembers] = useState<MessengerMember[]>([]);
@@ -73,8 +85,18 @@ export default function TenantMessenger() {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
-  const [replyTo, setReplyTo] = useState<MessengerMessage | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, { body: string; replyTo: MessengerMessage | null }>>({});
+  const draft = selectedId ? drafts[selectedId]?.body ?? '' : '';
+  const replyTo = selectedId ? drafts[selectedId]?.replyTo ?? null : null;
+  const setDraft = (body: string) => { if (selectedId) setDrafts(current => ({ ...current, [selectedId]: { body, replyTo: current[selectedId]?.replyTo ?? null } })); };
+  const setReplyTo = (message: MessengerMessage | null) => { if (selectedId) setDrafts(current => ({ ...current, [selectedId]: { body: current[selectedId]?.body ?? '', replyTo: message } })); };
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [messageReload, setMessageReload] = useState(0);
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<{ conversationId: string; message: string } | null>(null);
+  const pendingSends = useRef(new Map<string, { body: string; replyToMessageId?: string; clientMessageId: string }>());
+  const mountedRef = useRef(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [confirmDeleteMessageId, setConfirmDeleteMessageId] = useState<string | null>(null);
@@ -109,26 +131,20 @@ export default function TenantMessenger() {
     };
   }, []);
   useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open]);
+    mountedRef.current = true;
+    const start = () => { setOpen(true); setNewConversation(true); setSelectedId(null); setSelectedMembers(new Set()); setGroupTitle(''); setMemberSearch(''); };
+    window.addEventListener('operatoros:compose-message', start);
+    return () => { mountedRef.current = false; window.removeEventListener('operatoros:compose-message', start); };
+  }, []);
 
   const loadConversations = useCallback(async (quiet = false) => {
-    if (!tenantId || !user) return;
+    if (!tenantId || !user || !mountedRef.current) return;
     if (!quiet) setLoading(true);
     try {
       const response = await tenantMessengerApi.conversations();
+      if (!mountedRef.current) return;
       setConversations(response.conversations);
-      setError(null);
+      if (!quiet) setError(null);
       if (selectedIdRef.current && !response.conversations.some(item => item.id === selectedIdRef.current)) {
         setSelectedId(null);
         setMessages([]);
@@ -141,9 +157,10 @@ export default function TenantMessenger() {
   }, [tenantId, user?.id]);
 
   const loadMembers = useCallback(async (search = '', quiet = false) => {
-    if (!tenantId || !user) return;
+    if (!tenantId || !user || !mountedRef.current) return;
     try {
       const response = await tenantMessengerApi.members(search);
+      if (!mountedRef.current) return;
       setMembers(response.members);
     } catch (caught) {
       if (!quiet) setError(errorMessage(caught));
@@ -229,17 +246,38 @@ export default function TenantMessenger() {
     if (!open || !selectedId) return;
     let active = true;
     setLoadingMessages(true);
-    setError(null);
+    setMessageError(null);
+    setMessages([]);
     tenantMessengerApi.messages(selectedId).then(response => {
       if (active) {
         shouldScrollToEndRef.current = true;
         setMessages(response.messages);
         setHasMoreMessages(response.hasMore);
       }
-      return tenantMessengerApi.markRead(selectedId);
-    }).then(() => loadConversations(true)).catch(caught => { if (active) setError(errorMessage(caught)); }).finally(() => { if (active) setLoadingMessages(false); });
+      if (active) return tenantMessengerApi.markRead(selectedId);
+    }).then(() => { if (active) return loadConversations(true); }).catch(caught => { if (active) setMessageError(errorMessage(caught)); }).finally(() => { if (active) setLoadingMessages(false); });
     return () => { active = false; };
-  }, [open, selectedId, loadConversations]);
+  }, [open, selectedId, loadConversations, messageReload]);
+
+  useEffect(() => {
+    if (!open || !selectedId || socketState === 'open') return;
+    let active = true;
+    // Recover the open thread as well as its unread badge when realtime drops.
+    // Merge the recent page so previously loaded history stays in place.
+    const timer = window.setInterval(() => {
+      void tenantMessengerApi.messages(selectedId).then(async response => {
+        if (!active) return;
+        setMessages(current => {
+          const merged = new Map(current.map(message => [message.id, message]));
+          for (const message of response.messages) merged.set(message.id, message);
+          return [...merged.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+        });
+        setMessageError(null);
+        await tenantMessengerApi.markRead(selectedId);
+      }).catch(caught => { if (active) setMessageError(errorMessage(caught)); });
+    }, 12_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [open, selectedId, socketState]);
 
   useEffect(() => {
     if (!shouldScrollToEndRef.current) return;
@@ -254,7 +292,9 @@ export default function TenantMessenger() {
   const openConversation = (id: string) => {
     setNewConversation(false);
     setSelectedId(id);
-    setReplyTo(null);
+    selectedIdRef.current = id;
+    setMessages([]);
+    setMessageError(null);
     setEditingId(null);
     setRenamingConversation(false);
     setConfirmDeleteConversation(false);
@@ -277,6 +317,7 @@ export default function TenantMessenger() {
     setError(null);
     try {
       const response = await tenantMessengerApi.messages(selectedId, messages[0].id);
+      if (!mountedRef.current || selectedIdRef.current !== selectedId) return;
       shouldScrollToEndRef.current = false;
       setMessages(current => [...response.messages, ...current.filter(item => !response.messages.some(older => older.id === item.id))]);
       setHasMoreMessages(response.hasMore);
@@ -290,6 +331,7 @@ export default function TenantMessenger() {
     setError(null);
     try {
       const response = await tenantMessengerApi.createConversation([...selectedMembers], selectedMembers.size > 1 ? groupTitle.trim() || undefined : undefined);
+      if (!mountedRef.current) return;
       await loadConversations(true);
       setNewConversation(false);
       setSelectedId(response.conversation.id);
@@ -300,17 +342,26 @@ export default function TenantMessenger() {
   const sendMessage = async () => {
     if (!selectedId || !draft.trim() || sending) return;
     setSending(true);
-    setError(null);
+    setSendError(null);
     const body = draft.trim();
-    const clientId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `web-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const previous = pendingSends.current.get(selectedId);
+    const input = previous?.body === body && previous.replyToMessageId === replyTo?.id ? previous : {
+      body, replyToMessageId: replyTo?.id,
+      clientMessageId: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `web-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    };
+    pendingSends.current.set(selectedId, input);
     try {
-      const response = await tenantMessengerApi.send(selectedId, { body, clientMessageId: clientId, replyToMessageId: replyTo?.id });
+      const response = await tenantMessengerApi.send(selectedId, input);
+      if (!mountedRef.current) return;
+      pendingSends.current.delete(selectedId);
       shouldScrollToEndRef.current = true;
-      setMessages(current => current.some(item => item.id === response.message.id) ? current : [...current, response.message]);
-      setDraft('');
-      setReplyTo(null);
+      if (selectedIdRef.current === selectedId) setMessages(current => current.some(item => item.id === response.message.id) ? current : [...current, response.message]);
+      setDrafts(current => {
+        if (current[selectedId]?.body.trim() !== body || current[selectedId]?.replyTo?.id !== input.replyToMessageId) return current;
+        const next = { ...current }; delete next[selectedId]; return next;
+      });
       await loadConversations(true);
-    } catch (caught) { setError(errorMessage(caught)); }
+    } catch (caught) { if (mountedRef.current) setSendError({ conversationId: selectedId, message: errorMessage(caught) }); }
     finally { setSending(false); }
   };
 
@@ -319,6 +370,7 @@ export default function TenantMessenger() {
     setSending(true);
     try {
       const response = await tenantMessengerApi.editMessage(selectedId, message.id, editDraft.trim(), message.version);
+      if (!mountedRef.current || selectedIdRef.current !== selectedId) return;
       setMessages(current => current.map(item => item.id === message.id ? response.message : item));
       setEditingId(null);
       setEditDraft('');
@@ -331,6 +383,7 @@ export default function TenantMessenger() {
     setSending(true);
     try {
       const response = await tenantMessengerApi.deleteMessage(selectedId, message.id, message.version);
+      if (!mountedRef.current || selectedIdRef.current !== selectedId) return;
       setMessages(current => current.map(item => item.id === message.id ? response.message : item));
       setConfirmDeleteMessageId(null);
       await loadConversations(true);
@@ -342,6 +395,7 @@ export default function TenantMessenger() {
     if (!selectedConversation) return;
     try {
       const response = await tenantMessengerApi.updateConversation(selectedConversation.id, { muted: !selectedConversation.muted });
+      if (!mountedRef.current) return;
       setConversations(current => current.map(item => item.id === response.conversation.id ? response.conversation : item));
     } catch (caught) { setError(errorMessage(caught)); }
   };
@@ -355,6 +409,7 @@ export default function TenantMessenger() {
         title: renameDraft.trim(),
         expectedVersion: selectedConversation.version,
       });
+      if (!mountedRef.current) return;
       setConversations(current => current.map(item => item.id === response.conversation.id ? response.conversation : item));
       setRenamingConversation(false);
     } catch (caught) { setError(errorMessage(caught)); }
@@ -365,6 +420,7 @@ export default function TenantMessenger() {
     if (!selectedConversation) return;
     try {
       await tenantMessengerApi.hideConversation(selectedConversation.id);
+      if (!mountedRef.current) return;
       setConversations(current => current.filter(item => item.id !== selectedConversation.id));
       setSelectedId(null);
       setMessages([]);
@@ -386,15 +442,18 @@ export default function TenantMessenger() {
   const sortedMembers = useMemo(() => [...members].sort((a, b) => Number(b.presence === 'online') - Number(a.presence === 'online') || a.name.localeCompare(b.name)), [members]);
   const canRenameSelected = selectedConversation?.kind === 'group'
     && selectedConversation.participants.some(participant => participant.userId === user?.id && participant.role === 'owner');
+  const visibleConversations = conversations.filter(conversation => (!unreadOnly || conversation.unreadCount > 0)
+    && `${conversationName(conversation, user?.id ?? '')} ${conversation.participants.map(member => member.name).join(' ')}`.toLocaleLowerCase().includes(conversationSearch.trim().toLocaleLowerCase()));
 
   if (!user || !tenantId) return null;
 
   return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
     <div className={styles.root} data-testid="tenant-messenger">
+      <Dialog.Trigger asChild>
       <button
         type="button"
         className={styles.trigger}
-        onClick={() => setOpen(value => !value)}
         aria-label={`Open organization messenger${unreadCount ? `, ${unreadCount} unread` : ''}`}
         aria-expanded={open}
         data-testid="tenant-messenger-toggle"
@@ -403,13 +462,16 @@ export default function TenantMessenger() {
         <span className={styles.triggerLabel}>Messages</span>
         {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
+      </Dialog.Trigger>
 
       {typeof document !== 'undefined' && createPortal(
         <>
           {open && (
             <>
-              <button className={styles.backdrop} type="button" aria-label="Close messenger" onClick={() => setOpen(false)} data-testid="tenant-messenger-backdrop" data-operatoros-priority-layer="messenger-backdrop" />
-              <section className={`${styles.panel} ${selectedId ? styles.panelConversation : ''}`} role="dialog" aria-modal="true" aria-label="Organization messenger" data-testid="tenant-messenger-panel" data-operatoros-priority-layer="messenger-panel">
+              <Dialog.Overlay className={styles.backdrop} data-testid="tenant-messenger-backdrop" data-operatoros-priority-layer="messenger-backdrop" />
+              <Dialog.Content asChild aria-describedby={undefined} onEscapeKeyDown={event => { if (confirmDeleteMessageId || confirmDeleteConversation) event.preventDefault(); }}>
+              <section className={`${styles.panel} ${selectedId ? styles.panelConversation : ''}`} aria-label="Organization messenger" data-testid="tenant-messenger-panel" data-operatoros-priority-layer="messenger-panel">
+              <Dialog.Title className="ops-visually-hidden">Organization messenger</Dialog.Title>
             <aside className={styles.sidebar}>
               <div className={styles.sidebarHeader}>
                 <span className={`${styles.connection} ${socketState === 'open' ? styles.connectionOpen : ''}`} aria-hidden="true" />
@@ -426,7 +488,11 @@ export default function TenantMessenger() {
                   <button type="button" className={styles.secondaryButton} onClick={() => void enableDesktopAlerts()}><Bell size={13} /> Enable</button>
                 </div>
               )}
-              {error && <div className={styles.error} role="alert">{error}</div>}
+              {error && <div className={styles.error} role="alert">{error} <button type="button" className={styles.secondaryButton} onClick={() => { void loadConversations(); void loadMembers(memberSearch); }}>Refresh conversations</button></div>}
+              {!newConversation && <div className={styles.searchWrap}>
+                <input className={styles.input} aria-label="Search conversations" placeholder="Find a person or group" value={conversationSearch} onChange={event => setConversationSearch(event.target.value)} />
+                <div className={styles.filterRow}><button type="button" className={styles.secondaryButton} aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>All</button><button type="button" className={styles.secondaryButton} aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}>Unread ({unreadCount})</button></div>
+              </div>}
               {newConversation ? (
                 <div className={styles.composerView}>
                   <div className={styles.searchWrap}>
@@ -435,7 +501,7 @@ export default function TenantMessenger() {
                   <div className={styles.memberList}>
                     {sortedMembers.length === 0 ? <div className={styles.state}>No matching members in this organization.</div> : sortedMembers.map(member => {
                       const selected = selectedMembers.has(member.id);
-                      return <button key={member.id} type="button" className={`${styles.member} ${selected ? styles.memberSelected : ''}`} onClick={() => setSelectedMembers(current => { const next = new Set(current); if (next.has(member.id)) next.delete(member.id); else next.add(member.id); return next; })}>
+                      return <button key={member.id} type="button" aria-pressed={selected} className={`${styles.member} ${selected ? styles.memberSelected : ''}`} onClick={() => setSelectedMembers(current => { const next = new Set(current); if (next.has(member.id)) next.delete(member.id); else next.add(member.id); return next; })}>
                         <span className={styles.avatar}>{initials(member.name)}<span className={`${styles.presence} ${member.presence === 'online' ? styles.presenceOnline : ''}`} /></span>
                         <span className={styles.memberMeta}><strong>{member.name}</strong><span>{member.presence === 'online' ? 'Online' : 'Offline'} · {member.email}</span></span>
                         <span className={styles.check}><Check size={13} /></span>
@@ -452,12 +518,14 @@ export default function TenantMessenger() {
                 <div className={styles.state}><MessageCircle size={25} /><p>No conversations yet.</p><button type="button" className={styles.primaryButton} onClick={beginNewConversation}>Message a teammate</button></div>
               ) : (
                 <div className={styles.conversationList}>
-                  {conversations.map(conversation => {
+                  {visibleConversations.length === 0 && <div className={styles.state}>No conversations match this view. <button type="button" className={styles.textButton} onClick={() => { setConversationSearch(''); setUnreadOnly(false); }}>Show all conversations</button></div>}
+                  {visibleConversations.map(conversation => {
                     const name = conversationName(conversation, user.id);
                     const presence = conversationPresence(conversation, user.id);
                     return <button key={conversation.id} type="button" className={`${styles.conversation} ${conversation.id === selectedId ? styles.conversationActive : ''}`} onClick={() => openConversation(conversation.id)} data-testid={`messenger-conversation-${conversation.id}`}>
                       <span className={styles.avatar}>{conversation.kind === 'group' ? <UsersRound size={17} /> : initials(name)}<span className={`${styles.presence} ${presence === 'online' ? styles.presenceOnline : ''}`} /></span>
                       <span className={styles.conversationBody}><span className={styles.conversationRow}><span className={styles.conversationName}>{name}</span><time className={styles.conversationTime}>{relativeTime(conversation.lastMessageAt)}</time></span><span className={styles.preview}>{conversation.lastMessage?.deleted ? 'Message deleted' : conversation.lastMessage?.body || 'No messages yet'}</span></span>
+                      {drafts[conversation.id]?.body && <span className={styles.draftBadge}>Draft</span>}
                       {conversation.unreadCount > 0 && <span className={styles.unread}>{conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}</span>}
                     </button>;
                   })}
@@ -483,11 +551,12 @@ export default function TenantMessenger() {
                     <div className={styles.chatActions}>
                       {canRenameSelected && !renamingConversation && <button type="button" className={styles.iconButton} onClick={() => { setRenameDraft(selectedConversation.title || ''); setRenamingConversation(true); }} aria-label="Rename group conversation" title="Rename group"><Edit3 size={15} /></button>}
                       <button type="button" className={styles.iconButton} onClick={() => void toggleMute()} aria-label={selectedConversation.muted ? 'Unmute conversation' : 'Mute conversation'} title={selectedConversation.muted ? 'Unmute' : 'Mute'}>{selectedConversation.muted ? <BellOff size={15} /> : <Bell size={15} />}</button>
-                      {confirmDeleteConversation ? <><button type="button" className={styles.dangerButton} onClick={() => void hideConversation()}>Remove</button><button type="button" className={styles.secondaryButton} onClick={() => setConfirmDeleteConversation(false)}>Cancel</button></> : <button type="button" className={styles.iconButton} onClick={() => setConfirmDeleteConversation(true)} aria-label="Remove conversation from my history" title="Remove from my history"><Trash2 size={15} /></button>}
+                      <button type="button" className={styles.iconButton} onClick={() => setConfirmDeleteConversation(true)} aria-label="Remove conversation from my history" title="Remove from my history"><Trash2 size={15} /></button>
                     </div>
                   </div>
+                  <details className={styles.people}><summary>People in this conversation ({selectedConversation.participants.length})</summary><ul>{selectedConversation.participants.map((participant, index) => <li key={participant.userId ?? index}>{participant.name}{participant.userId === user.id ? ' (you)' : ''} <span>{participant.role === 'owner' ? 'Group owner' : 'Member'}</span></li>)}</ul></details>
                   <div className={styles.messages} aria-live="polite">
-                    {loadingMessages ? <div className={styles.state}>Loading saved messages…</div> : messages.length === 0 ? <div className={styles.state}>No messages yet. Start the conversation below.</div> : <>
+                    {loadingMessages ? <div className={styles.state} role="status">Loading saved messages…</div> : messageError ? <div className={styles.error} role="alert">{messageError} <button type="button" className={styles.secondaryButton} onClick={() => setMessageReload(value => value + 1)}>Retry messages</button></div> : messages.length === 0 ? <div className={styles.state}>No messages yet. Start the conversation below.</div> : <>
                       {hasMoreMessages && <div className={styles.olderMessages}><button type="button" className={styles.secondaryButton} disabled={loadingOlder} onClick={() => void loadOlderMessages()}>{loadingOlder ? 'Loading…' : 'Load earlier messages'}</button></div>}
                       {messages.map(message => (
                       <article key={message.id} className={styles.message} data-testid={`messenger-message-${message.id}`}>
@@ -499,7 +568,7 @@ export default function TenantMessenger() {
                           {!message.deletedAt && editingId !== message.id && <div className={styles.messageActions}>
                             <button type="button" className={styles.textButton} onClick={() => setReplyTo(message)}><Reply size={11} /> Reply</button>
                             {message.senderUserId === user.id && <button type="button" className={styles.textButton} onClick={() => { setEditingId(message.id); setEditDraft(message.body || ''); }}><Edit3 size={11} /> Edit</button>}
-                            {message.senderUserId === user.id && (confirmDeleteMessageId === message.id ? <><button type="button" className={styles.textButton} onClick={() => void deleteMessage(message)}>Confirm delete</button><button type="button" className={styles.textButton} onClick={() => setConfirmDeleteMessageId(null)}>Cancel</button></> : <button type="button" className={styles.textButton} onClick={() => setConfirmDeleteMessageId(message.id)}><Trash2 size={11} /> Delete</button>)}
+                            {message.senderUserId === user.id && <button type="button" className={styles.textButton} onClick={() => setConfirmDeleteMessageId(message.id)}><Trash2 size={11} /> Delete</button>}
                           </div>}
                         </div>
                       </article>
@@ -508,8 +577,10 @@ export default function TenantMessenger() {
                     <div ref={messageEndRef} />
                   </div>
                   <div className={styles.composer}>
+                    {sendError?.conversationId === selectedId && <div className={styles.error} role="alert">{sendError.message} Your draft is kept. Retry Send to confirm this message without creating a duplicate.</div>}
+                    {error && <div className={styles.error} role="alert">{error}</div>}
                     {replyTo && <div className={styles.replyBar}><span>Replying to <strong>{replyTo.senderName}</strong>: {(replyTo.body || '').slice(0, 80)}</span><button type="button" className={styles.textButton} onClick={() => setReplyTo(null)}>Cancel</button></div>}
-                    <textarea className={styles.textarea} value={draft} onChange={event => setDraft(event.target.value)} maxLength={4000} placeholder={`Message ${conversationName(selectedConversation, user.id)}`} aria-label="Message" onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} />
+                    <textarea className={styles.textarea} value={draft} onChange={event => setDraft(event.target.value)} maxLength={4000} placeholder={`Message ${conversationName(selectedConversation, user.id)}`} aria-label="Message" onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void sendMessage(); } }} />
                     <div className={styles.composerActions}><span className={styles.characterCount}>{draft.length}/4000 · Enter to send, Shift+Enter for a new line</span><button type="button" className={styles.primaryButton} disabled={!draft.trim() || sending} onClick={() => void sendMessage()}><Send size={14} /> {sending ? 'Sending…' : 'Send'}</button></div>
                   </div>
                 </>
@@ -518,6 +589,18 @@ export default function TenantMessenger() {
               )}
             </div>
               </section>
+              </Dialog.Content>
+              <AlertDialog.Root open={Boolean(confirmDeleteMessageId || confirmDeleteConversation)} onOpenChange={value => { if (!value) { setConfirmDeleteMessageId(null); setConfirmDeleteConversation(false); } }}>
+                <AlertDialog.Portal>
+                  <AlertDialog.Overlay className={styles.confirmBackdrop} />
+                  <AlertDialog.Content className={styles.confirmPanel} onEscapeKeyDown={event => { event.preventDefault(); event.stopPropagation(); setConfirmDeleteMessageId(null); setConfirmDeleteConversation(false); }}>
+                    <AlertDialog.Title>{confirmDeleteMessageId ? 'Delete this message?' : 'Remove from my history?'}</AlertDialog.Title>
+                    <AlertDialog.Description>{confirmDeleteMessageId ? 'The message will be replaced with a deleted-message marker for everyone in this conversation.' : 'This removes the conversation from your own saved history. Other participants keep their history.'}</AlertDialog.Description>
+                    {error && <p role="alert">{error}</p>}
+                    <div className={styles.filterRow}><AlertDialog.Cancel asChild><button type="button" className={styles.secondaryButton}>Cancel</button></AlertDialog.Cancel><AlertDialog.Action asChild><button type="button" className={styles.dangerButton} disabled={sending} onClick={event => { event.preventDefault(); const message = messages.find(item => item.id === confirmDeleteMessageId); if (message) void deleteMessage(message); else if (confirmDeleteConversation) void hideConversation(); }}>{confirmDeleteMessageId ? 'Confirm delete' : 'Remove'}</button></AlertDialog.Action></div>
+                  </AlertDialog.Content>
+                </AlertDialog.Portal>
+              </AlertDialog.Root>
             </>
           )}
           <div aria-live="assertive" aria-atomic="true">{toast && <div className={styles.toast} data-operatoros-priority-layer="messenger-toast">{toast}</div>}</div>
@@ -525,5 +608,6 @@ export default function TenantMessenger() {
         document.body,
       )}
     </div>
+    </Dialog.Root>
   );
 }

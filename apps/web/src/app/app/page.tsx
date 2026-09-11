@@ -80,11 +80,14 @@ function AppContent() {
   const [activePage, setActivePage] = useState<string>(initialConsolePage);
 
   useEffect(() => {
+    // The initial unresolved session is not a sign-out. Keep bookmarked
+    // workspace routes while the existing authentication check completes.
+    if (loading) return;
     if (!user) {
       setActivePage('my-apps');
       setAuthPage('login');
     }
-  }, [user?.id]);
+  }, [user?.id, loading]);
 
   useEffect(() => {
     const restoreRoute = () => setActivePage(initialConsolePage());

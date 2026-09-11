@@ -1,0 +1,15 @@
+.accountTrigger { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid #344158; border-radius: 8px; background: #111923; color: #eef5ff; font: inherit; font-size: 13px; cursor: pointer; }
+.accountMenu { z-index: 11000; min-width: 230px; max-width: calc(100vw - 24px); padding: 6px; background: #121b28; color: #eef5ff; border: 1px solid #435269; border-radius: 10px; box-shadow: 0 10px 30px #0006; }
+.accountItem { display: flex; align-items: center; width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 6px; color: inherit; background: transparent; text-decoration: none; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.accountItem[data-highlighted] { background: #243650; outline: none; }
+.accountItem[data-disabled] { opacity: .5; cursor: default; }
+.menuLabel { padding: 8px 12px; color: #aeb9c7; font-size: 12px; }
+.accountTrigger:focus-visible { outline: 2px solid #8bb9ff; outline-offset: 3px; }
+.workspace { color-scheme: dark; font-variant-numeric: tabular-nums; }
+.workspace h1,.workspace h2,.workspace h3 { text-wrap: balance; }
+.workspace p { text-wrap: pretty; }
+.workspace :focus-visible { outline: 2px solid #8bb9ff; outline-offset: 3px; }
+.navSearch { width: 100%; min-height: 42px; box-sizing: border-box; padding: 9px 10px; border: 1px solid #344158; border-radius: 8px; background: #0b1018; color: #eef5ff; font: inherit; font-size: 13px; }
+.navSearch::placeholder { color: #aeb9c7; }
+.overlay { position: fixed; inset: 0; background: #000a; z-index: 1000; }
+@media(max-width:760px) { .accountTrigger span { display: none; } .workspace main > div { max-width: 100%; box-sizing: border-box; } }

@@ -1,6 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import * as Dialog from '@radix-ui/react-dialog';
+import OperatorOSAccountMenu from '../OperatorOSAccountMenu';
+import chrome from '../OperatorOSChrome.module.css';
 import {
   Activity,
   Boxes,
@@ -89,7 +92,7 @@ function runtimeEnvironment(): string {
   const host = window.location.hostname.toLowerCase();
   if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')) return 'LOCAL';
   if (host.includes('staging') || host.includes('preview') || host.includes('replit.dev')) return 'NON-PRODUCTION';
-  return 'PRODUCTION';
+  return ['operatoros.net', 'app.operatoros.net', 'auth.operatoros.net'].includes(host) ? 'PRODUCTION' : 'UNVERIFIED HOST';
 }
 
 export default function PlatformCommandShell({
@@ -105,6 +108,14 @@ export default function PlatformCommandShell({
 }) {
   const { logoutEverywhere } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [navigationSearch, setNavigationSearch] = useState('');
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 820px)');
+    const update = () => { setIsMobile(query.matches); setDrawerOpen(false); };
+    update(); query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [release, setRelease] = useState<ReleaseIdentity | null>(null);
@@ -135,6 +146,33 @@ export default function PlatformCommandShell({
     }
   }
 
+  const navigationElement = (
+          <nav
+            id="platform-command-navigation"
+            className={`${styles.sideNav} ${drawerOpen ? styles.sideNavOpen : ''}`}
+            aria-label="Platform Command sections"
+          >
+            {isMobile && <><Dialog.Title className="ops-visually-hidden">Platform Command navigation</Dialog.Title><Dialog.Close className={styles.accountLink} aria-label="Close Platform Command navigation"><X size={18} /> Close menu</Dialog.Close></>}
+            <p className={styles.navLabel}>Command workspace</p>
+            <input className={chrome.navSearch} aria-label="Find an admin control" placeholder="Find a control" value={navigationSearch} onChange={event => setNavigationSearch(event.target.value)} />
+            {!sections.some(section => section.label.toLowerCase().includes(navigationSearch.trim().toLowerCase())) && <p className={styles.navLabel}>No matching controls</p>}
+            {sections.filter(section => section.label.toLowerCase().includes(navigationSearch.trim().toLowerCase())).map(({ kind, label, view: destination, Icon }) => {
+              const active = activeKind === kind;
+              return (
+                <Link
+                  key={kind}
+                  href={platformViewToPath(destination)}
+                  className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
+                  aria-current={active ? 'page' : undefined}
+                  data-testid={`platform-nav-${kind}`}
+                >
+                  <Icon size={16} aria-hidden="true" /> {label}
+                </Link>
+              );
+            })}
+          </nav>
+  );
+
   const releaseLabel = release?.status === 'identified' && release.commit
     ? `RELEASE ${release.commit.slice(0, 7)}`
     : release
@@ -142,23 +180,23 @@ export default function PlatformCommandShell({
       : 'RELEASE CHECKING';
 
   return (
+    <Dialog.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
     <div className={styles.shell} data-testid="platform-command-shell">
       <a className={styles.skipLink} href="#platform-command-content">Skip to command content</a>
       <header className={styles.header}>
         <div className={styles.headerRow}>
           <div className={styles.identity}>
             {accessState === 'authorized' && (
-              <button
+              <Dialog.Trigger asChild><button
                 type="button"
                 className={styles.menuButton}
                 aria-label={drawerOpen ? 'Close Platform Command navigation' : 'Open Platform Command navigation'}
                 aria-controls="platform-command-navigation"
                 aria-expanded={drawerOpen}
-                onClick={() => setDrawerOpen(open => !open)}
                 data-testid="platform-drawer-toggle"
               >
                 {drawerOpen ? <X size={19} aria-hidden="true" /> : <Menu size={19} aria-hidden="true" />}
-              </button>
+              </button></Dialog.Trigger>
             )}
             <a className={styles.brand} href={PLATFORM_DOMAINS.root} aria-label="OperatorOS home">
               <OperatorLogo size={30} wordmarkSize={13} showDomain={false} />
@@ -174,26 +212,13 @@ export default function PlatformCommandShell({
             <Link className={styles.accountLink} href="/app" data-testid="platform-my-apps">
               <Grid2X2 size={16} aria-hidden="true" /><span>My Apps</span>
             </Link>
-            <a className={styles.accountLink} href={PLATFORM_DOMAINS.root}>
-              <Home size={16} aria-hidden="true" /><span>OperatorOS Home</span>
-            </a>
-            <a className={styles.accountLink} href={DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl}>
-              <UserRound size={16} aria-hidden="true" /><span>Profile and security</span>
-            </a>
-            <a className={styles.accountLink} href={buildOperatorOSHelpUrl({ module: 'platform-command' })}>
-              <LifeBuoy size={16} aria-hidden="true" /><span>Help and support</span>
-            </a>
-            {accessState !== 'loading' && (
-              <button
-                type="button"
-                className={styles.logoutButton}
-                onClick={() => void globalLogout()}
-                disabled={loggingOut}
-                data-testid="platform-global-logout"
-              >
-                <LogOut size={16} aria-hidden="true" /><span>{loggingOut ? 'Signing out…' : 'Sign out'}</span>
-              </button>
-            )}
+            <a className={styles.accountLink} href={buildOperatorOSHelpUrl({ module: 'platform-command' })} aria-label="Help and support"><LifeBuoy size={16} aria-hidden="true" /><span>Help</span></a>
+            <OperatorOSAccountMenu items={[
+              { label: 'OperatorOS Home', href: PLATFORM_DOMAINS.root },
+              { label: 'Profile and security', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.profileUrl },
+              { label: 'Workspace billing', href: DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl },
+              { label: loggingOut ? 'Signing out…' : 'Sign out everywhere', onSelect: () => void globalLogout(), disabled: loggingOut, testId: 'platform-global-logout' },
+            ]} />
           </nav>
         </div>
         {logoutError && <div className={styles.alert} role="alert">{logoutError}</div>}
@@ -201,35 +226,7 @@ export default function PlatformCommandShell({
 
       {accessState === 'authorized' ? (
         <div className={styles.body}>
-          {drawerOpen && (
-            <button
-              type="button"
-              className={styles.overlay}
-              aria-label="Close navigation"
-              onClick={() => setDrawerOpen(false)}
-            />
-          )}
-          <nav
-            id="platform-command-navigation"
-            className={`${styles.sideNav} ${drawerOpen ? styles.sideNavOpen : ''}`}
-            aria-label="Platform Command sections"
-          >
-            <p className={styles.navLabel}>Command workspace</p>
-            {sections.map(({ kind, label, view: destination, Icon }) => {
-              const active = activeKind === kind;
-              return (
-                <Link
-                  key={kind}
-                  href={platformViewToPath(destination)}
-                  className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
-                  aria-current={active ? 'page' : undefined}
-                  data-testid={`platform-nav-${kind}`}
-                >
-                  <Icon size={16} aria-hidden="true" /> {label}
-                </Link>
-              );
-            })}
-          </nav>
+          {isMobile ? <Dialog.Portal><Dialog.Overlay className={styles.overlay} /><Dialog.Content asChild aria-describedby={undefined}>{navigationElement}</Dialog.Content></Dialog.Portal> : navigationElement}
           <div className={styles.mainColumn}>
             <div className={styles.crumbBar}>
               <nav className={styles.crumbs} aria-label="Breadcrumb">
@@ -278,5 +275,6 @@ export default function PlatformCommandShell({
         </main>
       )}
     </div>
+    </Dialog.Root>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -158,7 +160,8 @@ export default function CallCommandWorkspace({
 
       {['organizations', 'providers', 'compliance', 'settings'].includes(view) && <CallCommandMspWorkspace view={view} canWrite={canWriteModule} canManage={canManageModule} />}
 
-      {view === 'overview' && <section id="callcommand-dashboard" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: space.md, marginBottom: space.xl }}>
+      {view === 'overview' && <CoreSuiteSection title="Call operations totals" description="Review volume, routing, and recorded activity.">
+<section id="callcommand-dashboard" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: space.md, marginBottom: space.xl }}>
         {[
           ['Total calls', data?.analytics?.totalCalls ?? 0, PhoneCall],
           ['Calls today', data?.analytics?.callsToday ?? 0, Activity],
@@ -166,7 +169,8 @@ export default function CallCommandWorkspace({
           ['Live sessions', data?.sessions.filter(item => !item.endedAt).length ?? 0, Radio],
           ['Actions dispatched', data?.actionRuns.length ?? 0, Zap],
         ].map(([label,value,Icon]: any) => <article key={label} style={card}><Icon size={18} color="#2dd4bf"/><div style={{ fontSize: 27, fontWeight: 900, marginTop: 8 }}>{value}</div><div style={{ color: semantic.textMuted, fontSize: 12 }}>{label}</div></article>)}
-      </section>}
+      </section>
+</CoreSuiteSection>}
 
       {view === 'numbers' && <section id="callcommand-configuration" style={{ ...card, marginBottom: space.xl }}>
         <SectionTitle icon={<PhoneCall/>} title="Channels and phone lines" subtitle="Business hours, live behavior, consent policy, receptionist assignment, after-hours routing, and connection health." />
