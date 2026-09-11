@@ -482,8 +482,8 @@ const leadCenterCss = `
   .tfk-lead-eyebrow { color: var(--tfk-primary); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
   .tfk-lead-metrics { display: grid; grid-template-columns: repeat(4, minmax(82px, auto)); gap: 8px; }
   .tfk-lead-metrics > div { border: 1px solid color-mix(in srgb, var(--tfk-primary) 16%, transparent); border-radius: 7px; padding: 9px 11px; background: var(--tfk-card); display: grid; gap: 2px; }
-  .tfk-lead-metrics span { color: #789189; font-size: 10px; text-transform: uppercase; font-weight: 800; }
-  .tfk-lead-metrics strong { color: #10231d; font-size: 14px; }
+  .tfk-lead-metrics span { color: var(--tfk-muted-foreground); font-size: 12px; font-weight: 700; }
+  .tfk-lead-metrics strong { color: var(--tfk-foreground); font-size: 14px; }
   .tfk-lead-error { border: 1px solid rgba(220,38,38,.35); background: rgba(254,242,242,.9); color: #991b1b; border-radius: 7px; padding: 10px 12px; display: flex; gap: 9px; align-items: center; font-size: 13px; }
   .tfk-lead-error span { flex: 1; }
   .tfk-lead-error button { border: 0; background: transparent; color: #991b1b; font-weight: 800; cursor: pointer; }

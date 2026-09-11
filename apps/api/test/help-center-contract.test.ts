@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MODULE_CATALOG } from '../../../packages/sdk/src/catalog.js';
+import { CALLCOMMAND_NAVIGATION } from '../../web/src/components/module-shells/CallCommandRoute.contract.js';
 import {
   HELP_GUIDES,
   MODULE_HELP_GUIDE_IDS,
@@ -52,8 +53,32 @@ test('page-aware Help links resolve the owning module guide and nested route', (
   assert.equal(findHelpPage(techDeck, '/tickets/record-123')?.id, 'tech-tickets');
   assert.equal(findHelpPage(techDeck, '/modules/techdeck/tickets/record-123')?.id, 'tech-tickets');
 
+  for (const group of CALLCOMMAND_NAVIGATION) {
+    for (const item of group.items) {
+      assert.equal(findHelpPage(findHelpGuide('callcommand-ai'), item.canonicalPath)?.path, item.canonicalPath,
+        `CallCommand navigation needs current instructions: ${item.label}`);
+    }
+  }
+
   const fallback = findHelpGuide('not-a-module');
   assert.equal(fallback.id, 'operatoros');
+});
+
+test('page help chooses exact tab and longest matching parent before broad sections', () => {
+  const guide = findHelpGuide('techdeck');
+  const generic = guide.pages[0];
+  const scoped = { ...guide, pages: [
+    { ...generic, id: 'parent', path: '/tickets' },
+    { ...generic, id: 'deep', path: '/tickets/reports' },
+    { ...generic, id: 'tab-default', path: '/settings?tab=general' },
+    { ...generic, id: 'tab-access', path: '/settings?tab=access' },
+  ] };
+  assert.equal(findHelpPage(scoped, '/tickets/reports/monthly')?.id, 'deep');
+  assert.equal(findHelpPage(scoped, '/settings?tab=access')?.id, 'tab-access');
+  assert.equal(findHelpPage(scoped, '/ticketing'), null);
+  assert.equal(findHelpPage(findHelpGuide('brandforgeos'), '/modules/brandforgeos/dashboard')?.id, 'brand-dashboard');
+  assert.equal(findHelpPage(findHelpGuide('brandforgeos'), '/app')?.id, 'brand-dashboard');
+  assert.equal(findHelpPage(findHelpGuide('tradeflowkit'), '/app/apps/tradeflowkit')?.id, 'tfk-dashboard');
 });
 
 test('Help and support entry points no longer send customers to the biography page', () => {

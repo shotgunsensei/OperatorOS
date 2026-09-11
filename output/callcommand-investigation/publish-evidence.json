@@ -1,0 +1,195 @@
+{
+  "release": "CallCommand guided setup v61",
+  "authorized": [
+    "commit",
+    "PR to main",
+    "Replit GitHub pull",
+    "publish",
+    "required backed-up additive release apply"
+  ],
+  "pullRequest": "https://github.com/shotgunsensei/OperatorOS/pull/98",
+  "candidateCommit": "cd13d6a20d58a7e1488f8bbaa972be0a445bd41c",
+  "releaseCiRun": 34562492707,
+  "nativeCiRun": 34562492720,
+  "initialCiRepair": {
+    "run": 34560402309,
+    "passedStages": 12,
+    "failedStages": [
+      "api",
+      "exact-host-visual-accessibility"
+    ],
+    "causes": [
+      "temporary module fixture cleanup omitted",
+      "existing browser journey needed to open Advanced setup"
+    ],
+    "repairedCallCommandAndTierTests": 182,
+    "finalSetupAndTierTests": 18,
+    "completeCallCommandSsoBrowserJourney": "PASS in 13.3 seconds"
+  },
+  "scopedLocal": {
+    "frozenInstall": "PASS",
+    "productionBuildAndTypechecks": "PASS",
+    "unitTests": {
+      "pass": 52,
+      "fail": 0,
+      "skip": 0
+    },
+    "callCommandTests": {
+      "pass": 209,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 59517
+    },
+    "guidedBrowserTests": {
+      "pass": 3,
+      "fail": 0,
+      "skip": 0,
+      "durationSeconds": 20.5
+    },
+    "cleanDatabaseApply": {
+      "pass": true,
+      "version": 61,
+      "steps": 61,
+      "durationMs": 19702
+    },
+    "releaseIdentityTests": {
+      "pass": 6,
+      "fail": 0,
+      "skip": 0
+    },
+    "hardening": {
+      "pass": true,
+      "unresolvedAdvisories": 0,
+      "critical": 0,
+      "disclosedPatchedHighRecords": 2
+    }
+  },
+  "productionBefore": {
+    "readOnlyAggregateVerified": true,
+    "tenants": 12,
+    "subscriptions": 5,
+    "activeTrialing": 5,
+    "grandfathered": 5,
+    "stripeLinked": 0,
+    "applicationStacks": 0,
+    "moduleGrants": 75,
+    "activeGrants": 75,
+    "openWebhooks": 0,
+    "guidedSetupTable": false,
+    "pointInTimeRecoveryDays": 7,
+    "scheduledBackupsEnabled": false,
+    "developmentDataOverwrite": false
+  },
+  "absentFromProductionSettings": [
+    "OPENAI_PROJECT_ID",
+    "OPENAI_WEBHOOK_SECRET",
+    "CALLCOMMAND_SIP_ROUTE_SECRET",
+    "CALLCOMMAND_REALTIME_MODEL",
+    "STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY",
+    "STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY",
+    "STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY"
+  ],
+  "nativeCiResult": "PASS: contracts, Android app/deep link, iOS simulator app/deep link",
+  "verifiedRecoverySnapshot": {
+    "utc": "2026-09-11T04:18:22.723509+00:00",
+    "privateReplitDirectory": "/tmp/operatoros-v61-recovery-0zkdt3nt",
+    "encryptedBytes": 2252192,
+    "readableTocEntries": 3526,
+    "sha256": "1cfd8e1fd4bd19ed6daab6e615983db1bf030500fa5951ca1f6f6eaf9148b1c8"
+  },
+  "authenticatedBaseline": "Existing owner session reached production /setup; configuration has no receptionist or line yet and reports OpenAI Realtime incomplete. Read-only verification.",
+  "publication": "SUCCESS",
+  "liveCallAndStripeAcceptance": "NOT_PERFORMED",
+  "verifiedDevelopmentRecoverySnapshot": {
+    "utc": "2026-09-11T04:43:59.189995+00:00",
+    "privateReplitDirectory": "/tmp/operatoros-v61-recovery-ka5ubkaq",
+    "encryptedBytes": 2171360,
+    "readableTocEntries": 3517,
+    "sha256": "04954401ce87a5213a4d160d5a258056ebaa1c84aa8d59b3c5d57ddfcc5b1a58"
+  },
+  "mergeCommit": "cb47800fc1476825949a9476c7f3a5fe1a9e9312",
+  "mergedAt": "2026-09-11T04:52:58Z",
+  "releaseCiResult": {
+    "passedStages": 14,
+    "failedStages": 0,
+    "apiPass": 1467,
+    "unitPass": 52,
+    "integrationPass": 32,
+    "fail": 0,
+    "skip": 0,
+    "browserJourneys": 24,
+    "visualTests": 4
+  },
+  "mainReleaseCiRun": 34563859024,
+  "mainNativeCiRun": 34563858982,
+  "replitSource": "cb47800fc1476825949a9476c7f3a5fe1a9e9312",
+  "developmentRelease": {
+    "version": 61,
+    "steps": 61,
+    "applyMs": 6093,
+    "verifyMs": 411
+  },
+  "freshProductionBackup": {
+    "utc": "2026-09-11T04:55:43.814506+00:00",
+    "privateReplitDirectory": "/tmp/operatoros-v61-production-recovery-x07y0prw",
+    "encryptedBytes": 2252464,
+    "readableTocEntries": 3526,
+    "sha256": "bf2f65942649c1ee4b2c6e13147d18aab79d90f76d83c4925bc20ab83940ee15"
+  },
+  "productionRelease": {
+    "version": 61,
+    "steps": 61,
+    "lastStep": "callcommand_guided_setup",
+    "applyMs": 12841,
+    "verifyMs": 582,
+    "aggregateUnchanged": true,
+    "validatedForeignKeys": 3
+  },
+  "noNewStripePermissionGrant": true,
+  "priorServiceResumedAt": "2026-09-11T05:04:24.141Z",
+  "mainReleaseCiResult": "PASS: all 14 stages",
+  "mainNativeCiResult": "PASS: all 3 jobs",
+  "liveRelease": {
+    "status": "identified",
+    "contractVersion": 1,
+    "commit": "cb47800fc1476825949a9476c7f3a5fe1a9e9312",
+    "buildId": "9c9632bb7f9a1a34945bc028",
+    "builtAt": "2026-09-11T05:12:19.218Z",
+    "lockfileSha256": "969322c9ed0b3712109cacc767dc513e63adb41321b9b11601a02360e240def6",
+    "deployedAt": "2026-09-11T05:20:01.487Z",
+    "databaseRelease": {
+      "contractVersion": 1,
+      "releaseVersion": 61,
+      "stepCount": 61,
+      "lastStep": "callcommand_guided_setup"
+    }
+  },
+  "replitBuildId": "53f152aa-5492-4ef4-956a-f8d8840dc419",
+  "noStripeLoginNeededForPublication": true,
+  "temporaryProductionConnectionCleared": true,
+  "publicRuntimeChecks": {
+    "passed": 47,
+    "failed": 0
+  },
+  "authenticatedLiveSetup": "PASS: existing owner session; three-step form and collapsed advanced controls; no tenant record changes",
+  "publicationMarker": {
+    "commit": "915b0cd6b9470c6c098225a4a11cbf780d4f9d97",
+    "contentNeutral": true,
+    "preservedBranch": "codex/replit-v61-publish-marker",
+    "activeReplitMain": "cb47800fc1476825949a9476c7f3a5fe1a9e9312"
+  },
+  "documentationPullRequest": "https://github.com/shotgunsensei/OperatorOS/pull/99",
+  "documentationCommit": "31ac6d2116df54d089d4ff61753946a602fce39a",
+  "documentationValidation": {
+    "parityCapabilities": 7396,
+    "parityFailures": 0,
+    "testsPassed": 8,
+    "testsFailed": 0,
+    "testsSkipped": 0,
+    "requiredGithubChecks": 0
+  },
+  "finalCheckoutCommit": "31ac6d2116df54d089d4ff61753946a602fce39a",
+  "replitDocumentationPull": "VERIFIED_FAST_FORWARD",
+  "additionalDocumentationCiRun": 34566168727,
+  "additionalDocumentationCiStatus": "IN_PROGRESS_AT_HANDOFF"
+}

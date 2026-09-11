@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "required": true,
+  "processExitCode": 1,
+  "summary": {
+    "tests": 1467,
+    "suites": 1,
+    "pass": 1466,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "releaseEligible": false
+}

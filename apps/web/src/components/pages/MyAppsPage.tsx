@@ -427,7 +427,10 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
 
   const recordLaunch = (card: LaunchpadModule) => {
     pushRecent(card.registry.slug);
-    setRecentSlugs(readRecent());
+    // Let the anchor's native click finish before reordering recently used
+    // cards. Replacing the clicked node during dispatch can cancel a browser's
+    // modifier-click/new-tab action. Storage is written before navigation.
+    window.setTimeout(() => setRecentSlugs(readRecent()), 0);
   };
 
   const handleTrialAction = async () => {

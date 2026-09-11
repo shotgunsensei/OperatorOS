@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "modules": [
+    {
+      "moduleSlug": "brandforgeos",
+      "json": "build/parity/reports/brandforgeos.json",
+      "markdown": "build/parity/reports/brandforgeos.md",
+      "html": "build/parity/reports/brandforgeos.html"
+    },
+    {
+      "moduleSlug": "callcommand-ai",
+      "json": "build/parity/reports/callcommand-ai.json",
+      "markdown": "build/parity/reports/callcommand-ai.md",
+      "html": "build/parity/reports/callcommand-ai.html"
+    },
+    {
+      "moduleSlug": "faultlinelab",
+      "json": "build/parity/reports/faultlinelab.json",
+      "markdown": "build/parity/reports/faultlinelab.md",
+      "html": "build/parity/reports/faultlinelab.html"
+    },
+    {
+      "moduleSlug": "ninja-launch-kit",
+      "json": "build/parity/reports/ninja-launch-kit.json",
+      "markdown": "build/parity/reports/ninja-launch-kit.md",
+      "html": "build/parity/reports/ninja-launch-kit.html"
+    },
+    {
+      "moduleSlug": "ninja-pool-hall",
+      "json": "build/parity/reports/ninja-pool-hall.json",
+      "markdown": "build/parity/reports/ninja-pool-hall.md",
+      "html": "build/parity/reports/ninja-pool-hall.html"
+    },
+    {
+      "moduleSlug": "ninjamation",
+      "json": "build/parity/reports/ninjamation.json",
+      "markdown": "build/parity/reports/ninjamation.md",
+      "html": "build/parity/reports/ninjamation.html"
+    },
+    {
+      "moduleSlug": "outcall",
+      "json": "build/parity/reports/outcall.json",
+      "markdown": "build/parity/reports/outcall.md",
+      "html": "build/parity/reports/outcall.html"
+    },
+    {
+      "moduleSlug": "pulsedesk",
+      "json": "build/parity/reports/pulsedesk.json",
+      "markdown": "build/parity/reports/pulsedesk.md",
+      "html": "build/parity/reports/pulsedesk.html"
+    },
+    {
+      "moduleSlug": "snapproofos",
+      "json": "build/parity/reports/snapproofos.json",
+      "markdown": "build/parity/reports/snapproofos.md",
+      "html": "build/parity/reports/snapproofos.html"
+    },
+    {
+      "moduleSlug": "studyforge-ai",
+      "json": "build/parity/reports/studyforge-ai.json",
+      "markdown": "build/parity/reports/studyforge-ai.md",
+      "html": "build/parity/reports/studyforge-ai.html"
+    },
+    {
+      "moduleSlug": "techdeck",
+      "json": "build/parity/reports/techdeck.json",
+      "markdown": "build/parity/reports/techdeck.md",
+      "html": "build/parity/reports/techdeck.html"
+    },
+    {
+      "moduleSlug": "torqueshed",
+      "json": "build/parity/reports/torqueshed.json",
+      "markdown": "build/parity/reports/torqueshed.md",
+      "html": "build/parity/reports/torqueshed.html"
+    },
+    {
+      "moduleSlug": "tradeflowkit",
+      "json": "build/parity/reports/tradeflowkit.json",
+      "markdown": "build/parity/reports/tradeflowkit.md",
+      "html": "build/parity/reports/tradeflowkit.html"
+    }
+  ],
+  "totals": {
+    "modules": 13,
+    "capabilities": 7396,
+    "stateCounts": {
+      "ACTIVE_NATIVE": 4281,
+      "ACTIVE_SHARED_EQUIVALENT": 3115,
+      "OWNER_WAIVED": 0,
+      "BLOCKED": 0
+    },
+    "issueCounts": {}
+  }
+}

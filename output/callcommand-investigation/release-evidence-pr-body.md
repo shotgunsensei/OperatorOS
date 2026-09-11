@@ -1,0 +1,7 @@
+CallCommand v61 is published from PR #98's merge commit, and the live application now exposes the three-step tenant setup. This records the exact source/build/database identity, passing PR and merge CI, the backed-up production apply and aggregate reconciliation, 47 passing public runtime checks, and the authenticated setup-page inspection.
+
+The release gate, implementation status, investigation, and parity overlay now reflect the deployed result. They retain the remaining Realtime/Stripe-price configuration and actual call/payment acceptance requirements. No live call, phone purchase, new Stripe permission, or usage invoice is claimed. Replit's empty publication marker was preserved separately so its active main continues to track GitHub.
+
+This PR changes documentation only. Validation: `git diff --cached --check` passed; runtime merge `cb47800fc1476825949a9476c7f3a5fe1a9e9312` passed all 14 release stages in both PR run 34562492707 and main run 34563859024, native CI passed, and the deployed runtime verifier passed 47/47. The live runtime remains that code commit after this evidence update.
+
+The committed documentation also passed `corepack pnpm verify:parity` (7,396 capabilities; zero failures) and `corepack pnpm test:parity` (8/8, zero skipped). GitHub reports no required checks for this documentation-only PR; its automatically started full release workflow is additional validation and remains separate from the already completed exact-runtime acceptance.

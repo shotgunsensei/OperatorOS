@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "policy": "Every Playwright test selected by the Phase 21 release gate is required; a skipped result fails the run.",
+  "skipped": []
+}

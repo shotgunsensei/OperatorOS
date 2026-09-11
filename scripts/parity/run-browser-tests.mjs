@@ -9,9 +9,14 @@ import { runCaptured, spawnLogged, stopChild, waitForHttp, waitForPort } from '.
 
 const suiteIndex = process.argv.indexOf('--suite');
 const suite = suiteIndex >= 0 ? process.argv[suiteIndex + 1] : 'all';
+const grepIndex = process.argv.indexOf('--grep');
+const grep = grepIndex >= 0 ? process.argv[grepIndex + 1] : undefined;
+if (grepIndex >= 0 && (!grep || grep.startsWith('--') || suite !== 'polish')) {
+  throw new Error('--grep requires a pattern and --suite polish');
+}
 const webRoot = join(REPOSITORY_ROOT, 'apps/web');
 const playwrightCli = join(webRoot, 'node_modules', '@playwright', 'test', 'cli.js');
-if (!['e2e', 'visual', 'all'].includes(suite)) throw new Error('--suite must be e2e, visual, or all');
+if (!['e2e', 'visual', 'polish', 'all'].includes(suite)) throw new Error('--suite must be e2e, visual, polish, or all');
 const browserEnv = {
   ...stripExternalProviderEnvironment(process.env),
   CI: 'true',
@@ -89,6 +94,10 @@ try {
     mirrorToParent: false,
   });
   await waitForPort(443, '127.0.0.1', 30_000, proxy);
+  if (suite === 'polish') {
+    const result = await runCaptured(process.execPath, [playwrightCli, 'test', '--retries=0', 'e2e/module-clarity-polish.spec.ts', 'e2e/help-center.spec.ts', 'e2e/sso-v1.spec.ts', ...(grep ? ['--grep', grep] : [])], { cwd: webRoot, env: runtimeEnv });
+    exitCode = result.status;
+  }
   if (suite === 'e2e' || suite === 'all') {
     const browserArgs = [
       'test',

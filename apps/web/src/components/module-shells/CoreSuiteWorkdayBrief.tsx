@@ -73,10 +73,10 @@ export default function CoreSuiteWorkdayBrief({
           ))}
         </ol>
       ) : (
-        <div className={styles.emptyActions} role="status"><CheckCircle2 size={17} aria-hidden="true" />Nothing urgent needs manual triage. Keep the normal workflow moving.</div>
+        <div className={styles.emptyActions} role="status"><CheckCircle2 size={17} aria-hidden="true" />No urgent items in the records shown here. You can continue your planned work.</div>
       )}
 
-      <h3 className={styles.automationLabel}>Safe ways to remove repeat work</h3>
+      <h3 className={styles.automationLabel}>Save time on repeat tasks</h3>
       <div className={styles.automations}>
         {brief.automations.map(automation => (
           <Link className={styles.automation} href={hrefFor(automation.href)} key={automation.label}>

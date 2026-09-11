@@ -14,8 +14,9 @@ test('Help Center searches every product guide and opens the matching page guide
   await expect(page.getByRole('heading', { name: 'TechDeck', exact: true })).toBeVisible();
   const guide = page.locator('#guide-techdeck-tech-tickets');
   await expect(guide).toHaveAttribute('open', '');
-  await expect(guide.getByText('What you will accomplish')).toBeVisible();
+  await expect(guide.getByText('What you will accomplish')).toHaveCount(0);
   await expect(guide.getByText('How to do it')).toBeVisible();
+  await expect(guide.locator('ol li').first()).toContainText('Create, search, filter, and open tickets');
   await expect(guide.getByRole('link', { name: 'Go to Tickets' })).toHaveAttribute('href', 'https://techdeck.operatoros.net/tickets');
 });
 

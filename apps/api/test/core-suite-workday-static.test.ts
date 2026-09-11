@@ -20,7 +20,7 @@ test('all three core modules mount a ranked workday brief over real module APIs'
   assert.match(pulse, /buildPulseDeskWorkday/);
   assert.match(pulse, /eyebrow="Today · operational pressure"/);
   assert.match(brief, /aria-label="Ranked next actions"/);
-  assert.match(brief, /Safe ways to remove repeat work/);
+  assert.match(brief, /Save time on repeat tasks/);
   assert.match(brief, /data-testid=\{`\$\{moduleId\}-workday-brief`\}/);
 });
 

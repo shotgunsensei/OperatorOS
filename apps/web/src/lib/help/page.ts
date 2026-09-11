@@ -26,11 +26,7 @@ export function guidePage(
     href,
     summary,
     features,
-    workflow: options.workflow ?? [
-      `Open ${title} and confirm that the organization and access badge are correct.`,
-      'Use the page filters or record list to narrow the work before changing anything.',
-      'Complete the needed action, then confirm the saved result, activity entry, or connection status shown by the page.',
-    ],
+    workflow: options.workflow ?? features,
     access: options.access,
     notes: options.notes,
   };
@@ -52,11 +48,7 @@ export function consolePage(
     href: url.toString(),
     summary,
     features,
-    workflow: options.workflow ?? [
-      `Open ${title} and verify the current account and organization context.`,
-      'Review the visible status, instructions, and access boundaries before selecting an action.',
-      'Complete the action and confirm the success, error, or no-change message before leaving the page.',
-    ],
+    workflow: options.workflow ?? features,
     access: options.access,
     notes: options.notes,
   };

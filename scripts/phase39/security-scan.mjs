@@ -8,7 +8,7 @@ import { inspectDeploymentScope } from '../verify-deployment-scope.mjs';
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const outputPath = join(repositoryRoot, 'build', 'phase39', 'security-scan.json');
 const textExtensions = new Set(['.cjs', '.env', '.example', '.js', '.json', '.jsx', '.md', '.mjs', '.ps1', '.sh', '.ts', '.tsx', '.yaml', '.yml']);
-const runtimePrefixes = ['apps/api/src/', 'apps/web/src/', 'apps/runner-gateway/src/', 'packages/'];
+const runtimePrefixes = ['apps/api/src/', 'apps/web/src/', 'apps/runner-gateway/src/', 'apps/torqueshed-native/src/', 'packages/'];
 
 const secretRules = [
   { id: 'private-key', pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g },
@@ -65,6 +65,15 @@ function repositoryFiles() {
   return result.stdout.split('\0').filter(Boolean).map(file => file.replaceAll('\\', '/'));
 }
 
+export function isCompleteDependencyAudit(report) {
+  const counts = report?.metadata?.vulnerabilities;
+  return !!counts
+    && Number.isInteger(report?.metadata?.dependencies)
+    && report.metadata.dependencies > 0
+    && ['info', 'low', 'moderate', 'high', 'critical'].every(key => Number.isInteger(counts[key]) && counts[key] >= 0)
+    && report.advisories !== null && typeof report.advisories === 'object' && !Array.isArray(report.advisories);
+}
+
 function auditDependencies() {
   const executable = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'corepack';
   const args = process.platform === 'win32'
@@ -87,6 +96,7 @@ function auditDependencies() {
   const disclosedHigh = Number(report?.metadata?.vulnerabilities?.high ?? 0);
   const disclosedCritical = Number(report?.metadata?.vulnerabilities?.critical ?? 0);
   const unresolvedAdvisories = Object.keys(report?.advisories ?? {});
+  const completeReport = isCompleteDependencyAudit(report);
   return {
     commandExitCode: result.status,
     dependencies: Number(report?.metadata?.dependencies ?? 0),
@@ -95,21 +105,26 @@ function auditDependencies() {
     ignoredGhsas,
     exceptionIntegrity,
     unresolvedAdvisories,
-    pass: result.status === 0 && disclosedCritical === 0 && unresolvedAdvisories.length === 0 && exceptionIntegrity,
+    completeReport,
+    pass: completeReport && result.status === 0 && disclosedCritical === 0 && unresolvedAdvisories.length === 0 && exceptionIntegrity,
   };
 }
 
 export function runSecurityScan() {
   const findings = [];
   let scannedFiles = 0;
+  let archivedFilesScanned = 0;
   for (const file of repositoryFiles()) {
     const extension = extname(file).toLowerCase();
     if (!textExtensions.has(extension) && !file.endsWith('.env.example')) continue;
-    if (file.startsWith('apps/modules/') || file.startsWith('docs/parity/generated/')) continue;
+    if (file.startsWith('docs/parity/generated/')) continue;
     const absolute = join(repositoryRoot, file);
     let content;
     try { content = readFileSync(absolute, 'utf8'); } catch { continue; }
     scannedFiles += 1;
+    // Migration snapshots stay read-only and are never runtime/dependency
+    // targets, but committed credentials would still be an exposure.
+    if (file.startsWith('apps/modules/')) archivedFilesScanned += 1;
     findings.push(...scanText(file, content, runtimePrefixes.some(prefix => file.startsWith(prefix))));
   }
   const dependencyAudit = auditDependencies();
@@ -119,6 +134,7 @@ export function runSecurityScan() {
     generatedAt: new Date().toISOString(),
     scannerVersion: createHash('sha256').update(readFileSync(fileURLToPath(import.meta.url))).digest('hex').slice(0, 16),
     scannedFiles,
+    archivedFilesScanned,
     findings,
     dependencyAudit,
     deploymentScope,

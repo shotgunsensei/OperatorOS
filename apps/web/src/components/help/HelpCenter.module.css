@@ -53,6 +53,12 @@
 .pageBody { padding: 0 18px 20px 50px; border-top: 1px solid #1d2938; }
 .pageDescription { margin: 16px 0; color: #c8d5e3; line-height: 1.65; }
 .guideColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.guideColumns > section:only-child { grid-column: 1 / -1; }
+.terms { margin-bottom: 16px; padding: 0 14px; border: 1px solid #2e485f; border-radius: 10px; background: var(--help-raised); }
+.terms summary { min-height: 44px; padding: 12px 0; color: #eff6ff; cursor: pointer; font-weight: 700; }
+.terms dl { margin: 0 0 14px; display: grid; gap: 12px; font-size: 14px; line-height: 1.6; }
+.terms dt { color: #eff6ff; font-weight: 700; }
+.terms dd { margin: 2px 0 0; color: #aebed0; }
 .guideColumns section { padding: 15px; border: 1px solid #223145; border-radius: 10px; background: var(--help-raised); }
 .guideColumns h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #eff6ff; font-size: 13px; }
 .guideColumns h3 svg { color: #6ee7b7; }
@@ -90,4 +96,3 @@
 @media (max-width: 900px) { .workspace { display: block; } .guideIndex { position: static; max-height: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 18px 20px; border-right: 0; border-bottom: 1px solid var(--help-border); } .indexHeading { grid-column: 1 / -1; } .indexGroup { margin: 0; } .guideContent { padding-top: 26px; } }
 @media (max-width: 680px) { .hero { padding: 44px 16px 26px; } .hero h1 { font-size: 38px; } .stats { display: grid; gap: 4px; } .guideIndex { grid-template-columns: 1fr; } .contentHeader, .supportCard { display: grid; } .startAction, .supportCard a { width: fit-content; } .guideColumns { grid-template-columns: 1fr; } .pageSummary { grid-template-columns: auto minmax(0, 1fr); } .guideBadge { display: none; } .pageBody { padding-left: 16px; } .resultButton span span { white-space: normal; } }
 @media (prefers-reduced-motion: reduce) { .summaryIcon { transition: none; } }
-

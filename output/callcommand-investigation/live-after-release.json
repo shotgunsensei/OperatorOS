@@ -1,0 +1,47 @@
+{
+  "ready": true,
+  "checks": {
+    "database": "healthy",
+    "auth": "configured",
+    "ssoCodeEncryption": "configured",
+    "moduleRegistry": "configured",
+    "sharedServiceWorker": "ready",
+    "sharedServiceQueues": "ready",
+    "sharedSecretEncryption": "live",
+    "sharedProviderControlPlane": "not_configured",
+    "releaseIdentity": "configured"
+  },
+  "operations": {
+    "worker": {
+      "completedCycles": 33,
+      "consecutiveFailures": 0,
+      "heartbeatAgeMs": 1382
+    },
+    "queues": {
+      "status": "ready",
+      "oldestReadySeconds": 0
+    }
+  },
+  "externalDependencies": {
+    "stripe": "configured",
+    "email": "configured",
+    "twilio": "configured",
+    "openai": "configured"
+  },
+  "release": {
+    "status": "identified",
+    "contractVersion": 1,
+    "commit": "cb47800fc1476825949a9476c7f3a5fe1a9e9312",
+    "buildId": "9c9632bb7f9a1a34945bc028",
+    "builtAt": "2026-09-11T05:12:19.218Z",
+    "lockfileSha256": "969322c9ed0b3712109cacc767dc513e63adb41321b9b11601a02360e240def6",
+    "deployedAt": "2026-09-11T05:20:01.487Z",
+    "databaseRelease": {
+      "contractVersion": 1,
+      "releaseVersion": 61,
+      "stepCount": 61,
+      "lastStep": "callcommand_guided_setup"
+    }
+  },
+  "requestId": "req-e"
+}

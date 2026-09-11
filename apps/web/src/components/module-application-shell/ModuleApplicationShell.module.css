@@ -1,12 +1,12 @@
 .shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--module-background-image), var(--module-background);
   color: var(--module-text);
   font-family: var(--module-font-body);
 }
 
 .workspace {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: 244px minmax(0, 1fr);
 }
@@ -15,7 +15,7 @@
   position: sticky;
   top: 0;
   align-self: start;
-  height: 100vh;
+  height: 100dvh;
   padding: calc(18px * var(--module-density));
   display: flex;
   flex-direction: column;
@@ -47,10 +47,8 @@
 .contextChip span,
 .navLabel {
   color: var(--module-muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
 }
 
 .contextChip strong {
@@ -118,10 +116,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  flex-wrap: wrap;
 }
 
 .breadcrumbs {
-  min-width: 0;
+  min-width: min(100%, 12rem);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -140,6 +139,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
+  flex-wrap: wrap;
 }
 
 .utilityLink,
@@ -175,8 +175,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--module-border);
 }
+
+.pageHeader > :first-child { flex: 1 1 22rem; min-width: 0; }
+.pageHeader > :not(:first-child) { flex-shrink: 0; }
 
 .eyebrow {
   color: var(--module-accent);
@@ -193,6 +197,7 @@
   font-family: var(--module-font-heading);
   font-size: clamp(25px, 3vw, 34px);
   line-height: 1.12;
+  text-wrap: balance;
 }
 
 .pageHeader p {
@@ -245,7 +250,9 @@
     z-index: 70;
     inset: 0 auto 0 0;
     width: min(84vw, 310px);
-    height: 100vh;
+    height: 100dvh;
+    visibility: hidden;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
     transform: translateX(-104%);
     box-shadow: 18px 0 48px rgba(0, 0, 0, .34);
     transition: transform 180ms ease;
@@ -253,6 +260,7 @@
 
   .sideRail.sideRailOpen {
     transform: translateX(0);
+    visibility: visible;
   }
 
   .overlay {

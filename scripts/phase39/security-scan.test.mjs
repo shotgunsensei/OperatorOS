@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { scanText } from './security-scan.mjs';
+import { isCompleteDependencyAudit, scanText } from './security-scan.mjs';
+
+test('dependency scan fails closed for empty, malformed, or incomplete audit responses', () => {
+  for (const report of [null, {}, { parseError: true }, { advisories: {} }, { metadata: { dependencies: 12, vulnerabilities: { high: 0 } }, advisories: {} }]) {
+    assert.equal(isCompleteDependencyAudit(report), false);
+  }
+  assert.equal(isCompleteDependencyAudit({ metadata: { dependencies: 12, vulnerabilities: { info: 0, low: 0, moderate: 0, high: 2, critical: 0 } }, advisories: {} }), true);
+});
 
 test('secret scan detects production credentials without printing the credential', () => {
   const value = `sk_live_${'a'.repeat(24)}`;

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "required": true,
+  "files": [
+    "scripts/phase20-product-truth.test.mjs",
+    "scripts/operatoros-brand-assets.test.mjs",
+    "scripts/parity/parity-compiler.test.mjs",
+    "scripts/parity/quality-gates.test.mjs",
+    "scripts/phase22-shared-equivalent-contract.test.mjs"
+  ],
+  "processExitCode": 0,
+  "summary": {
+    "tests": 52,
+    "suites": 0,
+    "pass": 52,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "releaseEligible": true
+}

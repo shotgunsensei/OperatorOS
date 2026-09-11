@@ -196,12 +196,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
   margin: 0 auto 20px;
   max-width: 1220px;
 }
 
 .crumbs {
-  min-width: 0;
+  min-width: min(100%, 12rem);
   color: var(--tfk-muted-foreground);
   font-size: 12px;
 }
@@ -214,6 +215,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .iconButton {
@@ -241,6 +243,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--tfk-border);
   padding: 2px 0 18px;
 }
@@ -395,6 +398,13 @@
   --d-border: var(--tfk-border);
   --d-accent: var(--tfk-primary);
   --d-danger: var(--tfk-danger);
+}
+
+.pageHeader > :first-child { flex: 1 1 22rem; min-width: 0; }
+.pageHeader > :not(:first-child) { flex-shrink: 0; }
+
+.shell :global(.directory-tradeflowkit .directory-tabs button[aria-selected='true']) {
+  color: var(--tfk-primary-foreground);
 }
 
 .shell :global(:is(h1, h2, h3, h4, strong, summary)) {

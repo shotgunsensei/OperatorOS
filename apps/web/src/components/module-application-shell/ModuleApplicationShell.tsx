@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import * as Dialog from '@radix-ui/react-dialog';
+import ModulePageGuide from '@/components/module-shells/ModulePageGuide';
 import { AlertTriangle, Ban, CloudOff, Inbox, Menu, RefreshCcw, X, type LucideIcon } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -57,6 +59,7 @@ export interface ModuleShellUtilityAction {
 
 export interface ModuleApplicationShellProps<Capability extends string = string, Role extends string = string> {
   moduleId: string;
+  helpModuleSlug?: string;
   moduleName: string;
   theme: ModuleThemeTokens;
   themeMode?: string;
@@ -126,6 +129,14 @@ export default function ModuleApplicationShell<Capability extends string = strin
   props: ModuleApplicationShellProps<Capability, Role>,
 ) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 760px)');
+    const update = () => { setIsMobile(query.matches); setDrawerOpen(false); };
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
   const access = props.access ?? {};
   const currentRoute = useMemo(
     () => findActiveModuleRoute(props.navigation, props.currentPath),
@@ -147,14 +158,7 @@ export default function ModuleApplicationShell<Capability extends string = strin
       document.getElementById(props.contentId || `${props.moduleId}-route-content`)?.focus({ preventScroll: true });
     }
   }, [props.contentId, props.currentPath, props.moduleId]);
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setDrawerOpen(false);
-    };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [drawerOpen]);
+
 
   const navigationItem = (item: ModuleRouteManifestItem<Capability, Role>, mobile = false) => {
     const active = isModuleRouteActive(item, props.currentPath);
@@ -202,29 +206,17 @@ export default function ModuleApplicationShell<Capability extends string = strin
     );
   };
 
-  const stateContent = effectiveState === 'ready' ? null : defaultStateCopy[effectiveState];
-  const StateIcon = effectiveState === 'ready' ? null : stateIcons[effectiveState];
-
-  return (
-    <main
-      className={classes(props.classNames, 'shell')}
-      style={moduleThemeStyle(props.theme)}
-      data-module-theme={props.theme.id}
-      data-theme={props.themeMode}
-      data-testid={props.testId || `${props.moduleId}-module-shell`}
-      {...props.dataAttributes}
-    >
-      <a className="ops-skip-link" href={`#${props.contentId || `${props.moduleId}-route-content`}`}>Skip to {props.moduleName} content</a>
-      {props.ecosystemHeader}
-      <div className={classes(props.classNames, 'workspace')}>
-        {drawerOpen && mobileMode === 'drawer' && (
-          <button type="button" className={styles.overlay} aria-label="Close module navigation" onClick={() => setDrawerOpen(false)} />
-        )}
+  const sidebar = (
         <aside
           className={`${classes(props.classNames, 'sideRail')} ${drawerOpen && mobileMode === 'drawer' ? styles.sideRailOpen : ''}`}
           data-testid={`${props.moduleId}-module-sidebar`}
           id={`${props.moduleId}-route-navigation`}
+          style={moduleThemeStyle(props.theme)}
         >
+          {isMobile && mobileMode === 'drawer' && <>
+            <Dialog.Title className="ops-visually-hidden">{props.moduleName} navigation</Dialog.Title>
+            <Dialog.Close className={styles.utilityLink}>Close menu <X size={18} aria-hidden="true" /></Dialog.Close>
+          </>}
           {props.brand}
           {props.organization && (props.classNames?.contextChip
             ? <div className={classes(props.classNames, 'contextChip')} data-testid={props.organization.testId}><span>{props.organization.label}</span><strong title={props.organization.title || props.organization.value}>{props.organization.value}</strong></div>
@@ -243,20 +235,45 @@ export default function ModuleApplicationShell<Capability extends string = strin
             </div>
           )}
         </aside>
+  );
+
+  const stateContent = effectiveState === 'ready' ? null : defaultStateCopy[effectiveState];
+  const StateIcon = effectiveState === 'ready' ? null : stateIcons[effectiveState];
+
+  return (
+    <Dialog.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
+    <main
+      className={classes(props.classNames, 'shell')}
+      style={moduleThemeStyle(props.theme)}
+      data-module-theme={props.theme.id}
+      data-theme={props.themeMode}
+      data-testid={props.testId || `${props.moduleId}-module-shell`}
+      {...props.dataAttributes}
+    >
+      <a className="ops-skip-link" href={`#${props.contentId || `${props.moduleId}-route-content`}`}>Skip to {props.moduleName} content</a>
+      {props.ecosystemHeader}
+      <div className={classes(props.classNames, 'workspace')}>
+
+        {isMobile && mobileMode === 'drawer' ? (
+          <Dialog.Portal>
+            <Dialog.Overlay className={styles.overlay} />
+            <Dialog.Content asChild aria-describedby={undefined}>{sidebar}</Dialog.Content>
+          </Dialog.Portal>
+        ) : sidebar}
 
         <div className={classes(props.classNames, 'content')}>
           <div className={classes(props.classNames, 'topbar')}>
-            {mobileMode === 'drawer' && (
+            {mobileMode === 'drawer' && (<Dialog.Trigger asChild>
               <button
                 type="button"
                 className={styles.drawerButton}
                 aria-label={drawerOpen ? `Close ${props.moduleName} navigation` : `Open ${props.moduleName} navigation`}
                 aria-controls={`${props.moduleId}-route-navigation`}
                 aria-expanded={drawerOpen}
-                onClick={() => setDrawerOpen(open => !open)}
+
               >
                 {drawerOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
-              </button>
+              </button></Dialog.Trigger>
             )}
             <nav className={classes(props.classNames, 'breadcrumbs')} aria-label={`${props.moduleName} breadcrumb`}>
               {props.breadcrumbContent ?? (
@@ -283,6 +300,7 @@ export default function ModuleApplicationShell<Capability extends string = strin
               </div>
               {props.page.actions}
             </header>
+            {effectiveState === 'ready' && <ModulePageGuide moduleSlug={props.helpModuleSlug ?? props.moduleId} routePath={props.currentPath} />}
             {stateContent && StateIcon ? (
               <section className={classes(props.classNames, 'stateCard')} data-module-state={effectiveState} aria-busy={effectiveState === 'loading' || undefined} role={effectiveState === 'error' || effectiveState === 'forbidden' ? 'alert' : 'status'}>
                 <div>
@@ -303,5 +321,6 @@ export default function ModuleApplicationShell<Capability extends string = strin
         </nav>
       )}
     </main>
+    </Dialog.Root>
   );
 }

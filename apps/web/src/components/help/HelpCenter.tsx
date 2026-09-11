@@ -22,6 +22,7 @@ import {
   type HelpPageGuide,
 } from '@/lib/help';
 import styles from './HelpCenter.module.css';
+import { MODULE_GLOSSARY } from '@/lib/help/module-glossary';
 
 type SearchResult = { guide: HelpGuide; page: HelpPageGuide };
 
@@ -65,10 +66,10 @@ function GuideCard({
       <div className={styles.pageBody}>
         <p className={styles.pageDescription}>{page.summary}</p>
         <div className={styles.guideColumns}>
-          <section>
+          {page.workflow !== page.features && <section>
             <h3><CheckCircle2 size={17} aria-hidden="true" /> What you will accomplish</h3>
             <ul>{page.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
-          </section>
+          </section>}
           <section>
             <h3><BookOpenText size={17} aria-hidden="true" /> How to do it</h3>
             <ol>{page.workflow.map(step => <li key={step}>{step}</li>)}</ol>
@@ -278,6 +279,10 @@ export default function HelpCenter({
                 </div>
                 <a href={selectedGuide.startHref} className={styles.startAction}>Open {selectedGuide.name}<ArrowUpRight size={15} /></a>
               </div>
+              {MODULE_GLOSSARY[selectedGuide.id] && <details className={styles.terms}>
+                <summary>Common terms in {selectedGuide.name}</summary>
+                <dl>{MODULE_GLOSSARY[selectedGuide.id].map(([term, meaning]) => <div key={term}><dt>{term}</dt><dd>{meaning}</dd></div>)}</dl>
+              </details>}
               <nav className={styles.pageJump} aria-label={`${selectedGuide.name} page guide shortcuts`}>
                 {selectedGuide.pages.map(page => (
                   <a key={page.id} href={`#${pageAnchor(selectedGuide, page)}`}>{page.title}</a>

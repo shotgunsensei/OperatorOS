@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "complete": true,
+  "passed": 14,
+  "failed": 0,
+  "results": [
+    {
+      "id": "faultlinelab-source-catalog",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:54:03.482Z",
+      "durationMs": 2706
+    },
+    {
+      "id": "phase39-production-hardening",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:54:06.188Z",
+      "durationMs": 3551
+    },
+    {
+      "id": "parity-report",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:54:09.739Z",
+      "durationMs": 5363
+    },
+    {
+      "id": "parity",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:54:15.102Z",
+      "durationMs": 5570
+    },
+    {
+      "id": "typecheck",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:54:20.672Z",
+      "durationMs": 28910
+    },
+    {
+      "id": "lint",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:54:49.582Z",
+      "durationMs": 16556
+    },
+    {
+      "id": "unit",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:55:06.138Z",
+      "durationMs": 16811
+    },
+    {
+      "id": "api",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T04:55:22.949Z",
+      "durationMs": 523929
+    },
+    {
+      "id": "integration-apply-reapply",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T05:04:06.878Z",
+      "durationMs": 25575
+    },
+    {
+      "id": "production-build",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T05:04:32.454Z",
+      "durationMs": 83037
+    },
+    {
+      "id": "route-control-static",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T05:05:55.491Z",
+      "durationMs": 4811
+    },
+    {
+      "id": "visual-contract-static",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T05:06:00.302Z",
+      "durationMs": 531
+    },
+    {
+      "id": "exact-host-visual-accessibility",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T05:06:00.833Z",
+      "durationMs": 491266
+    },
+    {
+      "id": "production-preflight",
+      "status": "PASS",
+      "exitCode": 0,
+      "startedAt": "2026-09-11T05:14:12.099Z",
+      "durationMs": 36
+    }
+  ]
+}

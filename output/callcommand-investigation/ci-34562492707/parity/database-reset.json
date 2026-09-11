@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "database": "operatoros_phase21_release",
+  "host": "127.0.0.1",
+  "reset": true,
+  "resetAt": "2026-09-11T04:42:01.493Z"
+}

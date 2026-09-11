@@ -378,7 +378,7 @@ export default function TradeFlowKitRevenueFlow({
   }
 
   const panel: React.CSSProperties = { border: `1px solid ${c.border}`, borderRadius: 10, background: c.panel, padding: 16 };
-  const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '9px 10px', background: '#0b1512', color: c.ink };
+  const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '9px 10px', background: c.soft, color: c.ink };
   const button = (tone = c.primary): React.CSSProperties => ({ border: 0, borderRadius: 7, padding: '9px 12px', background: tone, color: '#fff', fontWeight: 800, cursor: pending ? 'wait' : 'pointer', opacity: pending ? .6 : 1 });
 
   return (
@@ -500,7 +500,7 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect, ro
     setNotes(customer.notes ?? '');
   }, [customer]);
 
-  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: '#0b1512', color: c.ink };
+  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: c.soft, color: c.ink };
   const frame: React.CSSProperties = { border: `1px solid ${selected ? c.primary : c.border}`, borderRadius: 8, padding: 12, background: selected ? 'hsl(25 95% 95%)' : c.panel, boxShadow: selected ? `inset 3px 0 ${c.primary}` : 'none' };
 
   if (editing) {
@@ -658,7 +658,7 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
   const rawDate = kind === 'quote' ? document.expiresAt : (document as TradeFlowKitInvoice).dueDate;
   const [documentDate, setDocumentDate] = useState(rawDate?.slice(0, 10) ?? '');
   const availableJobs = jobs.filter((job) => job.customerId === customerId);
-  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: '#0b1512', color: c.ink };
+  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: c.soft, color: c.ink };
   const updateLine = (index: number, patch: Partial<EditableLineItem>) => setLineItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const valid = !!customerId && lineItems.length > 0 && lineItems.every((item) =>
     item.description.trim().length > 0 && Number.isInteger(Number(item.quantity)) &&

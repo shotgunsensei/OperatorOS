@@ -1,5 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 
+function scriptString(value: string): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+}
+
 function html(title: string, body: string, scripts = ''): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -65,6 +69,10 @@ td{padding:8px;border-bottom:1px solid #1a1a1a}
   <a href="/ui/profiles" data-testid="nav-profiles">Profiles</a>
 </div>
 ${body}
+<script>
+function escapeHtml(value){return String(value == null ? '' : value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function pathId(value){return escapeHtml(encodeURIComponent(String(value)))}
+</script>
 ${scripts}
 </body>
 </html>`;
@@ -116,7 +124,7 @@ async function loadWorkspaces(){
   const el=document.getElementById('workspace-list');
   if(!d.workspaces.length){el.innerHTML='<div class="text-sm">No workspaces yet.</div>';return}
   el.innerHTML='<table><thead><tr><th>ID</th><th>Repository</th><th>Profile</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>'+
-    d.workspaces.map(w=>'<tr data-testid="row-workspace-'+w.id+'"><td class="mono" style="font-size:11px">'+w.id.slice(0,8)+'</td><td>'+w.gitUrl+'<span class="text-sm"> @ '+w.gitRef+'</span></td><td>'+w.profileId+'</td><td><span class="badge badge-'+w.status+'">'+w.status+'</span></td><td class="text-sm">'+new Date(w.createdAt).toLocaleString()+'</td><td><a href="/ui/workspace/'+w.id+'" class="btn btn-sm" data-testid="link-workspace-'+w.id+'">Open</a></td></tr>').join('')+
+    d.workspaces.map(w=>'<tr data-testid="row-workspace-'+escapeHtml(w.id)+'"><td class="mono" style="font-size:11px">'+escapeHtml(w.id.slice(0,8))+'</td><td>'+escapeHtml(w.gitUrl)+'<span class="text-sm"> @ '+escapeHtml(w.gitRef)+'</span></td><td>'+escapeHtml(w.profileId)+'</td><td><span class="badge badge-'+escapeHtml(w.status)+'">'+escapeHtml(w.status)+'</span></td><td class="text-sm">'+new Date(w.createdAt).toLocaleString()+'</td><td><a href="/ui/workspace/'+pathId(w.id)+'" class="btn btn-sm" data-testid="link-workspace-'+escapeHtml(w.id)+'">Open</a></td></tr>').join('')+
     '</tbody></table>';
 }
 async function createWorkspace(e){
@@ -188,7 +196,7 @@ loadProfiles();loadWorkspaces();
     </div>
   </div>
 </div>`, `<script>
-const WS_ID='${id}';
+const WS_ID=${scriptString(id)};
 const term=document.getElementById('terminal');
 function appendTerm(text,cls){const s=document.createElement('span');if(cls)s.className=cls;s.textContent=text+'\\n';term.appendChild(s);term.scrollTop=term.scrollHeight}
 
@@ -213,9 +221,9 @@ function connectWS(){
 async function loadWS(){
   const r=await fetch('/v1/workspaces/'+WS_ID);const d=await r.json();
   document.getElementById('ws-info').innerHTML=
-    '<div class="flex" style="justify-content:space-between"><div><h2 style="font-size:18px;color:#fff">'+d.gitUrl+'</h2>'+
-    '<div class="text-sm">Ref: '+d.gitRef+' &middot; Profile: '+d.profileId+' &middot; ID: '+d.id+'</div></div>'+
-    '<span class="badge badge-'+d.status+'" data-testid="status-workspace">'+d.status+'</span></div>';
+    '<div class="flex" style="justify-content:space-between"><div><h2 style="font-size:18px;color:#fff">'+escapeHtml(d.gitUrl)+'</h2>'+
+    '<div class="text-sm">Ref: '+escapeHtml(d.gitRef)+' &middot; Profile: '+escapeHtml(d.profileId)+' &middot; ID: '+escapeHtml(d.id)+'</div></div>'+
+    '<span class="badge badge-'+escapeHtml(d.status)+'" data-testid="status-workspace">'+escapeHtml(d.status)+'</span></div>';
 }
 
 async function startRunner(){
@@ -263,8 +271,8 @@ async function verify(){
   const r=await fetch('/v1/workspaces/'+WS_ID+'/verify',{method:'POST'});const d=await r.json();
   let html='<div class="card"><h3>Verification Results</h3>';
   d.checks.forEach(c=>{
-    html+='<div class="flex mt-2"><span class="badge badge-'+(c.passed?'succeeded':'failed')+'">'+(c.passed?'PASS':'FAIL')+'</span> <strong>'+c.label+'</strong> <span class="text-sm">'+c.durationMs+'ms</span></div>';
-    if(!c.passed&&c.stderr)html+='<pre class="mono text-sm" style="color:#f87171;margin-top:4px;padding:4px">'+c.stderr.slice(0,500)+'</pre>';
+    html+='<div class="flex mt-2"><span class="badge badge-'+(c.passed?'succeeded':'failed')+'">'+(c.passed?'PASS':'FAIL')+'</span> <strong>'+escapeHtml(c.label)+'</strong> <span class="text-sm">'+escapeHtml(c.durationMs)+'ms</span></div>';
+    if(!c.passed&&c.stderr)html+='<pre class="mono text-sm" style="color:#f87171;margin-top:4px;padding:4px">'+escapeHtml(c.stderr.slice(0,500))+'</pre>';
   });
   html+='<div class="mt-2"><span class="badge badge-'+(d.allPassed?'succeeded':'failed')+'">'+(d.allPassed?'ALL PASSED':'FAILED')+'</span></div></div>';
   document.getElementById('verify-results').innerHTML=html;
@@ -282,9 +290,9 @@ async function loadTasks(){
   const el=document.getElementById('task-list');
   if(!d.tasks.length){el.innerHTML='<div class="text-sm">No tasks.</div>';return}
   el.innerHTML=d.tasks.map(t=>
-    '<div class="flex mt-2" style="justify-content:space-between" data-testid="row-task-'+t.id+'">'+
-    '<div><a href="/ui/task/'+t.id+'">'+t.title+'</a> <span class="badge badge-'+t.status+'">'+t.status+'</span></div>'+
-    (t.status==='pending'?'<button class="btn btn-sm btn-primary" onclick="runTask(\\''+t.id+'\\')">Run</button>':'<span class="text-sm">'+(t.resultSummary||'')+'</span>')+
+    '<div class="flex mt-2" style="justify-content:space-between" data-testid="row-task-'+escapeHtml(t.id)+'">'+
+    '<div><a href="/ui/task/'+pathId(t.id)+'">'+escapeHtml(t.title)+'</a> <span class="badge badge-'+escapeHtml(t.status)+'">'+escapeHtml(t.status)+'</span></div>'+
+    (t.status==='pending'?'<button class="btn btn-sm btn-primary" data-run-task="'+escapeHtml(t.id)+'">Run</button>':'<span class="text-sm">'+escapeHtml(t.resultSummary||'')+'</span>')+
     '</div>'
   ).join('');
 }
@@ -293,6 +301,7 @@ async function runTask(taskId){
   await fetch('/v1/tasks/'+taskId+'/run',{method:'POST'});
   setTimeout(loadTasks,2000);setTimeout(loadTasks,5000);setTimeout(loadTasks,10000);
 }
+document.getElementById('task-list').addEventListener('click',function(event){const button=event.target.closest('[data-run-task]');if(button)runTask(button.dataset.runTask)});
 loadWS();loadTasks();connectWS();
 document.getElementById('cmd-input').addEventListener('keydown',e=>{if(e.key==='Enter')execCmd()});
 </script>`));
@@ -318,20 +327,20 @@ document.getElementById('cmd-input').addEventListener('keydown',e=>{if(e.key==='
     </div>
   </div>
 </div>`, `<script>
-const TASK_ID='${taskId}';
+const TASK_ID=${scriptString(taskId)};
 async function loadTask(){
   const r=await fetch('/v1/tasks/'+TASK_ID);const t=await r.json();
   document.getElementById('task-info').innerHTML=
-    '<div class="flex" style="justify-content:space-between"><div><h2 style="font-size:18px;color:#fff">'+t.title+'</h2>'+
-    '<div class="text-sm">Task ID: '+t.id+' &middot; Workspace: <a href="/ui/workspace/'+t.workspaceId+'">'+t.workspaceId.slice(0,8)+'</a></div></div>'+
-    '<span class="badge badge-'+t.status+'" data-testid="status-task">'+t.status+'</span></div>'+
-    (t.resultSummary?'<div class="text-sm mt-2">'+t.resultSummary+'</div>':'')+
+    '<div class="flex" style="justify-content:space-between"><div><h2 style="font-size:18px;color:#fff">'+escapeHtml(t.title)+'</h2>'+
+    '<div class="text-sm">Task ID: '+escapeHtml(t.id)+' &middot; Workspace: <a href="/ui/workspace/'+pathId(t.workspaceId)+'">'+escapeHtml(t.workspaceId.slice(0,8))+'</a></div></div>'+
+    '<span class="badge badge-'+escapeHtml(t.status)+'" data-testid="status-task">'+escapeHtml(t.status)+'</span></div>'+
+    (t.resultSummary?'<div class="text-sm mt-2">'+escapeHtml(t.resultSummary)+'</div>':'')+
     (t.status==='pending'?'<button class="btn btn-primary btn-sm mt-2" onclick="runTask()" data-testid="button-run-task">Run Task</button>':'');
   if(t.checkResults){
     let html='';
     Object.entries(t.checkResults).forEach(([k,v])=>{
-      html+='<div class="flex mt-2"><span class="badge badge-'+(v.passed?'succeeded':'failed')+'">'+(v.passed?'PASS':'FAIL')+'</span> <strong>'+k+'</strong></div>';
-      if(v.output)html+='<pre class="mono text-sm" style="margin-top:4px;padding:4px;max-height:100px;overflow:auto">'+v.output.slice(0,500)+'</pre>';
+      html+='<div class="flex mt-2"><span class="badge badge-'+(v.passed?'succeeded':'failed')+'">'+(v.passed?'PASS':'FAIL')+'</span> <strong>'+escapeHtml(k)+'</strong></div>';
+      if(v.output)html+='<pre class="mono text-sm" style="margin-top:4px;padding:4px;max-height:100px;overflow:auto">'+escapeHtml(v.output.slice(0,500))+'</pre>';
     });
     document.getElementById('check-results').innerHTML=html||'<div class="text-sm">No results yet.</div>';
   }
@@ -342,7 +351,7 @@ async function loadEvents(){
   const el=document.getElementById('event-timeline');
   if(!d.events.length){el.innerHTML='<div class="text-sm">No events yet.</div>';return}
   el.innerHTML='<table><thead><tr><th>Time</th><th>Type</th><th>Details</th></tr></thead><tbody>'+
-    d.events.map(e=>'<tr data-testid="row-event-'+e.id+'"><td class="text-sm">'+new Date(e.ts).toLocaleTimeString()+'</td><td><span class="badge" style="background:#222">'+e.type+'</span></td><td class="mono text-sm">'+JSON.stringify(e.payload||{}).slice(0,200)+'</td></tr>').join('')+
+    d.events.map(e=>'<tr data-testid="row-event-'+escapeHtml(e.id)+'"><td class="text-sm">'+new Date(e.ts).toLocaleTimeString()+'</td><td><span class="badge" style="background:#222">'+escapeHtml(e.type)+'</span></td><td class="mono text-sm">'+escapeHtml(JSON.stringify(e.payload||{}).slice(0,200))+'</td></tr>').join('')+
     '</tbody></table>';
 }
 async function loadTraces(){
@@ -350,7 +359,7 @@ async function loadTraces(){
   const el=document.getElementById('tool-traces');
   if(!d.traces.length){el.innerHTML='<div class="text-sm">No traces yet.</div>';return}
   el.innerHTML='<table><thead><tr><th>Time</th><th>Tool</th><th>Success</th><th>Duration</th><th>Details</th></tr></thead><tbody>'+
-    d.traces.map(t=>'<tr data-testid="row-trace-'+t.id+'"><td class="text-sm">'+new Date(t.ts).toLocaleTimeString()+'</td><td>'+t.toolName+'</td><td><span class="badge badge-'+(t.success?'succeeded':'failed')+'">'+(t.success?'OK':'FAIL')+'</span></td><td class="text-sm">'+(t.durationMs||0)+'ms</td><td class="mono text-sm">'+JSON.stringify(t.output||{}).slice(0,150)+'</td></tr>').join('')+
+    d.traces.map(t=>'<tr data-testid="row-trace-'+escapeHtml(t.id)+'"><td class="text-sm">'+new Date(t.ts).toLocaleTimeString()+'</td><td>'+escapeHtml(t.toolName)+'</td><td><span class="badge badge-'+(t.success?'succeeded':'failed')+'">'+(t.success?'OK':'FAIL')+'</span></td><td class="text-sm">'+escapeHtml((t.durationMs||0))+'ms</td><td class="mono text-sm">'+escapeHtml(JSON.stringify(t.output||{}).slice(0,150))+'</td></tr>').join('')+
     '</tbody></table>';
 }
 async function runTask(){
@@ -372,7 +381,7 @@ async function load(){
   const el=document.getElementById('task-list');
   if(!d.tasks.length){el.innerHTML='<div class="text-sm">No tasks yet.</div>';return}
   el.innerHTML='<table><thead><tr><th>ID</th><th>Title</th><th>Workspace</th><th>Status</th><th>Summary</th><th>Created</th></tr></thead><tbody>'+
-    d.tasks.map(t=>'<tr data-testid="row-task-'+t.id+'"><td class="mono text-sm"><a href="/ui/task/'+t.id+'">'+t.id.slice(0,8)+'</a></td><td>'+t.title+'</td><td><a href="/ui/workspace/'+t.workspaceId+'" class="mono text-sm">'+t.workspaceId.slice(0,8)+'</a></td><td><span class="badge badge-'+t.status+'">'+t.status+'</span></td><td class="text-sm">'+(t.resultSummary||'-')+'</td><td class="text-sm">'+new Date(t.createdAt).toLocaleString()+'</td></tr>').join('')+
+    d.tasks.map(t=>'<tr data-testid="row-task-'+escapeHtml(t.id)+'"><td class="mono text-sm"><a href="/ui/task/'+pathId(t.id)+'">'+escapeHtml(t.id.slice(0,8))+'</a></td><td>'+escapeHtml(t.title)+'</td><td><a href="/ui/workspace/'+pathId(t.workspaceId)+'" class="mono text-sm">'+escapeHtml(t.workspaceId.slice(0,8))+'</a></td><td><span class="badge badge-'+escapeHtml(t.status)+'">'+escapeHtml(t.status)+'</span></td><td class="text-sm">'+escapeHtml((t.resultSummary||'-'))+'</td><td class="text-sm">'+new Date(t.createdAt).toLocaleString()+'</td></tr>').join('')+
     '</tbody></table>';
 }
 load();
@@ -389,11 +398,11 @@ async function load(){
   const r=await fetch('/v1/profiles');const d=await r.json();
   const el=document.getElementById('profile-list');
   el.innerHTML=d.profiles.map(p=>
-    '<div class="card" data-testid="card-profile-'+p.id+'"><div class="flex" style="justify-content:space-between"><h3>'+p.name+'</h3><code class="text-sm">'+p.id+'</code></div>'+
-    '<div class="text-sm">'+p.description+'</div>'+
-    '<div class="text-sm mt-2">Image: <code>'+p.image+'</code></div>'+
+    '<div class="card" data-testid="card-profile-'+escapeHtml(p.id)+'"><div class="flex" style="justify-content:space-between"><h3>'+escapeHtml(p.name)+'</h3><code class="text-sm">'+escapeHtml(p.id)+'</code></div>'+
+    '<div class="text-sm">'+escapeHtml(p.description)+'</div>'+
+    '<div class="text-sm mt-2">Image: <code>'+escapeHtml(p.image)+'</code></div>'+
     '<div class="mt-2"><strong class="text-sm">Verify Commands:</strong></div>'+
-    p.verifyCommands.map(v=>'<div class="flex mt-2"><span class="badge" style="background:#222">'+v.name+'</span> <span class="text-sm">'+v.label+'</span></div><pre class="mono text-sm" style="margin-top:2px;padding:4px;background:#0a0a0a;border-radius:4px">'+v.commands[0]+'</pre>').join('')+
+    p.verifyCommands.map(v=>'<div class="flex mt-2"><span class="badge" style="background:#222">'+escapeHtml(v.name)+'</span> <span class="text-sm">'+escapeHtml(v.label)+'</span></div><pre class="mono text-sm" style="margin-top:2px;padding:4px;background:#0a0a0a;border-radius:4px">'+escapeHtml(v.commands[0])+'</pre>').join('')+
     '</div>'
   ).join('');
 }

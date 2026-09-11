@@ -1,0 +1,47 @@
+{
+  "ready": true,
+  "checks": {
+    "database": "healthy",
+    "auth": "configured",
+    "ssoCodeEncryption": "configured",
+    "moduleRegistry": "configured",
+    "sharedServiceWorker": "ready",
+    "sharedServiceQueues": "ready",
+    "sharedSecretEncryption": "live",
+    "sharedProviderControlPlane": "not_configured",
+    "releaseIdentity": "configured"
+  },
+  "operations": {
+    "worker": {
+      "completedCycles": 152350,
+      "consecutiveFailures": 0,
+      "heartbeatAgeMs": 404
+    },
+    "queues": {
+      "status": "ready",
+      "oldestReadySeconds": 0
+    }
+  },
+  "externalDependencies": {
+    "stripe": "configured",
+    "email": "configured",
+    "twilio": "configured",
+    "openai": "configured"
+  },
+  "release": {
+    "status": "identified",
+    "contractVersion": 1,
+    "commit": "f864bed869372fed3c1295b7ca048f06ac7a9a65",
+    "buildId": "570ecdc6285790ae91f1333e",
+    "builtAt": "2026-09-07T14:03:15.676Z",
+    "lockfileSha256": "5e6776a155583d4f4e18d08172d9fde19a4087a98c388dee951311debf2bc042",
+    "deployedAt": "2026-09-07T14:10:39.832Z",
+    "databaseRelease": {
+      "contractVersion": 1,
+      "releaseVersion": 60,
+      "stepCount": 60,
+      "lastStep": "forward_commerce_contract"
+    }
+  },
+  "requestId": "req-2df"
+}

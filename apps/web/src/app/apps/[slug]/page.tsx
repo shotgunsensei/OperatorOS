@@ -82,11 +82,15 @@ function InternalAppContent() {
   const [moduleAccessLevel, setModuleAccessLevel] = useState<ModuleAccessLevel>('none');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<'coming_soon' | 'disabled' | null>(null);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       if (!slug) return;
+      setLoading(true);
+      setErr(null);
+      setAvailability(null);
       try {
         // Task #66 round 3 fix: tenant-scoped entitlement check.
         // GET /v1/modules/:slug is gated by `requireTenantMember` and
@@ -104,8 +108,9 @@ function InternalAppContent() {
         // unlocked from any other field - server is source of truth.
         const summary = (await moduleApi.get(slug)) as UserModuleSummary | null;
         if (!alive) return;
-        if (!summary || summary.unlocked === false) {
+        if (!summary || summary.unlocked !== true) {
           setMod(null);
+          setAvailability(summary?.cta === 'coming_soon' || summary?.cta === 'disabled' ? summary.cta : null);
         } else {
           setMod(summary.module);
           setModuleAccessLevel(summary.module_access_level);
@@ -193,12 +198,20 @@ function InternalAppContent() {
             <h1 style={{ color: semantic.accentDanger, fontWeight: 600, fontSize: fontSize.lg, margin: 0 }}>
               {err
                 ? 'This tool could not be opened'
+                : availability === 'coming_soon'
+                  ? `${POLISHED_SHELL_NAMES[slug] ?? 'This tool'} is not available yet`
+                : availability === 'disabled'
+                  ? `${POLISHED_SHELL_NAMES[slug] ?? 'This tool'} is currently disabled`
                 : POLISHED_SHELL_NAMES[slug]
                   ? `${POLISHED_SHELL_NAMES[slug]} is not available for this organization`
                   : 'This tool is not available for this organization'}
             </h1>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm, marginTop: 4 }}>
-              {err ?? 'Browse other tools or ask your organization administrator to add access. OperatorOS checks access again every time a tool opens.'}
+              {err ?? (availability === 'coming_soon'
+                ? 'This app has not launched yet. Organization administrators cannot enable it. Browse the available apps or open its guide for current information.'
+                : availability === 'disabled'
+                  ? 'This app is currently disabled. Ask your platform administrator about its availability, or browse the other apps.'
+                  : 'Browse other tools or ask your organization administrator to add access. OperatorOS checks access again every time a tool opens.')}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
               <Link href="/app?page=apps" style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 13px', borderRadius: radius.sm, background: semantic.accent, color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: fontSize.sm }}>
@@ -217,7 +230,7 @@ function InternalAppContent() {
   const Shell = POLISHED_SHELLS[mod.slug];
   if (Shell) {
     return (
-      <div>
+      <div className="ops-module-experience">
         <OperatorOSEcosystemHeader moduleName={mod.name} moduleSlug={mod.slug} />
         <ModuleAccessProvider accessLevel={moduleAccessLevel}>
           <Shell baseUrl={mod.baseUrl ?? undefined} routePath={deepLinkTarget.routePath} />

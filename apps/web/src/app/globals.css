@@ -138,6 +138,7 @@ textarea,
   color: var(--ops-text);
   font-size: clamp(24px, 2.5vw, 32px);
   line-height: 1.15;
+  text-wrap: balance;
   letter-spacing: -.025em;
 }
 
@@ -147,6 +148,19 @@ textarea,
   color: var(--ops-text-muted);
   font-size: 15px;
   line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* Shared readability without replacing each application's visual identity. */
+.ops-module-experience { min-width: 0; }
+.ops-module-experience :where(h1, h2, h3) { text-wrap: balance; }
+.ops-module-experience :where(p, label) { text-wrap: pretty; }
+.ops-module-experience :where(button, input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']), select) { min-height: 40px; }
+.ops-module-experience :where(button:disabled) { cursor: not-allowed; }
+.ops-module-experience :where(table) { font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .ops-module-experience :where(input, select, textarea) { font-size: 16px; }
+  .ops-module-experience :where(button) { min-height: 44px; }
 }
 
 .ops-page-actions {

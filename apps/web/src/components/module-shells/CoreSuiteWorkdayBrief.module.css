@@ -154,7 +154,7 @@
 }
 
 .heading p {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .primaryAction,
@@ -213,7 +213,7 @@
 
 .metric span {
   color: var(--workday-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .metric strong {
@@ -223,7 +223,7 @@
 }
 
 .metric small {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .actions,
@@ -287,7 +287,7 @@
 
 .action p,
 .actionEyebrow {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .action svg {

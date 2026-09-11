@@ -104,6 +104,89 @@ Complete usage invoicing, an approved allowance/overage policy, unattended setup
 while all browsers are closed, expired-checkout recovery, and Autoscale long-call
 acceptance remain explicit gaps in the investigation. Module parity is unchanged.
 
+## Module clarity, visual polish, and security pass (2026-09-09)
+
+Status: **LOCAL SOURCE CANDIDATE / LOCAL VERIFICATION PASSED /
+NOT PUSHED OR DEPLOYED**. Branch: `codex/module-clarity-polish-security`, based
+on `b14e94a`. Earlier live-release evidence below describes earlier revisions.
+
+The active web modules now share compact page-specific instructions, plain
+product definitions, improved readable text, and accessible phone navigation.
+CallCommand's current setup/agent/workflow/usage/health pages have maintained
+instructions. TradeFlowKit's lead labels, saved-view empty state, CSV selectors,
+revenue forms, and selected Directory tab follow accessible light/dark colors.
+The launcher preserves native modifier/new-tab clicks while recording recent
+apps. Unavailable-app copy distinguishes server-reported coming-soon and
+disabled states from organization access. Headers wrap without squeezing
+tablet navigation or action labels. Auth, tenant, billing, paid-module
+boundaries, and OutCall's unavailable state are preserved.
+
+Security changes patch seven dependency families, fix legacy runner UI HTML
+and inline-script injection, require an explicit positive module-access
+decision, reject incomplete audit reports, and include active native source in
+the scanner's runtime checks. Archived source is also checked for secret
+patterns without executing it or installing its dependencies. The CycloneDX inventory was regenerated from
+the final lockfile. No database schema or environment-variable requirement was
+added. See [the detailed review](MODULE_CLARITY_POLISH_SECURITY_REVIEW.md).
+
+### Local verification environment and commands
+
+Windows PowerShell, Node 24.16.0, pnpm 10.34.5, PostgreSQL 16. Two isolated,
+synthetic-only disposable databases ran in the task-owned container
+`operatoros-polish-test-20260909` on `127.0.0.1:55469`:
+`operatoros_polish_test` (API) and `operatoros_polish_browser_test` (browser).
+Both passed the supported 60-step database apply. Test commands use
+`APP_ENV=test`, `NODE_ENV=test`, `PARITY_DATABASE_IS_DISPOSABLE=1`, the isolated
+`DATABASE_URL`, and non-production session/encryption secrets. The browser
+harness strips provider credentials, sets deterministic test-provider mode,
+maps exact production hosts to its local TLS proxy, and starts the compiled
+readiness-gated supervisor with `RUNNER_MODE=disabled`.
+The task-owned database container was stopped after the final browser pass;
+the harness also shut down its local web/API runtime and TLS proxy.
+
+| Command | Fresh local result |
+| --- | --- |
+| `corepack pnpm install --frozen-lockfile` with `CI=true` | Pass; existing native peer warnings remain |
+| `corepack pnpm typecheck` | Pass for API, web, runner, and native workspaces |
+| `corepack pnpm lint` | Pass, zero warnings; the current root package defines this command |
+| `corepack pnpm build:production` with `INTERNAL_API_URL=http://localhost:5001` | Pass; API/runner compiled, Next 15.5.25 generated 35 pages |
+| `corepack pnpm --dir apps/api test` | 1,453 passed, 0 failed, 0 skipped; 1,041,438 ms |
+| `corepack pnpm exec tsx --test --test-concurrency=1 apps/api/test/help-center-contract.test.ts apps/api/test/legacy-ui-xss.test.ts apps/api/test/core-suite-workday-static.test.ts apps/api/test/phase15-release-identity.test.ts` | 15 passed, 0 failed/skipped after the final Help additions |
+| `corepack pnpm test:polish` | 32 passed, 0 failed/skipped in 10.1 minutes; all 157 documented routes, 39 entry-screen viewport checks, Help, access-denial and SSO/workflows |
+| `corepack pnpm test:polish --grep 'clear guidance\|missing access decision\|Help Center searches\|page-aware module Help'` | 16 passed, 0 failed/skipped in 1.7 minutes after the final availability copy/header-wrap adjustments |
+| `node scripts/phase39/security-scan.mjs` | Pass; 4,316 eligible files including 2,898 archived files checked for secrets, 0 findings, complete dependency audit, deployment-scope pass |
+| `node --test scripts/phase39/*.test.mjs` | 15 passed, 0 failed/skipped |
+| `node scripts/phase39/generate-sbom.mjs` | 1,239 components; lockfile-bound CycloneDX inventory refreshed |
+| `git diff --check` | Pass |
+
+Dependency audit metadata changed from 2 critical / 13 high / 6 moderate to
+0 critical / 2 high / 0 moderate. The two remaining high entries are the
+existing `image-size` advisories covered by the checked-in patch and its
+exception-integrity/regression tests. Unresolved advisory entries: zero.
+They are disclosed rather than represented as zero vulnerability metadata.
+
+Logs: `output/polish-production-build-final.log`,
+`output/polish-api-tests-final.log`, `output/polish-focused-final.log`,
+`output/polish-typecheck-final.log`, `output/polish-lint-final.log`,
+`output/polish-browser-acceptance.log`, `output/polish-browser-final-focused.log`, `output/polish-security-scan-final.log`,
+and `output/polish-security-tests-final.log`. Browser screenshots and route
+findings are in `build/module-polish/`; scanner output is
+`build/phase39/security-scan.json`. These screenshots are review artifacts,
+not approved visual-regression baselines.
+
+The 157-section walkthrough found no serious/critical WCAG-tagged axe findings
+at desktop width and no document-level horizontal overflow at desktop or phone
+width. Module entry screens were checked at 1,440, 820, and 390 pixels with
+keyboard-expanded guidance. Phone drawers were checked for focus containment,
+Escape, and focus restoration. The final focused run follows the broad run
+because the subsequent changes only adjust unavailable-state copy/loading
+and header wrapping; no transaction or server authorization behavior changed.
+
+This pass does not establish deployed customer acceptance, live payment or
+provider delivery, or native-device visual acceptance. The existing inline
+script allowance in CSP remains a separate hardening item. No production
+database, credentials, provider configuration, billing object, or deployment
+was changed. Existing module production parity states remain unchanged.
 
 ## Module outcome/value upgrade - LIVE READY / V60 CUTOVER COMPLETE / AUTHENTICATED WORKFLOW ACCEPTANCE OPEN (verified 2026-09-07)
 

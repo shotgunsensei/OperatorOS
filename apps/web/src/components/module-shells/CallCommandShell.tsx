@@ -41,6 +41,7 @@ export default function CallCommandShell({ routePath }: CallCommandShellProps) {
   const roleLabel = platformAdmin ? 'Platform administrator' : !canWriteModule ? 'Read-only access' : activeRole === 'owner' ? 'Organization owner' : activeRole === 'admin' ? 'Organization administrator' : moduleAccessLevel === 'manager' ? 'CallCommand manager' : 'Call operator';
   return <ModuleApplicationShell
     moduleId="callcommand"
+    helpModuleSlug="callcommand-ai"
     moduleName="CallCommand AI"
     theme={CALLCOMMAND_THEME}
     currentPath={hrefFor(route.canonicalPath)}

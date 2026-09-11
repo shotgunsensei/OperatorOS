@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "moduleSlug": "outcall",
+  "moduleName": "OutCall",
+  "adapterId": "missing-source-readme-v1",
+  "sourceRoot": "apps/modules/outcall/source",
+  "sourceFingerprint": {
+    "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+    "treeSha256": "1932f9d04e7c8534aa2dbbff0d53082bdb11a6f60fa23913a1c7169b5d9560ed",
+    "fileCount": 1,
+    "totalBytes": 1312
+  },
+  "stateCounts": {
+    "ACTIVE_NATIVE": 1,
+    "ACTIVE_SHARED_EQUIVALENT": 0,
+    "OWNER_WAIVED": 0,
+    "BLOCKED": 0
+  },
+  "totalCapabilities": 1,
+  "issueCounts": {},
+  "releaseEligible": true,
+  "issues": [],
+  "capabilities": [
+    {
+      "capabilityId": "outcall.source_recovery.f27ae45eb8ea6be6",
+      "moduleSlug": "outcall",
+      "type": "source_recovery",
+      "title": "Establish the owner-authorized canonical OutCall reconstruction",
+      "required": true,
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "source": {
+        "canonicalIdentity": "canonical-launchable-source-application",
+        "pointers": [
+          "apps/modules/outcall/source/README.md"
+        ],
+        "missingPointers": [],
+        "line": null
+      },
+      "mapping": {
+        "implementationFiles": [
+          {
+            "path": "apps/api/src/lib/outcall-db-init.ts",
+            "sha256": "35037dfab13d1338ef89239b884a8bf2bbd1c6199eba6883cbda972452a5207e"
+          },
+          {
+            "path": "apps/api/src/lib/outcall-provider.ts",
+            "sha256": "2285a618412e32002c83fe78ad67af70b539a197ed98db9ab78b8cdd53749e84"
+          },
+          {
+            "path": "apps/api/src/lib/outcall.ts",
+            "sha256": "5758f39ade4fe4966b77b576c7ad2b15d164ac207afa4207b72db2770cefcb57"
+          },
+          {
+            "path": "apps/api/src/routes/outcall-routes.ts",
+            "sha256": "194d685239304b59471ba376c6a52df6616853f808b4a5870a63a8c9fabd5578"
+          },
+          {
+            "path": "apps/web/src/components/module-shells/OutCallRoute.contract.ts",
+            "sha256": "6cd6fffc006d1e5d5936ea9376662184093299c5fc02f2884bd573f2659de24e"
+          },
+          {
+            "path": "apps/web/src/components/module-shells/OutCallShell.tsx",
+            "sha256": "1e1721c121e6f3d382905f30ff0714b4861c0e0ff9f3307f142a15ab7d10e116"
+          },
+          {
+            "path": "apps/web/src/components/module-shells/OutCallWorkspace.tsx",
+            "sha256": "e8c0c1504a569e9ef2056ad7a51fc034987214bae139fc7599d082ea991f3299"
+          }
+        ],
+        "routeIds": [
+          "fastify:DELETE:/v1/modules/outcall/profiles/:id:apps/api/src/routes/outcall-routes.ts:726",
+          "fastify:DELETE:/v1/modules/outcall/triggers/:id:apps/api/src/routes/outcall-routes.ts:781",
+          "fastify:GET:/v1/modules/outcall/health:apps/api/src/routes/outcall-routes.ts:439",
+          "fastify:GET:/v1/modules/outcall/workspace:apps/api/src/routes/outcall-routes.ts:445",
+          "fastify:POST:/v1/modules/outcall/calls/:id/cancel:apps/api/src/routes/outcall-routes.ts:926",
+          "fastify:POST:/v1/modules/outcall/calls:apps/api/src/routes/outcall-routes.ts:632",
+          "fastify:POST:/v1/modules/outcall/data-deletion:apps/api/src/routes/outcall-routes.ts:848",
+          "fastify:POST:/v1/modules/outcall/data-export:apps/api/src/routes/outcall-routes.ts:794",
+          "fastify:POST:/v1/modules/outcall/onboarding/accept-safety:apps/api/src/routes/outcall-routes.ts:494",
+          "fastify:POST:/v1/modules/outcall/phone-verification/confirm:apps/api/src/routes/outcall-routes.ts:556",
+          "fastify:POST:/v1/modules/outcall/phone-verification/start:apps/api/src/routes/outcall-routes.ts:536",
+          "fastify:POST:/v1/modules/outcall/phone-verification:apps/api/src/routes/outcall-routes.ts:510",
+          "fastify:POST:/v1/modules/outcall/profiles:apps/api/src/routes/outcall-routes.ts:582",
+          "fastify:POST:/v1/modules/outcall/triggers:apps/api/src/routes/outcall-routes.ts:603",
+          "fastify:POST:/v1/modules/outcall/webhooks/twilio/sms:apps/api/src/routes/outcall-routes.ts:1028",
+          "fastify:POST:/v1/modules/outcall/webhooks/twilio/voice/gather:apps/api/src/routes/outcall-routes.ts:992",
+          "fastify:POST:/v1/modules/outcall/webhooks/twilio/voice/status:apps/api/src/routes/outcall-routes.ts:952",
+          "fastify:PUT:/v1/modules/outcall/profiles/:id:apps/api/src/routes/outcall-routes.ts:703",
+          "fastify:PUT:/v1/modules/outcall/triggers/:id:apps/api/src/routes/outcall-routes.ts:754"
+        ],
+        "schemaIds": [
+          "table:outcall_call_requests:apps/api/src/lib/outcall-db-init.ts",
+          "table:outcall_events:apps/api/src/lib/outcall-db-init.ts",
+          "table:outcall_phone_owners:apps/api/src/lib/outcall-db-init.ts",
+          "table:outcall_profiles:apps/api/src/lib/outcall-db-init.ts",
+          "table:outcall_rate_limits:apps/api/src/lib/outcall-db-init.ts",
+          "table:outcall_settings:apps/api/src/lib/outcall-db-init.ts",
+          "table:outcall_triggers:apps/api/src/lib/outcall-db-init.ts"
+        ]
+      },
+      "evidence": {
+        "files": [
+          {
+            "path": "apps/api/test/outcall-adapter.test.ts",
+            "testIds": [
+              "test:apps/api/test/outcall-adapter.test.ts:30:4336e1efcf7b",
+              "test:apps/api/test/outcall-adapter.test.ts:5:fc514bd02a04"
+            ]
+          },
+          {
+            "path": "apps/api/test/outcall-phase12b-db.test.ts",
+            "testIds": [
+              "test:apps/api/test/outcall-phase12b-db.test.ts:117:b866270e6ce5",
+              "test:apps/api/test/outcall-phase12b-db.test.ts:149:477af5a7f804",
+              "test:apps/api/test/outcall-phase12b-db.test.ts:250:4b77ae8d37f6",
+              "test:apps/api/test/outcall-phase12b-db.test.ts:297:00bbfaf0de1b",
+              "test:apps/api/test/outcall-phase12b-db.test.ts:375:7450a198d8ac"
+            ]
+          },
+          {
+            "path": "apps/api/test/outcall-phase50-routes.test.ts",
+            "testIds": [
+              "test:apps/api/test/outcall-phase50-routes.test.ts:10:cd30d01d563e",
+              "test:apps/api/test/outcall-phase50-routes.test.ts:24:009cdaacae7b",
+              "test:apps/api/test/outcall-phase50-routes.test.ts:37:cde11de88226"
+            ]
+          },
+          {
+            "path": "apps/api/test/outcall-provider.test.ts",
+            "testIds": [
+              "test:apps/api/test/outcall-provider.test.ts:110:aa51001752fc",
+              "test:apps/api/test/outcall-provider.test.ts:46:995001b76e29",
+              "test:apps/api/test/outcall-provider.test.ts:57:1e6e566e7316",
+              "test:apps/api/test/outcall-provider.test.ts:82:0fa8dc5179be"
+            ]
+          },
+          {
+            "path": "apps/web/e2e/phase50-outcall-routes.spec.ts",
+            "testIds": [
+              "test:apps/web/e2e/phase50-outcall-routes.spec.ts:76:851a6dd04a3a",
+              "test:apps/web/e2e/phase50-outcall-routes.spec.ts:79:43141bf7425a"
+            ]
+          },
+          {
+            "path": "scripts/phase37/outcall-source-gate.test.mjs",
+            "testIds": [
+              "test:scripts/phase37/outcall-source-gate.test.mjs:10:433578fb6ba5",
+              "test:scripts/phase37/outcall-source-gate.test.mjs:26:09da331e9f63",
+              "test:scripts/phase37/outcall-source-gate.test.mjs:39:7cfd057be155"
+            ]
+          }
+        ],
+        "testIds": [
+          "test:apps/api/test/outcall-adapter.test.ts:30:4336e1efcf7b",
+          "test:apps/api/test/outcall-adapter.test.ts:5:fc514bd02a04",
+          "test:apps/api/test/outcall-phase12b-db.test.ts:117:b866270e6ce5",
+          "test:apps/api/test/outcall-phase12b-db.test.ts:149:477af5a7f804",
+          "test:apps/api/test/outcall-phase12b-db.test.ts:250:4b77ae8d37f6",
+          "test:apps/api/test/outcall-phase12b-db.test.ts:297:00bbfaf0de1b",
+          "test:apps/api/test/outcall-phase12b-db.test.ts:375:7450a198d8ac",
+          "test:apps/api/test/outcall-phase50-routes.test.ts:10:cd30d01d563e",
+          "test:apps/api/test/outcall-phase50-routes.test.ts:24:009cdaacae7b",
+          "test:apps/api/test/outcall-phase50-routes.test.ts:37:cde11de88226",
+          "test:apps/api/test/outcall-provider.test.ts:110:aa51001752fc",
+          "test:apps/api/test/outcall-provider.test.ts:46:995001b76e29",
+          "test:apps/api/test/outcall-provider.test.ts:57:1e6e566e7316",
+          "test:apps/api/test/outcall-provider.test.ts:82:0fa8dc5179be",
+          "test:apps/web/e2e/phase50-outcall-routes.spec.ts:76:851a6dd04a3a",
+          "test:apps/web/e2e/phase50-outcall-routes.spec.ts:79:43141bf7425a",
+          "test:scripts/phase37/outcall-source-gate.test.mjs:10:433578fb6ba5",
+          "test:scripts/phase37/outcall-source-gate.test.mjs:26:09da331e9f63",
+          "test:scripts/phase37/outcall-source-gate.test.mjs:39:7cfd057be155"
+        ]
+      },
+      "originalUserOutcome": "Establish the owner-authorized canonical OutCall reconstruction",
+      "compatibilityAssertion": null,
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "The original historical repository was not recoverable. On 2026-08-26 the owner authorized reconstruction; the tenant-scoped OperatorOS web/API implementation is now the canonical current OutCall source and is covered by focused adapter, provider, persistence, route, and browser evidence. Provider activation remains a separate fail-closed go-live gate.",
+      "issues": []
+    }
+  ]
+}

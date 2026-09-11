@@ -35,6 +35,43 @@ existing `f864bed` release and database v60/60. See
 [the complete investigation](../callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md)
 for precise local evidence, prices, missing operations, and release boundaries.
 
+## Module clarity and security source overlay (2026-09-09)
+
+Status: **PARITY STATES UNCHANGED / LOCAL SOURCE REVIEW /
+LOCAL VERIFICATION PASSED / NOT DEPLOYED**.
+
+The candidate on `codex/module-clarity-polish-security` adds shared readable
+instructions, terminology, and accessible phone navigation, updates current
+CallCommand help, corrects TradeFlowKit theme contrast, preserves native
+launcher clicks, and patches dependency/injection/access-response issues.
+Local API regression coverage passed 1,453/1,453 with no skips. The broad browser
+suite passed 32/32, including all 157 documented sections and three entry-screen
+viewport sizes. The final availability-copy and header-wrap changes passed
+16/16 focused browser checks. Neither run skipped tests. Each row below
+records the candidate's documented section scope; final browser results are
+recorded in [implementation status](../IMPLEMENTATION_STATUS.md) and the
+[detailed review](../MODULE_CLARITY_POLISH_SECURITY_REVIEW.md).
+
+| Module | Documented sections in candidate | Production parity decision |
+| --- | ---: | --- |
+| TradeFlowKit | 18 | Unchanged; includes contrast corrections |
+| PulseDesk | 10 | Unchanged |
+| TechDeck | 19 | Unchanged |
+| TorqueShed | 17 | Unchanged; native device visuals not exercised |
+| FaultlineLab | 9 | Unchanged |
+| Operator Pool Hall | 8 | Unchanged; remains free |
+| BrandForgeOS | 12 | Unchanged |
+| SnapProofOS | 21 | Unchanged |
+| StudyForge AI | 9 | Unchanged |
+| Deploy Ops | 8 | Unchanged |
+| CallCommand AI | 17 | Unchanged; five current setup/operations guides added |
+| Script Ops | 9 | Unchanged |
+| OutCall | Unavailable entry | Activation lock preserved |
+
+Local compiled-runtime and synthetic-provider results do not substitute for
+authenticated acceptance on the deployed revision or prove external delivery,
+live billing, calls, or customer comprehension. No release or production parity
+promotion is authorized by this overlay.
 
 ## Release v60 live-deployment overlay (2026-09-07)
 

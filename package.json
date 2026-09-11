@@ -79,6 +79,7 @@
     "test:api": "node scripts/parity/run-api-tests.mjs",
     "test:integration": "node scripts/parity/run-integration-tests.mjs",
     "test:e2e": "node scripts/parity/run-browser-tests.mjs --suite e2e",
+    "test:polish": "node scripts/parity/run-browser-tests.mjs --suite polish",
     "test:visual": "node scripts/parity/verify-visual-contracts.mjs && node scripts/parity/run-browser-tests.mjs --suite visual",
     "test:route-integrity": "node scripts/parity/verify-controls.mjs",
     "visual:update": "pnpm --dir apps/web exec playwright test --config playwright.visual.config.ts --update-snapshots",

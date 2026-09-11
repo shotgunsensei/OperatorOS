@@ -1,0 +1,122 @@
+diff --git a/docs/CURRENT_RELEASE_GATE.md b/docs/CURRENT_RELEASE_GATE.md
+index 0599831..93a9847 100644
+--- a/docs/CURRENT_RELEASE_GATE.md
++++ b/docs/CURRENT_RELEASE_GATE.md
+@@ -1,6 +1,36 @@
+ # OperatorOS current release gate
+ 
+-## CallCommand v61 release - AUTHORIZED / PR AND DEPLOYMENT PENDING (2026-09-10)
++## CallCommand v61 - LIVE READY / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER ACCEPTANCE OPEN (2026-09-11)
++
++PR #98 merged at `cb47800fc1476825949a9476c7f3a5fe1a9e9312` after exact-head
++release CI passed all 14 stages (1,467 API, 52 unit, 32 integration, 24 browser
++journeys, and 4 visual cases) and native CI passed all jobs. Exact-merge release
++run `34563859024` and native run `34563858982` also passed. The Replit clean
++checkout pulled that exact merge and completed the frozen install. Both its
++development and explicitly selected production database independently verify
++v61/61. Production apply followed a fresh encrypted logical backup with public
++traffic paused; tenant/subscription/grant/webhook aggregates were unchanged,
++and all three new tenant-composite foreign keys are validated.
++
++Replit publication completed through its workspace UI after a preparation delay.
++Public readiness now reports that exact merge, new immutable build
++`9c9632bb7f9a1a34945bc028`, built `2026-09-11T05:12:19.218Z`, deployed
++`2026-09-11T05:20:01.487Z`, and v61/61 ending in `callcommand_guided_setup`.
++The repository public runtime verifier passed 47/47 checks. The existing signed-in
++owner session reached the new three-step setup page with its advanced controls
++collapsed. No tenant business record was changed during this inspection.
++
++Production-data overwrite stayed off, no Stripe connection or catalog was
++changed, and no live purchase or provider permission grant occurred. Replit's
++empty post-publish marker `915b0cd` was preserved on
++`codex/replit-v61-publish-marker`; the clean active checkout tracks GitHub `main`.
++Subsequent evidence-only commits do not change the live code identity above.
++Missing CallCommand Realtime/Stripe-price configuration and real-call/payment
++acceptance remain open. Full commands, counts, recovery evidence, CI links,
++and the platform configuration handoff are in
++[the v61 release evidence](callcommand/CALLCOMMAND_V61_RELEASE_EVIDENCE.md).
++
++## Historical CallCommand v61 candidate authorization (2026-09-10)
+ 
+ The owner authorized commit, PR to main, Replit GitHub pull, and publication of
+ the reviewed CallCommand guided-setup candidate. The scope includes the required
+diff --git a/docs/IMPLEMENTATION_STATUS.md b/docs/IMPLEMENTATION_STATUS.md
+index f9f2ef0..c9bb2eb 100644
+--- a/docs/IMPLEMENTATION_STATUS.md
++++ b/docs/IMPLEMENTATION_STATUS.md
+@@ -1,6 +1,31 @@
+ # OperatorOS implementation status
+ 
+-## CallCommand three-step tenant setup and billing recovery (2026-09-10)
++## CallCommand v61 delivery - published and live verified; provider acceptance open (2026-09-11)
++
++PR #98 is merged at `cb47800fc1476825949a9476c7f3a5fe1a9e9312`; local `main`
++and the Replit checkout contain that source. Exact-head CI passed all 14 release
++stages with 1,467 API tests, 52 unit tests, 32 integration tests, 24 browser
++journeys, and 4 visual cases; native CI passed. Exact-merge release run
++`34563859024` and native run `34563858982` also passed. No failed or skipped test was
++waived. Frozen Replit install passed. Both persistent databases independently
++verify v61/61 after the supported backed-up apply. Production aggregate counts
++were unchanged and its three new composite foreign keys are valid.
++
++The new application is published at that exact merge, immutable build
++`9c9632bb7f9a1a34945bc028`, deployed `2026-09-11T05:20:01.487Z`, and v61/61.
++`OPERATOROS_EXPECTED_RELEASE_COMMIT=cb47800fc1476825949a9476c7f3a5fe1a9e9312 node
++scripts/verify-production-runtime.mjs` passed 47/47 public runtime/routing checks.
++The existing authenticated owner session reached the new three-step setup page;
++advanced controls were collapsed and the empty form could not advance. No tenant
++business record was changed. Replit's intermediate preparation/Stripe guidance
++did not require a new Stripe login or permission grant; publication completed
++with existing billing configuration and production data preserved.
++No provider access grant, live charge, phone purchase, or actual AI call occurred.
++See [v61 delivery evidence](callcommand/CALLCOMMAND_V61_RELEASE_EVIDENCE.md) for
++exact commands, environment, pass counts, backup/reconciliation, and remaining
++configuration. Unrelated local interface/help/security work is preserved.
++
++## Historical CallCommand three-step tenant setup and billing recovery (2026-09-10)
+ 
+ Status: **PR #98 OPEN / PUBLICATION AUTHORIZED / EXACT COMMIT CI PENDING**.
+ Branch `codex/callcommand-guided-setup`, based on
+diff --git a/docs/callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md b/docs/callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md
+index b360026..cc8f10f 100644
+--- a/docs/callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md
++++ b/docs/callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md
+@@ -1,7 +1,13 @@
+ # CallCommand AI: tenant setup investigation and implementation
+ 
+ Date: 2026-09-10. Branch: `codex/callcommand-guided-setup`, based on `b14e94a`.
+-Status: **LOCAL IMPLEMENTATION; DEPLOYED/PROVIDER ACCEPTANCE OPEN**.
++Current delivery status (2026-09-11): **PR #98 MERGED AND PUBLISHED;
++DATABASE V61 AND AUTHENTICATED SETUP VERIFIED; PROVIDER ACCEPTANCE OPEN**.
++PR and exact-merge CI passed all 14 release stages. Live commit `cb47800`, build
++`9c9632bb7f9a1a34945bc028`, and v61/61 are verified; 47/47 public runtime checks
++passed. The signed-in owner session reached the deployed three-step setup.
++See [the v61 release evidence](CALLCOMMAND_V61_RELEASE_EVIDENCE.md) for exact
++commits, CI, recovery, database reconciliation, and the publication handoff.
+ Delivery authorization was granted after the investigation: commit, PR to main,
+ Replit pull, and publish. Follow `docs/CURRENT_RELEASE_GATE.md` for the current
+ delivery gate. The local evidence below is historical to the investigation;
+diff --git a/docs/modules/MODULE_PARITY_INDEX.md b/docs/modules/MODULE_PARITY_INDEX.md
+index 96cf25e..e67d08f 100644
+--- a/docs/modules/MODULE_PARITY_INDEX.md
++++ b/docs/modules/MODULE_PARITY_INDEX.md
+@@ -1,6 +1,18 @@
+ # OperatorOS module parity index
+ 
+-## CallCommand guided-setup source overlay (2026-09-10)
++## CallCommand v61 delivery overlay (2026-09-11)
++
++Status: **PARITY UNCHANGED / SOURCE MERGED / DATABASE V61 VERIFIED /
++APPLICATION PUBLISHED / AUTHENTICATED SETUP VERIFIED / PROVIDER ACCEPTANCE OPEN**.
++
++| Module | New evidence | Production parity decision |
++| --- | --- | --- |
++| CallCommand AI | PR #98 merged and published at `cb47800`, build `9c9632bb7f9a1a34945bc028`; PR and exact-merge release/native CI passed; both databases independently verified v61/61 after backup/reconciliation; 47/47 public runtime checks; existing authenticated owner reached the new three-step setup | Unchanged. Deployment and authenticated page acceptance are proven. Actual provider call, hosted billing, persisted buyer workflow, and usage-invoicing acceptance remain open. |
++
++See [release evidence](../callcommand/CALLCOMMAND_V61_RELEASE_EVIDENCE.md).
++No synthetic payment return or compiled build is presented as a live purchase.
++
++## Historical CallCommand guided-setup source overlay (2026-09-10)
+ 
+ Status: **CALLCOMMAND PARITY UNCHANGED / LOCAL CANDIDATE VERIFIED /
+ LIVE ACCEPTANCE OPEN**. Branch `codex/callcommand-guided-setup` adds the tenant
