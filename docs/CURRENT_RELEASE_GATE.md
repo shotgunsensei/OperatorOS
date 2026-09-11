@@ -23,6 +23,16 @@ dependency repairs. Its fresh frozen install, production build/typechecks,
 zero unresolved advisories and zero critical findings; the two existing patched
 high advisory records remain disclosed. No audit exception was added or widened.
 
+PR run 34560402309 passed 12/14 stages and exposed two test integration defects:
+the guided fixture did not remove its temporary catalog module, allowing a later
+seed to add a Starter mapping, and the existing CallCommand browser journey did
+not expand the new Advanced setup disclosure. Fixture-owned module/plan cleanup
+now asserts restoration, and the browser follows the disclosure before the same
+forwarding, persistence, and reauthentication assertions. The CallCommand plus
+tier sequence passed 182/182; the final setup/tier pair passed 18/18; the complete
+CallCommand browser journey passed 1/1 in 13.3 seconds. A fresh full CI run is
+required. Android/iOS CI run 34560402200 passed all three jobs.
+
 Before publication, establish a private production backup/recovery point, inspect
 aggregate state, apply through the supported one-shot release path, unset apply
 authority, and verify v61/61. Preserve provider-managed production data and keep

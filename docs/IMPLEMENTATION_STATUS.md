@@ -20,6 +20,16 @@ disclosed patched high advisory records. Release-identity coverage passes 6/6,
 zero skips. Exact PR and merge CI plus production database/publication evidence
 remain required; these local checks do not assert deployed acceptance.
 
+CI integration repair (2026-09-11): run 34560402309 passed 12/14 release stages,
+with 1466/1467 API tests and 23/24 browser journeys passing; all 4 visual tests
+passed. Fixed the new fixture's temporary catalog/plan cleanup and updated the
+existing CallCommand journey to expand Advanced setup before forwarding a number.
+The checks retain Starter denial, real persistence, and deep-link reauthentication
+assertions. Fresh disposable verification: 182/182 CallCommand/tier checks,
+18/18 final setup/tier checks, and 1/1 complete CallCommand SSO browser journey
+(13.3 seconds), zero failures/skips. Full CI rerun pending. Android/iOS run
+34560402200 passed contracts and both device build/deep-link jobs.
+
 CallCommand setup now guides an entitled tenant administrator through business
 information, a priced number selection, and answering activation/test call.
 The server automatically prepares a receptionist and default follow-up workflow,

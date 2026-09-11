@@ -2300,6 +2300,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByText('Business receptionist', { exact: true })).toBeVisible();
 
     await modulePage.getByRole('link', { name: 'Set up CallCommand', exact: true }).click();
+    await modulePage.getByText('Advanced setup, existing numbers, and custom routing', { exact: true }).click();
     await modulePage.getByRole('button', { name: /Forward Existing/ }).click();
     await modulePage.getByTestId('input-callcommand-channel-phone').fill(phone);
     await modulePage.getByTestId('button-callcommand-connect-number').click();

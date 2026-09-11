@@ -18,19 +18,20 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
-import { modules, tenantModules, tenantUsers } from '../src/schema.js';
+import { modules, planModules, tenantModules, tenantUsers } from '../src/schema.js';
 import { signToken } from '../src/lib/auth.js';
 import { __setStripeTestOverrides, classifyWebhookEvent } from '../src/lib/billing-service.js';
 import { processCallCommandNumberWebhookEvent, requestCallCommandNumberBilling } from '../src/lib/callcommand-number-billing.js';
 import { MockCallCommandNumberProvider } from '../src/lib/callcommand-number-provider.js';
 import { __setCallCommandNumberProviderForTests, registerCallCommandCommercialRoutes } from '../src/routes/callcommand-commercial-routes.js';
-import { cleanupUser, createTestUser, createTestModule, ensureSchemaReady } from './_setup.js';
+import { cleanupModule, cleanupUser, createTestUser, createTestModule, ensureSchemaReady } from './_setup.js';
 
 type Row = Record<string, any>;
 let owner: Awaited<ReturnType<typeof createTestUser>>;
 let other: Awaited<ReturnType<typeof createTestUser>>;
 let app: ReturnType<typeof Fastify>;
 let assignment: Row;
+let createdModuleId: string | undefined;
 let firstOrder = '';
 let secondOrder = '';
 let firstChannel = '';
@@ -60,6 +61,7 @@ before(async () => {
   await ensureSchemaReady(); owner = await createTestUser(); other = await createTestUser();
   const [existing] = await db.select().from(modules).where(eq(modules.slug,'callcommand-ai')).limit(1);
   const module = existing || await createTestModule('callcommand-ai');
+  if (!existing) createdModuleId = module.id;
   for (const user of [owner,other]) await db.insert(tenantModules).values({tenantId:user.currentTenantId,moduleId:module.id,status:'enabled',source:'admin',allowAllMembers:true});
   __setStripeTestOverrides({enabled:true,client:stripe});
   __setCallCommandNumberProviderForTests(new MockCallCommandNumberProvider(['+19105550601','+19105550602','+19105550603'].map(phoneNumber => ({
@@ -76,6 +78,12 @@ after(async () => {
       await db.execute(sql.raw(`DELETE FROM ${table} WHERE tenant_id='${user.currentTenantId}'`));
     }
     await db.delete(tenantModules).where(eq(tenantModules.tenantId,user.currentTenantId)); await cleanupUser(user.id);
+  }
+  if (createdModuleId) {
+    await db.delete(planModules).where(eq(planModules.moduleId,createdModuleId));
+    await cleanupModule(createdModuleId);
+    assert.equal((await db.select().from(modules).where(eq(modules.id,createdModuleId))).length, 0,
+      'guided setup must not leave its synthetic module or plan mappings in the shared test catalog');
   }
 });
 
