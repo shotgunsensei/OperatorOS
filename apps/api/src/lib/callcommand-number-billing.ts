@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
-import { subscriptions, tenantUsers, users } from '../schema.js';
-import { getStripeFeatureBillingClient, isStripeEnabled } from './billing-service.js';
+import { modules, subscriptions, tenantUsers, users } from '../schema.js';
+import { beginIdempotentOperation, completeIdempotentOperation } from './shared-usage-activity.js';
+import { getStripeCatalogClient, getStripeFeatureBillingClient, isStripeEnabled } from './billing-service.js';
 import { callCommandNumberBillingGraceDays } from './callcommand-managed-number.js';
 import { resolveAppBaseUrl } from './public-url.js';
 
@@ -180,6 +181,12 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
   const local = quantity(input.billableLocalQuantity, 'billableLocalQuantity');
   const tollFree = quantity(input.billableTollFreeQuantity, 'billableTollFreeQuantity');
   const key = idempotencyKey(input.idempotencyKey);
+  const counts = (await db.execute(sql`SELECT COUNT(*) FILTER (WHERE number_type='local')::int AS local,
+    COUNT(*) FILTER (WHERE number_type='toll_free')::int AS toll_free FROM callcommand_channels
+    WHERE tenant_id=${input.tenantId} AND acquisition_mode='platform_provisioned' AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL`)).rows[0] as Row;
+  if (local < Math.max(0, Number(counts.local) - 1) || tollFree < Number(counts.toll_free)) {
+    throw new CallCommandNumberBillingError('Release the extra phone numbers before reducing their subscription.', 'CALLCOMMAND_NUMBER_RELEASE_REQUIRED');
+  }
   if (local === 0 && tollFree === 0) {
     const existing = await db.execute(sql`
       SELECT stripe_subscription_id FROM callcommand_number_billing_entitlements
@@ -207,6 +214,13 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
 
   return db.transaction(async tx => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-number-billing:${input.tenantId}`},0))`);
+    const [module] = await tx.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'callcommand-ai')).limit(1);
+    if (!module) throw new CallCommandNumberBillingError('CallCommand is unavailable.', 'CALLCOMMAND_MODULE_UNAVAILABLE');
+    const operation = await beginIdempotentOperation({ tenantId: input.tenantId, moduleId: module.id,
+      scope: 'callcommand-number-billing', idempotencyKey: key,
+      request: { userId: input.userId, local, tollFree, localPriceId, tollFreePriceId }, leaseMs: 300000 }, tx);
+    if (operation.state === 'replay') return operation.responseJson as Awaited<ReturnType<typeof requestCallCommandNumberBilling>>;
+    if (operation.state !== 'acquired') throw new CallCommandNumberBillingError('This billing request is already being processed or has different details.', 'CALLCOMMAND_NUMBER_BILLING_CONFLICT');
     const [user] = await tx.select({
       id: users.id,
       email: users.email,
@@ -224,6 +238,17 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
       WHERE tenant_id=${input.tenantId} LIMIT 1 FOR UPDATE
     `);
     const current = loaded.rows[0] as Row | undefined;
+    if (current?.billing_status === 'pending' && !current.stripe_subscription_id) {
+      const recent = (await tx.execute(sql`SELECT response_json FROM shared_idempotency_keys
+        WHERE tenant_id=${input.tenantId} AND module_id=${module.id} AND scope='callcommand-number-billing' AND status='completed'
+          AND completed_at>NOW()-INTERVAL '23 hours' ORDER BY completed_at DESC LIMIT 1`)).rows[0] as Row | undefined;
+      const previous = recent?.response_json as Row | undefined;
+      if (previous?.checkoutUrl && previous.billableLocalQuantity === local && previous.billableTollFreeQuantity === tollFree) {
+        await completeIdempotentOperation({ tenantId: input.tenantId, id: operation.id, leaseExpiresAt: operation.leaseExpiresAt, responseStatus: 200, responseJson: previous }, tx);
+        return previous as Awaited<ReturnType<typeof requestCallCommandNumberBilling>>;
+      }
+      throw new CallCommandNumberBillingError('A number checkout is still open. Complete it before changing paid capacity, or contact OperatorOS support to clear an expired checkout.', 'CALLCOMMAND_NUMBER_CHECKOUT_PENDING');
+    }
     const [baseSubscription] = await tx.select().from(subscriptions).where(and(
       eq(subscriptions.tenantId, input.tenantId),
       eq(subscriptions.status, 'active'),
@@ -252,19 +277,27 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
       subscriptionId?: string;
     };
     try {
+      for (const [kind, priceId] of [['local', localPriceId], ['toll_free', tollFreePriceId]] as const) {
+        if (!priceId) continue;
+        const price = await getStripeCatalogClient().prices.retrieve(priceId);
+        if (!price.active || price.currency !== 'usd' || price.unit_amount !== configuredCents(kind)
+          || price.recurring?.interval !== 'month' || price.recurring.interval_count !== 1 || price.recurring.usage_type !== 'licensed') {
+          throw new CallCommandNumberBillingError('The billing price does not match the displayed monthly number price. Contact OperatorOS support.', 'CALLCOMMAND_NUMBER_PRICE_MISMATCH');
+        }
+      }
       if (subscriptionId) {
         const items: Array<Record<string, unknown>> = [];
         if (current?.stripe_local_subscription_item_id) {
           items.push(local > 0
             ? { id: current.stripe_local_subscription_item_id, quantity: local }
-            : { id: current.stripe_local_subscription_item_id, deleted: true });
+            : { id: current.stripe_local_subscription_item_id, quantity: 0 });
         } else if (local > 0 && localPriceId) {
           items.push({ price: localPriceId, quantity: local });
         }
         if (current?.stripe_toll_free_subscription_item_id) {
           items.push(tollFree > 0
             ? { id: current.stripe_toll_free_subscription_item_id, quantity: tollFree }
-            : { id: current.stripe_toll_free_subscription_item_id, deleted: true });
+            : { id: current.stripe_toll_free_subscription_item_id, quantity: 0 });
         } else if (tollFree > 0 && tollFreePriceId) {
           items.push({ price: tollFreePriceId, quantity: tollFree });
         }
@@ -273,14 +306,15 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
           params: Record<string, unknown>,
           options: { idempotencyKey: string },
         ) => Promise<unknown>;
-        await update(subscriptionId, {
-          items,
-          cancel_at_period_end: local === 0 && tollFree === 0,
-          payment_behavior: 'pending_if_incomplete',
-          proration_behavior: 'always_invoice',
-          metadata,
-        }, { idempotencyKey: stripeKey(input.tenantId, key, 'update') });
+        // Stripe pending updates do not accept metadata or cancellation fields.
+        await update(subscriptionId, { cancel_at_period_end: local === 0 && tollFree === 0, metadata },
+          { idempotencyKey: stripeKey(input.tenantId, key, 'metadata') });
+        let updated: Row | null = null;
+        if (local > 0 || tollFree > 0) updated = await update(subscriptionId, {
+          items, payment_behavior: 'pending_if_incomplete', proration_behavior: 'always_invoice', expand: ['latest_invoice'],
+        }, { idempotencyKey: stripeKey(input.tenantId, key, 'update') }) as Row;
         result = { action: 'quantity_update_pending', billableLocalQuantity: local, billableTollFreeQuantity: tollFree, subscriptionId };
+        if (updated?.pending_update && updated.latest_invoice?.hosted_invoice_url) result.checkoutUrl = String(updated.latest_invoice.hosted_invoice_url);
       } else {
         if (!customerId) {
           const createCustomer = stripe.customers.create as unknown as (
@@ -344,6 +378,7 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
         version=callcommand_number_billing_entitlements.version+1,
         updated_at=NOW()
     `);
+    await completeIdempotentOperation({ tenantId: input.tenantId, id: operation.id, leaseExpiresAt: operation.leaseExpiresAt, responseStatus: 200, responseJson: result }, tx);
     return result;
   });
 }
@@ -353,6 +388,7 @@ function metadataCandidates(object: Row): Row[] {
   if (object.metadata) candidates.push(object.metadata);
   if (object.subscription_data?.metadata) candidates.push(object.subscription_data.metadata);
   if (object.subscription_details?.metadata) candidates.push(object.subscription_details.metadata);
+  if (object.parent?.subscription_details?.metadata) candidates.push(object.parent.subscription_details.metadata);
   for (const line of object.lines?.data ?? []) {
     if (line?.metadata) candidates.push(line.metadata);
     if (line?.parent?.subscription_item_details?.subscription?.metadata) {
@@ -374,6 +410,7 @@ function subscriptionId(type: string, object: Row): string | null {
   if (typeof object.subscription === 'string') return object.subscription;
   if (typeof object.subscription?.id === 'string') return object.subscription.id;
   if (typeof object.subscription_details?.subscription === 'string') return object.subscription_details.subscription;
+  if (typeof object.parent?.subscription_details?.subscription === 'string') return object.parent.subscription_details.subscription;
   return null;
 }
 
@@ -401,21 +438,40 @@ export async function processCallCommandNumberWebhookEvent(event: {
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(tenantId)) {
     return { handled: false, error: 'CallCommand managed-number event has no valid tenant' };
   }
+  return db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-number-billing:${tenantId}`},0))`);
   const created = Number.isSafeInteger(event.created) ? Number(event.created) : 0;
   const providerSubscriptionId = subscriptionId(event.type, object);
   const customerId = typeof object.customer === 'string' ? object.customer : object.customer?.id ?? null;
-  const state = await db.execute(sql`
-    SELECT stripe_local_price_id,stripe_toll_free_price_id
+  const state = await tx.execute(sql`
+    SELECT stripe_local_price_id,stripe_toll_free_price_id,stripe_subscription_id,stripe_customer_id,last_billing_event_id,last_stripe_event_created
     FROM callcommand_number_billing_entitlements WHERE tenant_id=${tenantId} LIMIT 1
   `);
   const current = state.rows[0] as Row | undefined;
-  const localLine = itemForPrice(object, String(current?.stripe_local_price_id ?? '') || null);
-  const tollFreeLine = itemForPrice(object, String(current?.stripe_toll_free_price_id ?? '') || null);
+  if (current && (current.last_billing_event_id === event.id || created < Number(current.last_stripe_event_created)
+    || (current.stripe_subscription_id && providerSubscriptionId && current.stripe_subscription_id !== providerSubscriptionId)
+    || (current.stripe_customer_id && customerId && current.stripe_customer_id !== customerId))) {
+    return { handled: true, action: 'callcommand_number_stale_or_unrelated_event', rowsAffected: 0 };
+  }
+  let localLine = itemForPrice(object, String(current?.stripe_local_price_id ?? '') || null);
+  let tollFreeLine = itemForPrice(object, String(current?.stripe_toll_free_price_id ?? '') || null);
 
   if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') {
-    const local = quantity(localLine?.quantity ?? metadata.requested_billable_local_quantity ?? 0, 'paid local quantity');
-    const tollFree = quantity(tollFreeLine?.quantity ?? metadata.requested_billable_toll_free_quantity ?? 0, 'paid toll-free quantity');
-    const updated = await db.execute(sql`
+    if (!providerSubscriptionId || !current) return { handled: true, action: 'callcommand_number_unmatched_invoice', rowsAffected: 0 };
+    // Invoice prorations can contain old quantities or omit unchanged items.
+    // Fetch the subscription and settle only its latest, actually paid invoice.
+    const subscription = await getStripeFeatureBillingClient().subscriptions.retrieve(providerSubscriptionId, { expand: ['latest_invoice'] });
+    const invoice = subscription.latest_invoice as unknown as Row | null;
+    if (!invoice || invoice.id !== object.id || invoice.status !== 'paid' || subscription.pending_update
+      || subscription.metadata.tenant_id !== tenantId || subscription.metadata.feature !== CALLCOMMAND_NUMBER_FEATURE_KEY
+      || (typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id) !== customerId) {
+      return { handled: true, action: 'callcommand_number_invoice_not_current', rowsAffected: 0 };
+    }
+    localLine = itemForPrice(subscription as unknown as Row, String(current.stripe_local_price_id ?? '') || null);
+    tollFreeLine = itemForPrice(subscription as unknown as Row, String(current.stripe_toll_free_price_id ?? '') || null);
+    const local = quantity(localLine?.quantity ?? 0, 'paid local quantity');
+    const tollFree = quantity(tollFreeLine?.quantity ?? 0, 'paid toll-free quantity');
+    const updated = await tx.execute(sql`
       UPDATE callcommand_number_billing_entitlements SET
         licensed_billable_local_quantity=${local},
         licensed_billable_toll_free_quantity=${tollFree},
@@ -431,7 +487,8 @@ export async function processCallCommandNumberWebhookEvent(event: {
         last_billing_event_id=${event.id},version=version+1,updated_at=NOW()
       WHERE tenant_id=${tenantId} AND ${created} >= last_stripe_event_created RETURNING tenant_id
     `);
-    await db.execute(sql`
+    if (!updated.rows.length) return { handled: true, action: 'callcommand_number_stale_invoice', rowsAffected: 0 };
+    await tx.execute(sql`
       UPDATE callcommand_channels SET
         billing_status=CASE
           WHEN number_type='local' AND id IN (
@@ -439,7 +496,14 @@ export async function processCallCommandNumberWebhookEvent(event: {
             WHERE tenant_id=${tenantId} AND acquisition_mode='platform_provisioned'
               AND lifecycle_state<>'RELEASED' AND number_type='local' AND deleted_at IS NULL
             ORDER BY COALESCE(activated_at,created_at),id LIMIT 1
-          ) THEN 'included' ELSE 'active' END,
+          ) THEN 'included'
+          WHEN id IN (SELECT id FROM callcommand_channels WHERE tenant_id=${tenantId}
+            AND acquisition_mode='platform_provisioned' AND lifecycle_state<>'RELEASED' AND number_type='local' AND deleted_at IS NULL
+            ORDER BY COALESCE(activated_at,created_at),id LIMIT ${local + 1}) THEN 'active'
+          WHEN id IN (SELECT id FROM callcommand_channels WHERE tenant_id=${tenantId}
+            AND acquisition_mode='platform_provisioned' AND lifecycle_state<>'RELEASED' AND number_type='toll_free' AND deleted_at IS NULL
+            ORDER BY COALESCE(activated_at,created_at),id LIMIT ${tollFree}) THEN 'active'
+          ELSE 'suspended' END,
         billing_grace_expires_at=NULL,updated_at=NOW()
       WHERE tenant_id=${tenantId} AND acquisition_mode='platform_provisioned'
         AND lifecycle_state NOT IN ('RELEASED','RELEASE_PENDING') AND deleted_at IS NULL
@@ -447,24 +511,31 @@ export async function processCallCommandNumberWebhookEvent(event: {
     return { handled: true, action: 'callcommand_number_quantities_settled', rowsAffected: updated.rows.length };
   }
   if (event.type === 'invoice.payment_failed') {
+    if (!current || !providerSubscriptionId) return { handled: true, action: 'callcommand_number_unmatched_failure', rowsAffected: 0 };
+    const subscription = await getStripeFeatureBillingClient().subscriptions.retrieve(providerSubscriptionId, { expand: ['latest_invoice'] });
+    const invoice = subscription.latest_invoice as unknown as Row | null;
+    if (subscription.pending_update || !invoice || invoice.id !== object.id || invoice.status === 'paid') {
+      return { handled: true, action: 'callcommand_number_upgrade_payment_pending', rowsAffected: 0 };
+    }
     const days = callCommandNumberBillingGraceDays();
-    const updated = await db.execute(sql`
+    const updated = await tx.execute(sql`
       UPDATE callcommand_number_billing_entitlements SET billing_status='grace_period',
-        grace_expires_at=NOW()+(${days}::text || ' days')::interval,
+        grace_expires_at=COALESCE(grace_expires_at,NOW()+(${days}::text || ' days')::interval),
         last_stripe_event_created=GREATEST(last_stripe_event_created,${created}),
         last_billing_event_id=${event.id},version=version+1,updated_at=NOW()
       WHERE tenant_id=${tenantId} AND ${created} >= last_stripe_event_created RETURNING tenant_id,grace_expires_at
     `);
-    await db.execute(sql`
+    if (!updated.rows.length) return { handled: true, action: 'callcommand_number_stale_failure', rowsAffected: 0 };
+    await tx.execute(sql`
       UPDATE callcommand_channels SET billing_status='grace_period',
-        billing_grace_expires_at=NOW()+(${days}::text || ' days')::interval,updated_at=NOW()
+        billing_grace_expires_at=${(updated.rows[0] as Row).grace_expires_at},updated_at=NOW()
       WHERE tenant_id=${tenantId} AND acquisition_mode='platform_provisioned'
         AND lifecycle_state='ACTIVE' AND billing_status<>'included' AND deleted_at IS NULL
     `);
     return { handled: true, action: 'callcommand_number_payment_grace_started', rowsAffected: updated.rows.length };
   }
   if (event.type === 'customer.subscription.deleted') {
-    const updated = await db.execute(sql`
+    const updated = await tx.execute(sql`
       UPDATE callcommand_number_billing_entitlements SET
         licensed_billable_local_quantity=0,licensed_billable_toll_free_quantity=0,
         pending_billable_local_quantity=0,pending_billable_toll_free_quantity=0,
@@ -476,7 +547,8 @@ export async function processCallCommandNumberWebhookEvent(event: {
         AND (${providerSubscriptionId}::text IS NULL OR stripe_subscription_id=${providerSubscriptionId})
         AND ${created} >= last_stripe_event_created RETURNING tenant_id
     `);
-    await db.execute(sql`
+    if (!updated.rows.length) return { handled: true, action: 'callcommand_number_stale_deletion', rowsAffected: 0 };
+    await tx.execute(sql`
       UPDATE callcommand_channels SET billing_status='suspended',lifecycle_state='SUSPENDED',
         health_status='degraded',health_reason_code='NUMBER_BILLING_SUSPENDED',updated_at=NOW()
       WHERE tenant_id=${tenantId} AND acquisition_mode='platform_provisioned'
@@ -486,17 +558,18 @@ export async function processCallCommandNumberWebhookEvent(event: {
   }
   if (event.type === 'checkout.session.completed' || event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
     const status = object.status === 'past_due' || object.status === 'unpaid' ? 'past_due' : 'pending';
-    const updated = await db.execute(sql`
-      UPDATE callcommand_number_billing_entitlements SET billing_status=${status},
+    const updated = await tx.execute(sql`
+      UPDATE callcommand_number_billing_entitlements SET billing_status=CASE
+        WHEN billing_status IN ('active','included','grace_period') THEN billing_status ELSE ${status} END,
         stripe_customer_id=COALESCE(${customerId},stripe_customer_id),
         stripe_subscription_id=COALESCE(${providerSubscriptionId},stripe_subscription_id),
-        last_stripe_event_created=GREATEST(last_stripe_event_created,${created}),
-        last_billing_event_id=${event.id},version=version+1,updated_at=NOW()
+        version=version+1,updated_at=NOW()
       WHERE tenant_id=${tenantId} AND ${created} >= last_stripe_event_created RETURNING tenant_id
     `);
     return { handled: true, action: 'callcommand_number_billing_state_observed', rowsAffected: updated.rows.length };
   }
   return { handled: false, error: `Unhandled CallCommand managed-number event type: ${event.type}` };
+  });
 }
 
 export function isCallCommandNumberStripeEvent(event: { data?: { object?: Row } }): boolean {

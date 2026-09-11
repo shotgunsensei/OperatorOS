@@ -12,14 +12,15 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 60);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 61);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 60);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 60);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 61);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 61);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS[58].id, 'core_suite_trial_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'forward_commerce_contract');
+  assert.equal(release.DATABASE_RELEASE_STEPS[59].id, 'forward_commerce_contract');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'callcommand_guided_setup');
   assert.equal(
     createHash('sha256')
       .update(JSON.stringify(release.DATABASE_RELEASE_STEPS.slice(0, 59)))

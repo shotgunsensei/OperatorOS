@@ -11,6 +11,7 @@ import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import type { CallCommandRouteArea } from './CallCommandRoute.contract';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import CallCommandSetup from './CallCommandSetup';
 import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 import { buildCallCommandWorkflowFocus } from '@/lib/companion-workflow';
 
@@ -554,13 +555,13 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
     {readOnlyNotice}
     {error && <div role="alert" style={{ ...panel, borderColor: 'rgba(251,113,133,.5)', color: '#fda4af', marginBottom: space.md }}><AlertTriangle size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{error}</div>}
     {notice && <div role="status" style={{ ...panel, borderColor: 'rgba(52,211,153,.45)', color: '#6ee7b7', marginBottom: space.md }}><CheckCircle2 size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{notice}</div>}
-    <section data-testid="banner-callcommand-provider" style={{ ...panel, display: 'flex', gap: 12, alignItems: 'center', marginBottom: space.lg, borderColor: telephonyReady ? 'rgba(52,211,153,.45)' : 'rgba(251,191,36,.45)' }}>
+    <section data-testid="banner-callcommand-provider" style={{ ...panel, display: view === 'setup' ? 'none' : 'flex', gap: 12, alignItems: 'center', marginBottom: space.lg, borderColor: telephonyReady ? 'rgba(52,211,153,.45)' : 'rgba(251,191,36,.45)' }}>
       <span style={{ color: telephonyReady ? '#34d399' : '#fbbf24' }}>{telephonyReady ? <CheckCircle2 size={19}/> : <AlertTriangle size={19}/>}</span>
       <div style={{ flex: 1 }}><strong>{telephonyReady ? 'Twilio voice connection available' : 'Twilio voice connection unavailable'}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{telephonyReady ? "Twilio setup is available. Each organization's business number, incoming route, and receptionist workflow are checked separately below." : 'Configuration, workflows, simulations, and call review remain available. Live calls and transfers remain unavailable until an administrator configures Twilio.'}</div></div>
     </section>
     {commercialUnavailable && <div style={{ ...panel, borderColor: 'rgba(251,191,36,.35)', color: '#fde68a', marginBottom: space.md }}><AlertTriangle size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>Commercial number, capacity, pricing, and health data are not available from this environment. Existing configuration and the no-cost simulator remain available; this screen does not mark Twilio ready without current health data.</div>}
 
-    {(view === 'overview' || view === 'setup') && <section style={{ ...panel, marginBottom: space.lg, padding: 0, overflow: 'hidden' }}>
+    {view === 'overview' && <section style={{ ...panel, marginBottom: space.lg, padding: 0, overflow: 'hidden' }}>
       <div style={{ padding: '22px 24px', background: 'radial-gradient(circle at 88% 0,rgba(16,185,129,.22),transparent 38%),linear-gradient(135deg,rgba(6,78,59,.3),rgba(5,15,22,.2))' }}>
         <Heading icon={<Sparkles/>} title={goLiveReady ? 'CallCommand is ready for live calls' : 'Finish setting up your receptionist'} subtitle={goLiveReady ? 'Your Twilio connection, business number, incoming route, receptionist, and workflow are verified.' : 'Complete the checklist below. CallCommand will not claim live readiness until Twilio confirms the number and incoming route.'}/>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{readiness.map(item => <Badge key={item.label} tone={item.ready ? 'good' : 'warn'}>{item.ready ? 'Ready' : 'Next'} · {item.label}</Badge>)}</div>
@@ -587,7 +588,8 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
       </section>
     </>}
 
-    {view === 'setup' && <div style={{ display: 'grid', gap: space.lg }}>
+    {view === 'setup' && product && <CallCommandSetup product={product} commercial={commercial} canAdmin={canAdmin} refresh={refresh} hrefFor={hrefFor}/>}
+    {view === 'setup' && <details style={{ marginTop: 24 }}><summary style={{ cursor: 'pointer', padding: 14 }}>Advanced setup, existing numbers, and custom routing</summary><div style={{ display: 'grid', gap: space.lg }}>
       <section style={panel}><Heading icon={<PhoneCall/>} title="1. Choose your business number" subtitle="Get a new number, forward an existing line, or connect an existing provider account. Twilio purchases remain blocked until phone-number billing is active."/>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 10, marginBottom: 14 }}>{[
           ['new', 'Get New Number', 'Search current local or toll-free inventory. Your plan is checked before a Twilio number is purchased.'],
@@ -618,7 +620,7 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
       <WorkflowEditor product={commercialProduct} flow={flow} setFlow={setFlow} templateKey={templateKey} setTemplateKey={key => { setTemplateKey(key); setFlow(current => ({ ...current, name: `${TEMPLATES[key].label} workflow`, description: TEMPLATES[key].description })); }} alerts={alerts} setAlerts={setAlerts} endpoints={endpoints} canAdmin={canAdmin} busy={busy} onSaveAlerts={() => void saveAlertSettings()} onActivate={() => void activateWorkflow()}/>
       <TransferAndTest transfer={transfer} setTransfer={setTransfer} product={commercialProduct} verificationCode={verificationCode} setVerificationCode={setVerificationCode} canWrite={canWrite} busy={busy} simulationTranscript={simulationTranscript} setSimulationTranscript={setSimulationTranscript} onCreateTarget={() => void createTransferTarget()} onStartVerification={item => void run(`verify-start:${item.id}`, () => moduleShellApi.callcommand.productStartTargetVerification(item.id), 'Verification started. Enter the code received at the destination.')} onCheckVerification={item => void run(`verify-check:${item.id}`, () => moduleShellApi.callcommand.productCheckTargetVerification(item.id, { code: verificationCode[item.id] ?? '' }), 'Transfer destination verified.')} onSimulate={() => void simulate()}/>
       <ReadinessPanel readiness={readiness} goLiveReady={goLiveReady} canAdmin={canAdmin} busy={busy} onGoLive={() => void goLive()}/>
-    </div>}
+    </div></details>}
 
     {view === 'numbers' && <NumberManagement
       numbers={displayedNumbers}
@@ -702,7 +704,7 @@ function NumberManagement({
             </div>
             <Badge tone={healthTone}>{lifecycle.replaceAll('_', ' ').toLowerCase()}</Badge>
             <Badge tone={['included','active'].includes(String(item.billingStatus)) ? 'good' : item.billingStatus === 'grace_period' ? 'warn' : 'neutral'}>billing {item.billingStatus ?? 'not configured'}</Badge>
-            {active && item.phoneE164 && <a href={`tel:${item.phoneE164}`} style={{ ...primary, padding: '7px 10px', textDecoration: 'none' }}><PhoneCall size={13}/>Call It Now</a>}
+            {active && item.dialNumber && <a href={`tel:${item.dialNumber}`} style={{ ...primary, padding: '7px 10px', textDecoration: 'none' }}><PhoneCall size={13}/>Call It Now</a>}
             <button aria-label={`Check provider health for ${label}`} style={{ ...quiet, padding: '7px 10px', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onHealth(item)}><HeartPulse size={13}/>Check health</button>
             {item.acquisitionMode === 'platform_provisioned' && lifecycle !== 'RELEASED' && <button aria-label={`Repair call routing for ${label}`} style={{ ...quiet, padding: '7px 10px', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onRepair(item)}><RefreshCw size={13}/>Repair routing</button>}
             {canRelease && <button aria-label={`Schedule disconnection for ${label}`} style={{ ...quiet, padding: '7px 10px', color: '#fda4af', ...disabledStyle(canAdmin && !busy) }} disabled={!canAdmin || !!busy} onClick={() => onStartRelease(item)}>Disconnect</button>}

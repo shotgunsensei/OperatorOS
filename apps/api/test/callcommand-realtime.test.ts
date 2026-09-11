@@ -296,6 +296,24 @@ test('REST controls use only fixed OpenAI endpoints, bounded payloads, and safe 
   );
 });
 
+test('new inbound calls greet once on socket open without overriding tenant instructions; resumed calls do not greet again', () => {
+  const sockets: FakeSocket[] = [];
+  const adapter = new OpenAiRealtimeSipAdapter({ env: ENV, socketFactory: () => { const socket = new FakeSocket(); sockets.push(socket); return socket; }, webhookClientFactory: () => ({ webhooks: { unwrap: async () => ({}) } }) });
+  const callbacks = { executeTool: async () => ({ok:true}) };
+  adapter.connectSideband({ openAiCallId:OPENAI_CALL_ID,allowedToolNames:[],callbacks,greetOnOpen:true });
+  assert.equal(sockets[0].sent.length,0); sockets[0].open(); sockets[0].open();
+  assert.deepEqual(sockets[0].sent.map(item=>JSON.parse(item)),[{type:'response.create',response:{tool_choice:'none'}}]);
+  adapter.connectSideband({ openAiCallId:'rtc_resumed',allowedToolNames:[],callbacks,greetOnOpen:false }); sockets[1].open(); assert.equal(sockets[1].sent.length,0);
+});
+
+test('input transcription is requested only when server consent policy enables it', async () => {
+  const payloads: any[] = [];
+  const adapter = new OpenAiRealtimeSipAdapter({ env:ENV,fetch:async (_url,init)=>{payloads.push(JSON.parse(String(init.body)));return new Response(null,{status:200});},webhookClientFactory:()=>({webhooks:{unwrap:async()=>({})}}) });
+  for (const transcribeInput of [false,true]) await adapter.accept(OPENAI_CALL_ID,{instructions:'Use the business instructions.',tools:[],transcribeInput});
+  assert.equal(payloads[0].audio.input.transcription,undefined);
+  assert.equal(payloads[1].audio.input.transcription.model,'gpt-4o-mini-transcribe');
+});
+
 test('each sideband socket is isolated and completed function calls execute exactly once', async () => {
   const sockets: FakeSocket[] = [];
   const socketRequests: Array<{ url: string; options: Parameters<RealtimeSocketFactory>[1] }> = [];

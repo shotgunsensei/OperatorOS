@@ -1,5 +1,47 @@
 # OperatorOS current release gate
 
+## CallCommand v61 release - AUTHORIZED / PR AND DEPLOYMENT PENDING (2026-09-10)
+
+The owner authorized commit, PR to main, Replit GitHub pull, and publication of
+the reviewed CallCommand guided-setup candidate. The scope includes the required
+backed-up additive v61 database apply described in the prior delivery handoff.
+Actual live call purchases, new Stripe catalog activation, and customer usage
+billing remain separate acceptance work.
+
+The candidate appends `callcommand_guided_setup` after the existing 60 release
+steps. Prior local focused results are recorded in
+[the investigation](callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md).
+Those checks ran in a checkout that also contains separately uncommitted module
+polish/security work; the scoped PR must pass the exact committed revision's
+CI before merge/deployment. Preserve unrelated interface work outside this PR.
+
+The isolated candidate reproduced 13 unresolved dependency advisories (including
+critical findings) in the older main lock. The release therefore includes the
+necessary Next.js, sharp, xmldom, qs, js-yaml, decode-uri-component, and uuid
+dependency repairs. Its fresh frozen install, production build/typechecks,
+6 release-identity tests, and Phase 39 hardening gate pass. The audit reports
+zero unresolved advisories and zero critical findings; the two existing patched
+high advisory records remain disclosed. No audit exception was added or widened.
+
+PR run 34560402309 passed 12/14 stages and exposed two test integration defects:
+the guided fixture did not remove its temporary catalog module, allowing a later
+seed to add a Starter mapping, and the existing CallCommand browser journey did
+not expand the new Advanced setup disclosure. Fixture-owned module/plan cleanup
+now asserts restoration, and the browser follows the disclosure before the same
+forwarding, persistence, and reauthentication assertions. The CallCommand plus
+tier sequence passed 182/182; the final setup/tier pair passed 18/18; the complete
+CallCommand browser journey passed 1/1 in 13.3 seconds. A fresh full CI run is
+required. Android/iOS CI run 34560402200 passed all three jobs.
+
+Before publication, establish a private production backup/recovery point, inspect
+aggregate state, apply through the supported one-shot release path, unset apply
+authority, and verify v61/61. Preserve provider-managed production data and keep
+development-data overwrite and Stripe sandbox-to-live synchronization off.
+Publication is complete only when the public readiness payload identifies the
+reviewed merged commit, a new build, and database v61/61 ending in
+`callcommand_guided_setup`. The v60 evidence below remains the last verified
+live release until that happens.
+
 ## Release v60 outcome/value deployment - LIVE READY / DATABASE AND SOURCE SYNCHRONIZED / AUTHENTICATED ACCEPTANCE OPEN (verified 2026-09-07)
 
 The customer-outcome release and its Replit schema-contract repair are merged

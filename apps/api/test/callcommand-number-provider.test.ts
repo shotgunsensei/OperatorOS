@@ -376,6 +376,12 @@ test('health, routing update, and destructive release are fail-closed', async ()
   assert.equal(health.health, 'healthy');
   assert.deepEqual(health.healthReasons, []);
 
+  api.currentNumber.voiceApplicationSid = `AP${'a'.repeat(32)}`;
+  api.currentNumber.trunkSid = `TK${'b'.repeat(32)}`;
+  const overridden = await provider.inspectNumber({ credentials, providerAccountId: TENANT_SID, providerNumberId: NUMBER_SID });
+  assert.equal(overridden.health, 'degraded');
+  assert.ok(overridden.healthReasons.includes('voice_routing_overridden'));
+
   const updated = await provider.updateRouting({
     credentials,
     providerAccountId: TENANT_SID,
@@ -384,8 +390,10 @@ test('health, routing update, and destructive release are fail-closed', async ()
   });
   assert.equal(updated.routing.voiceUrl, `${ORIGIN}/v2/voice`);
   assert.deepEqual(api.updateCalls[0].input, {
+    voiceApplicationSid: '', trunkSid: '',
     voiceUrl: `${ORIGIN}/v2/voice`, voiceMethod: 'POST', statusCallback: `${ORIGIN}/v2/status`, statusCallbackMethod: 'POST',
   });
+  assert.equal((await provider.inspectNumber({ credentials, providerAccountId: TENANT_SID, providerNumberId: NUMBER_SID })).health, 'healthy');
 
   await assert.rejects(() => provider.releaseNumber({
     credentials,

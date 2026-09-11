@@ -1,5 +1,85 @@
 # OperatorOS implementation status
 
+## CallCommand three-step tenant setup and billing recovery (2026-09-10)
+
+Status: **PR #98 OPEN / PUBLICATION AUTHORIZED / EXACT COMMIT CI PENDING**.
+Branch `codex/callcommand-guided-setup`, based on
+`b14e94a`, preserves the pre-existing module clarity/security changes below.
+The detailed investigation, remaining gaps, files, exact commands, pricing,
+rollback, and platform-owned launch handoff are in
+[the CallCommand setup report](callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md).
+
+The authorized PR's isolated checkout reproduced 13 unresolved dependency
+advisories in the previous main lock. Included the required framework and
+transitive dependency repairs without the separate interface-polish work.
+From `C:\Dev\OperatorOS-callcommand-release`, frozen install and
+`corepack pnpm build:production` pass, including all workspace typechecks and
+35 Next pages. `corepack pnpm verify:hardening:phase39` passes with zero runtime
+findings, zero unresolved advisories, zero critical findings, and the same two
+disclosed patched high advisory records. Release-identity coverage passes 6/6,
+zero skips. Exact PR and merge CI plus production database/publication evidence
+remain required; these local checks do not assert deployed acceptance.
+
+CI integration repair (2026-09-11): run 34560402309 passed 12/14 release stages,
+with 1466/1467 API tests and 23/24 browser journeys passing; all 4 visual tests
+passed. Fixed the new fixture's temporary catalog/plan cleanup and updated the
+existing CallCommand journey to expand Advanced setup before forwarding a number.
+The checks retain Starter denial, real persistence, and deep-link reauthentication
+assertions. Fresh disposable verification: 182/182 CallCommand/tier checks,
+18/18 final setup/tier checks, and 1/1 complete CallCommand SSO browser journey
+(13.3 seconds), zero failures/skips. Full CI rerun pending. Android/iOS run
+34560402200 passed contracts and both device build/deep-link jobs.
+
+CallCommand setup now guides an entitled tenant administrator through business
+information, a priced number selection, and answering activation/test call.
+The server automatically prepares a receptionist and default follow-up workflow,
+saves the selection/price consent through billing, and resumes the existing
+tenant-managed provisioning operation after confirmed payment. Existing custom
+workflows and advanced controls are preserved. Billing fixes cover duplicate
+checkout, current Stripe invoice metadata, supported pending-update parameters,
+exact paid quantities, stale events, failed upgrades, and provider-release-before-
+quantity-reduction. Call runtime starts the greeting and requests transcription
+only under the existing consent policy. Exact-line activation rejects unpaid or
+releasing numbers; routing repair detects Twilio application/trunk overrides and
+cannot cancel a pending release.
+
+Database release **v61/61** adds only `callcommand_guided_setup` after the existing
+60 steps, with tenant-composite foreign keys, price/consent/expiry state, and
+idempotent saved orders. No new environment variables are introduced. Production
+backup/apply/deployment and provider actions remain unperformed.
+
+Fresh verification on Windows/Node 24.16.0/pnpm 10.34.5 used synthetic disposable
+PostgreSQL 16 on `127.0.0.1:55438`, with provider credentials stripped:
+
+| Command/scope | Result |
+| --- | --- |
+| All CallCommand API tests plus affected central billing/release/preflight tests, serial via `tsx --test --test-concurrency=1` | 209 passed, 0 failed/skipped; 81,141 ms |
+| Help, release identity, production runtime verifier | 17 passed, 0 failed/skipped |
+| `node --test apps/web/e2e/callcommand-commercial-contract.test.mjs` | 6 passed, 0 failed/skipped |
+| `corepack pnpm build:production` with `INTERNAL_API_URL=http://127.0.0.1:5001` | Pass including four workspace typechecks and 35 Next pages |
+| `corepack pnpm lint` | Pass, zero warnings |
+| Supported clean `db:apply`, immediate reapply, and `db:verify` | Pass/pass/pass, v61/61 |
+| New Playwright setup spec through compiled supervisor/local exact-host TLS | 3 passed, 0 failed/skipped, 21.8 seconds; desktop/mobile persistence and synthetic payment-return/activation |
+| Guided-form Axe/layout checks | Zero selected WCAG A/AA violations and no horizontal page overflow at 1440/390px |
+| `node scripts/phase39/security-scan.mjs` | Pass, 4,328 files, zero findings/unresolved advisories; two existing patched high advisory records disclosed |
+| `git diff --check` | Pass |
+| Local `preflight:production -- --callcommand-ready` | Expected fail closed without production/provider inputs; deployed secret state not inferred |
+
+Logs/screenshots: `output/callcommand-investigation/`. The new browser spec is
+included in the normal `test:e2e` harness. No full whole-repository API rerun,
+CI run, actual payment, external carrier call, or authenticated deployed workflow
+is claimed by these focused results.
+The task-owned database container and local browser/runtime services were stopped
+after verification.
+
+A public read-only `/readyz` check on 2026-09-10 confirmed the existing deployment
+is ready at `f864bed869372fed3c1295b7ca048f06ac7a9a65`, build
+`570ecdc6285790ae91f1333e`, database v60/60. The guided setup candidate is not live.
+Complete usage invoicing, an approved allowance/overage policy, unattended setup
+while all browsers are closed, expired-checkout recovery, and Autoscale long-call
+acceptance remain explicit gaps in the investigation. Module parity is unchanged.
+
+
 ## Module outcome/value upgrade - LIVE READY / V60 CUTOVER COMPLETE / AUTHENTICATED WORKFLOW ACCEPTANCE OPEN (verified 2026-09-07)
 
 ### Source and GitHub

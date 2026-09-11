@@ -143,6 +143,8 @@ export async function ensureSchemaReady() {
   await ensureCallCommandCommercialTables();
   const { ensureCallCommandManagedNumberTables } = await import('../src/lib/callcommand-managed-number-db-init.js');
   await ensureCallCommandManagedNumberTables();
+  const { ensureCallCommandSetupTables } = await import('../src/lib/callcommand-setup-db-init.js');
+  await ensureCallCommandSetupTables();
   const { ensureCrossModuleDataFabricTables } = await import('../src/lib/cross-module-data-fabric-db-init.js');
   await ensureCrossModuleDataFabricTables();
   const { ensureTenantMessengerTables } = await import('../src/lib/tenant-messenger-db-init.js');

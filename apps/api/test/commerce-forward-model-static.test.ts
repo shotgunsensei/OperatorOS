@@ -79,10 +79,10 @@ test('only the six approved business add-ons can be sold through the stack', () 
 });
 
 test('release v60 appends one immutable forward-commerce step to the ordered manifest', () => {
-  assert.equal(DATABASE_RELEASE_CONTRACT.releaseVersion, 60);
-  assert.equal(DATABASE_RELEASE_STEPS.length, 60);
-  assert.equal(DATABASE_RELEASE_STEPS.at(-1)?.id, 'forward_commerce_contract');
-  assert.equal(new Set(DATABASE_RELEASE_STEPS.map(step => step.id)).size, 60);
+  assert.ok(DATABASE_RELEASE_CONTRACT.releaseVersion >= 60);
+  assert.equal(DATABASE_RELEASE_STEPS.length, DATABASE_RELEASE_CONTRACT.releaseVersion);
+  assert.equal(DATABASE_RELEASE_STEPS[59]?.id, 'forward_commerce_contract');
+  assert.equal(new Set(DATABASE_RELEASE_STEPS.map(step => step.id)).size, DATABASE_RELEASE_STEPS.length);
   assert.equal(Object.isFrozen(DATABASE_RELEASE_CONTRACT), true);
   assert.equal(Object.isFrozen(DATABASE_RELEASE_STEPS), true);
 });

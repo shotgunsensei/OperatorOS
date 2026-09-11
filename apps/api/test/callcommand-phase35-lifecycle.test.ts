@@ -304,7 +304,8 @@ test('managed-number search, provisioning, replay, tenant isolation, reconciliat
   });
   assert.equal(provisioned.statusCode, 201, provisioned.body);
   assert.equal(provisioned.json().providerActionConfirmed, true);
-  assert.equal(provisioned.json().readyForLiveCalls, true);
+  assert.equal(provisioned.json().readyForLiveCalls, false);
+  assert.equal(provisioned.json().readyForActivation, true);
   assert.equal(provisioned.json().lifecycleState, 'ACTIVE');
   managedChannelId = String(provisioned.json().channel.id);
 
@@ -322,7 +323,8 @@ test('managed-number search, provisioning, replay, tenant isolation, reconciliat
   assert.equal(stored.rows[0].billing_status, 'included');
   assert.equal(stored.rows[0].number_type, 'local');
   assert.equal(stored.rows[0].flow_name, 'General Reception');
-  assert.equal(stored.rows[0].graph_json.nodes[0].type, 'route');
+  assert.equal(stored.rows[0].graph_json.nodes[0].type, 'action');
+  assert.equal(stored.rows[0].graph_json.nodes[0].config.actionType, 'task');
   assert.match(String(stored.rows[0].provider_account_sid), /^AC[0-9a-f]{32}$/);
   assert.match(String(stored.rows[0].secret_reference_id), /^[0-9a-f-]{36}$/);
 

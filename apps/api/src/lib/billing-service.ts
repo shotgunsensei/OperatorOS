@@ -1556,6 +1556,7 @@ export function classifyWebhookEvent(event: { type: string; data: { object: any 
   if (obj.metadata) candidates.push({ md: obj.metadata, at: 'object' });
   if (obj.subscription_data?.metadata) candidates.push({ md: obj.subscription_data.metadata, at: 'subscription_data' });
   if (obj.subscription_details?.metadata) candidates.push({ md: obj.subscription_details.metadata, at: 'subscription_details' });
+  if (obj.parent?.subscription_details?.metadata) candidates.push({ md: obj.parent.subscription_details.metadata, at: 'subscription_details' });
   if (Array.isArray(obj.lines?.data)) {
     for (const line of obj.lines.data) {
       if (line?.metadata) candidates.push({ md: line.metadata, at: 'invoice_line' });

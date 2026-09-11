@@ -90,7 +90,7 @@ function laneBillingIdempotencyKey(value: unknown): string {
 function stripeIdempotencyKey(
   tenantId: string,
   idempotencyKey: string,
-  operation: 'customer' | 'checkout' | 'update',
+  operation: 'customer' | 'checkout' | 'update' | 'metadata',
 ): string {
   const source = operation === 'customer'
     ? `callcommand-lane:${tenantId}:customer`
@@ -306,6 +306,8 @@ export async function createOrUpdateCallCommandLaneCheckout(
           params: Record<string, unknown>,
           options: { idempotencyKey: string },
         ) => Promise<unknown>;
+        if (quantity > 0) await updateSubscription(subscriptionId, { cancel_at_period_end: false, metadata },
+          { idempotencyKey: stripeIdempotencyKey(input.tenantId, idempotencyKey, 'metadata') });
         await updateSubscription(
           subscriptionId,
           quantity === 0
@@ -315,10 +317,8 @@ export async function createOrUpdateCallCommandLaneCheckout(
               }
             : {
                 items: [{ id: String(current.stripe_subscription_item_id), quantity }],
-                cancel_at_period_end: false,
                 payment_behavior: 'pending_if_incomplete',
                 proration_behavior: 'always_invoice',
-                metadata,
               },
           { idempotencyKey: stripeIdempotencyKey(input.tenantId, idempotencyKey, 'update') },
         );

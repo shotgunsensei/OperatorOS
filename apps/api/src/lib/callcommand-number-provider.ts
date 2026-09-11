@@ -87,7 +87,7 @@ export interface SafeProvisionedPhoneNumber {
 export interface SafeNumberHealth extends SafeProvisionedPhoneNumber {
   accountStatus: ProviderAccountStatus;
   health: 'healthy' | 'degraded';
-  healthReasons: Array<'account_not_active' | 'voice_not_capable' | 'voice_url_not_allowed' | 'status_url_not_allowed' | 'non_post_routing'>;
+  healthReasons: Array<'account_not_active' | 'voice_not_capable' | 'voice_url_not_allowed' | 'status_url_not_allowed' | 'non_post_routing' | 'voice_routing_overridden'>;
 }
 
 export interface SafeReleasedPhoneNumber {
@@ -263,6 +263,8 @@ export interface TwilioProvisionRequest {
 }
 
 export interface TwilioRoutingUpdateRequest {
+  voiceApplicationSid: '';
+  trunkSid: '';
   voiceUrl: string;
   voiceMethod: 'POST';
   statusCallback: string;
@@ -655,6 +657,8 @@ export class TwilioCallCommandNumberProvider implements CallCommandNumberProvide
     if (!number.routing.voiceUrlAllowed) healthReasons.push('voice_url_not_allowed');
     if (!number.routing.statusCallbackUrlAllowed) healthReasons.push('status_url_not_allowed');
     if (number.routing.voiceMethod !== 'POST' || number.routing.statusCallbackMethod !== 'POST') healthReasons.push('non_post_routing');
+    // Twilio applications and SIP trunks override the number's callback URLs.
+    if (raw.voiceApplicationSid || raw.trunkSid) healthReasons.push('voice_routing_overridden');
     return { ...number, accountStatus, health: healthReasons.length ? 'degraded' : 'healthy', healthReasons };
   }
 
@@ -672,6 +676,8 @@ export class TwilioCallCommandNumberProvider implements CallCommandNumberProvide
     const accountSid = validateAccountSid(input.providerAccountId);
     const numberSid = validateNumberSid(input.providerNumberId);
     const values: TwilioRoutingUpdateRequest = {
+      voiceApplicationSid: '',
+      trunkSid: '',
       voiceUrl: validateWebhookUrl(input.routing.voiceUrl, this.allowedWebhookOrigins),
       voiceMethod: 'POST',
       statusCallback: validateWebhookUrl(input.routing.statusCallbackUrl, this.allowedWebhookOrigins),

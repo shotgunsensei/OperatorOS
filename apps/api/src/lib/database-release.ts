@@ -41,6 +41,7 @@ import { ensureCallCommandPhase35Tables } from './callcommand-phase35-db-init.js
 import { ensureCallCommandMspTables } from './callcommand-msp-db-init.js';
 import { ensureCallCommandCommercialTables } from './callcommand-commercial-db-init.js';
 import { ensureCallCommandManagedNumberTables } from './callcommand-managed-number-db-init.js';
+import { ensureCallCommandSetupTables } from './callcommand-setup-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import { ensureNinjamationPhase36Tables } from './ninjamation-phase36-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
@@ -129,6 +130,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   auth_mfa_tables: ensureAuthMfaTables,
   callcommand_commercial_runtime: ensureCallCommandCommercialTables,
   callcommand_managed_number_provisioning: ensureCallCommandManagedNumberTables,
+  callcommand_guided_setup: ensureCallCommandSetupTables,
   core_suite_trial_tables: ensureCoreSuiteTrialTables,
   forward_commerce_contract: ensureForwardCommerceContract,
 };
@@ -681,7 +683,15 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
          AND actual.contype='c'
         WHERE actual.oid IS NULL
       )
-      AS forward_commerce_contract
+      AS forward_commerce_contract,
+      to_regclass('public.callcommand_setup_orders') IS NOT NULL
+        AND EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.callcommand_setup_orders')
+          AND conname='callcommand_setup_profile_fk' AND convalidated)
+        AND EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.callcommand_setup_orders')
+          AND conname='callcommand_setup_flow_fk' AND convalidated)
+        AND EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.callcommand_setup_orders')
+          AND conname='callcommand_setup_channel_fk' AND convalidated)
+        AS callcommand_guided_setup
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

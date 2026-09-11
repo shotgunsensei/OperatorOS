@@ -105,8 +105,8 @@ test('forward overflow accepts only a verified active external target in the cur
 test('cost-bearing number and lane operations require explicit server-side confirmation', () => {
   const provision = between(
     commercialRoutes,
-    "app.post(`${base}/commercial/numbers/provision`",
-    "app.post(`${base}/commercial/numbers/connect`",
+    'async function provisionManagedNumber(',
+    'async function serializeNumberPurchase',
   );
   assert.match(provision, /confirmRecurringProviderCharge !== true/);
   assert.match(provision, /CALLCOMMAND_NUMBER_RECURRING_CHARGE_NOT_CONFIRMED/);
@@ -160,8 +160,8 @@ test('profile and channel mutation preserve general and MSP product-mode boundar
 
   const provision = between(
     commercialRoutes,
-    "app.post(`${base}/commercial/numbers/provision`",
-    "app.post(`${base}/commercial/numbers/connect`",
+    'async function provisionManagedNumber(',
+    'async function serializeNumberPurchase',
   );
   assert.match(provision, /resolveProvisioningAgentAndFlow\(request, value\)/);
   const onboarding = between(
@@ -306,8 +306,8 @@ test('managed-number persistence separates provider, routing, billing, release, 
 test('provisioning prevents paid provider mutation before billing and recovers an ambiguous response by inventory', () => {
   const provision = between(
     commercialRoutes,
-    "app.post(`${base}/commercial/numbers/provision`",
-    "app.post(`${base}/commercial/numbers/connect`",
+    'async function provisionManagedNumber(',
+    'async function serializeNumberPurchase',
   );
   const billingGate = provision.indexOf('CALLCOMMAND_NUMBER_BILLING_REQUIRED');
   const providerPurchase = provision.indexOf('numberProvider().provisionNumber');
