@@ -62,7 +62,7 @@ export const CALLCOMMAND_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
 
 const copy: Record<CallCommandRouteArea, Pick<CallCommandRouteState, 'eyebrow' | 'title' | 'subtitle'>> = {
   overview: { eyebrow: 'Turn calls into completed work', title: 'Operations overview', subtitle: 'See setup progress, clearly labeled simulations or calls confirmed by your phone service, caller outcomes, available capacity, and follow-ups that need attention.' },
-  setup: { eyebrow: 'Get ready for the first call', title: 'Set up CallCommand', subtitle: 'Choose a number, prepare your receptionist, select a workflow, run a test, and finish the requirements for live calls.' },
+  setup: { eyebrow: 'Get ready for the first call', title: 'Set up CallCommand', subtitle: 'Describe your business, choose your number, and turn on your receptionist. OperatorOS prepares the AI and phone connection for you.' },
   calls: { eyebrow: 'Understand every caller outcome', title: 'Calls and history', subtitle: 'Review summaries, timelines, recordings, transcripts, and the follow-up work created from each call.' },
   recordings: { eyebrow: 'Listen when consent allows', title: 'Calls and history', subtitle: 'Open the recording available for this call and review it alongside the call summary.' },
   transcripts: { eyebrow: 'Review what was said', title: 'Calls and history', subtitle: 'Read the saved transcript for this call without changing the original conversation record.' },

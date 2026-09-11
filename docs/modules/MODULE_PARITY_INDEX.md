@@ -1,5 +1,29 @@
 # OperatorOS module parity index
 
+## CallCommand guided-setup source overlay (2026-09-10)
+
+Status: **CALLCOMMAND PARITY UNCHANGED / LOCAL CANDIDATE VERIFIED /
+LIVE ACCEPTANCE OPEN**. Branch `codex/callcommand-guided-setup` adds the tenant
+business -> priced number -> activation/test-call journey, durable billing
+return, default receptionist/follow-up configuration, signed-payment quantity
+hardening, initial AI greeting, policy-bound transcription, exact-line readiness,
+and provider routing/release safeguards. The additive local database contract is
+v61/61, ending in `callcommand_guided_setup`.
+
+| Module | New evidence | Production parity decision |
+| --- | --- | --- |
+| CallCommand AI | 209 CallCommand/affected billing-release API checks; 17 Help/release checks; 6 web contracts; 3 compiled-runtime desktop/mobile/browser cases; clean v61 apply/reapply/verify; build/typecheck/lint/security pass | Unchanged. Actual Stripe, Twilio, OpenAI, deployed tenant workflows, and usage-invoicing acceptance remain open. |
+
+No test failed or skipped in the final runs. The payment-return browser case
+uses an explicitly synthetic service fixture; the API tests use disposable
+PostgreSQL and SDK doubles. These do not prove an actual billed phone number or
+carrier call. The public deployment checked on 2026-09-10 still reports the
+existing `f864bed` release and database v60/60. See
+[implementation status](../IMPLEMENTATION_STATUS.md) and
+[the complete investigation](../callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md)
+for precise local evidence, prices, missing operations, and release boundaries.
+
+
 ## Release v60 live-deployment overlay (2026-09-07)
 
 Status: **PARITY STATES UNCHANGED / SOURCE AND DATABASE V60 SYNCHRONIZED /

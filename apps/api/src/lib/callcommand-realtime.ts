@@ -297,6 +297,7 @@ export interface RealtimeAcceptInput {
   instructions: string;
   tools: readonly RealtimeFunctionTool[];
   voice?: CallCommandRealtimeVoice;
+  transcribeInput?: boolean;
   maxOutputTokens?: number;
 }
 
@@ -365,7 +366,10 @@ function sanitizeAcceptInput(input: RealtimeAcceptInput, model: CallCommandRealt
     tool_choice: 'auto',
     tools,
     audio: {
-      input: { turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 700 } },
+      input: {
+        turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 700 },
+        ...(input.transcribeInput === true ? { transcription: { model: 'gpt-4o-mini-transcribe' } } : {}),
+      },
       output: { voice },
     },
   };
@@ -496,14 +500,18 @@ export class OpenAiRealtimeSidebandController {
     socket: RealtimeSocket,
     allowedToolNames: readonly string[],
     callbacks: RealtimeSidebandCallbacks,
+    greetOnOpen = false,
   ) {
     this.#socket = socket;
     this.#callbacks = callbacks;
     validateToolAllowlist(allowedToolNames);
     this.#allowedTools = new Set(allowedToolNames);
     socket.on('open', () => {
-      if (this.#state === 'closed' || this.#openFailure) return;
+      if (this.#state !== 'connecting' || this.#openFailure) return;
       this.#state = 'open';
+      // Preserve the complete server-compiled business/safety instructions.
+      // The opening greeting must not run business actions before caller input.
+      if (greetOnOpen) this.#send({ type: 'response.create', response: { tool_choice: 'none' } });
       this.#settleOpenWaiters();
     });
     socket.on('message', (raw: unknown) => { void this.#handleMessage(raw); });
@@ -876,6 +884,7 @@ export class OpenAiRealtimeSipAdapter {
     openAiCallId: string;
     allowedToolNames: readonly string[];
     callbacks: RealtimeSidebandCallbacks;
+    greetOnOpen?: boolean;
   }): OpenAiRealtimeSidebandController {
     const callId = parseOpenAiCallId(input.openAiCallId);
     if (!input.callbacks || typeof input.callbacks.executeTool !== 'function') invalid('Sideband tool executor is required');
@@ -900,6 +909,6 @@ export class OpenAiRealtimeSipAdapter {
         503,
       );
     }
-    return new OpenAiRealtimeSidebandController(callId, socket, input.allowedToolNames, input.callbacks);
+    return new OpenAiRealtimeSidebandController(callId, socket, input.allowedToolNames, input.callbacks, input.greetOnOpen === true);
   }
 }

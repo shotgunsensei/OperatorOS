@@ -439,11 +439,10 @@ async function resolveProvisioningAgentAndFlow(request: FastifyRequest, value: R
           start: 'general-reception',
           nodes: [{
             key: 'general-reception',
-            type: 'route',
+            type: 'action',
             config: {
-              purpose: 'general_reception',
-              collect: ['name', 'phone', 'reason'],
-              completion: 'Confirm the request and end or transfer according to tenant policy.',
+              actionType: 'task',
+              title: 'Follow up with caller',
             },
           }],
         }).graph;
@@ -473,7 +472,616 @@ async function resolveProvisioningAgentAndFlow(request: FastifyRequest, value: R
   });
 }
 
+async function provisionManagedNumber(request: FastifyRequest, value: Row): Promise<{ statusCode: number; body: Row }> {
+    let orderId: string | null = null;
+    let providerNumberId: string | null = null;
+    try {
+      if (value.confirmRecurringProviderCharge !== true) {
+        throw new CallCommandCommercialError(
+          'Explicit confirmation of the recurring telephony provider charge is required',
+          'CALLCOMMAND_NUMBER_RECURRING_CHARGE_NOT_CONFIRMED',
+          409,
+        );
+      }
+      const phone = normalizeE164(value.phone ?? value.phoneE164, 'phone');
+      const inferredNumberType = classifyManagedNumberType(phone);
+      const numberType = value.numberType === undefined ? inferredNumberType : String(value.numberType);
+      if ((numberType !== 'local' && numberType !== 'toll_free') || numberType !== inferredNumberType) {
+        throw new CallCommandCommercialError(
+          'The selected number does not match the requested local or toll-free type',
+          'CALLCOMMAND_NUMBER_TYPE_MISMATCH',
+          422,
+        );
+      }
+      const onboarding = await resolveProvisioningAgentAndFlow(request, value);
+      const profileId = onboarding.profileId;
+      const flowId = onboarding.flowId;
+      const rawIdempotencyKey = value.idempotencyKey ?? request.headers['idempotency-key'];
+      const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
+      if (!/^[A-Za-z0-9._:+-]{8,200}$/.test(idempotencyKey)) {
+        throw new CallCommandCommercialError(
+          'idempotencyKey must contain 8 to 200 safe characters',
+          'CALLCOMMAND_NUMBER_IDEMPOTENCY_KEY_INVALID',
+          422,
+        );
+      }
+
+      // Resolve a replay before projecting billing or touching the provider.
+      // Otherwise a successful first-local request becomes an apparent second
+      // local number on retry and is incorrectly blocked by the paid-quantity
+      // gate instead of returning its original result.
+      const previous = await db.execute(sql`
+        SELECT * FROM callcommand_number_orders
+        WHERE tenant_id=${tenant(request)} AND idempotency_key=${idempotencyKey} LIMIT 1
+      `);
+      const previousOrder = previous.rows[0] as Row | undefined;
+      if (previousOrder) {
+        const replayHash = managedNumberRequestHash({
+          accountId: previousOrder.telephony_account_id,
+          phone,
+          numberType,
+          profileId,
+          flowId,
+          friendlyName: String(value.friendlyName ?? value.name ?? 'CallCommand business line'),
+        });
+        if (String(previousOrder.phone_e164 ?? '') !== phone
+          || String(previousOrder.acquisition_mode ?? '') !== 'platform_provisioned'
+          || String(previousOrder.request_hash ?? '') !== replayHash) {
+          throw new CallCommandCommercialError(
+            'The idempotency key was already used for a different number-provisioning request',
+            'CALLCOMMAND_NUMBER_IDEMPOTENCY_CONFLICT',
+            409,
+          );
+        }
+        if (previousOrder.status === 'completed' && previousOrder.channel_id) {
+          const channel = await db.execute(sql`
+            SELECT id,name,phone_e164,status,profile_id,active_flow_id,provider_number_status,
+              provisioning_status,health_status,provider_verified_at,lifecycle_state,billing_status
+            FROM callcommand_channels
+            WHERE tenant_id=${tenant(request)} AND id=${String(previousOrder.channel_id)} LIMIT 1
+          `);
+          const saved = channel.rows[0] as Row | undefined;
+          return { statusCode: 200, body: {
+            duplicate: true,
+            providerActionConfirmed: true,
+            readyForLiveCalls: false,
+            readyForActivation: saved?.lifecycle_state === 'ACTIVE',
+            lifecycleState: saved?.lifecycle_state ?? previousOrder.provisioning_state,
+            channel: saved ? { ...camel(saved), phoneMasked: maskPhone(String(saved.phone_e164)) } : null,
+            order: camel(previousOrder),
+          } };
+        }
+        if (['pending', 'searching', 'purchasing', 'configuring'].includes(String(previousOrder.status))
+          || ['REQUESTED','PROVISIONING','PROVIDER_PROVISIONED','CONFIGURING_ROUTING','CONFIGURING_BILLING','TESTING','RECONCILIATION_REQUIRED'].includes(String(previousOrder.provisioning_state))) {
+          return { statusCode: 202, body: { duplicate: true, providerActionConfirmed: false, order: camel(previousOrder) } };
+        }
+        throw new CallCommandCommercialError(
+          'This provisioning key already ended without a confirmed number; retry with a new idempotency key',
+          'CALLCOMMAND_NUMBER_ORDER_TERMINAL',
+          409,
+        );
+      }
+
+      const inventoryCounts = await db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE number_type='local')::int AS local,
+          COUNT(*) FILTER (WHERE number_type='toll_free')::int AS toll_free
+        FROM callcommand_channels
+        WHERE tenant_id=${tenant(request)} AND acquisition_mode='platform_provisioned'
+          AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL
+      `);
+      const counts = inventoryCounts.rows[0] as Row;
+      const projected = calculateManagedNumberBillingQuantities({
+        local: Number(counts?.local ?? 0) + (numberType === 'local' ? 1 : 0),
+        tollFree: Number(counts?.toll_free ?? 0) + (numberType === 'toll_free' ? 1 : 0),
+      });
+      const billingRows = await db.execute(sql`
+        SELECT * FROM callcommand_number_billing_entitlements
+        WHERE tenant_id=${tenant(request)} LIMIT 1
+      `);
+      const numberBilling = billingRows.rows[0] as Row | undefined;
+      const licensedLocal = Number(numberBilling?.licensed_billable_local_quantity ?? 0);
+      const licensedTollFree = Number(numberBilling?.licensed_billable_toll_free_quantity ?? 0);
+      const graceValid = numberBilling?.billing_status === 'grace_period'
+        && numberBilling?.grace_expires_at
+        && new Date(numberBilling.grace_expires_at).getTime() > Date.now();
+      const billingUsable = numberBilling?.billing_status === 'active' || graceValid;
+      if ((projected.billableLocal > 0 || projected.billableTollFree > 0)
+        && (!billingUsable || projected.billableLocal > licensedLocal || projected.billableTollFree > licensedTollFree)) {
+        return { statusCode: 409, body: {
+          error: 'Managed-number billing must be completed before this provider purchase',
+          code: 'CALLCOMMAND_NUMBER_BILLING_REQUIRED',
+          providerActionConfirmed: false,
+          billingActionRequired: true,
+          required: {
+            billableLocalQuantity: projected.billableLocal,
+            billableTollFreeQuantity: projected.billableTollFree,
+          },
+          licensed: {
+            billableLocalQuantity: licensedLocal,
+            billableTollFreeQuantity: licensedTollFree,
+          },
+        } };
+      }
+      const account = await ensureTelephonyAccount(request);
+      const credentials = await storedAccountCredentials(account);
+      const requestHash = managedNumberRequestHash({
+        accountId: account.id,
+        phone,
+        numberType,
+        profileId,
+        flowId,
+        friendlyName: String(value.friendlyName ?? value.name ?? 'CallCommand business line'),
+      });
+      const inserted = await db.execute(sql`
+        INSERT INTO callcommand_number_orders(
+          tenant_id,telephony_account_id,requested_by_user_id,idempotency_key,
+          acquisition_mode,country_code,area_code,requested_capabilities,
+          phone_e164,phone_masked,status,operation_type,number_type,requested_phone_e164,
+          requested_profile_id,requested_flow_id,request_hash,provisioning_state,
+          expected_billable_local_quantity,expected_billable_toll_free_quantity,started_at,last_attempt_at
+        ) VALUES (
+          ${tenant(request)},${String(account.id)},${actor(request)},${idempotencyKey},
+          'platform_provisioned',${String(value.country ?? 'US').toUpperCase().slice(0, 2)},
+          ${value.areaCode ? String(value.areaCode).slice(0, 8) : null},'["voice"]'::jsonb,
+          ${phone},${maskPhone(phone)},'pending','provision',${numberType},${phone},
+          ${profileId},${flowId},${requestHash},'REQUESTED',
+          ${projected.billableLocal},${projected.billableTollFree},NOW(),NOW()
+        ) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING *
+      `);
+      if (!inserted.rows[0]) {
+        const existing = await db.execute(sql`
+          SELECT * FROM callcommand_number_orders WHERE tenant_id=${tenant(request)} AND idempotency_key=${idempotencyKey} LIMIT 1
+        `);
+        const row = existing.rows[0] as Row | undefined;
+        if (!row) throw new CallCommandCommercialError('Number provisioning state was not found', 'CALLCOMMAND_NUMBER_ORDER_NOT_FOUND', 404);
+        if (String(row.phone_e164 ?? '') !== phone
+          || String(row.telephony_account_id ?? '') !== String(account.id)
+          || String(row.acquisition_mode ?? '') !== 'platform_provisioned'
+          || String(row.request_hash ?? '') !== requestHash) {
+          throw new CallCommandCommercialError(
+            'The idempotency key was already used for a different number-provisioning request',
+            'CALLCOMMAND_NUMBER_IDEMPOTENCY_CONFLICT',
+            409,
+          );
+        }
+        if (row.status === 'completed' && row.channel_id) {
+          const channel = await db.execute(sql`
+            SELECT id,name,phone_e164,status,profile_id,active_flow_id,provider_number_status,
+              provisioning_status,health_status,provider_verified_at
+            FROM callcommand_channels WHERE tenant_id=${tenant(request)} AND id=${String(row.channel_id)} LIMIT 1
+          `);
+          const saved = channel.rows[0] as Row | undefined;
+          return { statusCode: 200, body: {
+            duplicate: true,
+            providerActionConfirmed: true,
+            channel: saved ? { ...camel(saved), phoneMasked: maskPhone(String(saved.phone_e164)) } : null,
+            order: camel(row),
+          } };
+        }
+        if (['pending', 'searching', 'purchasing', 'configuring'].includes(String(row.status))
+          || ['REQUESTED','PROVISIONING','PROVIDER_PROVISIONED','CONFIGURING_ROUTING','CONFIGURING_BILLING','TESTING','RECONCILIATION_REQUIRED'].includes(String(row.provisioning_state))) {
+          return { statusCode: 202, body: { duplicate: true, providerActionConfirmed: false, order: camel(row) } };
+        }
+        throw new CallCommandCommercialError(
+          'This provisioning key already ended without a confirmed number; retry with a new idempotency key',
+          'CALLCOMMAND_NUMBER_ORDER_TERMINAL',
+          409,
+        );
+      }
+      orderId = String((inserted.rows[0] as Row).id);
+      await db.execute(sql`
+        UPDATE callcommand_number_orders SET status='purchasing',provisioning_state='PROVISIONING',
+          last_attempt_at=NOW(),lease_owner=${`api:${process.pid}`},lease_expires_at=NOW()+INTERVAL '5 minutes',updated_at=NOW()
+        WHERE tenant_id=${tenant(request)} AND id=${orderId}
+      `);
+
+      const webhook = webhookConfiguration();
+      let provisioned;
+      try {
+        provisioned = await numberProvider().provisionNumber({
+          credentials,
+          providerAccountId: String(account.provider_account_sid),
+          selectedPhoneNumber: phone,
+          friendlyName: cleanText(value.friendlyName ?? value.name ?? 'CallCommand business line', 'friendlyName', 64)!,
+          routing: { voiceUrl: webhook.voiceUrl, statusCallbackUrl: webhook.statusCallbackUrl },
+        });
+      } catch (error) {
+        // A timeout after Twilio accepted the purchase is ambiguous.  Inspect
+        // the exact tenant subaccount before retrying so a lost response never
+        // creates a second billable number.
+        if ((error as any)?.retryable === true) {
+          const inventory = await numberProvider().listNumbers({
+            credentials,
+            providerAccountId: String(account.provider_account_sid),
+            limit: 1_000,
+          }).catch(() => []);
+          provisioned = inventory.find(number => number.phoneNumber === phone);
+        }
+        if (!provisioned) {
+          const failureCode = safeFailureCode(error, 'CALLCOMMAND_NUMBER_PROVISION_FAILED');
+          await db.execute(sql`
+            UPDATE callcommand_number_orders SET status='failed',provisioning_state=${(error as any)?.code === 'PROVIDER_NUMBER_UNAVAILABLE' ? 'ACTION_REQUIRED' : 'PROVISION_FAILED'},
+              error_code=${failureCode},error_message_safe=${(error as any)?.code === 'PROVIDER_NUMBER_UNAVAILABLE'
+                ? 'The selected number was just claimed. Search again for fresh inventory.'
+                : 'The provider did not confirm number acquisition.'},
+              retry_count=retry_count+1,failed_at=NOW(),lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+            WHERE tenant_id=${tenant(request)} AND id=${orderId}
+          `);
+          if ((error as any)?.code === 'PROVIDER_NUMBER_UNAVAILABLE') {
+            return { statusCode: 409, body: {
+              error: 'That number was just claimed. Fresh inventory is required.',
+              code: 'CALLCOMMAND_NUMBER_INVENTORY_CHANGED',
+              providerActionConfirmed: false,
+              refreshSearch: true,
+              search: {
+                country: String(value.country ?? 'US').toUpperCase(),
+                numberType,
+                areaCode: value.areaCode ?? null,
+                locality: value.locality ?? null,
+                region: value.region ?? null,
+                postalCode: value.postalCode ?? null,
+                contains: value.contains ?? null,
+              },
+              orderId,
+            } };
+          }
+          throw providerFailure(error, 'CALLCOMMAND_NUMBER_PROVISION_FAILED');
+        }
+        await db.execute(sql`
+          UPDATE callcommand_number_orders SET provisioning_state='PROVIDER_PROVISIONED',
+            provider_number_sid=${provisioned.providerNumberId},provider_operation_reference='recovered_by_inventory',
+            phone_e164=${provisioned.phoneNumber},phone_masked=${maskPhone(provisioned.phoneNumber)},
+            reconciliation_status='reconciled',error_code=NULL,error_message_safe=NULL,updated_at=NOW()
+          WHERE tenant_id=${tenant(request)} AND id=${orderId}
+        `);
+      }
+      providerNumberId = provisioned.providerNumberId;
+
+      await db.execute(sql`
+        UPDATE callcommand_number_orders SET provisioning_state='PROVIDER_PROVISIONED',
+          provider_number_sid=${provisioned.providerNumberId},provider_operation_reference=COALESCE(provider_operation_reference,${provisioned.providerNumberId}),
+          phone_e164=${provisioned.phoneNumber},phone_masked=${maskPhone(provisioned.phoneNumber)},updated_at=NOW()
+        WHERE tenant_id=${tenant(request)} AND id=${orderId}
+      `);
+
+      let channel: Row;
+      try {
+        channel = await db.transaction(async tx => {
+          const created = await tx.execute(sql`
+            INSERT INTO callcommand_channels(
+              tenant_id,created_by_user_id,name,phone_e164,timezone,consent_script,
+              recording_enabled,status,business_hours,live_behavior,after_hours_behavior,
+              require_recording_consent,provider_status,profile_id,product_mode,
+              telephony_account_id,acquisition_mode,provider_number_sid,
+              provider_number_status,routing_mode,provisioning_status,health_status,
+              provider_verified_at,provider_config_version,active_flow_id,number_type,country_code,
+              provider_region,provider_locality,provider_capabilities,lifecycle_state,billing_status,
+              provider_config_hash,provisioned_at
+            ) VALUES (
+              ${tenant(request)},${actor(request)},${cleanText(value.friendlyName ?? value.name ?? 'CallCommand business line','friendlyName',120)},
+              ${provisioned.phoneNumber},${cleanText(value.timezone ?? 'UTC','timezone',80)},
+              'This call may be recorded and processed for service.',FALSE,'paused','{"always":true}'::jsonb,
+              'ai_receptionist','voicemail',TRUE,'active',${profileId},'general',
+              ${String(account.id)},'platform_provisioned',${provisioned.providerNumberId},'active','general',
+              'configured','unknown',NOW(),1,${flowId},${numberType},
+              ${String(value.country ?? 'US').toUpperCase().slice(0, 2)},
+              ${value.region ? String(value.region).slice(0, 80) : null},
+              ${value.locality ? String(value.locality).slice(0, 120) : null},
+              ${JSON.stringify(provisioned.capabilities)}::jsonb,'TESTING',
+              ${projected.billableLocal === 0 && projected.billableTollFree === 0 ? 'included' : 'active'},
+              ${managedNumberRequestHash({ voiceUrl: webhook.voiceUrl, statusCallbackUrl: webhook.statusCallbackUrl, voiceMethod: 'POST', statusCallbackMethod: 'POST' })},NOW()
+            ) RETURNING *
+          `);
+          const saved = created.rows[0] as Row;
+          await tx.execute(sql`
+            UPDATE callcommand_number_orders SET channel_id=${String(saved.id)},provider_number_sid=${provisioned.providerNumberId},
+              phone_e164=${provisioned.phoneNumber},phone_masked=${maskPhone(provisioned.phoneNumber)},status='configuring',
+              provisioning_state='TESTING',lease_expires_at=NOW()+INTERVAL '5 minutes',updated_at=NOW()
+            WHERE tenant_id=${tenant(request)} AND id=${orderId}
+          `);
+          return saved;
+        });
+      } catch (error) {
+        await db.execute(sql`
+          UPDATE callcommand_number_orders SET provider_number_sid=${providerNumberId},phone_e164=${phone},phone_masked=${maskPhone(phone)},
+            status='failed',provisioning_state='RECONCILIATION_REQUIRED',
+            reconciliation_status='manual_review',compensation_status='manual_review',
+            error_code='NUMBER_PERSISTENCE_RECONCILIATION_REQUIRED',
+            error_message_safe='Provider ownership was confirmed but local persistence requires reconciliation.',
+            failed_at=NOW(),lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+          WHERE tenant_id=${tenant(request)} AND id=${orderId}
+        `);
+        await db.execute(sql`
+          INSERT INTO callcommand_number_reconciliation_issues(
+            tenant_id,telephony_account_id,order_id,issue_type,resource_key,
+            expected_json,actual_json,safe_auto_repair,status
+          ) VALUES (
+            ${tenant(request)},${String(account.id)},${orderId},'provider_number_missing_local_channel',
+            ${String(providerNumberId)},${JSON.stringify({ phone, providerNumberId })}::jsonb,
+            '{"localChannel":null}'::jsonb,FALSE,'manual_review'
+          ) ON CONFLICT (tenant_id,issue_type,resource_key) WHERE status IN ('open','repairing','manual_review','failed')
+          DO UPDATE SET actual_json=EXCLUDED.actual_json,status='manual_review',updated_at=NOW()
+        `).catch(() => undefined);
+        request.log.error({ err: error, orderId, providerNumberId }, 'Provider number requires CallCommand persistence reconciliation');
+        return { statusCode: 500, body: {
+          error: 'The provider acquired the number, but local activation requires administrator reconciliation',
+          code: 'CALLCOMMAND_NUMBER_RECONCILIATION_REQUIRED',
+          providerActionConfirmed: true,
+          orderId,
+        } };
+      }
+
+      let health;
+      try {
+        health = await numberProvider().inspectNumber({
+          credentials,
+          providerAccountId: String(account.provider_account_sid),
+          providerNumberId: String(providerNumberId),
+        });
+      } catch (error) {
+        const reason = safeFailureCode(error, 'CALLCOMMAND_NUMBER_HEALTH_FAILED');
+        await db.transaction(async tx => {
+          await tx.execute(sql`
+            UPDATE callcommand_channels SET lifecycle_state='RECONCILIATION_REQUIRED',
+              health_status='unavailable',health_reason_code=${reason},health_checked_at=NOW(),updated_at=NOW()
+            WHERE tenant_id=${tenant(request)} AND id=${String(channel.id)}
+          `);
+          await tx.execute(sql`
+            UPDATE callcommand_number_orders SET provisioning_state='RECONCILIATION_REQUIRED',
+              reconciliation_status='pending',error_code=${reason},error_message_safe='Provider health could not be confirmed after acquisition.',
+              retry_count=retry_count+1,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+            WHERE tenant_id=${tenant(request)} AND id=${orderId}
+          `);
+          await tx.execute(sql`
+            INSERT INTO callcommand_number_reconciliation_issues(
+              tenant_id,telephony_account_id,channel_id,order_id,issue_type,resource_key,
+              expected_json,actual_json,safe_auto_repair,status,last_error_code
+            ) VALUES (
+              ${tenant(request)},${String(account.id)},${String(channel.id)},${orderId},'provider_health_unconfirmed',
+              ${String(providerNumberId)},'{"providerPresent":true,"routingHealthy":true}'::jsonb,
+              '{"providerHealth":"unconfirmed"}'::jsonb,TRUE,'open',${reason}
+            ) ON CONFLICT (tenant_id,issue_type,resource_key) WHERE status IN ('open','repairing','manual_review','failed')
+            DO UPDATE SET last_error_code=EXCLUDED.last_error_code,status='open',updated_at=NOW()
+          `);
+        });
+        await activity(request, 'callcommand.number.reconciliation_required', 'channel', String(channel.id), 'Provider acquired the number but post-acquisition health is unconfirmed', { providerNumberId, reason });
+        return { statusCode: 202, body: {
+          duplicate: false,
+          providerActionConfirmed: true,
+          readyForLiveCalls: false,
+          lifecycleState: 'RECONCILIATION_REQUIRED',
+          channel: { ...camel(channel), lifecycleState: 'RECONCILIATION_REQUIRED', phoneMasked: maskPhone(String(channel.phone_e164)) },
+          orderId,
+          code: 'CALLCOMMAND_NUMBER_RECONCILIATION_REQUIRED',
+        } };
+      }
+
+      const activated = health.health === 'healthy';
+      const finalState = activated ? 'ACTIVE' : 'ROUTING_FAILED';
+      const finalReason = activated ? null : health.healthReasons[0] ?? 'PROVIDER_HEALTH_DEGRADED';
+      await db.transaction(async tx => {
+        await tx.execute(sql`
+          UPDATE callcommand_channels SET status=${activated ? 'active' : 'paused'},
+            lifecycle_state=${finalState},health_status=${activated ? 'healthy' : 'degraded'},
+            health_reason_code=${finalReason},health_checked_at=NOW(),
+            provider_number_status=${activated ? 'active' : 'failed'},
+            activated_at=${activated ? new Date() : null},last_reconciled_at=NOW(),updated_at=NOW()
+          WHERE tenant_id=${tenant(request)} AND id=${String(channel.id)}
+        `);
+        await tx.execute(sql`
+          UPDATE callcommand_number_orders SET status=${activated ? 'completed' : 'failed'},
+            provisioning_state=${finalState},reconciliation_status=${activated ? 'reconciled' : 'pending'},
+            error_code=${finalReason},error_message_safe=${activated ? null : 'Provider routing health must be repaired before live calls.'},
+            completed_at=${activated ? new Date() : null},failed_at=${activated ? null : new Date()},
+            lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+          WHERE tenant_id=${tenant(request)} AND id=${orderId}
+        `);
+        await tx.execute(sql`
+          INSERT INTO callcommand_number_billing_entitlements(
+            tenant_id,active_local_numbers,active_toll_free_numbers,billing_status
+          ) VALUES (
+            ${tenant(request)},${projected.activeLocal},${projected.activeTollFree},
+            ${projected.billableLocal === 0 && projected.billableTollFree === 0 ? 'included' : String(numberBilling?.billing_status ?? 'active')}
+          ) ON CONFLICT (tenant_id) DO UPDATE SET
+            active_local_numbers=EXCLUDED.active_local_numbers,
+            active_toll_free_numbers=EXCLUDED.active_toll_free_numbers,
+            billing_status=CASE
+              WHEN callcommand_number_billing_entitlements.billing_status IN ('active','grace_period')
+                THEN callcommand_number_billing_entitlements.billing_status
+              ELSE EXCLUDED.billing_status END,
+            version=callcommand_number_billing_entitlements.version+1,updated_at=NOW()
+        `);
+        if (!activated) {
+          await tx.execute(sql`
+            INSERT INTO callcommand_number_reconciliation_issues(
+              tenant_id,telephony_account_id,channel_id,order_id,issue_type,resource_key,
+              expected_json,actual_json,safe_auto_repair,status,last_error_code
+            ) VALUES (
+              ${tenant(request)},${String(account.id)},${String(channel.id)},${orderId},'routing_drift',
+              ${String(providerNumberId)},${JSON.stringify({ voiceUrl: webhook.voiceUrl, statusCallbackUrl: webhook.statusCallbackUrl, methods: 'POST' })}::jsonb,
+              ${JSON.stringify({ routing: health.routing, reasons: health.healthReasons })}::jsonb,TRUE,'open',${finalReason}
+            ) ON CONFLICT (tenant_id,issue_type,resource_key) WHERE status IN ('open','repairing','manual_review','failed')
+            DO UPDATE SET actual_json=EXCLUDED.actual_json,last_error_code=EXCLUDED.last_error_code,status='open',updated_at=NOW()
+          `);
+        }
+      });
+      const finalChannel = await db.execute(sql`
+        SELECT * FROM callcommand_channels WHERE tenant_id=${tenant(request)} AND id=${String(channel.id)} LIMIT 1
+      `);
+      channel = finalChannel.rows[0] as Row;
+      await activity(request, activated ? 'callcommand.number.activated' : 'callcommand.number.routing_failed', 'channel', String(channel.id), activated
+        ? 'Provisioned, routed, billed, and health-validated a tenant-isolated business number'
+        : 'Provider acquired the number but routing health requires repair', {
+        provider: 'twilio', acquisitionMode: 'platform_provisioned', providerNumberId,
+        numberType, createdProfile: onboarding.createdProfile, createdFlow: onboarding.createdFlow,
+      });
+      return { statusCode: activated ? 201 : 202, body: {
+        duplicate: false,
+        providerActionConfirmed: true,
+        readyForLiveCalls: false,
+        readyForActivation: activated,
+        lifecycleState: finalState,
+        channel: { ...camel(channel), phoneMasked: maskPhone(String(channel.phone_e164)) },
+        orderId,
+        onboarding: {
+          profileId,
+          flowId,
+          createdProfile: onboarding.createdProfile,
+          createdFlow: onboarding.createdFlow,
+        },
+        provider: { status: provisioned.status, routing: provisioned.routing, capabilities: provisioned.capabilities, cost: provisioned.cost },
+      } };
+    } catch (error) {
+      if (orderId && providerNumberId === null && !(error instanceof CallCommandCommercialError && error.code === 'CALLCOMMAND_NUMBER_ORDER_TERMINAL')) {
+        await db.execute(sql`
+          UPDATE callcommand_number_orders SET status='failed',provisioning_state='PROVISION_FAILED',
+            error_code=${safeFailureCode(error, 'CALLCOMMAND_NUMBER_PROVISION_FAILED')},
+            failed_at=COALESCE(failed_at,NOW()),updated_at=NOW()
+          WHERE tenant_id=${tenant(request)} AND id=${orderId} AND status NOT IN ('completed','failed','released')
+        `).catch(() => undefined);
+      }
+      throw error;
+    }
+}
+
+async function serializeNumberPurchase<T>(request: FastifyRequest, operation: () => Promise<T>): Promise<T> {
+  return db.transaction(async tx => {
+    // Try-lock avoids consuming the whole connection pool with waiting requests.
+    const lock = await tx.execute(sql`SELECT pg_try_advisory_xact_lock(hashtextextended(${`callcommand-number-purchase:${tenant(request)}`},0)) AS acquired`);
+    if (!(lock.rows[0] as Row)?.acquired) throw new CallCommandCommercialError('Another number is being set up. Please wait a moment.', 'CALLCOMMAND_NUMBER_PURCHASE_BUSY', 409);
+    return operation();
+  });
+}
+
 export async function registerCallCommandCommercialRoutes(app: FastifyInstance) {
+  app.post(`${base}/commercial/setup/receptionist`, { preHandler: admins }, async (request, reply) => {
+    try {
+      const value = body(request);
+      const businessName = cleanText(value.businessName, 'businessName', 160)!;
+      const description = cleanText(value.businessDescription, 'businessDescription', 2000)!;
+      const greeting = cleanText(value.greeting || `Thank you for calling ${businessName}. I'm your AI receptionist. How can I help?`, 'greeting', 1000)!;
+      const prepared = await resolveProvisioningAgentAndFlow(request, value);
+      await db.execute(sql`
+        UPDATE callcommand_profiles SET business_name=${businessName},business_description=${description},
+          name=${`${businessName} receptionist`.slice(0,160)},greeting=${greeting},voice_id='marin',
+          agent_purpose='Answer business questions using the supplied information, collect the caller name and request, and create a follow-up task.',
+          script=${`You are the AI receptionist for ${businessName}. Business information: ${description}. Never invent opening hours, availability, prices or promises. If an answer is not provided, take a message. Collect the caller name and request, confirm the details and create the configured follow-up task.`},
+          updated_at=NOW()
+        WHERE tenant_id=${tenant(request)} AND id=${prepared.profileId} AND product_mode='general' AND deleted_at IS NULL
+      `);
+      await activity(request, 'callcommand.setup.receptionist_saved', 'profile', prepared.profileId, 'Prepared the business receptionist and published follow-up workflow');
+      return prepared;
+    } catch (error) { return fail(reply, error); }
+  });
+
+  app.get(`${base}/commercial/setup`, { preHandler: reads }, async request => {
+    const orders = await db.execute(sql`
+      SELECT id,phone_e164,number_type,profile_id,flow_id,channel_id,status,monthly_amount_cents,last_error_code,expires_at
+      FROM callcommand_setup_orders WHERE tenant_id=${tenant(request)} AND status<>'canceled'
+      ORDER BY created_at DESC,id DESC LIMIT 1
+    `);
+    const order = orders.rows[0] as Row | undefined;
+    return { order: order ? { ...camel(order), phone: order.phone_e164 } : null };
+  });
+
+  app.post(`${base}/commercial/setup/orders`, { preHandler: admins }, async (request, reply) => {
+    try {
+      const result = await serializeNumberPurchase(request, async () => {
+        const value = body(request);
+        if (value.confirmMonthlyCharge !== true) throw new CallCommandCommercialError('Review and accept the monthly number price.', 'CALLCOMMAND_SETUP_PRICE_CONFIRMATION_REQUIRED', 409);
+        const phone = normalizeE164(value.phone, 'phone');
+        // This self-service offer covers US inventory only; international regulatory onboarding is separate.
+        if (!/^\+1\d{10}$/.test(phone)) throw new CallCommandCommercialError('Choose a US number from the search results.', 'CALLCOMMAND_SETUP_NUMBER_UNSUPPORTED', 422);
+        const numberType = classifyManagedNumberType(phone);
+        const key = String(value.idempotencyKey ?? '');
+        if (!/^[A-Za-z0-9._:+-]{8,160}$/.test(key)) throw new CallCommandCommercialError('The setup request key is invalid.', 'CALLCOMMAND_SETUP_KEY_INVALID', 422);
+        const old = (await db.execute(sql`SELECT * FROM callcommand_setup_orders WHERE tenant_id=${tenant(request)} AND idempotency_key=${key}`)).rows[0] as Row | undefined;
+        if (old) {
+          if (old.phone_e164 !== phone || old.profile_id !== value.profileId || old.flow_id !== value.flowId || Number(old.monthly_amount_cents) !== value.monthlyAmountCents) {
+            throw new CallCommandCommercialError('This request was already used for a different selection.', 'CALLCOMMAND_SETUP_KEY_CONFLICT', 409);
+          }
+          return { orderId: old.id };
+        }
+        const pending = await db.execute(sql`SELECT id FROM callcommand_setup_orders WHERE tenant_id=${tenant(request)} AND status NOT IN ('ready','canceled') LIMIT 1`);
+        if (pending.rows.length) throw new CallCommandCommercialError('Finish or cancel the current number setup first.', 'CALLCOMMAND_SETUP_IN_PROGRESS', 409);
+        const counts = (await db.execute(sql`SELECT COUNT(*) FILTER (WHERE number_type='local')::int AS local FROM callcommand_channels
+          WHERE tenant_id=${tenant(request)} AND acquisition_mode='platform_provisioned' AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL`)).rows[0] as Row;
+        const catalog = getCallCommandNumberCatalog();
+        const amount = numberType === 'toll_free' ? catalog.tollFree.unitAmountCents : Number(counts.local) < catalog.includedLocalNumbers ? 0 : catalog.local.unitAmountCents;
+        if (value.monthlyAmountCents !== amount) throw new CallCommandCommercialError('The price changed. Refresh and review it before continuing.', 'CALLCOMMAND_SETUP_PRICE_CHANGED', 409);
+        if (!inspectCallCommandRealtimeReadiness().ready) throw new CallCommandCommercialError('OperatorOS is finishing the voice service connection. Your receptionist is saved; please contact support before buying a number.', 'CALLCOMMAND_REALTIME_NOT_CONFIGURED', 409);
+        const assignment = await resolveProvisioningAgentAndFlow(request, value);
+        const inserted = (await db.execute(sql`INSERT INTO callcommand_setup_orders(tenant_id,created_by_user_id,profile_id,flow_id,phone_e164,number_type,idempotency_key,monthly_amount_cents)
+          VALUES (${tenant(request)},${actor(request)},${assignment.profileId},${assignment.flowId},${phone},${numberType},${key},${amount}) RETURNING id`)).rows[0] as Row;
+        await activity(request, 'callcommand.setup.number_selected', 'setup_order', String(inserted.id), 'Saved the chosen business number and accepted OperatorOS monthly price', { monthlyAmountCents: amount, numberType });
+        return { orderId: inserted.id };
+      });
+      return reply.code(201).send(result);
+    } catch (error) { return fail(reply, error); }
+  });
+
+  app.post(`${base}/commercial/setup/orders/:id/continue`, { preHandler: admins }, async (request, reply) => {
+    try {
+      return await serializeNumberPurchase(request, async () => {
+        const orderId = id(request);
+        const order = (await db.execute(sql`SELECT * FROM callcommand_setup_orders WHERE tenant_id=${tenant(request)} AND id=${orderId}`)).rows[0] as Row | undefined;
+        if (!order) throw new CallCommandCommercialError('Setup was not found.', 'CALLCOMMAND_SETUP_NOT_FOUND', 404);
+        if (order.status === 'canceled') throw new CallCommandCommercialError('This setup was canceled.', 'CALLCOMMAND_SETUP_CANCELED', 409);
+        if (order.channel_id) return { state: order.status, channelId: order.channel_id };
+        const providerOrder = (await db.execute(sql`SELECT id FROM callcommand_number_orders WHERE tenant_id=${tenant(request)} AND idempotency_key=${`setup:${orderId}`} LIMIT 1`)).rows[0];
+        if (!providerOrder && new Date(order.expires_at).getTime() <= Date.now()) throw new CallCommandCommercialError('This selection expired. Choose a number again; any paid number capacity stays on your account.', 'CALLCOMMAND_SETUP_EXPIRED', 409);
+        if (!providerOrder) {
+          const inventory = (await db.execute(sql`SELECT COUNT(*)::int AS local FROM callcommand_channels WHERE tenant_id=${tenant(request)}
+            AND acquisition_mode='platform_provisioned' AND number_type='local' AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL`)).rows[0] as Row;
+          const catalog = getCallCommandNumberCatalog();
+          const currentAmount = order.number_type === 'toll_free' ? catalog.tollFree.unitAmountCents : Number(inventory.local) < 1 ? 0 : catalog.local.unitAmountCents;
+          if (currentAmount !== Number(order.monthly_amount_cents)) throw new CallCommandCommercialError('The number price has changed since you selected it. Choose the number again to review the updated price.', 'CALLCOMMAND_SETUP_PRICE_CHANGED', 409);
+        }
+        if (!inspectCallCommandRealtimeReadiness().ready) throw new CallCommandCommercialError('The voice service needs OperatorOS support. Your selection is saved.', 'CALLCOMMAND_REALTIME_NOT_CONFIGURED', 409);
+        const provision = await provisionManagedNumber(request, {
+          phone: order.phone_e164, numberType: order.number_type, country: 'US',
+          profileId: order.profile_id, flowId: order.flow_id, idempotencyKey: `setup:${orderId}`, confirmRecurringProviderCharge: true,
+        });
+        if (provision.body.code === 'CALLCOMMAND_NUMBER_BILLING_REQUIRED') {
+          let billing = order.billing_response as Row;
+          if (!billing?.action) {
+            billing = await requestCallCommandNumberBilling({ tenantId: tenant(request), userId: actor(request),
+              billableLocalQuantity: provision.body.required.billableLocalQuantity,
+              billableTollFreeQuantity: provision.body.required.billableTollFreeQuantity,
+              idempotencyKey: `setup-billing:${orderId}` });
+            await activity(request, 'callcommand.setup.billing_requested', 'setup_order', orderId, 'Requested the approved number subscription through OperatorOS billing');
+          }
+          await db.execute(sql`UPDATE callcommand_setup_orders SET status='awaiting_payment',billing_response=${JSON.stringify(billing)}::jsonb,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${orderId}`);
+          return { state: 'awaiting_payment', checkoutUrl: billing.checkoutUrl ?? null };
+        }
+        const channelId = provision.body.channel?.id ?? null;
+        const state = channelId && provision.body.readyForActivation === true ? 'ready' : channelId ? 'attention' : 'provisioning';
+        await db.execute(sql`UPDATE callcommand_setup_orders SET channel_id=${channelId},status=${state},last_error_code=${provision.body.code ?? null},updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${orderId}`);
+        return { state, channelId, code: provision.body.code ?? null };
+      });
+    } catch (error) {
+      const code = safeFailureCode(error, 'CALLCOMMAND_SETUP_FAILED');
+      if (UUID.test(String(params(request).id))) await db.execute(sql`UPDATE callcommand_setup_orders SET last_error_code=${code},updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${String(params(request).id)}`).catch(() => undefined);
+      return fail(reply, error);
+    }
+  });
+
+  app.post(`${base}/commercial/setup/orders/:id/cancel`, { preHandler: admins }, async (request, reply) => {
+    try {
+      await serializeNumberPurchase(request, async () => {
+        const orderId = id(request);
+        const acquired = await db.execute(sql`SELECT id FROM callcommand_number_orders WHERE tenant_id=${tenant(request)} AND idempotency_key=${`setup:${orderId}`}
+          AND (provider_number_sid IS NOT NULL OR status NOT IN ('failed','canceled')) LIMIT 1`);
+        if (acquired.rows.length) throw new CallCommandCommercialError('This number has reached provisioning. Check its status before changing it.', 'CALLCOMMAND_SETUP_PROVIDER_REVIEW_REQUIRED', 409);
+        const canceled = await db.execute(sql`UPDATE callcommand_setup_orders SET status='canceled',updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${orderId} AND channel_id IS NULL RETURNING id`);
+        if (!canceled.rows.length) throw new CallCommandCommercialError('This setup cannot be canceled here.', 'CALLCOMMAND_SETUP_NOT_FOUND', 404);
+        await activity(request, 'callcommand.setup.canceled', 'setup_order', orderId, 'Canceled a number selection; existing paid number capacity is retained');
+      });
+      return { canceled: true };
+    } catch (error) { return fail(reply, error); }
+  });
+
   app.get(`${base}/commercial/workspace`, { preHandler: reads }, async (request, reply) => {
     try {
       const tenantId = tenant(request);
@@ -497,6 +1105,8 @@ export async function registerCallCommandCommercialRoutes(app: FastifyInstance) 
             c.lifecycle_state,c.billing_status,c.billing_grace_expires_at,c.provisioned_at,c.activated_at,
             c.release_scheduled_at,c.released_at,c.last_reconciled_at,
             c.created_at,c.updated_at,p.name AS assigned_agent_name,f.name AS workflow_name,
+            (p.status='active' AND p.product_mode='general' AND p.deleted_at IS NULL) AS profile_ready,
+            (f.status='active' AND f.product_mode='general' AND f.deleted_at IS NULL) AS workflow_ready,
             (a.id IS NOT NULL AND a.status='active' AND a.health_status='healthy'
               AND secret.id IS NOT NULL AND secret.revoked_at IS NULL) AS provider_ready
           FROM callcommand_channels c
@@ -620,8 +1230,11 @@ export async function registerCallCommandCommercialRoutes(app: FastifyInstance) 
             : 'A deployment administrator must configure the OpenAI project, signed webhook, SIP route secret, and allowlisted model.',
         },
       ];
-      const configurationReady = providerReady && numberVerified && routingVerified && profileAssigned
-        && workflowAssigned && numberBillingReady && realtimeReadiness.ready;
+      const configurationReady = realtimeReadiness.ready && rawNumbers.some(row =>
+        row.lifecycle_state === 'ACTIVE' && row.provider_ready === true && row.profile_ready === true && row.workflow_ready === true
+        && row.provider_number_status === 'active' && !!row.provider_verified_at && row.health_status === 'healthy' && !!row.health_checked_at
+        && (['included','active'].includes(String(row.billing_status))
+          || (row.billing_status === 'grace_period' && row.billing_grace_expires_at && new Date(row.billing_grace_expires_at).getTime() > Date.now())));
       const tenantContext = (request as any).tenantContext as Row;
       const moduleAccessLevel = String((request as any).tenantModuleAccessLevel ?? 'none');
       const canWrite = (tenantContext?.viaPlatformRole === true
@@ -638,6 +1251,7 @@ export async function registerCallCommandCommercialRoutes(app: FastifyInstance) 
           const connectionType = String(row.connection_type ?? '');
           return {
             ...camel(row),
+            dialNumber: String(row.phone_e164),
             phoneMasked: maskPhone(String(row.phone_e164)),
             connectionPlan: row.acquisition_mode === 'byon' && CONNECTION_INSTRUCTIONS[connectionType]
               ? { type: connectionType, status: 'provider_action_required', instructions: CONNECTION_INSTRUCTIONS[connectionType] }
@@ -787,475 +1401,10 @@ export async function registerCallCommandCommercialRoutes(app: FastifyInstance) 
   });
 
   app.post(`${base}/commercial/numbers/provision`, { preHandler: admins }, async (request, reply) => {
-    let orderId: string | null = null;
-    let providerNumberId: string | null = null;
     try {
-      const value = body(request);
-      if (value.confirmRecurringProviderCharge !== true) {
-        throw new CallCommandCommercialError(
-          'Explicit confirmation of the recurring telephony provider charge is required',
-          'CALLCOMMAND_NUMBER_RECURRING_CHARGE_NOT_CONFIRMED',
-          409,
-        );
-      }
-      const phone = normalizeE164(value.phone ?? value.phoneE164, 'phone');
-      const inferredNumberType = classifyManagedNumberType(phone);
-      const numberType = value.numberType === undefined ? inferredNumberType : String(value.numberType);
-      if ((numberType !== 'local' && numberType !== 'toll_free') || numberType !== inferredNumberType) {
-        throw new CallCommandCommercialError(
-          'The selected number does not match the requested local or toll-free type',
-          'CALLCOMMAND_NUMBER_TYPE_MISMATCH',
-          422,
-        );
-      }
-      const onboarding = await resolveProvisioningAgentAndFlow(request, value);
-      const profileId = onboarding.profileId;
-      const flowId = onboarding.flowId;
-      const rawIdempotencyKey = value.idempotencyKey ?? request.headers['idempotency-key'];
-      const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
-      if (!/^[A-Za-z0-9._:+-]{8,200}$/.test(idempotencyKey)) {
-        throw new CallCommandCommercialError(
-          'idempotencyKey must contain 8 to 200 safe characters',
-          'CALLCOMMAND_NUMBER_IDEMPOTENCY_KEY_INVALID',
-          422,
-        );
-      }
-
-      // Resolve a replay before projecting billing or touching the provider.
-      // Otherwise a successful first-local request becomes an apparent second
-      // local number on retry and is incorrectly blocked by the paid-quantity
-      // gate instead of returning its original result.
-      const previous = await db.execute(sql`
-        SELECT * FROM callcommand_number_orders
-        WHERE tenant_id=${tenant(request)} AND idempotency_key=${idempotencyKey} LIMIT 1
-      `);
-      const previousOrder = previous.rows[0] as Row | undefined;
-      if (previousOrder) {
-        const replayHash = managedNumberRequestHash({
-          accountId: previousOrder.telephony_account_id,
-          phone,
-          numberType,
-          profileId,
-          flowId,
-          friendlyName: String(value.friendlyName ?? value.name ?? 'CallCommand business line'),
-        });
-        if (String(previousOrder.phone_e164 ?? '') !== phone
-          || String(previousOrder.acquisition_mode ?? '') !== 'platform_provisioned'
-          || String(previousOrder.request_hash ?? '') !== replayHash) {
-          throw new CallCommandCommercialError(
-            'The idempotency key was already used for a different number-provisioning request',
-            'CALLCOMMAND_NUMBER_IDEMPOTENCY_CONFLICT',
-            409,
-          );
-        }
-        if (previousOrder.status === 'completed' && previousOrder.channel_id) {
-          const channel = await db.execute(sql`
-            SELECT id,name,phone_e164,status,profile_id,active_flow_id,provider_number_status,
-              provisioning_status,health_status,provider_verified_at,lifecycle_state,billing_status
-            FROM callcommand_channels
-            WHERE tenant_id=${tenant(request)} AND id=${String(previousOrder.channel_id)} LIMIT 1
-          `);
-          const saved = channel.rows[0] as Row | undefined;
-          return reply.code(200).send({
-            duplicate: true,
-            providerActionConfirmed: true,
-            readyForLiveCalls: saved?.lifecycle_state === 'ACTIVE',
-            lifecycleState: saved?.lifecycle_state ?? previousOrder.provisioning_state,
-            channel: saved ? { ...camel(saved), phoneMasked: maskPhone(String(saved.phone_e164)) } : null,
-            order: camel(previousOrder),
-          });
-        }
-        if (['pending', 'searching', 'purchasing', 'configuring'].includes(String(previousOrder.status))
-          || ['REQUESTED','PROVISIONING','PROVIDER_PROVISIONED','CONFIGURING_ROUTING','CONFIGURING_BILLING','TESTING','RECONCILIATION_REQUIRED'].includes(String(previousOrder.provisioning_state))) {
-          return reply.code(202).send({ duplicate: true, providerActionConfirmed: false, order: camel(previousOrder) });
-        }
-        throw new CallCommandCommercialError(
-          'This provisioning key already ended without a confirmed number; retry with a new idempotency key',
-          'CALLCOMMAND_NUMBER_ORDER_TERMINAL',
-          409,
-        );
-      }
-
-      const inventoryCounts = await db.execute(sql`
-        SELECT
-          COUNT(*) FILTER (WHERE number_type='local')::int AS local,
-          COUNT(*) FILTER (WHERE number_type='toll_free')::int AS toll_free
-        FROM callcommand_channels
-        WHERE tenant_id=${tenant(request)} AND acquisition_mode='platform_provisioned'
-          AND lifecycle_state<>'RELEASED' AND deleted_at IS NULL
-      `);
-      const counts = inventoryCounts.rows[0] as Row;
-      const projected = calculateManagedNumberBillingQuantities({
-        local: Number(counts?.local ?? 0) + (numberType === 'local' ? 1 : 0),
-        tollFree: Number(counts?.toll_free ?? 0) + (numberType === 'toll_free' ? 1 : 0),
-      });
-      const billingRows = await db.execute(sql`
-        SELECT * FROM callcommand_number_billing_entitlements
-        WHERE tenant_id=${tenant(request)} LIMIT 1
-      `);
-      const numberBilling = billingRows.rows[0] as Row | undefined;
-      const licensedLocal = Number(numberBilling?.licensed_billable_local_quantity ?? 0);
-      const licensedTollFree = Number(numberBilling?.licensed_billable_toll_free_quantity ?? 0);
-      const graceValid = numberBilling?.billing_status === 'grace_period'
-        && numberBilling?.grace_expires_at
-        && new Date(numberBilling.grace_expires_at).getTime() > Date.now();
-      const billingUsable = numberBilling?.billing_status === 'active' || graceValid;
-      if ((projected.billableLocal > 0 || projected.billableTollFree > 0)
-        && (!billingUsable || projected.billableLocal > licensedLocal || projected.billableTollFree > licensedTollFree)) {
-        return reply.code(409).send({
-          error: 'Managed-number billing must be completed before this provider purchase',
-          code: 'CALLCOMMAND_NUMBER_BILLING_REQUIRED',
-          providerActionConfirmed: false,
-          billingActionRequired: true,
-          required: {
-            billableLocalQuantity: projected.billableLocal,
-            billableTollFreeQuantity: projected.billableTollFree,
-          },
-          licensed: {
-            billableLocalQuantity: licensedLocal,
-            billableTollFreeQuantity: licensedTollFree,
-          },
-        });
-      }
-      const account = await ensureTelephonyAccount(request);
-      const credentials = await storedAccountCredentials(account);
-      const requestHash = managedNumberRequestHash({
-        accountId: account.id,
-        phone,
-        numberType,
-        profileId,
-        flowId,
-        friendlyName: String(value.friendlyName ?? value.name ?? 'CallCommand business line'),
-      });
-      const inserted = await db.execute(sql`
-        INSERT INTO callcommand_number_orders(
-          tenant_id,telephony_account_id,requested_by_user_id,idempotency_key,
-          acquisition_mode,country_code,area_code,requested_capabilities,
-          phone_e164,phone_masked,status,operation_type,number_type,requested_phone_e164,
-          requested_profile_id,requested_flow_id,request_hash,provisioning_state,
-          expected_billable_local_quantity,expected_billable_toll_free_quantity,started_at,last_attempt_at
-        ) VALUES (
-          ${tenant(request)},${String(account.id)},${actor(request)},${idempotencyKey},
-          'platform_provisioned',${String(value.country ?? 'US').toUpperCase().slice(0, 2)},
-          ${value.areaCode ? String(value.areaCode).slice(0, 8) : null},'["voice"]'::jsonb,
-          ${phone},${maskPhone(phone)},'pending','provision',${numberType},${phone},
-          ${profileId},${flowId},${requestHash},'REQUESTED',
-          ${projected.billableLocal},${projected.billableTollFree},NOW(),NOW()
-        ) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING *
-      `);
-      if (!inserted.rows[0]) {
-        const existing = await db.execute(sql`
-          SELECT * FROM callcommand_number_orders WHERE tenant_id=${tenant(request)} AND idempotency_key=${idempotencyKey} LIMIT 1
-        `);
-        const row = existing.rows[0] as Row | undefined;
-        if (!row) throw new CallCommandCommercialError('Number provisioning state was not found', 'CALLCOMMAND_NUMBER_ORDER_NOT_FOUND', 404);
-        if (String(row.phone_e164 ?? '') !== phone
-          || String(row.telephony_account_id ?? '') !== String(account.id)
-          || String(row.acquisition_mode ?? '') !== 'platform_provisioned'
-          || String(row.request_hash ?? '') !== requestHash) {
-          throw new CallCommandCommercialError(
-            'The idempotency key was already used for a different number-provisioning request',
-            'CALLCOMMAND_NUMBER_IDEMPOTENCY_CONFLICT',
-            409,
-          );
-        }
-        if (row.status === 'completed' && row.channel_id) {
-          const channel = await db.execute(sql`
-            SELECT id,name,phone_e164,status,profile_id,active_flow_id,provider_number_status,
-              provisioning_status,health_status,provider_verified_at
-            FROM callcommand_channels WHERE tenant_id=${tenant(request)} AND id=${String(row.channel_id)} LIMIT 1
-          `);
-          const saved = channel.rows[0] as Row | undefined;
-          return reply.code(200).send({
-            duplicate: true,
-            providerActionConfirmed: true,
-            channel: saved ? { ...camel(saved), phoneMasked: maskPhone(String(saved.phone_e164)) } : null,
-            order: camel(row),
-          });
-        }
-        if (['pending', 'searching', 'purchasing', 'configuring'].includes(String(row.status))
-          || ['REQUESTED','PROVISIONING','PROVIDER_PROVISIONED','CONFIGURING_ROUTING','CONFIGURING_BILLING','TESTING','RECONCILIATION_REQUIRED'].includes(String(row.provisioning_state))) {
-          return reply.code(202).send({ duplicate: true, providerActionConfirmed: false, order: camel(row) });
-        }
-        throw new CallCommandCommercialError(
-          'This provisioning key already ended without a confirmed number; retry with a new idempotency key',
-          'CALLCOMMAND_NUMBER_ORDER_TERMINAL',
-          409,
-        );
-      }
-      orderId = String((inserted.rows[0] as Row).id);
-      await db.execute(sql`
-        UPDATE callcommand_number_orders SET status='purchasing',provisioning_state='PROVISIONING',
-          last_attempt_at=NOW(),lease_owner=${`api:${process.pid}`},lease_expires_at=NOW()+INTERVAL '5 minutes',updated_at=NOW()
-        WHERE tenant_id=${tenant(request)} AND id=${orderId}
-      `);
-
-      const webhook = webhookConfiguration();
-      let provisioned;
-      try {
-        provisioned = await numberProvider().provisionNumber({
-          credentials,
-          providerAccountId: String(account.provider_account_sid),
-          selectedPhoneNumber: phone,
-          friendlyName: cleanText(value.friendlyName ?? value.name ?? 'CallCommand business line', 'friendlyName', 64)!,
-          routing: { voiceUrl: webhook.voiceUrl, statusCallbackUrl: webhook.statusCallbackUrl },
-        });
-      } catch (error) {
-        // A timeout after Twilio accepted the purchase is ambiguous.  Inspect
-        // the exact tenant subaccount before retrying so a lost response never
-        // creates a second billable number.
-        if ((error as any)?.retryable === true) {
-          const inventory = await numberProvider().listNumbers({
-            credentials,
-            providerAccountId: String(account.provider_account_sid),
-            limit: 1_000,
-          }).catch(() => []);
-          provisioned = inventory.find(number => number.phoneNumber === phone);
-        }
-        if (!provisioned) {
-          const failureCode = safeFailureCode(error, 'CALLCOMMAND_NUMBER_PROVISION_FAILED');
-          await db.execute(sql`
-            UPDATE callcommand_number_orders SET status='failed',provisioning_state=${(error as any)?.code === 'PROVIDER_NUMBER_UNAVAILABLE' ? 'ACTION_REQUIRED' : 'PROVISION_FAILED'},
-              error_code=${failureCode},error_message_safe=${(error as any)?.code === 'PROVIDER_NUMBER_UNAVAILABLE'
-                ? 'The selected number was just claimed. Search again for fresh inventory.'
-                : 'The provider did not confirm number acquisition.'},
-              retry_count=retry_count+1,failed_at=NOW(),lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-            WHERE tenant_id=${tenant(request)} AND id=${orderId}
-          `);
-          if ((error as any)?.code === 'PROVIDER_NUMBER_UNAVAILABLE') {
-            return reply.code(409).send({
-              error: 'That number was just claimed. Fresh inventory is required.',
-              code: 'CALLCOMMAND_NUMBER_INVENTORY_CHANGED',
-              providerActionConfirmed: false,
-              refreshSearch: true,
-              search: {
-                country: String(value.country ?? 'US').toUpperCase(),
-                numberType,
-                areaCode: value.areaCode ?? null,
-                locality: value.locality ?? null,
-                region: value.region ?? null,
-                postalCode: value.postalCode ?? null,
-                contains: value.contains ?? null,
-              },
-              orderId,
-            });
-          }
-          throw providerFailure(error, 'CALLCOMMAND_NUMBER_PROVISION_FAILED');
-        }
-        await db.execute(sql`
-          UPDATE callcommand_number_orders SET provisioning_state='PROVIDER_PROVISIONED',
-            provider_number_sid=${provisioned.providerNumberId},provider_operation_reference='recovered_by_inventory',
-            phone_e164=${provisioned.phoneNumber},phone_masked=${maskPhone(provisioned.phoneNumber)},
-            reconciliation_status='reconciled',error_code=NULL,error_message_safe=NULL,updated_at=NOW()
-          WHERE tenant_id=${tenant(request)} AND id=${orderId}
-        `);
-      }
-      providerNumberId = provisioned.providerNumberId;
-
-      await db.execute(sql`
-        UPDATE callcommand_number_orders SET provisioning_state='PROVIDER_PROVISIONED',
-          provider_number_sid=${provisioned.providerNumberId},provider_operation_reference=COALESCE(provider_operation_reference,${provisioned.providerNumberId}),
-          phone_e164=${provisioned.phoneNumber},phone_masked=${maskPhone(provisioned.phoneNumber)},updated_at=NOW()
-        WHERE tenant_id=${tenant(request)} AND id=${orderId}
-      `);
-
-      let channel: Row;
-      try {
-        channel = await db.transaction(async tx => {
-          const created = await tx.execute(sql`
-            INSERT INTO callcommand_channels(
-              tenant_id,created_by_user_id,name,phone_e164,timezone,consent_script,
-              recording_enabled,status,business_hours,live_behavior,after_hours_behavior,
-              require_recording_consent,provider_status,profile_id,product_mode,
-              telephony_account_id,acquisition_mode,provider_number_sid,
-              provider_number_status,routing_mode,provisioning_status,health_status,
-              provider_verified_at,provider_config_version,active_flow_id,number_type,country_code,
-              provider_region,provider_locality,provider_capabilities,lifecycle_state,billing_status,
-              provider_config_hash,provisioned_at
-            ) VALUES (
-              ${tenant(request)},${actor(request)},${cleanText(value.friendlyName ?? value.name ?? 'CallCommand business line','friendlyName',120)},
-              ${provisioned.phoneNumber},${cleanText(value.timezone ?? 'UTC','timezone',80)},
-              'This call may be recorded and processed for service.',FALSE,'paused','{"always":true}'::jsonb,
-              'ai_receptionist','voicemail',TRUE,'active',${profileId},'general',
-              ${String(account.id)},'platform_provisioned',${provisioned.providerNumberId},'active','general',
-              'configured','unknown',NOW(),1,${flowId},${numberType},
-              ${String(value.country ?? 'US').toUpperCase().slice(0, 2)},
-              ${value.region ? String(value.region).slice(0, 80) : null},
-              ${value.locality ? String(value.locality).slice(0, 120) : null},
-              ${JSON.stringify(provisioned.capabilities)}::jsonb,'TESTING',
-              ${projected.billableLocal === 0 && projected.billableTollFree === 0 ? 'included' : 'active'},
-              ${managedNumberRequestHash({ voiceUrl: webhook.voiceUrl, statusCallbackUrl: webhook.statusCallbackUrl, voiceMethod: 'POST', statusCallbackMethod: 'POST' })},NOW()
-            ) RETURNING *
-          `);
-          const saved = created.rows[0] as Row;
-          await tx.execute(sql`
-            UPDATE callcommand_number_orders SET channel_id=${String(saved.id)},provider_number_sid=${provisioned.providerNumberId},
-              phone_e164=${provisioned.phoneNumber},phone_masked=${maskPhone(provisioned.phoneNumber)},status='configuring',
-              provisioning_state='TESTING',lease_expires_at=NOW()+INTERVAL '5 minutes',updated_at=NOW()
-            WHERE tenant_id=${tenant(request)} AND id=${orderId}
-          `);
-          return saved;
-        });
-      } catch (error) {
-        await db.execute(sql`
-          UPDATE callcommand_number_orders SET provider_number_sid=${providerNumberId},phone_e164=${phone},phone_masked=${maskPhone(phone)},
-            status='failed',provisioning_state='RECONCILIATION_REQUIRED',
-            reconciliation_status='manual_review',compensation_status='manual_review',
-            error_code='NUMBER_PERSISTENCE_RECONCILIATION_REQUIRED',
-            error_message_safe='Provider ownership was confirmed but local persistence requires reconciliation.',
-            failed_at=NOW(),lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-          WHERE tenant_id=${tenant(request)} AND id=${orderId}
-        `);
-        await db.execute(sql`
-          INSERT INTO callcommand_number_reconciliation_issues(
-            tenant_id,telephony_account_id,order_id,issue_type,resource_key,
-            expected_json,actual_json,safe_auto_repair,status
-          ) VALUES (
-            ${tenant(request)},${String(account.id)},${orderId},'provider_number_missing_local_channel',
-            ${String(providerNumberId)},${JSON.stringify({ phone, providerNumberId })}::jsonb,
-            '{"localChannel":null}'::jsonb,FALSE,'manual_review'
-          ) ON CONFLICT (tenant_id,issue_type,resource_key) WHERE status IN ('open','repairing','manual_review','failed')
-          DO UPDATE SET actual_json=EXCLUDED.actual_json,status='manual_review',updated_at=NOW()
-        `).catch(() => undefined);
-        request.log.error({ err: error, orderId, providerNumberId }, 'Provider number requires CallCommand persistence reconciliation');
-        return reply.code(500).send({
-          error: 'The provider acquired the number, but local activation requires administrator reconciliation',
-          code: 'CALLCOMMAND_NUMBER_RECONCILIATION_REQUIRED',
-          providerActionConfirmed: true,
-          orderId,
-        });
-      }
-
-      let health;
-      try {
-        health = await numberProvider().inspectNumber({
-          credentials,
-          providerAccountId: String(account.provider_account_sid),
-          providerNumberId: String(providerNumberId),
-        });
-      } catch (error) {
-        const reason = safeFailureCode(error, 'CALLCOMMAND_NUMBER_HEALTH_FAILED');
-        await db.transaction(async tx => {
-          await tx.execute(sql`
-            UPDATE callcommand_channels SET lifecycle_state='RECONCILIATION_REQUIRED',
-              health_status='unavailable',health_reason_code=${reason},health_checked_at=NOW(),updated_at=NOW()
-            WHERE tenant_id=${tenant(request)} AND id=${String(channel.id)}
-          `);
-          await tx.execute(sql`
-            UPDATE callcommand_number_orders SET provisioning_state='RECONCILIATION_REQUIRED',
-              reconciliation_status='pending',error_code=${reason},error_message_safe='Provider health could not be confirmed after acquisition.',
-              retry_count=retry_count+1,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-            WHERE tenant_id=${tenant(request)} AND id=${orderId}
-          `);
-          await tx.execute(sql`
-            INSERT INTO callcommand_number_reconciliation_issues(
-              tenant_id,telephony_account_id,channel_id,order_id,issue_type,resource_key,
-              expected_json,actual_json,safe_auto_repair,status,last_error_code
-            ) VALUES (
-              ${tenant(request)},${String(account.id)},${String(channel.id)},${orderId},'provider_health_unconfirmed',
-              ${String(providerNumberId)},'{"providerPresent":true,"routingHealthy":true}'::jsonb,
-              '{"providerHealth":"unconfirmed"}'::jsonb,TRUE,'open',${reason}
-            ) ON CONFLICT (tenant_id,issue_type,resource_key) WHERE status IN ('open','repairing','manual_review','failed')
-            DO UPDATE SET last_error_code=EXCLUDED.last_error_code,status='open',updated_at=NOW()
-          `);
-        });
-        await activity(request, 'callcommand.number.reconciliation_required', 'channel', String(channel.id), 'Provider acquired the number but post-acquisition health is unconfirmed', { providerNumberId, reason });
-        return reply.code(202).send({
-          duplicate: false,
-          providerActionConfirmed: true,
-          readyForLiveCalls: false,
-          lifecycleState: 'RECONCILIATION_REQUIRED',
-          channel: { ...camel(channel), lifecycleState: 'RECONCILIATION_REQUIRED', phoneMasked: maskPhone(String(channel.phone_e164)) },
-          orderId,
-          code: 'CALLCOMMAND_NUMBER_RECONCILIATION_REQUIRED',
-        });
-      }
-
-      const activated = health.health === 'healthy';
-      const finalState = activated ? 'ACTIVE' : 'ROUTING_FAILED';
-      const finalReason = activated ? null : health.healthReasons[0] ?? 'PROVIDER_HEALTH_DEGRADED';
-      await db.transaction(async tx => {
-        await tx.execute(sql`
-          UPDATE callcommand_channels SET status=${activated ? 'active' : 'paused'},
-            lifecycle_state=${finalState},health_status=${activated ? 'healthy' : 'degraded'},
-            health_reason_code=${finalReason},health_checked_at=NOW(),
-            provider_number_status=${activated ? 'active' : 'failed'},
-            activated_at=${activated ? new Date() : null},last_reconciled_at=NOW(),updated_at=NOW()
-          WHERE tenant_id=${tenant(request)} AND id=${String(channel.id)}
-        `);
-        await tx.execute(sql`
-          UPDATE callcommand_number_orders SET status=${activated ? 'completed' : 'failed'},
-            provisioning_state=${finalState},reconciliation_status=${activated ? 'reconciled' : 'pending'},
-            error_code=${finalReason},error_message_safe=${activated ? null : 'Provider routing health must be repaired before live calls.'},
-            completed_at=${activated ? new Date() : null},failed_at=${activated ? null : new Date()},
-            lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-          WHERE tenant_id=${tenant(request)} AND id=${orderId}
-        `);
-        await tx.execute(sql`
-          INSERT INTO callcommand_number_billing_entitlements(
-            tenant_id,active_local_numbers,active_toll_free_numbers,billing_status
-          ) VALUES (
-            ${tenant(request)},${projected.activeLocal},${projected.activeTollFree},
-            ${projected.billableLocal === 0 && projected.billableTollFree === 0 ? 'included' : String(numberBilling?.billing_status ?? 'active')}
-          ) ON CONFLICT (tenant_id) DO UPDATE SET
-            active_local_numbers=EXCLUDED.active_local_numbers,
-            active_toll_free_numbers=EXCLUDED.active_toll_free_numbers,
-            billing_status=CASE
-              WHEN callcommand_number_billing_entitlements.billing_status IN ('active','grace_period')
-                THEN callcommand_number_billing_entitlements.billing_status
-              ELSE EXCLUDED.billing_status END,
-            version=callcommand_number_billing_entitlements.version+1,updated_at=NOW()
-        `);
-        if (!activated) {
-          await tx.execute(sql`
-            INSERT INTO callcommand_number_reconciliation_issues(
-              tenant_id,telephony_account_id,channel_id,order_id,issue_type,resource_key,
-              expected_json,actual_json,safe_auto_repair,status,last_error_code
-            ) VALUES (
-              ${tenant(request)},${String(account.id)},${String(channel.id)},${orderId},'routing_drift',
-              ${String(providerNumberId)},${JSON.stringify({ voiceUrl: webhook.voiceUrl, statusCallbackUrl: webhook.statusCallbackUrl, methods: 'POST' })}::jsonb,
-              ${JSON.stringify({ routing: health.routing, reasons: health.healthReasons })}::jsonb,TRUE,'open',${finalReason}
-            ) ON CONFLICT (tenant_id,issue_type,resource_key) WHERE status IN ('open','repairing','manual_review','failed')
-            DO UPDATE SET actual_json=EXCLUDED.actual_json,last_error_code=EXCLUDED.last_error_code,status='open',updated_at=NOW()
-          `);
-        }
-      });
-      const finalChannel = await db.execute(sql`
-        SELECT * FROM callcommand_channels WHERE tenant_id=${tenant(request)} AND id=${String(channel.id)} LIMIT 1
-      `);
-      channel = finalChannel.rows[0] as Row;
-      await activity(request, activated ? 'callcommand.number.activated' : 'callcommand.number.routing_failed', 'channel', String(channel.id), activated
-        ? 'Provisioned, routed, billed, and health-validated a tenant-isolated business number'
-        : 'Provider acquired the number but routing health requires repair', {
-        provider: 'twilio', acquisitionMode: 'platform_provisioned', providerNumberId,
-        numberType, createdProfile: onboarding.createdProfile, createdFlow: onboarding.createdFlow,
-      });
-      return reply.code(activated ? 201 : 202).send({
-        duplicate: false,
-        providerActionConfirmed: true,
-        readyForLiveCalls: activated,
-        lifecycleState: finalState,
-        channel: { ...camel(channel), phoneMasked: maskPhone(String(channel.phone_e164)) },
-        orderId,
-        onboarding: {
-          profileId,
-          flowId,
-          createdProfile: onboarding.createdProfile,
-          createdFlow: onboarding.createdFlow,
-        },
-        provider: { status: provisioned.status, routing: provisioned.routing, capabilities: provisioned.capabilities, cost: provisioned.cost },
-      });
-    } catch (error) {
-      if (orderId && providerNumberId === null && !(error instanceof CallCommandCommercialError && error.code === 'CALLCOMMAND_NUMBER_ORDER_TERMINAL')) {
-        await db.execute(sql`
-          UPDATE callcommand_number_orders SET status='failed',provisioning_state='PROVISION_FAILED',
-            error_code=${safeFailureCode(error, 'CALLCOMMAND_NUMBER_PROVISION_FAILED')},
-            failed_at=COALESCE(failed_at,NOW()),updated_at=NOW()
-          WHERE tenant_id=${tenant(request)} AND id=${orderId} AND status NOT IN ('completed','failed','released')
-        `).catch(() => undefined);
-      }
-      return fail(reply, error);
-    }
+      const result = await serializeNumberPurchase(request, () => provisionManagedNumber(request, body(request)));
+      return reply.code(result.statusCode).send(result.body);
+    } catch (error) { return fail(reply, error); }
   });
 
   app.post(`${base}/commercial/numbers/connect`, { preHandler: admins }, async (request, reply) => {
@@ -1383,7 +1532,7 @@ export async function registerCallCommandCommercialRoutes(app: FastifyInstance) 
         JOIN callcommand_telephony_accounts a
           ON a.tenant_id=c.tenant_id AND a.id=c.telephony_account_id AND a.archived_at IS NULL
         WHERE c.tenant_id=${tenant(request)} AND c.id=${channelId}
-          AND c.acquisition_mode='platform_provisioned' AND c.lifecycle_state<>'RELEASED'
+          AND c.acquisition_mode='platform_provisioned' AND c.lifecycle_state NOT IN ('RELEASED','RELEASE_PENDING')
           AND c.deleted_at IS NULL LIMIT 1
       `);
       const channel = loaded.rows[0] as Row | undefined;
@@ -2476,6 +2625,8 @@ export async function registerCallCommandCommercialRoutes(app: FastifyInstance) 
               AND c.product_mode='general' AND c.routing_mode<>'msp' AND c.deleted_at IS NULL
               AND c.provider_number_status='active' AND c.provider_verified_at IS NOT NULL
               AND c.health_status='healthy' AND c.health_checked_at IS NOT NULL
+              AND c.lifecycle_state='ACTIVE'
+              AND (c.billing_status IN ('included','active') OR (c.billing_status='grace_period' AND c.billing_grace_expires_at>NOW()))
             FOR UPDATE OF c,p,f,a,secret
           `);
           if (!ready.rows[0]) {
@@ -2514,6 +2665,8 @@ export async function registerCallCommandCommercialRoutes(app: FastifyInstance) 
           if (!activated.rows[0]) {
             throw new CallCommandCommercialError('Phone number was not found', 'CALLCOMMAND_NUMBER_NOT_FOUND', 404);
           }
+          await tx.execute(sql`UPDATE callcommand_setup_orders SET status='ready',last_error_code=NULL,updated_at=NOW()
+            WHERE tenant_id=${tenant(request)} AND channel_id=${activationChannelId} AND status<>'canceled'`);
         }
         return runtime.rows[0] as Row;
       });

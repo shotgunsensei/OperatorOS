@@ -1,5 +1,29 @@
 # OperatorOS current release gate
 
+## CallCommand v61 release - AUTHORIZED / PR AND DEPLOYMENT PENDING (2026-09-10)
+
+The owner authorized commit, PR to main, Replit GitHub pull, and publication of
+the reviewed CallCommand guided-setup candidate. The scope includes the required
+backed-up additive v61 database apply described in the prior delivery handoff.
+Actual live call purchases, new Stripe catalog activation, and customer usage
+billing remain separate acceptance work.
+
+The candidate appends `callcommand_guided_setup` after the existing 60 release
+steps. Prior local focused results are recorded in
+[the investigation](callcommand/CALLCOMMAND_TENANT_SETUP_INVESTIGATION_2026-09-10.md).
+Those checks ran in a checkout that also contains separately uncommitted module
+polish/security work; the scoped PR must pass the exact committed revision's
+CI before merge/deployment. Preserve that unrelated work outside this PR.
+
+Before publication, establish a private production backup/recovery point, inspect
+aggregate state, apply through the supported one-shot release path, unset apply
+authority, and verify v61/61. Preserve provider-managed production data and keep
+development-data overwrite and Stripe sandbox-to-live synchronization off.
+Publication is complete only when the public readiness payload identifies the
+reviewed merged commit, a new build, and database v61/61 ending in
+`callcommand_guided_setup`. The v60 evidence below remains the last verified
+live release until that happens.
+
 ## Release v60 outcome/value deployment - LIVE READY / DATABASE AND SOURCE SYNCHRONIZED / AUTHENTICATED ACCEPTANCE OPEN (verified 2026-09-07)
 
 The customer-outcome release and its Replit schema-contract repair are merged

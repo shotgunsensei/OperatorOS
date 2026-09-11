@@ -95,6 +95,7 @@ try {
       'e2e/sso-v1.spec.ts',
       'e2e/parity-route-control.spec.ts',
       'e2e/twilio-compliance.spec.ts',
+      'e2e/callcommand-guided-setup.spec.ts',
       'e2e/torqueshed-phase28.spec.ts',
       'e2e/ninja-pool-hall-phase30.spec.ts',
       'e2e/brandforgeos-phase31.spec.ts',

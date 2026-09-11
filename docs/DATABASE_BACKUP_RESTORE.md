@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints 60 ordered step identifiers without secrets
+`db:plan` is read-only and prints the current 61 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -44,6 +44,26 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+### Release v61 guided setup
+
+Release v61 appends `callcommand_guided_setup` without changing the first 60
+steps. It adds a tenant-owned purchase-intent table with composite foreign keys
+to the existing CallCommand profile, flow, and channel tables. Back up the full
+shared authority before applying, capture aggregate tenant/subscription/grant/
+webhook counts, use the supported one-shot apply, and independently verify
+v61/61 plus the three validated composite foreign keys. Reconcile aggregate
+counts after apply; no existing business rows should be removed or replaced.
+
+Do not copy development data over production or let a provider-generated schema
+diff replace the ordered release authority. The published supervisor verifies
+v61 and must not retain `OPERATOROS_DATABASE_RELEASE_MODE`. Retain purchase
+intent and provider/billing ownership on rollback; do not drop the new ledger
+or assume reverting code cancels an external subscription or phone number.
+
+The clean disposable PostgreSQL rehearsal on 2026-09-10 passed apply, immediate
+reapply, and independent current verification at v61/61. Production evidence
+must be recorded separately in `CURRENT_RELEASE_GATE.md`.
 
 Release v60 appends `forward_commerce_contract` after the v59 evaluation-trial
 step. It adds the one-time `subscriptions.legacy_access_grandfathered_at`

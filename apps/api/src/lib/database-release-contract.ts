@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 60,
+  releaseVersion: 61,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -67,4 +67,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'callcommand_managed_number_provisioning', kind: 'ddl' },
   { id: 'core_suite_trial_tables', kind: 'ddl' },
   { id: 'forward_commerce_contract', kind: 'ddl' },
+  { id: 'callcommand_guided_setup', kind: 'ddl' },
 ] as const);

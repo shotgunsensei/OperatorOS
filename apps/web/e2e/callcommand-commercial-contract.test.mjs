@@ -102,13 +102,14 @@ test('commercial UI preserves product-mode, authorization, and cost-confirmation
   assert.match(commercial, /commercial\?\.capabilities\?\.canAdmin === true/);
   assert.doesNotMatch(commercial, /activeRole !== 'viewer'|useTenant\(|useAuth\(/);
   assert.match(commercial, /confirmRecurringProviderCharge: true/);
-  for (const label of ['Get New Number', 'Forward Existing', 'Connect Provider', 'Call It Now', 'Safe auto-repair']) {
+  for (const label of ['Get New Number', 'Forward Existing', 'Connect Provider', 'Call It Now', 'Repair safe connection issues']) {
     assert.match(commercial, new RegExp(label));
   }
   assert.match(commercial, /numberType: 'local' as 'local' \| 'toll_free'/);
   assert.match(commercial, /first local number is included/i);
   assert.match(commercial, /CALLCOMMAND_NUMBER_INVENTORY_CHANGED/);
   assert.match(commercial, /commercialNumberBilling/);
+  assert.match(commercial, /commercialReconcileNumbers\(\{ autoRepair: true \}\)/);
   assert.match(commercial, /commercialCancelNumberRelease/);
   assert.match(commercial, /commercialExecuteNumberRelease/);
   assert.match(commercial, /uiIdempotencyKey/);

@@ -2581,6 +2581,11 @@ export const moduleShellApi = {
     workspace: () => apiFetch('/modules/callcommand-ai/workspace'),
     productWorkspace: () => apiFetch('/modules/callcommand-ai/product/workspace'),
     commercialWorkspace: () => apiFetch('/modules/callcommand-ai/product/commercial/workspace'),
+    setupStatus: () => apiFetch('/modules/callcommand-ai/product/commercial/setup'),
+    setupReceptionist: (input: Record<string, unknown>) => apiFetch('/modules/callcommand-ai/product/commercial/setup/receptionist', { method: 'POST', body: JSON.stringify(input) }),
+    setupSelectNumber: (input: Record<string, unknown>) => apiFetch('/modules/callcommand-ai/product/commercial/setup/orders', { method: 'POST', body: JSON.stringify(input) }),
+    setupContinue: (id: string) => apiFetch(`/modules/callcommand-ai/product/commercial/setup/orders/${encodeURIComponent(id)}/continue`, { method: 'POST', body: '{}' }),
+    setupCancel: (id: string) => apiFetch(`/modules/callcommand-ai/product/commercial/setup/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: '{}' }),
     commercialSearchNumbers: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/commercial/numbers/search', { method: 'POST', body: JSON.stringify(input) }),
     commercialProvisionNumber: (input: Record<string, unknown>) =>

@@ -789,6 +789,7 @@ export async function registerCallCommandRealtimeRoutes(app: FastifyInstance) {
             tools: acceptConfig.tools,
             voice: acceptConfig.audio.output.voice,
             maxOutputTokens: acceptConfig.max_output_tokens,
+            transcribeInput: transcriptPersistenceAllowed(authority),
           });
         } catch (error) {
           await safeReject(adapter, incoming.openAiCallId, 480);
@@ -834,6 +835,7 @@ export async function registerCallCommandRealtimeRoutes(app: FastifyInstance) {
           openAiCallId: incoming.openAiCallId,
           allowedToolNames: configuration.tools.map(tool => tool.name),
           callbacks,
+          greetOnOpen: claim.mode === 'accept',
         });
         unregisterSideband = registerCallCommandRealtimeSideband(String(authority.id), sideband);
         await sideband.waitUntilOpen(8_000);
