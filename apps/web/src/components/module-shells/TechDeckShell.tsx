@@ -29,6 +29,8 @@ import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
+import CoreSuiteJourney from './CoreSuiteJourney';
+import CoreSuiteSection from './CoreSuiteSection';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -120,7 +122,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
             ? 'TechDeck manager'
             : 'Technician';
 
-  const pageAction = route.area === 'tickets'
+  const pageAction = route.area === 'tickets' || route.area === 'overview'
     ? null
     : route.area === 'settings' && platformAdmin
       ? <Link className="techdeck-action" href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/techdeck`}><ExternalLink size={15} />Platform settings</Link>
@@ -150,6 +152,8 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
       stateMessage={!hasTenantContext ? 'Choose an organization in My Apps before opening its TechDeck service work.' : undefined}
       pageHeaderTestId="techdeck-module-header"
       mobileNavigation="drawer"
+      collapsibleNavigation
+      workflow={<CoreSuiteJourney moduleId="techdeck" path={route.canonicalPath} hrefFor={hrefFor} />}
       testId="techdeck-module-shell"
       dataAttributes={{ 'data-techdeck-route': route.area }}
     >
@@ -159,6 +163,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
           {route.area === 'overview' && (
             <section className="techdeck-overview" id="techdeck-overview" data-testid="techdeck-overview-route">
               <TechDeckWorkdayBrief tenantKey={adapter.tenantId} hrefFor={hrefFor} />
+              <CoreSuiteSection title="Tools and service records" description="Assets, procedures, evidence, reports, and scheduled work.">
               <div className="techdeck-readiness" aria-label="TechDeck readiness">
                 <Metric label="Sign-in" value="Protected" Icon={ShieldCheck} />
                 <Metric label="Client records" value="Organization-only" Icon={Building2} />
@@ -172,6 +177,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
                   </Link>
                 ))}
               </div>
+              </CoreSuiteSection>
             </section>
           )}
 

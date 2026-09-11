@@ -1,0 +1,37 @@
+.journey, .section {
+  --flow-panel: var(--tfk-panel, var(--module-panel, #0d1320));
+  --flow-raised: var(--tfk-panel-soft, var(--module-panel-raised, #101826));
+  --flow-text: var(--tfk-foreground, var(--module-text, #e5eefc));
+  --flow-muted: var(--tfk-muted-foreground, var(--module-muted, #9bb0c6));
+  --flow-border: var(--tfk-border, var(--module-border, #263348));
+  --flow-accent: var(--tfk-primary, var(--module-primary, #38bdf8));
+  min-width: 0;
+  color: var(--flow-text);
+}
+.journey { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--flow-border); border-radius: 12px; background: var(--flow-panel); }
+.journey ol { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.journey li { flex: 1 1 110px; min-width: 0; }
+.journey a { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; color: var(--flow-muted); font-size: 13px; font-weight: 600; text-decoration: none; }
+.journey a span { display: grid; place-items: center; width: 23px; height: 23px; flex: none; border: 1px solid var(--flow-border); border-radius: 50%; font-size: 12px; font-variant-numeric: tabular-nums; }
+.journey a[aria-current='step'] { color: var(--flow-text); background: var(--flow-raised); border-color: var(--flow-accent); }
+.journey a[aria-current='step'] span { color: var(--flow-accent); border-color: var(--flow-accent); }
+.journey a:hover { color: var(--flow-text); background: var(--flow-raised); }
+.journey p { margin: 0; color: var(--flow-muted); font-size: 13px; line-height: 1.65; text-wrap: pretty; }
+.journey p strong { color: var(--flow-text); }
+.section { width: 100%; grid-column: 1 / -1; border: 1px solid var(--flow-border); border-radius: 10px; background: var(--flow-panel); }
+.section > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; padding: 14px 16px; cursor: pointer; list-style: none; }
+.section > summary::-webkit-details-marker { display: none; }
+.section > summary > span { display: grid; gap: 4px; min-width: 0; }
+.section > summary strong { color: var(--flow-text); font-size: 14px; font-weight: 600; text-wrap: balance; }
+.section > summary small { color: var(--flow-muted); font-size: 13px; line-height: 1.5; text-wrap: pretty; }
+.section > summary svg { flex: none; color: var(--flow-muted); }
+.section[open] > summary svg { transform: rotate(180deg); }
+.sectionBody { display: grid; gap: 16px; padding: 0 16px 16px; min-width: 0; }
+.journey a:focus-visible, .section > summary:focus-visible { outline: 2px solid var(--flow-accent); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .journey { padding: 12px; }
+  .journey li { flex-basis: 95px; }
+  .journey a { padding: 7px; }
+  .section > summary { padding: 12px; }
+  .sectionBody { padding: 0 12px 12px; }
+}

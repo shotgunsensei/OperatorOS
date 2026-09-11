@@ -13,6 +13,7 @@ import {
 } from '@/lib/auth';
 import { buildTradeFlowKitWorkday } from '@/lib/core-suite-workday';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import CoreSuiteSection from './CoreSuiteSection';
 import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 
 const empty: TradeFlowKitOperationsResponse = {
@@ -159,7 +160,7 @@ export default function TradeFlowKitOperations({
     }
   }, []);
 
-  useEffect(() => { void loadSavedViews(); }, [loadSavedViews, tenantKey]);
+  useEffect(() => { if (view !== 'dashboard') void loadSavedViews(); }, [loadSavedViews, tenantKey, view]);
 
   const selectedJob = data.jobs.find(job => job.id === selectedJobId) ?? null;
   const tasks = useMemo(() => data.tasks.filter(task => task.jobId === selectedJobId), [data.tasks, selectedJobId]);
@@ -318,6 +319,7 @@ export default function TradeFlowKitOperations({
           <div className="tfk-workday-slot" aria-busy={loading}>
             {loading
               ? <div className="tfk-workday-loading" role="status"><Loader2 className="spin" size={18} /> Preparing today’s lead-to-cash brief…</div>
+              : error ? <div className="tfk-ops-alert" role="alert" data-testid="tradeflowkit-workday-error"><AlertTriangle size={17} /><span>Today’s priorities could not load. Refresh to try again, or open a section from the menu.</span><button type="button" onClick={() => void load()}>Try again</button></div>
               : <CoreSuiteWorkdayBrief
                   moduleId="tradeflowkit"
                   eyebrow="Today · lead to cash"
@@ -325,7 +327,8 @@ export default function TradeFlowKitOperations({
                   hrefFor={href => `${routePrefix}${href}`}
                 />}
           </div>
-          {!loading && selectedJob && (
+          {!loading && !error && selectedJob && (
+            <CoreSuiteSection title="Prepare proof of completed work" description="Review a connected field-proof package for your selected job.">
             <div style={{ margin: '14px 0 18px' }}>
               <OutcomeWorkflowAction
                 workflowKey="tradeflowkit.job_to_snapproof"
@@ -347,18 +350,20 @@ export default function TradeFlowKitOperations({
                 testId="tradeflowkit-start-field-proof"
               />
             </div>
+            </CoreSuiteSection>
           )}
         </>
       )}
 
-      <div className="tfk-ops-metrics" aria-label="Operational analytics">
+      {view === "dashboard" && !loading && !error && <CoreSuiteSection title="Business totals" description="Leads, completed work, invoicing, and collections."><div className="tfk-ops-metrics" aria-label="Business totals"><Metric label="Open leads" value={String(data.metrics.leads)} /><Metric label="Jobs" value={String(data.metrics.jobs)} /><Metric label="Tasks complete" value={`${data.metrics.completed_tasks}/${data.metrics.tasks}`} /><Metric label="Invoiced" value={money(data.metrics.invoiced_cents)} /><Metric label="Collected" value={money(data.metrics.collected_cents)} /><Metric label="Outstanding" value={money(data.metrics.outstanding_cents)} /></div></CoreSuiteSection>}
+      {view !== "dashboard" && <div className="tfk-ops-metrics" aria-label="Operational analytics">
         <Metric label="Open leads" value={String(data.metrics.leads)} />
         <Metric label="Jobs" value={String(data.metrics.jobs)} />
         <Metric label="Tasks complete" value={`${data.metrics.completed_tasks}/${data.metrics.tasks}`} />
         <Metric label="Invoiced" value={money(data.metrics.invoiced_cents)} />
         <Metric label="Collected" value={money(data.metrics.collected_cents)} />
         <Metric label="Outstanding" value={money(data.metrics.outstanding_cents)} />
-      </div>
+      </div>}
 
       <section className="tfk-accounting-exports" data-testid="tradeflowkit-accounting-exports" aria-labelledby="tradeflowkit-accounting-exports-title">
         <div><Download size={18} /><div><strong id="tradeflowkit-accounting-exports-title">Accounting export</strong><span>Export active customers, invoice lines, and successful payments. Review account and tax mappings in your accounting test company before importing.</span></div></div>
@@ -371,7 +376,7 @@ export default function TradeFlowKitOperations({
         </nav>
       </section>
 
-      {error && <div className={`tfk-ops-alert ${conflict ? 'conflict' : ''}`} role="alert" data-testid={conflict ? 'tradeflowkit-conflict-state' : 'tradeflowkit-operations-error'}><AlertTriangle size={17} /><span>{error}</span>{conflict && <button type="button" onClick={() => void load()}>Refresh latest</button>}</div>}
+      {error && view !== 'dashboard' && <div className={`tfk-ops-alert ${conflict ? 'conflict' : ''}`} role="alert" data-testid={conflict ? 'tradeflowkit-conflict-state' : 'tradeflowkit-operations-error'}><AlertTriangle size={17} /><span>{error}</span>{conflict && <button type="button" onClick={() => void load()}>Refresh latest</button>}</div>}
 
       <div className="tfk-ops-toolbar">
         <label><Search size={15} /><span className="sr-only">Search jobs</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search jobs" maxLength={100} /></label>
@@ -601,6 +606,9 @@ const css = `
   .tfk-ops[data-view="settings"] :is(.tfk-ops-head,.tfk-ops-metrics,.tfk-accounting-exports,.tfk-ops-toolbar,.tfk-saved-views,.tfk-bulk-bar,.tfk-ops-layout,.tfk-ops-state) { display:none!important; }
   .tfk-ops[data-view="settings"] { padding:18px; }
   .tfk-ops[data-view="dashboard"] .tfk-ops-actions a { display:none; }
+  .tfk-ops[data-view="dashboard"] .tfk-ops-head > div:first-child { display:none; }
+  .tfk-ops[data-view="dashboard"] .tfk-ops-head { justify-content:flex-end; margin-bottom:12px; }
+  .tfk-ops[data-view="dashboard"] { border:0; padding:0; background:transparent; }
   @media(max-width:960px){.tfk-ops-metrics{grid-template-columns:repeat(3,1fr)}.tfk-settings{grid-template-columns:repeat(2,1fr)}.tfk-settings>div{grid-column:1/-1}.tfk-settings button{grid-column:auto}}
   @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout,.tfk-bulk-bar{grid-template-columns:1fr}.tfk-saved-views form{grid-template-columns:auto minmax(0,1fr)}.tfk-saved-views form button{grid-column:1/-1}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-job-choice{min-width:220px}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}.tfk-workday-slot,.tfk-workday-loading{min-height:820px}}
 `;

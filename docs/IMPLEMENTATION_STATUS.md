@@ -1,5 +1,45 @@
 # OperatorOS implementation status
 
+## Three main modules: guided workflow and visual polish (2026-09-11)
+
+Status: **LOCAL SOURCE CANDIDATE / NO DEPLOYMENT OR PARITY PROMOTION**.
+The clean starting checkout was `main` at `9f5530e`. Git metadata is read-only
+in this session, so a scoped branch could not be created and the scoped
+changes remain uncommitted in the current checkout.
+
+TradeFlowKit, TechDeck, and PulseDesk now prioritize the daily brief over
+feature directories, reduce competing dashboard controls, retain all ranked
+record links behind three initially visible priorities, group optional
+automation and reporting controls, and display route-aware workflow stages.
+Secondary navigation opens on demand or for the current section. Native
+disclosures preserve optional form fields and payloads. TradeFlowKit retains
+its bottom bar and gains a full accessible phone menu. PulseDesk retains its
+privacy acknowledgment and opens equipment routing for an equipment-issue
+deep link. Failed dashboard requests cannot render a setup/clear brief.
+
+Current verification: focused native workday/journey contracts **11/11**;
+broader shell/Help/workday/journey contracts **19/19**, with zero failures or
+skips; `corepack pnpm lint` and web typecheck pass; `corepack pnpm
+build:production` passes all four workspace typechecks, the 4/4 catalog
+checks, API/runner/web compilation, and 35/35 Next pages. Subsequent web
+presentation fixes were rebuilt through `corepack pnpm --dir apps/web build`.
+The current package defines `lint`; this pass ran it rather than inferring it
+from a build. The final synthetic browser suite passed **11/11** (39.9 seconds,
+zero failures/skips), including 10 responsive dashboard combinations and an
+additional dark-phone state with no serious/critical axe findings in the
+audited dashboard regions. Final artifacts are recorded in the scoped report.
+
+Browser tests use compiled Next assets with intercepted synthetic API and
+WebSocket responses and a loopback-only destination. No API/database/provider
+is started. Docker access is unavailable and no disposable PostgreSQL was
+available in this session, so no persistent workflow or server-authorization
+acceptance is claimed. Auth, SSO, billing, entitlements, API handlers, schema,
+and deployment configuration remain unchanged; no new production env vars.
+
+See [scope, exact commands, test-host recovery, and evidence](modules/CORE_SUITE_GUIDED_POLISH.md).
+No commit, push, merge, database apply, publication, or deployment occurred.
+
+
 ## CallCommand v61 delivery - published and live verified; provider acceptance open (2026-09-11)
 
 PR #98 is merged at `cb47800fc1476825949a9476c7f3a5fe1a9e9312`; local `main`

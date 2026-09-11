@@ -27,6 +27,7 @@ export default function TechDeckWorkdayBrief({
   const [tickets, setTickets] = useState<TechDeckTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadVersion, setReloadVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -51,7 +52,7 @@ export default function TechDeckWorkdayBrief({
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [tenantKey]);
+  }, [tenantKey, reloadVersion]);
 
   const brief = useMemo(() => buildTechDeckWorkday(workspace, tickets), [tickets, workspace]);
 
@@ -59,7 +60,7 @@ export default function TechDeckWorkdayBrief({
     return <section className="techdeck-workday-state" aria-busy="true" data-testid="techdeck-workday-loading"><span /><span /><span /></section>;
   }
   if (error) {
-    return <section className="techdeck-workday-error" role="alert" data-testid="techdeck-workday-error"><AlertTriangle size={17} />{error}<a href={hrefFor('/tickets')}>Open the ticket queue</a></section>;
+    return <section className="techdeck-workday-error" role="alert" data-testid="techdeck-workday-error"><AlertTriangle size={17} aria-hidden="true" /><span>{error}</span><button type="button" onClick={() => setReloadVersion(value => value + 1)}>Try again</button><a href={hrefFor('/tickets')}>Open the ticket queue</a></section>;
   }
   return <CoreSuiteWorkdayBrief moduleId="techdeck" eyebrow="Today · risk to proof" brief={brief} hrefFor={hrefFor} />;
 }

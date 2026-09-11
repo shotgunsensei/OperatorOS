@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import CoreSuiteSection from './CoreSuiteSection';
 import {
   AlertTriangle,
   Archive,
@@ -391,7 +392,7 @@ export default function TechDeckTicketQueue({
         <div className="techdeck-ticket-form-title">
           <Plus size={17} aria-hidden="true" />
           <strong>Open a technician ticket</strong>
-          <span>Set ownership and response targets up front.</span>
+          <span>Describe the issue and choose its priority. Add response targets when needed.</span>
         </div>
 
         {actionError && !actionError.ticketId && (
@@ -427,6 +428,7 @@ export default function TechDeckTicketQueue({
             ))}
           </select>
         </label>
+        <CoreSuiteSection title="Response targets (optional)" description="Set deadlines for the initial response and resolution.">
         <label>
           <span>Response deadline</span>
           <input
@@ -443,6 +445,7 @@ export default function TechDeckTicketQueue({
             onChange={(event) => setForm((current) => ({ ...current, resolutionDeadline: event.target.value }))}
           />
         </label>
+        </CoreSuiteSection>
         <label className="techdeck-ticket-form-wide">
           <span>Description</span>
           <textarea

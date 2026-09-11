@@ -26,6 +26,8 @@ import { ModuleApplicationShell } from '@/components/module-application-shell';
 import { useTenant } from '@/components/TenantProvider';
 import { useModuleAccessLevel } from '@/components/ModuleAccessContext';
 import { getActiveTenantId } from '@/lib/auth';
+import CoreSuiteJourney from './CoreSuiteJourney';
+import CoreSuiteSection from './CoreSuiteSection';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -112,7 +114,7 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
   const tenantLabel = activeTenant?.name ?? (adapter.tenantId ? 'Selected organization' : 'No organization selected');
   const activeServiceView = serviceView[route.area];
 
-  const pageAction = route.area === 'requests'
+  const pageAction = route.area === 'requests' || route.area === 'overview'
     ? null
     : route.area === 'settings' && platformAdmin
       ? <Link className="pulsedesk-action" href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/pulsedesk`}><ExternalLink size={15} />Platform settings</Link>
@@ -146,22 +148,14 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
           : undefined}
       pageHeaderTestId="pulsedesk-module-header"
       mobileNavigation="drawer"
+      collapsibleNavigation
+      workflow={<CoreSuiteJourney moduleId="pulsedesk" path={route.canonicalPath} hrefFor={hrefFor} />}
       testId="pulsedesk-module-shell"
       dataAttributes={{ 'data-pulsedesk-route': route.area }}
     >
       <style>{pulseDeskRouteCss}</style>
       {hasTenantContext && adapter.tenantId && !restrictedProviderRoute && (
         <>
-          {route.area === 'overview' && (
-            <section className="pulsedesk-route-grid" id="pulsedesk-overview" data-testid="pulsedesk-overview-route">
-              {overviewRoutes.map(item => (
-                <Link key={item.area} href={hrefFor(item.path)} className="pulsedesk-route-card" data-testid={`pulsedesk-overview-${item.area}`}>
-                  <item.Icon size={19} /><strong>{item.label}</strong><span>{item.summary}</span>
-                </Link>
-              ))}
-            </section>
-          )}
-
           {activeServiceView && (
             <section
               id={route.area === 'requests' ? 'pulsedesk-operations' : route.area === 'settings' ? 'pulsedesk-settings-workflow' : route.area === 'overview' ? 'pulsedesk-overview-dashboard' : `pulsedesk-${route.area}`}
@@ -175,8 +169,21 @@ export default function PulseDeskShell({ routePath }: PulseDeskShellProps) {
                 view={activeServiceView}
                 requestHref={id => hrefFor(`/requests/${id}`)}
                 routeHref={hrefFor}
+                showWorkday={route.area === 'overview'}
               />
             </section>
+          )}
+
+          {route.area === 'overview' && (
+            <CoreSuiteSection title="Workspace tools" description="Contacts, facilities, intake, and reporting.">
+              <section className="pulsedesk-route-grid" id="pulsedesk-overview" data-testid="pulsedesk-overview-route">
+                {overviewRoutes.map(item => (
+                  <Link key={item.area} href={hrefFor(item.path)} className="pulsedesk-route-card" data-testid={`pulsedesk-overview-${item.area}`}>
+                    <item.Icon size={19} /><strong>{item.label}</strong><span>{item.summary}</span>
+                  </Link>
+                ))}
+              </section>
+            </CoreSuiteSection>
           )}
 
           {route.area === 'assignments' && (

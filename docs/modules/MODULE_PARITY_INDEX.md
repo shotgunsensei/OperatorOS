@@ -1,5 +1,22 @@
 # OperatorOS module parity index
 
+## Core Suite guided workflow and polish overlay (2026-09-11)
+
+Status: **PARITY UNCHANGED / LOCAL PRESENTATION CANDIDATE**.
+
+| Module | Changed user workflow | Parity decision |
+| --- | --- | --- |
+| TradeFlowKit | Daily priorities first; customer-to-payment navigation; optional business totals, proof handoff, automation, and document notes; complete phone menu; light/dark contrast | Existing state retained. Synthetic browser presentation and local build evidence do not establish authenticated/persistent or deployed acceptance. |
+| TechDeck | Triage-to-report navigation; concise daily priorities; optional service tools and ticket deadlines; direct brief retry | Existing state retained. Remote execution, provider, server authorization, persistence, and deployed acceptance are not added by this pass. |
+| PulseDesk | Daily coordination before workspace tools; capture-to-review navigation; concise request form with optional routing; analytics separated from the daily brief; privacy acknowledgment retained | Existing state retained. Synthetic form checks do not establish persistent writes, clinical capability, or deployed acceptance. |
+
+Shared shell, Help, workday, and route contracts passed 19/19. The final
+synthetic UI browser suite passed 11/11. Production build/typecheck/lint
+passed locally. Exact browser evidence, recovery steps,
+and verification limitations are in [the scoped report](CORE_SUITE_GUIDED_POLISH.md).
+No API/schema/auth/billing change, data apply, deployment, or state promotion.
+
+
 ## CallCommand v61 delivery overlay (2026-09-11)
 
 Status: **PARITY UNCHANGED / SOURCE MERGED / DATABASE V61 VERIFIED /

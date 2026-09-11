@@ -1,5 +1,7 @@
 'use client';
 
+import CoreSuiteSection from './CoreSuiteSection';
+
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Archive, BriefcaseBusiness, FileText, FileUp, Link2, Pencil, Plus, Receipt, Trash2, Users, X, type LucideIcon } from 'lucide-react';
 import {
@@ -437,7 +439,7 @@ export default function TradeFlowKitRevenueFlow({
               <button disabled={pending || invoiceImportRows.length === 0} style={button(c.gold)}><FileUp size={14} /> Import checked invoices</button>
             </form>
             <form onSubmit={createDocument} data-testid="tradeflowkit-document-create-form" style={{ ...panel, flex: '2 1 340px', display: 'grid', gap: 8 }}>
-              <strong style={{ color: c.ink }}>3. Revenue document</strong>
+              <strong style={{ color: c.ink }}>{documentKind === 'quote' ? 'Prepare a quote' : 'Prepare an invoice'}</strong>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <select aria-label="Document type" value={documentKind} disabled={view === 'quotes' || view === 'invoices'} onChange={(e) => setDocumentKind(e.target.value as 'quote' | 'invoice')} style={{ ...input, flex: '1 1 120px' }}><option value="quote">Quote</option><option value="invoice">Direct invoice</option></select>
                 <select aria-label="Document customer" required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={{ ...input, flex: '1 1 140px' }}><option value="">Customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
@@ -445,7 +447,7 @@ export default function TradeFlowKitRevenueFlow({
               </div>
               <input aria-label="Line-item description" required maxLength={500} placeholder="Line-item description" value={lineDescription} onChange={(e) => setLineDescription(e.target.value)} style={input} />
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><input aria-label="Quantity" type="number" min="1" max="10000" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...input, flex: '1 1 90px' }} /><input aria-label="Unit price dollars" type="number" min="0" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...input, flex: '1 1 120px' }} /><input aria-label="Tax percent" type="number" min="0" max="100" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} style={{ ...input, flex: '1 1 100px' }} />{documentKind === 'invoice' && <input aria-label="Invoice due date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ ...input, flex: '1 1 150px' }} />}</div>
-              <input aria-label="Document notes" maxLength={4000} placeholder="Notes (optional)" value={documentNotes} onChange={(e) => setDocumentNotes(e.target.value)} style={input} />
+              <CoreSuiteSection title="Notes (optional)"><input aria-label="Document notes" maxLength={4000} placeholder="Notes (optional)" value={documentNotes} onChange={(e) => setDocumentNotes(e.target.value)} style={input} /></CoreSuiteSection>
               <button disabled={pending || !customerId || !lineDescription.trim()} style={button(c.gold)}><Plus size={14} /> Create {documentKind}</button>
             </form>
           </div> : <div data-testid="tradeflowkit-revenue-readonly" style={{ color: c.muted, background: c.soft, borderRadius: 8, padding: 12, marginTop: 16 }}>Your access is read-only. Creating or changing revenue records requires contributor access.</div>}

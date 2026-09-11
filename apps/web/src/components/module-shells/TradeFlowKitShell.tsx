@@ -45,6 +45,8 @@ import TradeFlowKitWorkManagement from './TradeFlowKitWorkManagement';
 import TradeFlowKitGlobalSearch from './TradeFlowKitGlobalSearch';
 import TradeFlowKitTrash from './TradeFlowKitTrash';
 import BusinessDirectory from './BusinessDirectory';
+import CoreSuiteJourney from './CoreSuiteJourney';
+import CoreSuiteSection from './CoreSuiteSection';
 import {
   TRADEFLOWKIT_MOBILE_ROUTE_IDS,
   TRADEFLOWKIT_NAVIGATION,
@@ -341,7 +343,7 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
   };
   const currentManifestPath = hrefFor(`/${route.screen}${route.recordId ? `/${route.recordId}` : ''}${route.attachmentId ? `?attachment=${encodeURIComponent(route.attachmentId)}` : ''}`);
   const pageActions = route.screen === 'dashboard'
-    ? <Link className={styles.primaryLink} href={hrefFor('/leads')} data-testid="tradeflowkit-start-with-lead"><ClipboardList size={15} /> Start with a lead</Link>
+    ? null
     : route.screen === 'quotes' && canWriteModule
       ? <Link className={styles.primaryLink} href={hrefFor('/quotes/new')}><FileText size={15} /> New quote</Link>
       : route.screen === 'invoices' && canWriteModule
@@ -401,6 +403,8 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
       }}
       classNames={shellClasses}
       mobileNavigation="bottom"
+      collapsibleNavigation
+      workflow={hasTenantContext ? <CoreSuiteJourney moduleId="tradeflowkit" path={`/${route.screen}`} hrefFor={hrefFor} /> : undefined}
       mobileItemIds={TRADEFLOWKIT_MOBILE_ROUTE_IDS}
       testId="tradeflowkit-module-shell"
       contentId="tradeflowkit-overview"
@@ -440,8 +444,9 @@ function TradeFlowKitScreen({
 }: RouteState & { tenantKey: string; canWrite: boolean; canManage: boolean; hrefFor: (href: string) => string }) {
   if (screen === 'dashboard') {
     return <>
-      <TradeFlowKitGlobalSearch tenantKey={tenantKey} />
       <TradeFlowKitOperations tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="dashboard" routePrefix={hrefFor('')} />
+      <TradeFlowKitGlobalSearch tenantKey={tenantKey} />
+      <CoreSuiteSection title="Workspace tools" description="Sales, work management, payments, and reporting.">
       <div className={styles.dashboardGrid} aria-label="TradeFlowKit active workflows">
         <QuickLink href={hrefFor('/leads')} Icon={ClipboardList} title="Lead pipeline" body="Capture and qualify real service opportunities." />
         <QuickLink href={hrefFor('/customers')} Icon={Users} title="Customers" body="Open customer details, active work, and payment history." />
@@ -456,6 +461,7 @@ function TradeFlowKitScreen({
         <QuickLink href={hrefFor('/analytics')} Icon={BarChart3} title="Analytics" body="See where sales, delivery, billing, and collections are getting stuck." />
         <QuickLink href={hrefFor('/directory')} Icon={ContactRound} title="Business Directory" body="Keep organizations, contacts, and sites ready for customer work." />
       </div>
+      </CoreSuiteSection>
     </>;
   }
   if (screen === 'leads') return <section id="tradeflowkit-lead-center" data-testid="tradeflowkit-lead-center-panel" tabIndex={-1}><TradeFlowKitLeadCenter tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} recordId={recordId} view="leads" routePrefix={hrefFor('')} /></section>;

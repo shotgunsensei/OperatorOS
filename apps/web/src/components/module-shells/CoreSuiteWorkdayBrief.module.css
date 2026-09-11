@@ -22,14 +22,29 @@
 }
 
 .brief[data-module='tradeflowkit'] {
-  --workday-accent: #047857;
-  --workday-accent-strong: #047857;
+  --workday-accent: var(--tfk-primary, #047857);
+  --workday-accent-strong: var(--tfk-primary, #047857);
   --workday-surface: var(--tfk-panel, #ffffff);
   --workday-surface-raised: var(--tfk-panel-soft, #f1f5f9);
   --workday-border: var(--tfk-border, #315044);
   --workday-text: var(--tfk-foreground, #10231d);
   --workday-muted: var(--tfk-muted-foreground, #52645e);
 }
+
+.brief[data-guided='true'] { gap: 20px; padding: clamp(18px, 2.5vw, 28px); border-radius: 14px; }
+.brief[data-guided='true'] .heading { gap: 8px; max-width: 620px; }
+.brief[data-guided='true'] .heading h2 { font-weight: 650; line-height: 1.25; }
+.brief[data-guided='true'] .primaryAction { min-height: 44px; padding: 10px 16px; font-weight: 650; }
+.brief[data-guided='true'] .metric { border-left-width: 1px; border-radius: 8px; padding: 16px; }
+.brief[data-guided='true'] .metric strong { font-size: 26px; font-weight: 650; }
+.brief[data-guided='true'] .action { padding: 14px; }
+.brief[data-guided='true'] .actionBody strong { font-size: 14px; font-weight: 650; }
+.brief[data-guided='true'] .action:hover, .brief[data-guided='true'] .setupStep:hover { border-color: var(--workday-accent); }
+.brief[data-guided='true'] .setupStep { padding: 16px; gap: 8px 12px; }
+.brief[data-guided='true'] .setupStep p, .brief[data-guided='true'] .automation p { font-size: 13px; }
+.brief[data-guided='true'] .setupStep strong { font-size: 14px; font-weight: 650; }
+.brief[data-module='tradeflowkit'] .primaryAction,
+.brief[data-module='tradeflowkit'] .setupStep span { color: var(--tfk-primary-foreground, #fff); }
 
 .brief[data-module='techdeck'] {
   --workday-accent-strong: #0369a1;

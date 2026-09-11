@@ -20,6 +20,7 @@ import {
 } from '@/lib/auth';
 import { buildPulseDeskWorkday } from '@/lib/core-suite-workday';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
+import CoreSuiteSection from './CoreSuiteSection';
 import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 
 const PHI_WARNING = 'Operational information only. Do not enter patient names, MRNs, dates of birth, diagnoses, insurance details, treatment information, or clinical notes.';
@@ -56,7 +57,7 @@ async function base64File(file: File): Promise<string> {
   return btoa(binary);
 }
 
-export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModule, canManageModule, view, requestHref, routeHref }: { tenantKey: string; canWriteModule: boolean; canManageModule: boolean; view: PulseDeskServiceView; requestHref: (id: string) => string; routeHref: (path: string) => string }) {
+export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModule, canManageModule, view, requestHref, routeHref, showWorkday = true }: { tenantKey: string; canWriteModule: boolean; canManageModule: boolean; view: PulseDeskServiceView; requestHref: (id: string) => string; routeHref: (path: string) => string; showWorkday?: boolean }) {
   const [dashboard, setDashboard] = useState<PulseDeskServiceDashboard | null>(null);
   const [configuration, setConfiguration] = useState<PulseDeskServiceConfiguration | null>(null);
   const [tickets, setTickets] = useState<PulseDeskServiceTicket[]>([]);
@@ -155,7 +156,7 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
     if (/\/(tickets|requests|submit)(\/|$)/.test(path) || assetIssueMatch) {
       setRequestedAssetId(assetIssueMatch?.[1] ?? '');
       setAssetIssueDeepLink(Boolean(assetIssueMatch));
-      if (ticketMatch?.[1]) void loadTicket(ticketMatch[1]);
+      if (ticketMatch?.[1] && ticketMatch[1] !== 'new') void loadTicket(ticketMatch[1]);
     }
   }, [loadTicket, view]);
 
@@ -272,37 +273,43 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
     setSelected(new Set());
   }
 
-  if (loading) return <div className="pds-loading" data-testid="pulsedesk-service-desk-loading"><RefreshCw className="pds-spin" size={18} /> Loading this PulseDesk route…<style>{css}</style></div>;
+  if (loading) return <div className="pds-loading" role="status" aria-busy="true" data-testid="pulsedesk-service-desk-loading"><RefreshCw className="pds-spin" size={18} /> Loading this PulseDesk route…<style>{css}</style></div>;
 
   return (
     <section className="pds" data-testid="pulsedesk-service-desk-workspace">
       <style>{css}</style>
       <div className="pds-warning" data-testid="pulsedesk-service-desk-phi-warning"><ShieldAlert size={18} /><div><strong>No patient data / no unnecessary PHI.</strong><span>{PHI_WARNING}</span></div></div>
       <div className="pds-toolbar">
-        <h2 className="pds-route-label">{view.replaceAll('_', ' ')}</h2>
+        <h2 className="pds-route-label">{view === 'dashboard' ? (showWorkday ? 'Today’s work' : 'Operational performance') : view === 'tickets' ? 'Request workspace' : view.replaceAll('_', ' ')}</h2>
         <button type="button" className="pds-secondary" onClick={() => void loadAll()} disabled={loading || Boolean(busy)}><RefreshCw size={14} /> Refresh</button>
       </div>
       {error && <div className="pds-error" role="alert" data-testid="pulsedesk-service-error"><AlertTriangle size={16} />{error}</div>}
       {notice && <div className="pds-success" role="status"><CheckCircle2 size={16} />{notice}</div>}
       {!canWriteModule && <div className="pds-warning" role="status" data-testid="pulsedesk-service-read-only"><ShieldAlert size={16} /><div><strong>Read-only access</strong><span>You can review operational work, but this access level cannot create or change records.</span></div></div>}
 
-      {view === 'dashboard' && dashboard && <Dashboard dashboard={dashboard} tickets={tickets} requestHref={requestHref} routeHref={routeHref} canManage={canManageModule} />}
+      {view === 'dashboard' && !loading && !error && dashboard && <Dashboard dashboard={dashboard} tickets={tickets} requestHref={requestHref} routeHref={routeHref} canManage={canManageModule} showWorkday={showWorkday} />}
 
       {view === 'tickets' && <div className="pds-ticket-layout">
         <div className="pds-stack">
           {canWriteModule ? <form className="pds-card pds-form" onSubmit={createTicket} data-testid="pulsedesk-service-ticket-create">
-            <Heading icon={Plus} title="New operational ticket" subtitle="Ticket number, due targets, status history, and activity tracking are added automatically." />
+            <Heading icon={Plus} title="New operational request" subtitle="Describe the need. We add the request number, configured response targets, and activity history when you save." />
+            <label>What needs attention?
             <input name="summary" minLength={5} maxLength={160} required aria-label="Operational request summary" placeholder="Short operational summary" />
+            </label>
+            <label>Useful context (optional)
             <textarea name="description" maxLength={10000} aria-label="Operational request context" placeholder="Operational context only (optional)" />
+            </label>
             <div className="pds-grid-3">
               <select name="ticketTypeKey" aria-label="Request type" defaultValue="service_request"><option value="service_request">Service request</option><option value="incident">Incident</option><option value="problem">Problem</option><option value="maintenance">Maintenance</option><option value="supply">Supply</option><option value="facility">Facility</option></select>
               <select name="category" aria-label="Request category" defaultValue="other">{(configuration?.defaults.categories ?? ['other']).map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select>
               <select name="priority" aria-label="Request priority" defaultValue="normal">{(configuration?.defaults.priorities ?? ['normal']).map(value => <option key={value} value={value}>{value}</option>)}</select>
             </div>
+            <CoreSuiteSection title="Location, routing, and response targets" description="Optional details for the team handling this request." defaultOpen={assetIssueDeepLink}>
             <div className="pds-grid-3"><select name="directoryOrganizationId" aria-label="Service client" defaultValue=""><option value="">No service client</option>{clients.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><select name="directorySiteId" aria-label="Facility" defaultValue=""><option value="">No facility</option>{sites.map(row => <option key={row.id} value={row.id}>{row.organization?.name ? `${row.organization.name} · ` : ''}{row.name}</option>)}</select><select name="requesterContactId" aria-label="Requester contact" defaultValue=""><option value="">No requester contact</option>{contacts.map(row => <option key={row.id} value={row.id}>{row.firstName} {row.lastName}</option>)}</select></div>
             {assetIssueDeepLink && <div className="pds-route-context" role="status">Reporting an issue for the selected equipment. Confirm the equipment and enter only PHI-minimized operational details.</div>}
             <div className="pds-grid-3"><input name="locationLabel" maxLength={120} aria-label="Operational location" placeholder="Operational location" /><select name="departmentId" aria-label="Department" defaultValue=""><option value="">No department</option>{configuration?.departments.filter(row => row.active).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><select name="assetId" aria-label="Operational equipment" value={requestedAssetId} onChange={event => setRequestedAssetId(event.target.value)}><option value="">No equipment</option>{assets.map(row => <option key={String(row.id)} value={String(row.id)}>{String(row.assetTag)} · {String(row.name)}</option>)}</select></div>
             <div className="pds-grid-3"><select name="queueId" aria-label="Service queue" defaultValue=""><option value="">Unqueued</option>{configuration?.queues.filter(row => row.active).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><select name="teamId" aria-label="Assigned team" defaultValue=""><option value="">No team</option>{configuration?.teams.filter(row => row.active).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><select name="slaPolicyId" aria-label="SLA policy" defaultValue=""><option value="">Default/no SLA</option>{configuration?.slaPolicies.filter(row => row.active).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></div>
+            </CoreSuiteSection>
             <label className="pds-check"><input type="checkbox" name="isPatientImpacting" /> Patient-care operations impacted (no patient details)</label>
             <label className="pds-ack"><input type="checkbox" name="phiAcknowledged" required /> I confirm this contains operational information only and no patient data or unnecessary PHI.</label>
             <button disabled={Boolean(busy)}><Plus size={14} /> Create ticket</button>
@@ -345,14 +352,14 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
 
 function Heading({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle: string }) { return <header className="pds-heading"><Icon size={18} /><div><h3>{title}</h3><p>{subtitle}</p></div></header>; }
 function Empty({ text }: { text: string }) { return <div className="pds-empty">{text}</div>; }
-function Dashboard({ dashboard, tickets, requestHref, routeHref, canManage }: { dashboard: PulseDeskServiceDashboard; tickets: PulseDeskServiceTicket[]; requestHref: (id: string) => string; routeHref: (path: string) => string; canManage: boolean }) {
+function Dashboard({ dashboard, tickets, requestHref, routeHref, canManage, showWorkday }: { dashboard: PulseDeskServiceDashboard; tickets: PulseDeskServiceTicket[]; requestHref: (id: string) => string; routeHref: (path: string) => string; canManage: boolean; showWorkday: boolean }) {
   const workday = buildPulseDeskWorkday(dashboard, tickets, canManage);
   const metrics = [['Open tickets', dashboard.metrics.openTickets], ['At risk', dashboard.metrics.atRisk], ['Overdue', dashboard.metrics.overdue], ['Operational equipment', dashboard.metrics.operationalAssets], ['Pending supplies', dashboard.metrics.pendingSupplyRequests], ['Facility requests', dashboard.metrics.openFacilityRequests], ['Time logged', `${dashboard.metrics.timeMinutes} min`]];
   const hrefFor = (href: string) => href.startsWith('/requests/') ? requestHref(href.slice('/requests/'.length)) : routeHref(href);
   const trainingTicket = tickets.find(ticket => ['resolved', 'closed'].includes(ticket.status));
   return <div className="pds-stack">
-    <CoreSuiteWorkdayBrief moduleId="pulsedesk" eyebrow="Today · operational pressure" brief={workday} hrefFor={hrefFor} />
-    {trainingTicket && <OutcomeWorkflowAction
+    {showWorkday && <CoreSuiteWorkdayBrief moduleId="pulsedesk" eyebrow="Today · operational pressure" brief={workday} hrefFor={hrefFor} />}
+    {trainingTicket && <CoreSuiteSection title="Reuse a resolved issue for training" description="Review an unpublished practice exercise for your team."><OutcomeWorkflowAction
       workflowKey="support.resolved_to_faultlinelab"
       aggregateId={trainingTicket.id}
       sourceVersion={trainingTicket.version}
@@ -373,9 +380,11 @@ function Dashboard({ dashboard, tickets, requestHref, routeHref, canManage }: { 
         { label: 'Privacy review checkpoint', detail: 'The draft remains unpublished until a trainer checks for any private data the basic masking cannot identify' },
       ]}
       testId="pulsedesk-create-training-exercise"
-    />}
+    /></CoreSuiteSection>}
+    <CoreSuiteSection title="Operational totals and recent work" description="Response pressure, equipment, supplies, and request history." defaultOpen={!showWorkday}>
     <div className="pds-metrics">{metrics.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div>
     <section className="pds-card"><Heading icon={Activity} title="Current operational work" subtitle={`Updated ${formatDate(dashboard.generatedAt)}.`} />{tickets.slice(0, 8).map(ticket => <a className="pds-row-button" key={ticket.id} href={requestHref(ticket.id)}><span><strong>{ticket.humanId}</strong> {ticket.summary}</span><small>{ticket.status} · {ticket.priority} · SLA {ticket.sla.state}</small></a>)}</section>
+    </CoreSuiteSection>
   </div>;
 }
 
