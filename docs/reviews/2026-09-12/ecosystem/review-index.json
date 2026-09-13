@@ -1,0 +1,348 @@
+{
+  "sourceCommit": "fe7f1711428e10daefc9b56d15b8e6a73289dadc",
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "P1",
+      "title": "F01 — P1 — Cancelling payment confirmation still records payment",
+      "phases": [
+        "P01"
+      ]
+    },
+    {
+      "id": "F02",
+      "priority": "P2",
+      "title": "F02 — P2 — Single-invoice payment audit reports total instead of amount collected",
+      "phases": [
+        "P01"
+      ]
+    },
+    {
+      "id": "F03",
+      "priority": "P1",
+      "title": "F03 — P1 — Native offline failures remove the user's recoverable work",
+      "phases": [
+        "P02"
+      ]
+    },
+    {
+      "id": "F04",
+      "priority": "P2",
+      "title": "F04 — P2 — Native settings and requests lack complete failure recovery",
+      "phases": [
+        "P02"
+      ]
+    },
+    {
+      "id": "F05",
+      "priority": "P2",
+      "title": "F05 — P2 — SnapProof Team route does not load the team",
+      "phases": [
+        "P06"
+      ]
+    },
+    {
+      "id": "F06",
+      "priority": "P2",
+      "title": "F06 — P2 — TorqueShed export screen stops at a status label",
+      "phases": [
+        "P03"
+      ]
+    },
+    {
+      "id": "F07",
+      "priority": "P2",
+      "title": "F07 — P2 — TorqueShed record changes can race outstanding loads",
+      "phases": [
+        "P03"
+      ]
+    },
+    {
+      "id": "F08",
+      "priority": "P2",
+      "title": "F08 — P2 — TorqueShed discoverability displays the opposite of a saved false setting",
+      "phases": [
+        "P03"
+      ]
+    },
+    {
+      "id": "F09",
+      "priority": "P2",
+      "title": "F09 — P2 — TechDeck queue search examines only the loaded slice",
+      "phases": [
+        "P04"
+      ]
+    },
+    {
+      "id": "F10",
+      "priority": "P2",
+      "title": "F10 — P2 — PulseDesk knows the total but cannot expose records beyond 100",
+      "phases": [
+        "P05"
+      ]
+    },
+    {
+      "id": "F11",
+      "priority": "P2",
+      "title": "F11 — P2 — PulseDesk saved views are created but cannot be applied",
+      "phases": [
+        "P05"
+      ]
+    },
+    {
+      "id": "F12",
+      "priority": "P2",
+      "title": "F12 — P2 — PulseDesk search replaces the input on every query change",
+      "phases": [
+        "P05"
+      ]
+    },
+    {
+      "id": "F13",
+      "priority": "P2",
+      "title": "F13 — P2 — StudyForge keeps using a completed flashcard session",
+      "phases": [
+        "P07"
+      ]
+    },
+    {
+      "id": "F14",
+      "priority": "P2",
+      "title": "F14 — P2 — StudyForge keyboard shortcuts intercept interactive controls",
+      "phases": [
+        "P07"
+      ]
+    },
+    {
+      "id": "F15",
+      "priority": "P2",
+      "title": "F15 — P2 — FaultlineLab substitutes empty evidence for failed evidence requests",
+      "phases": [
+        "P08"
+      ]
+    },
+    {
+      "id": "F16",
+      "priority": "P2",
+      "title": "F16 — P2 — CallCommand can substitute a different call for a deep link",
+      "phases": [
+        "P09"
+      ]
+    },
+    {
+      "id": "F17",
+      "priority": "P2",
+      "title": "F17 — P2 — CallCommand “Calls today” uses a bounded UTC slice",
+      "phases": [
+        "P09"
+      ]
+    },
+    {
+      "id": "F18",
+      "priority": "P1",
+      "title": "F18 — P1 gate defect — OutCall source gate fails on stale prose and ledger evidence",
+      "phases": [
+        "P10"
+      ]
+    },
+    {
+      "id": "F19",
+      "priority": "P2",
+      "title": "F19 — P2 — OutCall hides records after five and cannot open older calls independently",
+      "phases": [
+        "P11"
+      ]
+    },
+    {
+      "id": "F20",
+      "priority": "P2",
+      "title": "F20 — P2 — OutCall scheduling silently uses the first profile",
+      "phases": [
+        "P11"
+      ]
+    },
+    {
+      "id": "F21",
+      "priority": "P2",
+      "title": "F21 — P2 — OutCall phone verification has no complete recovery loop",
+      "phases": [
+        "P11"
+      ]
+    },
+    {
+      "id": "F22",
+      "priority": "P1",
+      "title": "F22 — P1 future-release risk — OutCall asynchronous status and retry identity need end-to-end proof",
+      "phases": [
+        "P11",
+        "P19"
+      ]
+    },
+    {
+      "id": "F23",
+      "priority": "P2",
+      "title": "F23 — P2 — Public OutCall copy offers access options for an unavailable add-on",
+      "phases": [
+        "P10"
+      ]
+    },
+    {
+      "id": "F24",
+      "priority": "P2",
+      "title": "F24 — P2 — Pricing selections are lost across sign-in",
+      "phases": [
+        "P12"
+      ]
+    },
+    {
+      "id": "F25",
+      "priority": "P2",
+      "title": "F25 — P2 — Mobile sign-in puts the form below a full screen of marketing",
+      "phases": [
+        "P12"
+      ]
+    },
+    {
+      "id": "F26",
+      "priority": "P3",
+      "title": "F26 — P3 — Pricing loading language and selection semantics need finishing",
+      "phases": [
+        "P12"
+      ]
+    },
+    {
+      "id": "F27",
+      "priority": "P1",
+      "title": "F27 — P1 investigation — Batch leases can expire before a queued handler starts",
+      "phases": [
+        "P13"
+      ]
+    },
+    {
+      "id": "F28",
+      "priority": "P3",
+      "title": "F28 — P3 — Large mixed-responsibility files raise the cost of safe polish",
+      "phases": [
+        "P23"
+      ]
+    },
+    {
+      "id": "F29",
+      "priority": "P3",
+      "title": "F29 — P3 — Generated investigation artifacts materially inflate repository review",
+      "phases": [
+        "P23"
+      ]
+    },
+    {
+      "id": "F30",
+      "priority": "P1",
+      "title": "F30 — P1 release gate — Broad regression and parity reports do not prove every customer journey",
+      "phases": [
+        "P00",
+        "P20",
+        "P22"
+      ]
+    },
+    {
+      "id": "F31",
+      "priority": "P1",
+      "title": "F31 — P1 release gate — Managed deep security review could not start",
+      "phases": [
+        "P18"
+      ]
+    },
+    {
+      "id": "F32",
+      "priority": "P2",
+      "title": "F32 — P2 — Put OutCall limitations at the actual decision point",
+      "phases": [
+        "P11"
+      ]
+    },
+    {
+      "id": "F33",
+      "priority": "P2",
+      "title": "F33 — P2 — CallCommand setup overstates availability before acceptance",
+      "phases": [
+        "P09"
+      ]
+    },
+    {
+      "id": "F34",
+      "priority": "P1",
+      "title": "F34 — P1 gate defect — Current full API gate fails a superseded copy contract",
+      "phases": [
+        "P00"
+      ]
+    },
+    {
+      "id": "F35",
+      "priority": "P2",
+      "title": "F35 — P2 — TradeFlowKit still positions OutCall as business missed-call recovery",
+      "phases": [
+        "P10"
+      ]
+    }
+  ],
+  "priorities": {
+    "P1": 8,
+    "P2": 24,
+    "P3": 3
+  },
+  "phaseIds": [
+    "P00",
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "P06",
+    "P07",
+    "P08",
+    "P09",
+    "P10",
+    "P11",
+    "P12",
+    "P13",
+    "P14",
+    "P15",
+    "P16",
+    "P17",
+    "P18",
+    "P19",
+    "P20",
+    "P21",
+    "P22",
+    "P23",
+    "P24",
+    "P25",
+    "P26",
+    "P27"
+  ],
+  "opportunityIds": [
+    "E01",
+    "E02",
+    "E03",
+    "E04",
+    "E05",
+    "E06",
+    "E07",
+    "E08",
+    "E09",
+    "E10",
+    "E11",
+    "E12",
+    "E13",
+    "E14",
+    "E15",
+    "E16"
+  ],
+  "validation": {
+    "uniqueFindings": 35,
+    "uniquePhases": 28,
+    "uniqueOpportunities": 16,
+    "brokenLocalLinks": 0
+  },
+  "note": "Document consistency validation only; not product tests or security certification."
+}

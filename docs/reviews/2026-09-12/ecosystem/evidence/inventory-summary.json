@@ -1,0 +1,38 @@
+{
+  "api": {
+    "files": 271,
+    "lines": 109757
+  },
+  "native": {
+    "files": 32,
+    "lines": 1426
+  },
+  "other": {
+    "files": 35,
+    "lines": 59362
+  },
+  "packages": {
+    "files": 17,
+    "lines": 3791
+  },
+  "quarantined-import": {
+    "files": 2580,
+    "lines": 335935
+  },
+  "runner": {
+    "files": 7,
+    "lines": 1009
+  },
+  "scripts": {
+    "files": 90,
+    "lines": 13813
+  },
+  "tests": {
+    "files": 372,
+    "lines": 65890
+  },
+  "web": {
+    "files": 271,
+    "lines": 69418
+  }
+}

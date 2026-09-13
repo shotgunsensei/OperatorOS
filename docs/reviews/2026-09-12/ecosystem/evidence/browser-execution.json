@@ -1,0 +1,8 @@
+{
+  "startedAt": "2026-09-12T23:42:27.019Z",
+  "finishedAt": "2026-09-13T00:15:27.391Z",
+  "exitCode": 1,
+  "error": null,
+  "database": "loopback disposable PostgreSQL 16; synthetic test data only",
+  "command": "node scripts/parity/run-browser-tests.mjs --suite all"
+}
