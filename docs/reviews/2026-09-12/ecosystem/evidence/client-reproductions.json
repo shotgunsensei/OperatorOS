@@ -1,0 +1,29 @@
+{
+  "commit": "fe7f1711428e10daefc9b56d15b8e6a73289dadc",
+  "capturedAt": "2026-09-12T23:28:49.015Z",
+  "probes": 4,
+  "reproduced": 4,
+  "limitations": "Expression probes substantiate source behavior; they are not authenticated browser E2E or a security audit.",
+  "observations": [
+    {
+      "finding": "F01",
+      "observed": "Cancel (null) invokes payInvoice once",
+      "kind": "executed actual extracted callback; no HTTP or database call"
+    },
+    {
+      "finding": "F03",
+      "observed": "Permanent failure removes sole queued item",
+      "kind": "executed actual queue-domain module; no device storage touched"
+    },
+    {
+      "finding": "F08",
+      "observed": "Saved profileDiscoverable=false renders discoverability checkbox true",
+      "kind": "executed actual JSX value expression with server-shaped settings"
+    },
+    {
+      "finding": "F05",
+      "observed": "Team route computes needsTeam=false",
+      "kind": "executed actual fetch-condition expression"
+    }
+  ]
+}
