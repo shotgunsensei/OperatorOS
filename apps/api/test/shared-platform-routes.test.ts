@@ -94,7 +94,9 @@ test('P22-ROUTE-SECRET-001: provider mutation is audited and never echoes a raw 
   });
   assert.equal(response.statusCode, 200, response.body);
   assert.equal(response.body.includes(secret), false);
-  assert.equal(response.json().provider.state, 'ready');
+  assert.equal(response.json().provider.state, 'configured');
+  assert.equal(response.json().provider.reasonCode, 'LIVE_CONNECTION_UNVERIFIED');
+  assert.equal(response.json().provider.externalDelivery, false);
   assert.equal(response.json().provider.hasSecretReference, true);
   const encrypted = await db.execute(sql`SELECT encode(ciphertext, 'hex') AS ciphertext FROM shared_secret_references WHERE tenant_id = ${owner.currentTenantId!}`);
   assert.equal(JSON.stringify(encrypted.rows).includes(secret), false);

@@ -23,6 +23,7 @@ import {
 } from '@/lib/help';
 import styles from './HelpCenter.module.css';
 import { MODULE_GLOSSARY } from '@/lib/help/module-glossary';
+import ModuleSetupGuide from './ModuleSetupGuide';
 
 type SearchResult = { guide: HelpGuide; page: HelpPageGuide };
 
@@ -279,6 +280,7 @@ export default function HelpCenter({
                 </div>
                 <a href={selectedGuide.startHref} className={styles.startAction}>Open {selectedGuide.name}<ArrowUpRight size={15} /></a>
               </div>
+              <ModuleSetupGuide key={selectedGuide.id} moduleSlug={selectedGuide.id} />
               {MODULE_GLOSSARY[selectedGuide.id] && <details className={styles.terms}>
                 <summary>Common terms in {selectedGuide.name}</summary>
                 <dl>{MODULE_GLOSSARY[selectedGuide.id].map(([term, meaning]) => <div key={term}><dt>{term}</dt><dd>{meaning}</dd></div>)}</dl>

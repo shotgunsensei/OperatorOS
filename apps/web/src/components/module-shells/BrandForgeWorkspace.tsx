@@ -1,6 +1,7 @@
 'use client';
 
 import CoreSuiteSection from './CoreSuiteSection';
+import SharedCustomerPicker from './SharedCustomerPicker';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -449,6 +450,7 @@ function DashboardPanel({ dashboard, campaigns, calendar, navigate, hrefFor }: {
 
 function BrandsPanel({ brands, saving, mutate, canWrite, onBrandSaved }: { brands: BrandForgeBrand[]; saving: boolean; mutate: (task: () => Promise<unknown>) => Promise<void>; canWrite: boolean; onBrandSaved: (brand: BrandForgeBrand) => void }) {
   const [name, setName] = useState('');
+  const [directoryOrganizationId, setDirectoryOrganizationId] = useState('');
   const [description, setDescription] = useState('');
   const [tone, setTone] = useState('');
   const [headingFont, setHeadingFont] = useState('');
@@ -459,6 +461,7 @@ function BrandsPanel({ brands, saving, mutate, canWrite, onBrandSaved }: { brand
     event.preventDefault();
     void mutate(async () => {
       await moduleShellApi.brandforgeos.createBrand({
+        directoryOrganizationId: directoryOrganizationId || null,
         name,
         description: description || null,
         voiceTone: tone || null,
@@ -474,6 +477,7 @@ function BrandsPanel({ brands, saving, mutate, canWrite, onBrandSaved }: { brand
         accentColor: '#22d3ee',
       });
       setName('');
+      setDirectoryOrganizationId('');
       setDescription('');
       setTone('');
       setHeadingFont('');
@@ -483,8 +487,12 @@ function BrandsPanel({ brands, saving, mutate, canWrite, onBrandSaved }: { brand
     });
   };
   return (
-    <Panel id="brandforgeos-brands" title="Brand HQ" description="Manage identities, visual tokens, typography, voice, guidelines, and reusable asset references.">
+    <Panel id="brandforgeos-brands" title="Brand HQ" description="Keep brand colors, fonts, writing style, and approved assets together.">
       <CreateGrid onSubmit={submit} canWrite={canWrite}>
+        <SharedCustomerPicker moduleSlug="brandforgeos" value={directoryOrganizationId} onSelect={customer => {
+          setDirectoryOrganizationId(customer?.id ?? '');
+          if (customer) setName(customer.name.slice(0, 120));
+        }} />
         <Field label="Brand name" value={name} onChange={setName} required />
         <Field label="Voice and tone" value={tone} onChange={setTone} />
         <Field label="Heading font" value={headingFont} onChange={setHeadingFont} />
@@ -499,6 +507,7 @@ function BrandsPanel({ brands, saving, mutate, canWrite, onBrandSaved }: { brand
           brands.map((brand) => (
             <article key={brand.id} style={{ ...cardStyle, borderTop: `3px solid ${brand.primaryColor || '#a855f7'}` }}>
               <h3>{brand.name}</h3>
+              {brand.sharedCustomer && <p style={{ color: semantic.textMuted }}>Shared customer: {brand.sharedCustomer.name}<br />{[brand.sharedCustomer.email, brand.sharedCustomer.phone].filter(Boolean).join(' / ')}</p>}
               <p style={{ color: semantic.textMuted, minHeight: 36 }}>{brand.description || 'No description recorded.'}</p>
               <div style={{ color: '#f0abfc', fontSize: 13 }}>{brand.voiceTone || 'Voice not set'}</div>
               <div style={{ color: semantic.textMuted, fontSize: 12, marginTop: 8 }}>{[brand.headingFont, brand.bodyFont].filter(Boolean).join(' / ') || 'Typography not set'}</div>

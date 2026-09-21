@@ -86,9 +86,11 @@ test('email verification routes are non-enumerating, hashed, single-use, and res
     headers: { cookie: `operatoros_session=${session}` },
     payload: { newEmail: `changed-${user.email}`, password: 'verified-email-password' },
   });
-  assert.equal(changed.statusCode, 200, changed.body);
+  assert.equal(changed.statusCode, 202, changed.body);
   const [afterChange] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
-  assert.equal(afterChange.emailVerifiedAt, null, 'a changed address must prove mailbox control again');
+  assert.equal(afterChange.email, verified.email, 'the current address stays active until the new mailbox is verified');
+  assert.ok(afterChange.emailVerifiedAt);
+  assert.equal(changed.json().pendingVerification, true);
 
   const staleAddressToken = await issueEmailVerificationToken(user.id, '127.0.0.1');
   await db.update(users).set({

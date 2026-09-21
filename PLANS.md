@@ -2,6 +2,35 @@
 
 Status: current execution plan
 
+## Shared customer and security continuation (2026-09-21)
+
+Implemented locally: shared tenant customer selection in TradeFlowKit,
+BrandForge OS, and SnapProofOS; common header search/editor; persistent auth
+limits; sensitive-change MFA verification; verified email replacement; browser
+session revocation; honest provider readiness. Disposable v63 apply/reapply/verify
+passed and the final focused API runner passed 154/154. See
+[the current handoff](docs/modules/SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md).
+
+Confirmed external targets: Microsoft 365 and Google Workspace, QuickBooks Online,
+Facebook, LinkedIn, and X. Their executable live connectors remain to be built,
+then registered/authorized and accepted with the providers. Remaining product
+recommendations include saved onboarding, consolidated attention, organization
+MFA policy/passkeys/workplace login, spend controls, and legacy customer linking.
+Do not describe the entire recommendations list as completed. The production
+release gate remains unchanged; no push, deployment, or production apply occurred.
+
+## Customer workflow readiness continuation (2026-09-21)
+
+The current local candidate is `codex/customer-workflow-readiness` from
+`665c4e2`. See [the scoped report](docs/modules/CUSTOMER_WORKFLOW_READINESS_2026-09-21.md)
+for the full module map, changes, commands, and live-service handoff.
+Implemented: plain-language Help/connection guidance, recovery states, tenant
+queue scoping, Resend retry protection, and default-off private ClamAV scanning.
+Not complete: database-backed acceptance, all-route authenticated visual/workflow
+review, private scanner provisioning and persistent file-rescan acceptance, live
+mailbox/publishing implementation, vendor acceptance, and authorized deployment.
+Do not label all modules operational from this candidate's source/UI checks.
+
 Authority: `docs/IMPLEMENTATION_STATUS.md` records the latest evidence and
 `docs/modules/MODULE_PARITY_INDEX.md` records module state.
 

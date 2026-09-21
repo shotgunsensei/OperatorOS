@@ -1,5 +1,98 @@
 # OperatorOS implementation status
 
+## Shared customers, account security, and selected connections (2026-09-21 continuation)
+
+Status: **LOCAL IMPLEMENTATION / DATABASE VERIFIED / NOT DEPLOYED**.
+The same `codex/customer-workflow-readiness` candidate now adds tenant-owned
+shared customer search/editing in module headers and customer selection in
+TradeFlowKit, BrandForge OS, and SnapProofOS. Current contact details are reused;
+private notes and historical invoice/report contents are not copied. Tenant,
+viewer, entitlement, module-session, revision-conflict, and foreign-key checks
+remain server-owned. Manual same-name TradeFlowKit creation no longer silently
+merges into a shared customer; the user must select the existing record.
+
+Account work adds persistent authentication limits across servers, fresh MFA
+verification for sensitive account changes, confirmation before changing the
+sign-in email, and individually revocable observed browser sessions. Generic
+saved provider settings no longer claim verified external delivery.
+
+Docker became available during this continuation. New disposable PostgreSQL 16
+tests supersede the earlier host-unavailable note below for this scope. The
+initial wider regression sweep passed **172/172**, no failures/skips, in
+128.313 seconds. Final `node scripts/verify-customer-workflows.mjs` passed
+**154/154**, no failures/skips, in **110.330 seconds** after duplicate protection
+and provider-readiness corrections. These are overlapping suites, not an additive
+326-test claim. Its disposable runner strips external provider configuration,
+generates test-only secrets, and removes only its own container.
+
+The ordered v63/63 release clean-applied in **16,154 ms**, reapplied idempotently
+in **642 ms**, and passed independent verification. No production apply occurred.
+Final production build, all four typechecks, lint, and **18/18** synthetic
+browser checks passed (50.7 seconds). After the final site-selection preservation
+repair, shared-customer/SnapProof regressions passed **16/16** (23.714 seconds).
+Provider configuration/delivery distinction regressions passed **14/14**
+(22.354 seconds). These focused reruns also overlap the larger suite.
+Security scanning
+found no runtime findings or unresolved advisories; the existing two disclosed
+patched high-advisory exceptions remain.
+
+Two later test expectations were corrected without skips: the duplicate test
+used a customer's old name after another test renamed it, and the provider test
+expected a saved setting to mean verified delivery. A late TradeFlowKit input
+change also exposed an out-of-scope variable in its separate edit form; it was
+removed before rebuilding.
+
+The SnapProof shared-selection path also preserves explicitly selected service
+sites, contacts, and private notes. Saved provider configuration remains compatible
+with the existing startup configuration checks while its public status says
+`configured` and `externalDelivery=false`; it does not disable the platform simply
+because external delivery has not yet been verified.
+
+The chosen vendor targets are **Microsoft 365, Google Workspace, QuickBooks
+Online, Facebook, LinkedIn, and X**. Their live connectors/publishers remain
+unimplemented and unconnected; app registration/consent and provider acceptance
+are additional work, not the only remaining work. Organization MFA policies,
+passkeys/workplace login, saved onboarding/attention workflows, spend controls,
+legacy unlinked-customer review, and full deployed module acceptance remain open.
+
+See [the implementation and connection handoff](modules/SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md)
+for changed behavior, migration/rollback, repeatable commands, provider workflows,
+account owners, primary references, and completion evidence. No commit, push,
+deployment, external message, provider purchase, or production-data change was made.
+
+## Customer instructions, connection readiness, and file scanning (2026-09-21)
+
+Status: **LOCAL IMPLEMENTATION / PRODUCTION AND FULL WORKFLOW ACCEPTANCE OPEN**.
+Branch `codex/customer-workflow-readiness`, starting from clean `665c4e2`.
+The 15 Help guides / 198 page instructions pass the targeted plain-language
+check. OperatorOS and all 13 modules gain first-task and connection guidance.
+Shared services gains service checklists, honest loading/error states, collapsed
+advanced settings, and responsive controls. PulseDesk connection errors recover
+through a retry. Organization queue summaries now filter every count and age
+by the trusted tenant. Resend receives stable, organization-specific retry keys.
+A default-off private ClamAV adapter integrates with existing file quarantine
+and scan jobs; uncertain scan results cannot release files. An audited,
+administrator-only rescan action recovers eligible failed/unavailable checks.
+
+Focused source/unit/protocol checks pass **31/31**, with no failures/skips.
+Production build and all four workspace typechecks pass, as do current root
+lint and diff checks. The first successful synthetic browser run passes
+**14/14** (final confirmation: 58.4 seconds), including all module setup cards and the existing
+11 main-module presentation cases, with no serious/critical accessibility
+findings in audited regions. The separate quality-gate suite passes **20/20**.
+The security scan passes with no runtime findings
+or unresolved advisories; the two previously disclosed high advisory patch
+exceptions remain. Exact commands, final confirmation results, configuration,
+module-by-module gaps, vendor suggestions, artifacts, and rollback appear in
+[the customer readiness report](modules/CUSTOMER_WORKFLOW_READINESS_2026-09-21.md).
+
+No schema change or production action occurred. Local Docker's Linux engine
+is unavailable, so database-backed shared-service and full module acceptance
+are unverified. Vendor activation, real ClamAV engine acceptance, database-backed file-rescan
+acceptance, live mailbox/publishing connectors, deployed SSO, and the full
+authenticated visual/workflow sweep remain open. This is not completion of the
+request to make every module fully operational.
+
 ## Ecosystem, OperatorOS, admin, and messenger polish (2026-09-11)
 
 Status: **LOCAL CANDIDATE VERIFIED / NO DEPLOYMENT OR PARITY PROMOTION**.

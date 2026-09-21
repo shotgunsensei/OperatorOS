@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import AccountSessions from './AccountSessions';
 import { useAuth } from '../AuthProvider';
 import { authApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
@@ -19,6 +20,7 @@ export default function SettingsPage() {
   const [pwMessage, setPwMessage] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [securityCode, setSecurityCode] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
@@ -123,7 +125,8 @@ export default function SettingsPage() {
     if (newPassword.length < 8) { setPwMessage('Password must be at least 8 characters'); return; }
     setPwSaving(true); setPwMessage('');
     try {
-      await authApi.changePassword(currentPassword, newPassword);
+      await authApi.changePassword(currentPassword, newPassword, securityCode);
+      setSecurityCode('');
       await refresh();
       toast('Password changed successfully');
       setPwMessage('');
@@ -138,10 +141,11 @@ export default function SettingsPage() {
     if (!emailPassword) { setEmailMessage('Password is required'); return; }
     setEmailSaving(true); setEmailMessage('');
     try {
-      await authApi.changeEmail(newEmail.trim(), emailPassword);
+      await authApi.changeEmail(newEmail.trim(), emailPassword, securityCode);
+      setSecurityCode('');
       await refresh();
-      toast('Email updated successfully');
-      setEmailMessage('');
+      toast('Confirmation email requested');
+      setEmailMessage('Check your new email for a confirmation link. Your current sign-in email stays active until you confirm.');
       setNewEmail(''); setEmailPassword('');
     } catch {
       setEmailMessage('We could not update your email. Check your password and email address, then try again. Your current email is unchanged.');
@@ -153,7 +157,7 @@ export default function SettingsPage() {
     if (!deletePassword) { setDeleteMessage('Password is required'); return; }
     setDeleteSaving(true); setDeleteMessage('');
     try {
-      await authApi.requestDeletion(deletePassword);
+      await authApi.requestDeletion(deletePassword, securityCode);
       await logout();
     } catch {
       setDeleteMessage('We could not delete your account. Your account and data are unchanged. Check your password and try again.');
@@ -223,6 +227,12 @@ export default function SettingsPage() {
         </button>
       </section>
 
+      {mfaStatus?.enabled && <section style={cardStyle} aria-labelledby="security-code-heading">
+        <h2 id="security-code-heading" style={{ fontSize: 16 }}>Confirm account changes</h2>
+        <p style={{ color: colors.textMuted, fontSize: 13 }}>Before changing your password or email, or deleting your account, enter a current authenticator code. You can also use an unused recovery code.</p>
+        <label htmlFor="settings-security-code" style={labelStyle}>Authenticator or recovery code</label>
+        <input id="settings-security-code" value={securityCode} maxLength={80} autoComplete="one-time-code" onChange={event => setSecurityCode(event.target.value)} style={inputStyle} />
+      </section>}
       <section style={cardStyle} aria-labelledby="password-heading">
         <h2 id="password-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 6px' }}>Password</h2>
         <p id="password-guidance" style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 18px' }}>Use at least 8 characters. Changing your password signs out other sessions.</p>
@@ -243,7 +253,7 @@ export default function SettingsPage() {
       <section style={cardStyle} aria-labelledby="mfa-heading" data-testid="settings-mfa-section">
         <h2 id="mfa-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 6px' }}>Authenticator app</h2>
         <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 18px', lineHeight: 1.6 }}>
-          Require a time-based code after your password. The encrypted secret and one-way recovery-code hashes stay in OperatorOS, the identity authority for every module.
+          Use an authenticator app to protect your account. Save your recovery codes in case you lose access to your device.
         </p>
         {!mfaStatus ? (
           <p style={{ color: colors.textMuted, fontSize: 13 }}>Loading sign-in protection…</p>
@@ -309,7 +319,7 @@ export default function SettingsPage() {
 
       <section style={cardStyle} aria-labelledby="email-heading">
         <h2 id="email-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 6px' }}>Sign-in email</h2>
-        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>Changing your email requires password verification.</p>
+        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>Confirm your password and verify the new address before your sign-in email changes.</p>
         <div style={{ marginBottom: 16 }}>
           <label htmlFor="settings-new-email" style={labelStyle}>New email</label>
           <input id="settings-new-email" autoComplete="email" data-testid="input-new-email" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} style={inputStyle} />
@@ -320,7 +330,7 @@ export default function SettingsPage() {
         </div>
         {emailMessage && <FieldMessage>{emailMessage}</FieldMessage>}
         <button data-testid="button-change-email" onClick={handleChangeEmail} disabled={emailSaving} style={btnStyle}>
-          {emailSaving ? 'Updating email…' : 'Update sign-in email'}
+          {emailSaving ? 'Sending confirmation…' : 'Confirm new sign-in email'}
         </button>
       </section>
 
@@ -338,6 +348,7 @@ export default function SettingsPage() {
         <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px', lineHeight: 1.6 }}>
           Sign out everywhere closes this account&apos;s OperatorOS and module sessions. Other tabs and modules will ask you to sign in again on their next secure request.
         </p>
+        <AccountSessions />
         {globalLogoutMessage && (
           <div role="alert" style={{ fontSize: 13, color: colors.accentRed, marginBottom: 12 }}>
             {globalLogoutMessage}

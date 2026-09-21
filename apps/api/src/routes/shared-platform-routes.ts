@@ -15,6 +15,7 @@ import {
   searchSharedDocuments,
   listSharedFeatureFlags,
   setSharedFeatureFlag,
+  requestAttachmentRescan,
 } from '../lib/shared-platform-control-plane.js';
 import { createOutboundWebhookEndpoint, listOutboundWebhookEndpoints } from '../lib/shared-outbound-webhooks.js';
 import { requestSharedExport } from '../lib/shared-schedules-exports.js';
@@ -45,6 +46,20 @@ async function moduleId(tenantId: string, slug: string): Promise<string | null> 
 
 export async function registerSharedPlatformRoutes(app: FastifyInstance): Promise<void> {
   const tenantMember = requireTenantRole('member');
+
+  app.post('/v1/tenants/:tenantId/shared-platform/attachments/:attachmentId/rescan', { preHandler: [requireTenantAdmin] }, async (request, reply) => {
+    const { tenantId, actorUserId } = actor(request);
+    const body = (request.body ?? {}) as { moduleSlug?: string };
+    try {
+      const resolvedModuleId = await moduleId(tenantId, String(body.moduleSlug || ''));
+      if (!resolvedModuleId) return reply.code(404).send({ error: 'Enabled module not found', code: 'MODULE_NOT_FOUND' });
+      const result = await requestAttachmentRescan({
+        tenantId, actorUserId, moduleId: resolvedModuleId,
+        attachmentId: String((request.params as any).attachmentId),
+      }, request);
+      return reply.code(202).send(result);
+    } catch (error) { return sendError(reply, error); }
+  });
 
   app.get('/v1/tenants/:tenantId/shared-platform/overview', { preHandler: [requireTenantAdmin] }, async (request, reply) => {
     try { return reply.send(await getSharedPlatformOverview(String((request.params as any).tenantId))); }

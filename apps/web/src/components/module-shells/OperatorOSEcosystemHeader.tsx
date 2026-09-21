@@ -6,6 +6,7 @@ import OperatorOSAccountMenu from '@/components/OperatorOSAccountMenu';
 import { useAuth } from '@/components/AuthProvider';
 import OperatorLogo from '@/components/brand/OperatorLogo';
 import TenantMessenger from '@/components/TenantMessenger';
+import SharedCustomerPicker from './SharedCustomerPicker';
 import { useTenant } from '@/components/TenantProvider';
 import { buildOperatorOSHelpUrl, DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { PLATFORM_DOMAINS } from '../../../../../packages/sdk/src/ecosystem.js';
@@ -20,6 +21,7 @@ export default function OperatorOSEcosystemHeader({
   const { user, logoutEverywhere } = useAuth();
   const { activeTenant } = useTenant();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [customersOpen, setCustomersOpen] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
   async function globalLogout() {
@@ -82,6 +84,10 @@ export default function OperatorOSEcosystemHeader({
             ]} />
           </nav>
         </div>
+        <details key={`${activeTenant?.id ?? ''}:${moduleSlug}`} onToggle={event => setCustomersOpen(event.currentTarget.open)} style={{ maxWidth: 1320, margin: '8px auto 0' }}>
+          <summary style={{ cursor: 'pointer', padding: '8px 0', fontSize: 13 }}>Shared customers</summary>
+          {customersOpen && <SharedCustomerPicker moduleSlug={moduleSlug} />}
+        </details>
         {logoutError && <div className="operatoros-ecosystem-header__error" role="alert">{logoutError}</div>}
       </header>
     </>

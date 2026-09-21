@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { listSharedCustomers, updateSharedCustomer } from '../lib/shared-customers.js';
 import {
   archiveContact, archiveOrganization, archiveRelationship, archiveSite,
   associateOrganizationContact, associateSiteContact, createContact,
@@ -122,7 +123,42 @@ async function respond(reply: FastifyReply, operation: () => Promise<unknown>, s
   }
 }
 
+const sharedCustomerGuards = [requireTenantMember,
+  async (request: FastifyRequest, reply: FastifyReply) => requireTenantModuleAccess(String((request.params as any).moduleSlug))(request, reply),
+];
+
 export async function registerDirectoryRoutes(app: FastifyInstance) {
+  app.patch('/v1/modules/:moduleSlug/shared-customers/:id', { preHandler: [...sharedCustomerGuards, requireTenantModuleWriteAccess] }, async (request: any, reply) => {
+    reply.header('Cache-Control', 'private, no-store');
+    const id = parse(idSchema, request.params.id, reply);
+    const input = parse(z.object({
+      expectedRevision: z.string().regex(/^[0-9a-f]{64}$/), name: z.string().trim().min(2).max(160),
+      email: z.string().trim().email().max(320).nullable(), phone: z.string().trim().max(40).nullable(),
+      address: z.string().trim().max(2000).nullable(), website: z.string().url().max(500).nullable(),
+    }).strict(), request.body, reply);
+    if (!id || !input) return;
+    try {
+      return await updateSharedCustomer({ tenantId: request.tenantContext.tenantId, userId: request.user.id, moduleSlug: request.params.moduleSlug }, id, input);
+    } catch (error) {
+      if (error instanceof DirectoryFailure) return reply.code(error.statusCode).send({ code: error.code, error: error.message });
+      const code = (error as any)?.code ?? (error as any)?.cause?.code;
+      if (code === '23505') return reply.code(409).send({ code: 'SHARED_CUSTOMER_CONFLICT', error: 'Another customer or contact already uses these details. Review the existing record before saving.' });
+      if (code === '40P01' || code === '40001') return reply.code(409).send({ code: 'SHARED_CUSTOMER_CHANGED', error: 'Another update is in progress. Reload the customer before saving.' });
+      throw error;
+    }
+  });
+  // Uses the destination module's existing membership/entitlement/session guard.
+  // Access to shared business identity never grants access to the source module.
+  app.get('/v1/modules/:moduleSlug/shared-customers', { preHandler: sharedCustomerGuards }, async (request, reply) => {
+    const query = parse(z.object({ search: z.string().trim().max(200).optional(),
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+      offset: z.coerce.number().int().min(0).max(100000).default(0),
+    }).strict(), request.query, reply);
+    if (!query) return;
+    reply.header('Cache-Control', 'private, no-store');
+    const customers = await listSharedCustomers((request as any).tenantContext.tenantId, { ...query, limit: query.limit });
+    return { customers, canWrite: Boolean((request as any).tenantModuleAccessLevel) && !['none','viewer'].includes(String((request as any).tenantModuleAccessLevel)) && ((request as any).tenantContext.membershipRole !== 'viewer' || (request as any).tenantContext.viaPlatformRole), pagination: { limit: query.limit, offset: query.offset, hasMore: customers.length === query.limit } };
+  });
   app.get('/v1/modules/:moduleSlug/directory/organizations', { preHandler: readGuards }, async (request, reply) => {
     const query = pageQuery(request, reply); if (!query) return;
     const extra = request.query as Record<string, string | undefined>;

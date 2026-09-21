@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { createHash } from 'node:crypto';
 import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import { db } from '../db.js';
+import { withSharedCustomer, withSharedCustomers } from '../lib/shared-customers.js';
 import {
   brandforgeBrands,
   brandforgeCalendarItems,
@@ -414,7 +415,7 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
     const ctx = (request as any).tenantContext as Context;
     const rows = await db.select().from(brandforgeBrands).where(active(brandforgeBrands, ctx.tenantId))
       .orderBy(desc(brandforgeBrands.updatedAt)).limit(query.limit);
-    return { brands: rows.map(brandView) };
+    return { brands: await withSharedCustomers(ctx.tenantId, rows.map(brandView)) };
   });
 
   app.post(`${base}/brands`, { preHandler: writeGuards }, async (request, reply) => {
@@ -422,14 +423,24 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
     try { input = parseBrandInput(request.body, 'create'); } catch (error) { if (validation(reply, error)) return; throw error; }
     const ctx = (request as any).tenantContext as Context;
     const user = (request as any).user as User;
-    const [row] = await db.insert(brandforgeBrands).values({ ...input, name: input.name!, tenantId: ctx.tenantId, createdByUserId: user.id }).returning();
+    const row = await db.transaction(async tx => {
+      if (input.directoryOrganizationId) {
+        const locked = await tx.execute(sql`SELECT id FROM directory_organizations WHERE tenant_id=${ctx.tenantId} AND id=${input.directoryOrganizationId} AND archived_at IS NULL AND status='active' FOR SHARE`);
+        if (!locked.rows.length) return null;
+      }
+      const [created] = await tx.insert(brandforgeBrands).values({ ...input, name: input.name!, tenantId: ctx.tenantId, createdByUserId: user.id }).returning();
+      await tx.execute(sql`INSERT INTO activity_feed(tenant_id,user_id,action,entity_type,entity_id,metadata)
+        VALUES (${ctx.tenantId},${user.id},'created','brandforge_brand',${created!.id},${JSON.stringify({ organizationId: input.directoryOrganizationId ?? null })}::jsonb)`);
+      return created;
+    });
+    if (!row) return notFound(reply, 'customer');
     return reply.code(201).send(brandView(row!));
   });
 
   app.get(`${base}/brands/:id`, { preHandler: readGuards }, async (request, reply) => {
     const ctx = (request as any).tenantContext as Context;
     const row = await scopedBrand(ctx.tenantId, (request.params as any).id);
-    return row ? brandView(row) : notFound(reply, 'brand');
+    return row ? withSharedCustomer(ctx.tenantId, brandView(row)) : notFound(reply, 'brand');
   });
 
   app.patch(`${base}/brands/:id`, { preHandler: writeGuards }, async (request, reply) => {
@@ -437,10 +448,21 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
     try { input = parseBrandInput(request.body, 'patch'); } catch (error) { if (validation(reply, error)) return; throw error; }
     const ctx = (request as any).tenantContext as Context;
     const { expectedVersion, ...changes } = input;
-    const [row] = await db.update(brandforgeBrands).set({ ...changes, version: sql`${brandforgeBrands.version}+1`, updatedAt: new Date() }).where(and(
-      eq(brandforgeBrands.tenantId, ctx.tenantId), eq(brandforgeBrands.id, (request.params as any).id),
-      eq(brandforgeBrands.version, expectedVersion!), isNull(brandforgeBrands.deletedAt),
-    )).returning();
+    const outcome = await db.transaction(async tx => {
+      if (changes.directoryOrganizationId) {
+        const locked = await tx.execute(sql`SELECT id FROM directory_organizations WHERE tenant_id=${ctx.tenantId} AND id=${changes.directoryOrganizationId} AND archived_at IS NULL AND status='active' FOR SHARE`);
+        if (!locked.rows.length) return { missingCustomer: true, row: null };
+      }
+      const [row] = await tx.update(brandforgeBrands).set({ ...changes, version: sql`${brandforgeBrands.version}+1`, updatedAt: new Date() }).where(and(
+        eq(brandforgeBrands.tenantId, ctx.tenantId), eq(brandforgeBrands.id, (request.params as any).id),
+        eq(brandforgeBrands.version, expectedVersion!), isNull(brandforgeBrands.deletedAt),
+      )).returning();
+      if (row) await tx.execute(sql`INSERT INTO activity_feed(tenant_id,user_id,action,entity_type,entity_id,metadata)
+        VALUES (${ctx.tenantId},${(request as any).user.id},'updated','brandforge_brand',${row.id},${JSON.stringify({ organizationId: row.directoryOrganizationId })}::jsonb)`);
+      return { missingCustomer: false, row };
+    });
+    if (outcome.missingCustomer) return notFound(reply, 'customer');
+    const { row } = outcome;
     if (!row) return await scopedBrand(ctx.tenantId, (request.params as any).id) ? versionConflict(reply, 'Brand') : notFound(reply, 'brand');
     return brandView(row);
   });

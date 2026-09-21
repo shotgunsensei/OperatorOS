@@ -9,6 +9,7 @@ import {
   reconcileSnapProofCaptures,
 } from '@/lib/snapproof-offline-queue';
 import OutcomeWorkflowAction from './OutcomeWorkflowAction';
+import SharedCustomerPicker from './SharedCustomerPicker';
 
 export type SnapProofFieldTab =
   | 'customers'
@@ -524,10 +525,11 @@ function Customers({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
+  const [directoryOrganizationId, setDirectoryOrganizationId] = useState('');
   const [phone, setPhone] = useState('');
   const [search, setSearch] = useState('');
   const visibleCustomers = customers.filter((item) =>
-    [item.name, item.company, item.email]
+    [item.sharedCustomer?.name ?? item.name, item.company, item.sharedCustomer?.email ?? item.email]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(search.toLowerCase())),
   );
@@ -536,6 +538,7 @@ function Customers({
     if (!canWrite) return;
     void mutate(async () => {
       await moduleShellApi.snapproofos.createCustomer({
+        directoryOrganizationId: directoryOrganizationId || null,
         name,
         email: email || null,
         company: company || null,
@@ -545,6 +548,7 @@ function Customers({
       setEmail('');
       setCompany('');
       setPhone('');
+      setDirectoryOrganizationId('');
     });
   };
   return (
@@ -553,11 +557,17 @@ function Customers({
       description="Customer history stays attached to every field job and approved report."
     >
       {canWrite && <Form onSubmit={submit}>
+        <SharedCustomerPicker moduleSlug="snapproofos" value={directoryOrganizationId} onSelect={customer => {
+          setDirectoryOrganizationId(customer?.id ?? '');
+          setName(customer?.name ?? ''); setEmail(customer?.email ?? ''); setPhone(customer?.phone ?? '');
+        }} />
+        {!directoryOrganizationId && <>
         <Text name="Customer name" value={name} set={setName} required />
         <Text name="Company" value={company} set={setCompany} />
         <Text name="Email" value={email} set={setEmail} type="email" />
         <Text name="Phone" value={phone} set={setPhone} />
-        <Submit saving={saving} label="Create customer" />
+        </>}
+        <Submit saving={saving} label={directoryOrganizationId ? "Use shared customer" : "Create customer"} />
       </Form>}
       <div style={{ ...card, marginBottom: 16 }}>
         <Text name="Search customers" value={search} set={setSearch} />
@@ -566,10 +576,11 @@ function Customers({
         {visibleCustomers.length ? (
           visibleCustomers.map((item) => (
             <article key={item.id} style={card}>
-              <h3 style={{ margin: '0 0 5px' }}>{item.name}</h3>
+              <h3 style={{ margin: '0 0 5px' }}>{item.sharedCustomer?.name ?? item.name}</h3>
+              {item.sharedCustomer && <p style={{ color: colors.muted }}>Shared customer: current contact details</p>}
               <div style={{ color: colors.muted }}>{item.company || 'Independent customer'}</div>
               <p>
-                {item.email || 'No email'} · {item.phone || 'No phone'}
+                {(item.sharedCustomer ? item.sharedCustomer.email : item.email) || 'No email'} · {(item.sharedCustomer ? item.sharedCustomer.phone : item.phone) || 'No phone'}
               </p>
               <strong>{item.jobCount || 0} jobs</strong>
               {canManage && <div style={{ marginTop: 12 }}>

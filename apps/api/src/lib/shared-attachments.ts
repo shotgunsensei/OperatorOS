@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { enqueueSharedJob, registerSharedJobHandler } from './shared-background-jobs.js';
 import { isOperatorOSTestEnvironment } from './shared-service-safety.js';
+import { clamAvConfiguration, createClamAvScanner } from './clamav-scanner.js';
 
 type Executor = Pick<typeof db, 'execute'>;
 export const ATTACHMENT_SCAN_JOB = 'shared.attachment.scan.v1';
@@ -22,14 +23,21 @@ const unavailableScanner: AttachmentScanner = {
   configured: false,
   async scan() { return 'unavailable'; },
 };
-let scanner: AttachmentScanner = unavailableScanner;
+let scannerOverride: AttachmentScanner | null = null;
+
+function attachmentScanner(): AttachmentScanner {
+  if (scannerOverride && isOperatorOSTestEnvironment()) return scannerOverride;
+  const configuration = clamAvConfiguration();
+  return configuration ? createClamAvScanner(configuration) : unavailableScanner;
+}
 
 export function setAttachmentScannerForTests(next: AttachmentScanner | null): void {
   if (!isOperatorOSTestEnvironment()) throw new Error('Attachment scanner override is test-only');
-  scanner = next ?? unavailableScanner;
+  scannerOverride = next;
 }
 
 export function getAttachmentServiceStatus() {
+  const scanner = attachmentScanner();
   return {
     storage: { adapter: 'postgres', configured: (process.env.ATTACHMENT_STORAGE_ADAPTER || 'postgres') === 'postgres' },
     scanner: { name: scanner.name, configured: scanner.configured },
@@ -351,7 +359,7 @@ async function scanAttachmentJob(context: {
   if (!metadata || metadata.scan_status !== 'pending') return;
   const content = await getAttachmentStorageAdapter().get({ tenantId: context.tenantId, attachmentId });
   if (!content) throw Object.assign(new Error('Attachment blob is missing'), { code: 'ATTACHMENT_BLOB_MISSING' });
-  const status = await scanner.scan({
+  const status = await attachmentScanner().scan({
     content,
     detectedMimeType: String(metadata.detected_mime_type),
     sha256: String(metadata.sha256),

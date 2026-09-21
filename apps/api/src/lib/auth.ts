@@ -6,6 +6,7 @@ import { db } from '../db.js';
 import { users, subscriptions, adminAuditLogs, activityFeed, revokedSessionTokens } from '../schema.js';
 import { eq, and } from 'drizzle-orm';
 import { getUserPlanConfig, checkResourceLimit, checkFeatureAccess, type PlanFeatures, type PlanLimits } from './plans.js';
+import { observeBrowserSession } from './auth-browser-sessions.js';
 import { requireSessionSecret } from './session-secret.js';
 import { SESSION_COOKIE_NAME } from '../../../../packages/auth/index.js';
 import { resolveTorqueShedNativeAccessToken } from './torqueshed-native-auth.js';
@@ -99,6 +100,7 @@ export function signToken(payload: JWTPayload, options: { expiresInSeconds?: num
         ? Math.max(1, Math.floor(options.expiresInSeconds))
         : JWT_EXPIRY,
       algorithm: JWT_ALGORITHM,
+      jwtid: crypto.randomUUID(),
     },
   );
 }
@@ -158,7 +160,8 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     return reply.code(401).send({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
   }
 
-  const payload = verifyToken(token) ?? await resolveTorqueShedNativeAccessToken(token);
+  const signedPayload = verifyToken(token);
+  const payload = signedPayload ?? await resolveTorqueShedNativeAccessToken(token);
   if (!payload) {
     return reply.code(401).send({ error: 'Invalid or expired token', code: 'TOKEN_INVALID' });
   }
@@ -205,6 +208,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     return reply.code(403).send({ error: 'Account temporarily locked due to too many failed login attempts', code: 'ACCOUNT_LOCKED' });
   }
 
+  if (signedPayload) await observeBrowserSession(tokenHash, payload, String(request.headers['user-agent'] ?? ''));
   (request as any).user = user;
   (request as any).authSession = payload;
   (request as any).authTokenFingerprint = tokenHash;

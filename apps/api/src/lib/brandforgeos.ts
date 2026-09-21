@@ -104,13 +104,16 @@ function ensurePatch(changes: ObjectValue) {
 
 export function parseBrandInput(input: unknown, mode: 'create' | 'patch') {
   const body = record(input);
-  knownFields(body, ['name', 'description', 'primaryColor', 'secondaryColor', 'accentColor', 'headingFont', 'bodyFont', 'voiceTone', 'guidelines', 'assetSummary', 'expectedVersion']);
+  knownFields(body, ['directoryOrganizationId', 'name', 'description', 'primaryColor', 'secondaryColor', 'accentColor', 'headingFont', 'bodyFont', 'voiceTone', 'guidelines', 'assetSummary', 'expectedVersion']);
   const color = (value: unknown, field: string) => {
     const result = optionalText(value, field, 7);
     if (result && !HEX_COLOR.test(result)) throw new BrandForgeValidationError(`${field} must be a six-digit hex color`, field);
     return result;
   };
+  const directoryOrganizationId = optionalText(body.directoryOrganizationId, 'directoryOrganizationId', 36);
+  if (directoryOrganizationId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(directoryOrganizationId)) throw new BrandForgeValidationError('Choose a shared customer.', 'directoryOrganizationId');
   const changes = {
+    directoryOrganizationId,
     name: mode === 'create' || body.name !== undefined ? text(body.name, 'name', 1, 120) : undefined,
     description: optionalText(body.description, 'description', 4_000),
     primaryColor: color(body.primaryColor, 'primaryColor'),

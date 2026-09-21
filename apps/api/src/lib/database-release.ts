@@ -64,6 +64,8 @@ import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
 } from './database-release-contract.js';
+import { ensureAuthSecurityControls } from './auth-security-db-init.js';
+import { ensureSharedCustomerLinks } from './shared-customer-db-init.js';
 import { withDatabaseReleaseLock } from './database-release-lock.js';
 
 export { DATABASE_RELEASE_CONTRACT, DATABASE_RELEASE_STEPS };
@@ -131,6 +133,8 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   callcommand_commercial_runtime: ensureCallCommandCommercialTables,
   callcommand_managed_number_provisioning: ensureCallCommandManagedNumberTables,
   callcommand_guided_setup: ensureCallCommandSetupTables,
+  shared_customer_links: ensureSharedCustomerLinks,
+  auth_security_controls: ensureAuthSecurityControls,
   core_suite_trial_tables: ensureCoreSuiteTrialTables,
   forward_commerce_contract: ensureForwardCommerceContract,
 };
@@ -691,7 +695,15 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
           AND conname='callcommand_setup_flow_fk' AND convalidated)
         AND EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.callcommand_setup_orders')
           AND conname='callcommand_setup_channel_fk' AND convalidated)
-        AS callcommand_guided_setup
+        AS callcommand_guided_setup,
+      EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.brandforge_brands')
+        AND conname='brandforge_shared_customer_fk' AND convalidated)
+        AND to_regclass('public.idx_brandforge_shared_customer') IS NOT NULL
+        AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='directory_organizations' AND column_name='customer_address') AS shared_customer_links,
+      to_regclass('public.auth_request_limits') IS NOT NULL AND to_regclass('public.idx_auth_request_limits_expiry') IS NOT NULL
+        AND to_regclass('public.auth_pending_email_changes') IS NOT NULL
+        AND to_regclass('public.auth_browser_sessions') IS NOT NULL
+        AND to_regclass('public.idx_auth_browser_sessions_user') IS NOT NULL AS auth_security_controls
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})
