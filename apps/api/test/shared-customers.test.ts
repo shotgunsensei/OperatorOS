@@ -163,6 +163,62 @@ test('Linking shared customers preserves a chosen service site and private modul
   assert.notEqual(linked.json().customer.id, snapId);
 });
 
+test('Inactive name matches explain reactivation and can be selected after reactivation', async () => {
+  const name = 'Inactive Review Customer';
+  const created = await app.inject({ method: 'POST', url: '/v1/modules/tradeflowkit/customers', headers: headers(), payload: { name } });
+  assert.equal(created.statusCode, 201, created.body);
+  const saved = created.json();
+  await db.execute(sql`UPDATE directory_organizations SET status='inactive' WHERE tenant_id=${owner.currentTenantId} AND id=${saved.organizationId}`);
+  const rejected = await app.inject({ method: 'POST', url: '/v1/modules/tradeflowkit/customers', headers: headers(), payload: { name, email: 'should-not-save@example.test' } });
+  assert.equal(rejected.statusCode, 409, rejected.body);
+  assert.equal(rejected.json().code, 'SHARED_CUSTOMER_INACTIVE');
+  assert.match(rejected.json().error, /reactivate.*business directory/);
+  assert.doesNotMatch(rejected.json().error, /Choose.*Shared customers/);
+  const hidden = await app.inject({ method: 'GET', url: `/v1/modules/tradeflowkit/shared-customers?search=${encodeURIComponent(name)}`, headers: headers() });
+  assert.equal(hidden.json().customers.length, 0);
+  const stored = await db.execute(sql`SELECT status,version FROM directory_organizations WHERE tenant_id=${owner.currentTenantId} AND id=${saved.organizationId}`);
+  assert.equal(stored.rows[0].status, 'inactive');
+  const count = await db.execute(sql`SELECT COUNT(*)::int AS n FROM tradeflowkit_customers WHERE tenant_id=${owner.currentTenantId} AND organization_id=${saved.organizationId}`);
+  assert.equal(count.rows[0].n, 1);
+  const activated = await app.inject({ method: 'PATCH', url: `/v1/modules/tradeflowkit/directory/organizations/${saved.organizationId}`, headers: headers(), payload: { expectedVersion: Number(stored.rows[0].version), status: 'active' } });
+  assert.equal(activated.statusCode, 200, activated.body);
+  const visible = await app.inject({ method: 'GET', url: `/v1/modules/tradeflowkit/shared-customers?search=${encodeURIComponent(name)}`, headers: headers() });
+  assert.equal(visible.json().customers[0].id, saved.organizationId);
+  const linked = await app.inject({ method: 'POST', url: '/v1/modules/tradeflowkit/customers', headers: headers(), payload: { directoryOrganizationId: saved.organizationId } });
+  assert.equal(linked.statusCode, 201, linked.body); assert.equal(linked.json().id, saved.id);
+});
+
+test('SnapProof search matches the current shared name and primary email without exposing other tenants', async () => {
+  for (const search of ['Directory Edited Customer', 'DIRECTORY@EXAMPLE.TEST']) {
+    const url = `/v1/modules/snapproofos/customers?search=${encodeURIComponent(search)}`;
+    const found = await app.inject({ method: 'GET', url, headers: headers() });
+    assert.equal(found.statusCode, 200, found.body);
+    assert.ok(found.json().customers.some((row: any) => row.id === snapId));
+    const denied = await app.inject({ method: 'GET', url, headers: headers(foreign, foreign.currentTenantId) });
+    assert.equal(denied.statusCode, 200, denied.body); assert.equal(denied.json().customers.length, 0);
+  }
+  const old = await app.inject({ method: 'GET', url: '/v1/modules/snapproofos/customers?search=shared%40example.test', headers: headers() });
+  assert.equal(old.json().customers.some((row: any) => row.id === snapId), false);
+});
+
+test('SnapProof search preserves legacy fallback and does not match cleared shared email or wildcard text', async () => {
+  const created = await app.inject({ method: 'POST', url: '/v1/modules/snapproofos/customers', headers: headers(), payload: { name: 'Search Fallback Review', email: 'search-snapshot@example.test' } });
+  assert.equal(created.statusCode, 201, created.body);
+  const saved = created.json().customer;
+  await db.execute(sql`UPDATE directory_contacts SET email=NULL,normalized_email=NULL WHERE tenant_id=${owner.currentTenantId} AND id=${saved.directoryContactId}`);
+  const url = '/v1/modules/snapproofos/customers?search=search-snapshot%40example.test';
+  const cleared = await app.inject({ method: 'GET', url, headers: headers() });
+  assert.equal(cleared.json().customers.length, 0);
+  await db.execute(sql`UPDATE directory_organizations SET status='inactive' WHERE tenant_id=${owner.currentTenantId} AND id=${saved.directoryOrganizationId}`);
+  const fallback = await app.inject({ method: 'GET', url, headers: headers() });
+  assert.equal(fallback.json().customers[0].id, saved.id);
+  await db.execute(sql`UPDATE snapproof_customers SET directory_organization_id=NULL,directory_contact_id=NULL WHERE tenant_id=${owner.currentTenantId} AND id=${saved.id}`);
+  const legacy = await app.inject({ method: 'GET', url, headers: headers() });
+  assert.equal(legacy.json().customers[0].id, saved.id);
+  const wildcard = await app.inject({ method: 'GET', url: '/v1/modules/snapproofos/customers?search=%25', headers: headers() });
+  assert.equal(wildcard.json().customers.length, 0);
+});
+
 test('Viewer can read shared identity but cannot create a linked module record', async () => {
   const read = await app.inject({ method: 'GET', url: '/v1/modules/snapproofos/shared-customers', headers: headers(viewer) });
   assert.equal(read.statusCode, 200, read.body);

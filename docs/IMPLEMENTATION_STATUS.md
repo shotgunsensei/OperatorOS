@@ -1,5 +1,43 @@
 # OperatorOS implementation status
 
+## PR #102 review follow-up
+
+Reviewed base: `75d2c292341ef5188c286b5ae657e33e8f778117` on
+`codex/customer-workflow-readiness`. Both customer behavior findings are fixed:
+
+- Manual TradeFlowKit creation against an inactive, unarchived directory name
+  returns `409 SHARED_CUSTOMER_INACTIVE` with administrator reactivation guidance.
+  The record remains inactive, no duplicate is created, and the existing directory
+  reactivation flow makes it selectable again. The uniqueness rule is unchanged.
+- SnapProofOS customer search uses the active shared organization name and the
+  same active primary-contact ordering used for display, before its result limit.
+  It preserves company search and legacy/unavailable-directory snapshot fallback,
+  does not match a stale snapshot email when the active shared email was cleared,
+  treats wildcard characters literally, and keeps every join tenant-scoped.
+- This PR's new lint-pass claims were removed from all three evidence documents.
+  The existing package script does not override `AGENTS.md`'s verification policy;
+  no lint/formatting release-gate approval is claimed by this follow-up.
+
+Fresh focused verification: **24 passed, 0 failed, 0 skipped**, in **37.645 seconds**,
+using disposable PostgreSQL 16 and generated test credentials. Coverage includes
+inactive-name rejection/reactivation/reuse, current name/email search, tenant
+isolation, cleared email, legacy fallback, and existing import/revenue/proof flows.
+The fresh production build passed deployment-scope/catalog checks, all four
+workspace typechecks, and API/runner/web builds with 35 generated pages.
+`git diff --check` passed. Browser tests were not rerun because the follow-up
+changes server-side search/creation behavior and documentation only.
+
+```powershell
+node scripts/verify-customer-workflows.mjs apps/api/test/shared-customers.test.ts apps/api/test/tradeflowkit-customer-import.test.ts apps/api/test/tradeflowkit-revenue-flow.test.ts apps/api/test/snapproofos-db.test.ts
+$env:INTERNAL_API_URL='http://localhost:5001'
+corepack pnpm build:production
+git diff --check
+```
+
+Logs: `build/pr102-review-tests.log` and `build/pr102-review-build.log`.
+No schema, provider configuration, or production data change is required.
+Rollback is the scoped application-code revert. No push or deployment occurred.
+
 ## Shared customers, account security, and selected connections (2026-09-21 continuation)
 
 Status: **LOCAL IMPLEMENTATION / DATABASE VERIFIED / NOT DEPLOYED**.
@@ -27,7 +65,7 @@ generates test-only secrets, and removes only its own container.
 
 The ordered v63/63 release clean-applied in **16,154 ms**, reapplied idempotently
 in **642 ms**, and passed independent verification. No production apply occurred.
-Final production build, all four typechecks, lint, and **18/18** synthetic
+Final production build, all four typechecks, and **18/18** synthetic
 browser checks passed (50.7 seconds). After the final site-selection preservation
 repair, shared-customer/SnapProof regressions passed **16/16** (23.714 seconds).
 Provider configuration/delivery distinction regressions passed **14/14**
@@ -75,8 +113,8 @@ and scan jobs; uncertain scan results cannot release files. An audited,
 administrator-only rescan action recovers eligible failed/unavailable checks.
 
 Focused source/unit/protocol checks pass **31/31**, with no failures/skips.
-Production build and all four workspace typechecks pass, as do current root
-lint and diff checks. The first successful synthetic browser run passes
+Production build, all four workspace typechecks, and diff checks pass.
+The first successful synthetic browser run passes
 **14/14** (final confirmation: 58.4 seconds), including all module setup cards and the existing
 11 main-module presentation cases, with no serious/critical accessibility
 findings in audited regions. The separate quality-gate suite passes **20/20**.

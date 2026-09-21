@@ -145,7 +145,7 @@ There is no database migration in this candidate.
 Final confirmation after the rescan feature and last copy changes: focused
 suite **31/31** (16.14 seconds), quality-gate suite **20/20** (1.16 seconds),
 and browser suite **14/14** (58.4 seconds), all with zero failures/skips.
-The final production build, root lint, security scan, and diff check passed.
+The final production build, security scan, and diff check passed.
 The shared-services browser case also confirms a rescan request contains the
 owning app and transitions the synthetic file to Waiting without a duplicate
 request. Desktop and phone screenshots were visually inspected.
@@ -156,8 +156,8 @@ request. Desktop and phone screenshots were visually inspected.
   executors, and outbound isolation.
 - `corepack pnpm build:production`: passed deployment-scope checks, catalog
   validation, all four workspace typechecks, and API/runner/web builds; 35 pages.
-- `corepack pnpm lint`: passed. The current package defines this command even
-  though the older repository instructions describe its prior absence.
+- Lint/formatting approval is not claimed: `AGENTS.md` requires a reviewed
+  command before treating either as a release gate.
 - `corepack pnpm --dir apps/web exec playwright test --config playwright.ui.config.ts`:
   14 passed, 0 failed, 0 skipped in the first successful run (51.8 seconds).
   Synthetic API fixtures only. All 14 setup cards were checked; the previous
@@ -191,7 +191,6 @@ Exact focused test command:
 node --import tsx --test --test-concurrency=1 apps/api/test/attachment-rescan.test.ts apps/api/test/customer-readiness.test.ts apps/api/test/resend-delivery-retry.test.ts apps/api/test/shared-queue-tenant-scope.test.ts apps/api/test/clamav-scanner.test.ts apps/api/test/help-center-contract.test.ts apps/api/test/shared-platform-ui-static.test.ts apps/api/test/ecosystem-guided-polish.test.ts apps/api/test/deterministic-outbound-isolation.test.ts
 $env:INTERNAL_API_URL='http://localhost:5001'
 corepack pnpm build:production
-corepack pnpm lint
 node --test scripts/parity/quality-gates.test.mjs
 corepack pnpm --dir apps/web exec playwright test --config playwright.ui.config.ts
 node scripts/phase39/security-scan.mjs

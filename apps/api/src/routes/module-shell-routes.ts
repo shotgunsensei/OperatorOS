@@ -523,6 +523,9 @@ async function createLinkedTradeFlowKitCustomer(
   }
   if (!organization) throw new Error('Directory organization could not be resolved');
   if (!options.sourceId && !createdOrganization) {
+    if (organization.status !== 'active') {
+      throw Object.assign(new Error('This customer is inactive. Ask your organization administrator to reactivate it in the business directory before adding it.'), { code: 'SHARED_CUSTOMER_INACTIVE' });
+    }
     throw Object.assign(new Error('Choose the existing customer from Shared customers to avoid a duplicate.'), { code: 'SHARED_CUSTOMER_EXISTS' });
   }
 
@@ -882,6 +885,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       return reply.code(201).send(customer);
     } catch (error) {
       const code = (error as any)?.code ?? (error as any)?.cause?.code;
+      if (code === 'SHARED_CUSTOMER_INACTIVE') return reply.code(409).send({ code, error: 'This customer is inactive. Ask your organization administrator to reactivate it in the business directory before adding it.' });
       if (code === 'SHARED_CUSTOMER_EXISTS' || code === '23505') return reply.code(409).send({ code: 'SHARED_CUSTOMER_EXISTS', error: 'A customer with these details already exists. Choose them from Shared customers.' });
       throw error;
     }

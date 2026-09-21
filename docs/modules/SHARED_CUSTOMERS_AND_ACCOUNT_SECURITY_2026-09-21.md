@@ -106,7 +106,7 @@ loopback with generated test credentials. No real customer or provider was used.
   14/14 (22.354 seconds). These suites overlap; do not sum the counts.
 - Clean ordered v63 release apply: passed in 16,154 ms. Second idempotent apply:
   passed in 642 ms. Independent current-release verification: passed.
-- Production build, four workspace typechecks, and root lint passed locally.
+- Production build and four workspace typechecks passed locally.
 - Final combined synthetic browser suite: 18 passed, 0 failed, 0 skipped
   (50.7 seconds). It includes customer selection/autofill, common editing, recovery, phone layout,
   scoped accessibility, individual browser revocation, pending email messaging,
@@ -123,7 +123,6 @@ The new repeatable runner creates and removes only its own disposable container:
 node scripts/verify-customer-workflows.mjs
 $env:INTERNAL_API_URL='http://localhost:5001'
 corepack pnpm build:production
-corepack pnpm lint
 corepack pnpm --dir apps/web exec playwright test --config playwright.ui.config.ts
 node scripts/phase39/security-scan.mjs
 git diff --check

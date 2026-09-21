@@ -444,9 +444,27 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
   app.get(`${base}/customers`, { preHandler: readGuards }, async (request) => {
     const query = request.query as Row;
     const search = text(query?.search, 'search', 120);
+    const pattern = search ? `%${search.replace(/[\\%_]/g, '\\$&')}%` : null;
     const includeArchived = query?.includeArchived === 'true';
     const result = await db.execute(
-      sql`SELECT c.*,(SELECT COUNT(*)::int FROM snapproof_cases j WHERE j.tenant_id=c.tenant_id AND j.customer_id=c.id AND j.deleted_at IS NULL) AS job_count FROM snapproof_customers c WHERE c.tenant_id=${tenant(request)} AND (${includeArchived} OR c.archived_at IS NULL) AND (${search}::text IS NULL OR c.name ILIKE ${search ? `%${search}%` : null} OR c.company ILIKE ${search ? `%${search}%` : null} OR c.email ILIKE ${search ? `%${search}%` : null}) ORDER BY c.updated_at DESC LIMIT 100`,
+      // Match the identity displayed by withSharedCustomers before applying the
+      // result limit. Primary-contact ordering matches the shared projection.
+      sql`SELECT c.*,(SELECT COUNT(*)::int FROM snapproof_cases j WHERE j.tenant_id=c.tenant_id AND j.customer_id=c.id AND j.deleted_at IS NULL) AS job_count
+        FROM snapproof_customers c
+        LEFT JOIN directory_organizations o ON o.tenant_id=c.tenant_id AND o.id=c.directory_organization_id
+          AND o.archived_at IS NULL AND o.status='active'
+        LEFT JOIN LATERAL (
+          SELECT p.email FROM directory_organization_contacts link
+          JOIN directory_contacts p ON p.tenant_id=link.tenant_id AND p.id=link.contact_id
+          WHERE link.tenant_id=o.tenant_id AND link.organization_id=o.id
+            AND p.archived_at IS NULL AND p.status='active'
+          ORDER BY link.is_primary DESC,link.created_at,p.id LIMIT 1
+        ) contact ON true
+        WHERE c.tenant_id=${tenant(request)} AND (${includeArchived} OR c.archived_at IS NULL)
+          AND (${pattern}::text IS NULL OR COALESCE(o.name,c.name) ILIKE ${pattern}
+            OR c.company ILIKE ${pattern}
+            OR (CASE WHEN o.id IS NULL THEN c.email ELSE contact.email END) ILIKE ${pattern})
+        ORDER BY c.updated_at DESC LIMIT 100`,
     );
     return { customers: await withSharedCustomers(tenant(request), list(result.rows)) };
   });

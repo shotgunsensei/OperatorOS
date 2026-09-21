@@ -7,15 +7,17 @@ Status: **PARITY UNCHANGED / LOCAL DATABASE-BACKED CANDIDATE / NOT DEPLOYED**.
 | Module or surface | Implemented change | Evidence and remaining gate |
 | --- | --- | --- |
 | Module shells | Shared tenant customer search and common contact editor, gated by destination module access | PostgreSQL read/write/viewer/foreign-tenant/session tests; synthetic UI; no deployed acceptance |
-| TradeFlowKit | Select shared identity; publish new customers to the directory; prevent manual same-name silent merging; shared edits refresh editable customer rows | Persistent revenue/import/shared-customer regressions pass; live upgrade and legacy duplicate review open |
+| TradeFlowKit | Select shared identity; publish new customers to the directory; prevent manual same-name silent merging; explain reactivation for inactive matches; shared edits refresh editable customer rows | Persistent revenue/import/shared-customer and reactivation regressions pass; live upgrade and legacy duplicate review open |
 | BrandForge OS | Saved customer selection, independent brand name, durable tenant-composite link and audited changes | Persistent brand/link tests and synthetic autofill/mobile checks; publishing integrations open |
-| SnapProofOS | Saved customer selection; new customer publication to shared directory; live contact projection and new-report lookup; private notes retained | Persistent retry/tenant/report regressions; shared edits do not rewrite historical reports; legacy unlinked records and deployed acceptance open |
+| SnapProofOS | Saved customer selection; new customer publication to shared directory; live contact projection, current shared identity search, and new-report lookup; private notes retained | Persistent retry/tenant/report/search regressions; shared edits do not rewrite historical reports; legacy unlinked records and deployed acceptance open |
 | OperatorOS account | Shared authentication limits, fresh second-factor checks, pending email confirmation, individual browser revocation | Database-backed auth/security/SSO regressions; real inbox and deployed cookie/session journeys open |
 | Shared service configuration | Saved references/callback flags no longer imply verified delivery | Persistent provider-save/read tests; no vendor activation |
 
 Final focused runner: **154 passed / 0 failed / 0 skipped**; clean/repeated v63
 release verified in disposable PostgreSQL 16. Final synthetic browser: **18/18**;
 site-selection follow-up: **16/16**; provider-readiness follow-up: **14/14**.
+PR #102 review follow-up: **24/24** disposable-database checks in 37.645 seconds,
+including inactive customer recovery and current shared-identity search.
 Selected Microsoft 365, Google,
 QuickBooks Online, Facebook, LinkedIn, and X connectors remain implementation
 targets. Details: [shared customer/security report](SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md).
