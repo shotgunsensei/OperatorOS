@@ -1,5 +1,22 @@
 # OperatorOS module parity index
 
+## v63 production publication (2026-09-22)
+
+Status: **DEPLOYED / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER ACCEPTANCE OPEN**.
+This overlay supersedes the deployment/CI-pending portions of the earlier PR #102
+records; it does not widen module availability or claim external delivery.
+
+| Module or surface | Fresh evidence | Remaining acceptance |
+| --- | --- | --- |
+| OperatorOS and module hosts | Exact merge `74fdfeaff89b88b39073269066954b6f0787c7ad` published; v63/63; 47/47 public runtime checks; signed-in owner workspace home loads in Chrome | Per-role signed-in write/logout journeys on production; live provider delivery |
+| TradeFlowKit, BrandForge OS, SnapProofOS shared customers | Shared directory release applied; validated tenant-composite BrandForge link; owner SSO/dashboard and shared-customer reads pass on all three live hosts; same saved customer offered in each; exact-merge CI passes 1,517 API and 32 integration checks | Production create/edit/link acceptance; legacy unlinked-record review |
+| OperatorOS account security | Persistent auth-control tables present; deployed source matches passing API/browser CI | Real inbox confirmation, MFA/revocation and per-role production acceptance |
+| All 13 module visual contracts | Exact-merge CI passes 24 browser journeys and four visual/accessibility cases without skips; published artifact uses the same source | Broader authenticated live visual/workflow pass |
+| External connections / OutCall | Existing configuration preserved; no new provider activation or availability grant | Microsoft 365, Google, QuickBooks Online, Facebook, LinkedIn, and X targets remain open; OutCall stays unavailable |
+
+Full release identity, backup, repair, reconciliation, and verification evidence:
+[v63 publication record](../RELEASE_V63_EVIDENCE.md).
+
 ## PR #102 release regression repair (2026-09-22)
 
 Status: **PARITY UNCHANGED / LOCAL BROWSER AND VISUAL VERIFIED / LIVE ACCEPTANCE OPEN**.
