@@ -54,21 +54,24 @@ export function evaluateSharedServiceWorkerReadiness(
   return { ready: true, reasonCode: 'READY' as const, heartbeatAgeMs };
 }
 
-export async function getSharedServiceQueueHealth() {
-  const result = await db.execute(sql`
+export async function getSharedServiceQueueHealth(tenantId?: string, executor: Pick<typeof db, 'execute'> = db) {
+  // Customer-facing callers must supply their validated organization. The
+  // platform readiness probe intentionally retains an aggregate view.
+  const scope = tenantId === undefined ? sql`TRUE` : sql`tenant_id = ${tenantId}`;
+  const result = await executor.execute(sql`
     SELECT
-      (SELECT COUNT(*)::int FROM shared_outbox_messages WHERE status = 'dead_letter') AS outbox_dead_letter,
-      (SELECT COUNT(*)::int FROM shared_jobs WHERE status = 'dead_letter') AS jobs_dead_letter,
-      (SELECT COUNT(*)::int FROM shared_webhook_receipts WHERE status = 'dead_letter') AS webhooks_dead_letter,
-      (SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE status = 'dead_letter') AS outbound_webhooks_dead_letter,
-      (SELECT COUNT(*)::int FROM shared_outbox_messages WHERE status IN ('pending','retry','processing')) AS outbox_open,
-      (SELECT COUNT(*)::int FROM shared_jobs WHERE status IN ('pending','retry','processing')) AS jobs_open,
-      (SELECT COUNT(*)::int FROM shared_webhook_receipts WHERE status IN ('pending','retry','processing')) AS webhooks_open
-      ,(SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE status IN ('pending','retry','processing')) AS outbound_webhooks_open,
-      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(run_at)), 0)::int FROM shared_jobs WHERE status IN ('pending','retry') AND run_at <= NOW()) AS jobs_oldest_ready_seconds,
-      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(available_at)), 0)::int FROM shared_outbox_messages WHERE status IN ('pending','retry') AND available_at <= NOW()) AS outbox_oldest_ready_seconds,
-      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(next_attempt_at)), 0)::int FROM shared_webhook_receipts WHERE status IN ('pending','retry') AND next_attempt_at <= NOW()) AS webhooks_oldest_ready_seconds,
-      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(available_at)), 0)::int FROM shared_webhook_deliveries WHERE status IN ('pending','retry') AND available_at <= NOW()) AS outbound_webhooks_oldest_ready_seconds
+      (SELECT COUNT(*)::int FROM shared_outbox_messages WHERE ${scope} AND status = 'dead_letter') AS outbox_dead_letter,
+      (SELECT COUNT(*)::int FROM shared_jobs WHERE ${scope} AND status = 'dead_letter') AS jobs_dead_letter,
+      (SELECT COUNT(*)::int FROM shared_webhook_receipts WHERE ${scope} AND status = 'dead_letter') AS webhooks_dead_letter,
+      (SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE ${scope} AND status = 'dead_letter') AS outbound_webhooks_dead_letter,
+      (SELECT COUNT(*)::int FROM shared_outbox_messages WHERE ${scope} AND status IN ('pending','retry','processing')) AS outbox_open,
+      (SELECT COUNT(*)::int FROM shared_jobs WHERE ${scope} AND status IN ('pending','retry','processing')) AS jobs_open,
+      (SELECT COUNT(*)::int FROM shared_webhook_receipts WHERE ${scope} AND status IN ('pending','retry','processing')) AS webhooks_open
+      ,(SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE ${scope} AND status IN ('pending','retry','processing')) AS outbound_webhooks_open,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(run_at)), 0)::int FROM shared_jobs WHERE ${scope} AND status IN ('pending','retry') AND run_at <= NOW()) AS jobs_oldest_ready_seconds,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(available_at)), 0)::int FROM shared_outbox_messages WHERE ${scope} AND status IN ('pending','retry') AND available_at <= NOW()) AS outbox_oldest_ready_seconds,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(next_attempt_at)), 0)::int FROM shared_webhook_receipts WHERE ${scope} AND status IN ('pending','retry') AND next_attempt_at <= NOW()) AS webhooks_oldest_ready_seconds,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(available_at)), 0)::int FROM shared_webhook_deliveries WHERE ${scope} AND status IN ('pending','retry') AND available_at <= NOW()) AS outbound_webhooks_oldest_ready_seconds
   `);
   return result.rows[0] ?? {};
 }

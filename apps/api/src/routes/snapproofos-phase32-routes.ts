@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
+import { createSharedCustomer, findSharedCustomer, withSharedCustomer, withSharedCustomers } from '../lib/shared-customers.js';
 import {
   createAttachment,
   getAttachmentContent,
@@ -183,7 +184,7 @@ async function activity(
 }
 async function job(tenantId: string, jobId: string) {
   const result = await db.execute(
-    sql`SELECT c.*,cu.name AS customer_name,cu.email AS customer_email,cu.phone AS customer_phone,u.name AS assignee_name,u.email AS assignee_email FROM snapproof_cases c LEFT JOIN snapproof_customers cu ON cu.tenant_id=c.tenant_id AND cu.id=c.customer_id LEFT JOIN users u ON u.id=c.assigned_to_user_id WHERE c.tenant_id=${tenantId} AND c.id=${jobId} AND c.deleted_at IS NULL LIMIT 1`,
+    sql`SELECT c.*,cu.name AS customer_name,cu.email AS customer_email,cu.phone AS customer_phone,cu.directory_organization_id AS customer_directory_id,u.name AS assignee_name,u.email AS assignee_email FROM snapproof_cases c LEFT JOIN snapproof_customers cu ON cu.tenant_id=c.tenant_id AND cu.id=c.customer_id LEFT JOIN users u ON u.id=c.assigned_to_user_id WHERE c.tenant_id=${tenantId} AND c.id=${jobId} AND c.deleted_at IS NULL LIMIT 1`,
   );
   return result.rows[0] as Row | undefined;
 }
@@ -266,12 +267,13 @@ async function buildReportSnapshot(tenantId: string, jobId: string) {
       sql`SELECT accent_color,company_name,footer_text,contact_email,contact_phone,website,logo_attachment_id FROM snapproof_branding WHERE tenant_id=${tenantId}`,
     ),
   ]);
+  const shared = jobRow.customer_directory_id ? await findSharedCustomer(tenantId, jobRow.customer_directory_id) : null;
   const customer = jobRow.customer_id
     ? {
         id: jobRow.customer_id,
-        name: jobRow.customer_name,
-        email: jobRow.customer_email,
-        phone: jobRow.customer_phone,
+        name: shared ? shared.name : jobRow.customer_name,
+        email: shared ? shared.email : jobRow.customer_email,
+        phone: shared ? shared.phone : jobRow.customer_phone,
       }
     : null;
   const partRows = list(parts.rows);
@@ -442,11 +444,29 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
   app.get(`${base}/customers`, { preHandler: readGuards }, async (request) => {
     const query = request.query as Row;
     const search = text(query?.search, 'search', 120);
+    const pattern = search ? `%${search.replace(/[\\%_]/g, '\\$&')}%` : null;
     const includeArchived = query?.includeArchived === 'true';
     const result = await db.execute(
-      sql`SELECT c.*,(SELECT COUNT(*)::int FROM snapproof_cases j WHERE j.tenant_id=c.tenant_id AND j.customer_id=c.id AND j.deleted_at IS NULL) AS job_count FROM snapproof_customers c WHERE c.tenant_id=${tenant(request)} AND (${includeArchived} OR c.archived_at IS NULL) AND (${search}::text IS NULL OR c.name ILIKE ${search ? `%${search}%` : null} OR c.company ILIKE ${search ? `%${search}%` : null} OR c.email ILIKE ${search ? `%${search}%` : null}) ORDER BY c.updated_at DESC LIMIT 100`,
+      // Match the identity displayed by withSharedCustomers before applying the
+      // result limit. Primary-contact ordering matches the shared projection.
+      sql`SELECT c.*,(SELECT COUNT(*)::int FROM snapproof_cases j WHERE j.tenant_id=c.tenant_id AND j.customer_id=c.id AND j.deleted_at IS NULL) AS job_count
+        FROM snapproof_customers c
+        LEFT JOIN directory_organizations o ON o.tenant_id=c.tenant_id AND o.id=c.directory_organization_id
+          AND o.archived_at IS NULL AND o.status='active'
+        LEFT JOIN LATERAL (
+          SELECT p.email FROM directory_organization_contacts link
+          JOIN directory_contacts p ON p.tenant_id=link.tenant_id AND p.id=link.contact_id
+          WHERE link.tenant_id=o.tenant_id AND link.organization_id=o.id
+            AND p.archived_at IS NULL AND p.status='active'
+          ORDER BY link.is_primary DESC,link.created_at,p.id LIMIT 1
+        ) contact ON true
+        WHERE c.tenant_id=${tenant(request)} AND (${includeArchived} OR c.archived_at IS NULL)
+          AND (${pattern}::text IS NULL OR COALESCE(o.name,c.name) ILIKE ${pattern}
+            OR c.company ILIKE ${pattern}
+            OR (CASE WHEN o.id IS NULL THEN c.email ELSE contact.email END) ILIKE ${pattern})
+        ORDER BY c.updated_at DESC LIMIT 100`,
     );
-    return { customers: list(result.rows) };
+    return { customers: await withSharedCustomers(tenant(request), list(result.rows)) };
   });
   app.post(`${base}/customers`, { preHandler: writeGuards }, async (request, reply) => {
     try {
@@ -455,9 +475,36 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
       const directorySiteId = text(input.directorySiteId, 'directorySiteId', 36);
       const directoryContactId = text(input.directoryContactId, 'directoryContactId', 36);
       await assertDirectorySelection(tenant(request), directoryOrganizationId, directorySiteId, directoryContactId);
-      const result = await db.execute(
-        sql`INSERT INTO snapproof_customers(tenant_id,created_by_user_id,name,email,phone,company,address,notes,directory_organization_id,directory_site_id,directory_contact_id) VALUES (${tenant(request)},${actor(request)},${text(input.name, 'name', 200, true)},${text(input.email, 'email', 320)},${text(input.phone, 'phone', 40)},${text(input.company, 'company', 200)},${text(input.address, 'address', 2000)},${text(input.notes, 'notes', 5000)},${directoryOrganizationId},${directorySiteId},${directoryContactId}) RETURNING *`,
-      );
+      const shared = directoryOrganizationId ? await findSharedCustomer(tenant(request), directoryOrganizationId) : null;
+      if (directoryOrganizationId && !shared) return reply.code(404).send({ error: 'Shared customer not found', code: 'SHARED_CUSTOMER_NOT_FOUND' });
+      if (shared) {
+        input.name = shared.name; input.email = shared.email; input.phone = shared.phone; input.address = shared.address;
+        const contactId = directoryContactId || shared.contactId;
+        // Linking an existing customer is retry-safe and does not replace their job history.
+        const outcome = await db.transaction(async tx => {
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${tenant(request) + ':snapproof-customer:' + shared.id}))`);
+          const existing = await tx.execute(sql`SELECT * FROM snapproof_customers WHERE tenant_id=${tenant(request)} AND directory_organization_id=${shared.id}
+            AND directory_site_id IS NOT DISTINCT FROM ${directorySiteId}::varchar
+            AND directory_contact_id IS NOT DISTINCT FROM ${contactId}::varchar
+            AND archived_at IS NULL ORDER BY created_at,id LIMIT 1`);
+          if (existing.rows[0]) return existing.rows[0];
+          const created = await tx.execute(sql`INSERT INTO snapproof_customers(tenant_id,created_by_user_id,name,email,phone,address,company,notes,directory_organization_id,directory_site_id,directory_contact_id)
+            VALUES (${tenant(request)},${actor(request)},${shared.name},${shared.email},${shared.phone},${shared.address},${text(input.company, 'company', 200)},${text(input.notes, 'notes', 5000)},${shared.id},${directorySiteId},${contactId}) RETURNING *`);
+          await tx.execute(sql`INSERT INTO activity_feed(tenant_id,user_id,action,entity_type,entity_id,metadata)
+            VALUES (${tenant(request)},${actor(request)},'linked','snapproof_customer',${String(created.rows[0].id)},${JSON.stringify({ organizationId: shared.id })}::jsonb)`);
+          return created.rows[0];
+        });
+        return reply.code(201).send({ customer: await withSharedCustomer(tenant(request), camel(outcome)) });
+      }
+      const result = await db.transaction(async tx => {
+        const name = text(input.name, 'name', 200, true)!;
+        const email = text(input.email, 'email', 320);
+        const phone = text(input.phone, 'phone', 40);
+        const address = text(input.address, 'address', 2000);
+        const identity = await createSharedCustomer({ tenantId: tenant(request), userId: actor(request) }, { name, email, phone, address }, tx);
+        return tx.execute(sql`INSERT INTO snapproof_customers(tenant_id,created_by_user_id,name,email,phone,company,address,notes,directory_organization_id,directory_contact_id)
+          VALUES (${tenant(request)},${actor(request)},${name},${email},${phone},${text(input.company, 'company', 200)},${address},${text(input.notes, 'notes', 5000)},${identity.id},${identity.contactId}) RETURNING *`);
+      });
       const row = result.rows[0] as Row;
       await activity(
         request,
@@ -486,7 +533,7 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
         return reply
           .code(404)
           .send({ error: 'Customer not found', code: 'SNAPPROOF_CUSTOMER_NOT_FOUND' });
-      return { customer: camel(customer.rows[0]), jobs: (jobs.rows as Row[]).map(jobView) };
+      return { customer: await withSharedCustomer(tenant(request), camel(customer.rows[0])), jobs: (jobs.rows as Row[]).map(jobView) };
     } catch (error) {
       return fail(reply, error);
     }
@@ -502,6 +549,12 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
       const directorySiteId = 'directorySiteId' in input ? text(input.directorySiteId, 'directorySiteId', 36) : current.directory_site_id;
       const directoryContactId = 'directoryContactId' in input ? text(input.directoryContactId, 'directoryContactId', 36) : current.directory_contact_id;
       await assertDirectorySelection(tenant(request), directoryOrganizationId, directorySiteId, directoryContactId);
+      if (directoryOrganizationId && ['name', 'email', 'phone', 'address'].some(field => field in input)) {
+        return reply.code(409).send({
+          error: 'Open Shared customers to update contact details for all your apps. You can still update this customer’s private notes here.',
+          code: 'SHARED_CUSTOMER_EDIT_REQUIRED',
+        });
+      }
       const result = await db.execute(
         sql`UPDATE snapproof_customers SET name=COALESCE(${text(input.name, 'name', 200)},name),email=CASE WHEN ${'email' in input} THEN ${text(input.email, 'email', 320)} ELSE email END,phone=CASE WHEN ${'phone' in input} THEN ${text(input.phone, 'phone', 40)} ELSE phone END,company=CASE WHEN ${'company' in input} THEN ${text(input.company, 'company', 200)} ELSE company END,address=CASE WHEN ${'address' in input} THEN ${text(input.address, 'address', 2000)} ELSE address END,notes=CASE WHEN ${'notes' in input} THEN ${text(input.notes, 'notes', 5000)} ELSE notes END,directory_organization_id=${directoryOrganizationId},directory_site_id=${directorySiteId},directory_contact_id=${directoryContactId},version=version+1,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${customerId} AND archived_at IS NULL RETURNING *`,
       );

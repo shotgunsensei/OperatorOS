@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { db } from '../db.js';
+import { findSharedCustomer } from '../lib/shared-customers.js';
 import { and, desc, eq, ilike, isNull, ne, or, sql } from 'drizzle-orm';
 import {
   modules,
@@ -500,6 +501,7 @@ async function createLinkedTradeFlowKitCustomer(
   options: { sourceId?: string; deduplicateOrganization?: boolean; action?: 'created' | 'imported' } = {},
 ) {
   const normalizedName = normalizeTradeFlowKitCustomerName(input.name);
+  let createdOrganization = false;
   let [organization] = await tx.select().from(directoryOrganizations).where(and(
     eq(directoryOrganizations.tenantId, actor.tenantId),
     eq(directoryOrganizations.normalizedName, normalizedName),
@@ -510,6 +512,7 @@ async function createLinkedTradeFlowKitCustomer(
       tenantId: actor.tenantId, name: input.name, normalizedName, type: 'customer', status: 'active',
       notes: input.notes, createdByUserId: actor.userId, updatedByUserId: actor.userId,
     }).onConflictDoNothing().returning();
+    createdOrganization = Boolean(organization);
     if (!organization) {
       [organization] = await tx.select().from(directoryOrganizations).where(and(
         eq(directoryOrganizations.tenantId, actor.tenantId),
@@ -519,6 +522,12 @@ async function createLinkedTradeFlowKitCustomer(
     }
   }
   if (!organization) throw new Error('Directory organization could not be resolved');
+  if (!options.sourceId && !createdOrganization) {
+    if (organization.status !== 'active') {
+      throw Object.assign(new Error('This customer is inactive. Ask your organization administrator to reactivate it in the business directory before adding it.'), { code: 'SHARED_CUSTOMER_INACTIVE' });
+    }
+    throw Object.assign(new Error('Choose the existing customer from Shared customers to avoid a duplicate.'), { code: 'SHARED_CUSTOMER_EXISTS' });
+  }
 
   if (options.deduplicateOrganization) {
     const [existing] = await tx.select().from(tradeflowkitCustomers).where(and(
@@ -568,6 +577,7 @@ async function createLinkedTradeFlowKitCustomer(
     if (!duplicate) throw new Error('Imported customer could not be resolved');
     return { kind: 'duplicate' as const, customer: duplicate };
   }
+  await tx.execute(sql`UPDATE directory_organizations SET customer_address=${input.address} WHERE tenant_id=${actor.tenantId} AND id=${organization.id}`);
   await tx.insert(activityFeed).values({
     tenantId: actor.tenantId, userId: actor.userId, action: options.action ?? 'created',
     entityType: 'tradeflowkit_customer', entityId: created.id,
@@ -846,19 +856,39 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/modules/tradeflowkit/customers', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
-    let input;
-    try { input = parseCustomerCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
     const ctx = (request as any).tenantContext;
     const user = (request as any).user;
-    const customer = await db.transaction(async (tx) => {
-      const outcome = await createLinkedTradeFlowKitCustomer(
-        tx,
-        { tenantId: ctx.tenantId, userId: user.id },
-        input,
-      );
-      return outcome.customer;
-    });
-    return reply.code(201).send(customer);
+    const requestedId = (request.body as any)?.directoryOrganizationId;
+    if (requestedId !== undefined && requestedId !== null && (typeof requestedId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedId))) return reply.code(400).send({ error: 'Choose a shared customer.', code: 'SHARED_CUSTOMER_INVALID' });
+    if (requestedId) {
+      const shared = await findSharedCustomer(ctx.tenantId, requestedId);
+      if (!shared) return reply.code(404).send({ error: 'Shared customer not found', code: 'SHARED_CUSTOMER_NOT_FOUND' });
+      const linked = await db.transaction(async tx => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${ctx.tenantId + ':tfk-customer:' + shared.id}))`);
+        const [existing] = await tx.select().from(tradeflowkitCustomers).where(and(eq(tradeflowkitCustomers.tenantId, ctx.tenantId), eq(tradeflowkitCustomers.organizationId, shared.id), isNull(tradeflowkitCustomers.deletedAt))).limit(1);
+        if (existing) return existing;
+        const [created] = await tx.insert(tradeflowkitCustomers).values({ tenantId: ctx.tenantId, createdByUserId: user.id,
+          organizationId: shared.id, primaryContactId: shared.contactId, name: shared.name, email: shared.email, phone: shared.phone, address: shared.address,
+        }).returning();
+        await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'linked', entityType: 'tradeflowkit_customer', entityId: created.id, metadata: { organizationId: shared.id } });
+        return created;
+      });
+      return reply.code(201).send(linked);
+    }
+    let input;
+    try { input = parseCustomerCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    try {
+      const customer = await db.transaction(async (tx) => {
+        const outcome = await createLinkedTradeFlowKitCustomer(tx, { tenantId: ctx.tenantId, userId: user.id }, input);
+        return outcome.customer;
+      });
+      return reply.code(201).send(customer);
+    } catch (error) {
+      const code = (error as any)?.code ?? (error as any)?.cause?.code;
+      if (code === 'SHARED_CUSTOMER_INACTIVE') return reply.code(409).send({ code, error: 'This customer is inactive. Ask your organization administrator to reactivate it in the business directory before adding it.' });
+      if (code === 'SHARED_CUSTOMER_EXISTS' || code === '23505') return reply.code(409).send({ code: 'SHARED_CUSTOMER_EXISTS', error: 'A customer with these details already exists. Choose them from Shared customers.' });
+      throw error;
+    }
   });
 
   app.patch('/v1/modules/tradeflowkit/customers/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
@@ -879,6 +909,9 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
         if (current.version !== input.expectedVersion) {
           return { kind: 'version_conflict' as const, currentVersion: current.version };
         }
+
+        // Shared edits acquire the organization before editable customer rows.
+        if (current.organizationId) await tx.execute(sql`SELECT id FROM directory_organizations WHERE tenant_id=${ctx.tenantId} AND id=${current.organizationId} FOR UPDATE`);
 
         const normalizedName = normalizeTradeFlowKitCustomerName(input.name);
         if (current.organizationId) {
@@ -928,6 +961,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
             isNull(directoryOrganizations.archivedAt),
           )).returning();
           if (!updatedOrganization) throw new Error('TRADEFLOWKIT_DIRECTORY_VERSION_CONFLICT');
+          await tx.execute(sql`UPDATE directory_organizations SET customer_address=${input.address} WHERE tenant_id=${ctx.tenantId} AND id=${organization.id}`);
         }
 
         let primaryContactId = current.primaryContactId;

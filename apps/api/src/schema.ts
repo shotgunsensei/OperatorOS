@@ -2315,6 +2315,7 @@ export const brandforgeWorkspaceSettings = pgTable('brandforge_workspace_setting
 });
 
 export const brandforgeBrands = pgTable('brandforge_brands', {
+  directoryOrganizationId: varchar('directory_organization_id', { length: 36 }),
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
   createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),

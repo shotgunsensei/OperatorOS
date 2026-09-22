@@ -7,780 +7,780 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-linux.png",
-      "sha256": "ff2b3224949a8f32f0cbbc6ebc92f45f4cef56cf5b920ed7925127da62a07475",
+      "sha256": "cd2cc718099ff73b6cb585d2a921cf5b85d56dea31ddcb3464a65939ebbda87e",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.610Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-win32.png",
-      "sha256": "5d6014e96aed454f6c3a90cf8be83432b0945ae5a02dfbcf8f2af2cb1ccbd851",
+      "sha256": "15d786b12dc7ccb70143c8a6470cc361689059970990d7e38f768b90db8054f2",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.509Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-linux.png",
-      "sha256": "27de351ea603324305cd87c386e45750240a85b97bd646aab83ec28201b48934",
+      "sha256": "1ece82be6c9b186837c6e82ef46d61e04912cf71424329353a239e1c0c076051",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.616Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-win32.png",
-      "sha256": "7c242b11dfcfa876f0fef538db915bfcdc4b31d946312742e8e8e6bd057a743d",
+      "sha256": "3ae29496280cbba0a68634c9af611dd217e3226ad072396a8a8e4abe76692f00",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.509Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-linux.png",
-      "sha256": "1a50f5a7935d27b20ae99972ceecc30339605834eb4c52c8caae03c7e1bb6397",
+      "sha256": "41c038b7ea97d0ab29c5aab9c0f5bbd7bf7aab3bd85201066e62ad0b0b57105e",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.622Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "brandforgeos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-win32.png",
-      "sha256": "c59b1aef1da17c361c302b3a555ef0a112c22b919f5066c90623223b3f4aa5e4",
+      "sha256": "1c792f29caeb16ad21d3aec2d7ac5923f3b0b2b96b64bc499355d15b1bfafd0b",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.510Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-linux.png",
-      "sha256": "36d02610a34eed0d03dd5456dcbd0026fa7b995b1ffc72145d066396c7af27e3",
+      "sha256": "c4e1b7e60923dfedceba994bc21b7c358b260904ebfff1877c31dcf5f77107b5",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.629Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop-win32.png",
-      "sha256": "5c45148040303a560b567355c31326d13e61b33f672d54cce453b6a5dee1d91d",
+      "sha256": "acde4ec8e024110ccfdc4d087f49119d47d8b22247dcc3e41d23bea7c5d4a763",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.512Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-linux.png",
-      "sha256": "ec7fa05f48c01db0797c2d624fd50244457815b5e5281aa7075689b50a272853",
+      "sha256": "73f996034e41eb06b7161fa6a2fd7c110748cb5d9cdb0f39740199fada133789",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.637Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-win32.png",
-      "sha256": "8b0b9ef881d741db2f7f382d11c430b8bf3cf9b3e049da6ffb5c36e1ead335a7",
+      "sha256": "e25b15bd30e9841f65d88076ba43e6789ed95022c2fe6c2ccd30601e58657686",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.513Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-linux.png",
-      "sha256": "8a1bd45eb8592c16f098ff9e6c9de06e1cba236f208c689abbb2603800b1639d",
+      "sha256": "2064266e131787e438ade0f80ed48317b087d0aca95af08fb32ff0502c2c6d47",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.644Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "callcommand-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet-win32.png",
-      "sha256": "4aa82e9c6a3cd97c8f4ec171fec2dbabcb86d442631becaaef41290a01681ff3",
+      "sha256": "3182501ff5ec0a755de145c3f367fd8cb19e02877af93fd3e5c17cd25827e274",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.514Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-linux.png",
-      "sha256": "1c1b93e4f20b89cf75c362895ce29c50b50b76deaaf02fe845b798795134f065",
+      "sha256": "cbc44ac6cae536371de2a77e6b6786074472ed05129ef309b670a3f3a128075d",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.650Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-win32.png",
-      "sha256": "0ff3cedf75b608b3bd27a20a2ba3d0b2785186f8e66dcb8cf3b08e569574b612",
+      "sha256": "4ca0008e5f9fa361d39475077886ad87b70931974d879ed29f97a5b22fe3614c",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.514Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-linux.png",
-      "sha256": "b32e2efd01abe412de04762c057c4cf79895a1b3c1236c7226422857bff36f1e",
+      "sha256": "532d993f04e805f2f81692a1f138cec8e3d59f9b836ef79d161306304c24c937",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.657Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-win32.png",
-      "sha256": "14a41db9c0be5e4bac35f96689f68bb6a89fdb187b866e6a6bb319b50570cf3f",
+      "sha256": "b5c1159edab69985dcdd3049a3dec5a033a81d3d5a7f425b8a4c4615871a4e38",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.515Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-linux.png",
-      "sha256": "e62f518738a70aa0eddcb9cb8d51987a2e733691745271ae88f9e7e2b28f4dfa",
+      "sha256": "f7e0e3640cd45f87f718e57de56c2e5fe7da610d00c5738ba75fc4a94727a691",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.663Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "faultlinelab",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-win32.png",
-      "sha256": "486e827ffa6671c5ff6569c0a5dde87797c910c88b0b9e4d8a3ecf5f5fb7d919",
+      "sha256": "2fa03616ea9a0d4bec467406651508751642cb56ad35c1d793d2594e882f48f4",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.516Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-linux.png",
-      "sha256": "85b6716a00e07099d52bd47ff1c1756e2712eb1d841feb3899215d9fec4589c6",
+      "sha256": "a3cfe7fc41e49523989618709328ecd8c1fa811255db2a47b5bf8ab74bf89df3",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.670Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-win32.png",
-      "sha256": "d306a61e39b3a9e533aa783ba5fcf219ac6c7e18a45c8cbdfc6ed9764b5b0b10",
+      "sha256": "c04d037528243e1fd33ef9a9eb9f04f32a0e51c98ff04a3c4dc4de5b15abbe85",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.518Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-linux.png",
-      "sha256": "f655e00b95fd151a5e2dca3bf68779265d051505f4a3409afb30da2e514da13f",
+      "sha256": "87092f9316bcf665854cfe87461bfe4f98e46b72985d9f69ed1b87bf1ebfa343",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.678Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-win32.png",
-      "sha256": "dcbcbdde03c50a23159f15fd190ebddb853f10120b2905aed0e09b40c7c25b98",
+      "sha256": "cf212d0038a378157959076e198e057abc31a0e22deda64f8f81edd1952457f4",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.518Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-linux.png",
-      "sha256": "4009d9fd429de429007b8f8ef5548c5387e855815ac9c0930229b00d6aecc516",
+      "sha256": "f6a7dc5afdc2646b9872cbf0516c3bf0a331cbe91e647f9d0292b97523885b83",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.684Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-launch-kit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-win32.png",
-      "sha256": "626c9fd68e39f80b0e9e5a4b712cc6eec7e10b062abc9eba1371503ab3e03f9f",
+      "sha256": "7e79ff8c832faeb88d6ca0de9f59f709d2a423c7c771a61af498011ac6574978",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.520Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-linux.png",
-      "sha256": "48cc05d8092ba168d8c53dcf4f8fb264320ad1e1dc480b84de43173152f05c0c",
+      "sha256": "b4c44735d0122aafda535037f136db51a921dbdba9b3251d14b43cd4d721728b",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.694Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-win32.png",
-      "sha256": "7c53c11df8801007ab44a232e65f41368ddbb2d656ad0176b22c305fe8558529",
+      "sha256": "893a3d01d6efd6c3f4aec0b44ca194af2ce19200b0b94db142897a0bf0b26823",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.520Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-linux.png",
-      "sha256": "d36a73f179430d15502e0f101609622cdadace53a4b10662d4ed1b1401cd7d7c",
+      "sha256": "69b01ad95de9031b537c16beb3e650529a50c1ae7e35cf5873063e0c879ccec3",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.700Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-win32.png",
-      "sha256": "c503c8e46c7835e0b02986e798f5db7022c55e457b29cbbfb9b61bc7b265b089",
+      "sha256": "8e1366efd6afbd957709ed47c3bee42c3b45290c87e4972582409af166212c5b",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.521Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-linux.png",
-      "sha256": "ec46e27061a9de8b65056ada3d3820dfc6ab3cc1025b66df0a72d686c178b4f5",
+      "sha256": "2e68aa2964c10934fbadbf41bd573dd18d83d8c72a92a7493022961ce5cc4a5e",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.706Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninja-pool-hall",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-win32.png",
-      "sha256": "8be3825a00efa576bd4b51689be731b44f775a0edea824d0d181379493bb8111",
+      "sha256": "014fc2bd8da67ff570094ddaf1571aad8e7224eda19a3b57277b0b051b63b396",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.521Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-linux.png",
-      "sha256": "19262e2a02e49d7ccdb996698580dbff82dbfdbee52669a5b293a4a48caa18fa",
+      "sha256": "79f1221cae55eee3dc85ee88e2510bdb0fae5aa15c4a2ef2d32ec5a29f532872",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.713Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-win32.png",
-      "sha256": "9d9470b6ac6d2d5557643d21fd38b645c8f38bdcbc43a59089ce19d7c604c6f3",
+      "sha256": "2134890da6323425313511867670022e1467975fd64a98020de65b85e3f82ace",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.522Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-linux.png",
-      "sha256": "ca59e94a48937925b0a5dff749ba125867c912265788e05be97ac6ed35da424f",
+      "sha256": "2daa6ea4e3ad45543cec21d4e1a4416fd04e9f5eea2d7e7f6dd0492ffa1a6c96",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.719Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-win32.png",
-      "sha256": "c73c3e1645dc9070232236f20740c003a7440e37dddecbcb378b55674a4b131b",
+      "sha256": "205ac7418e02022fbc50d0f3225a61c3b3f2f76379a4ca65ec0c206bdcdff26e",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.523Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-linux.png",
-      "sha256": "a5c0169916ca870d5204180ceaa0495d80fd9ee158a8e4703dd5c06386a14d9a",
+      "sha256": "c7fb106f21e70ef679f9439503abd0017796489e636f3ef027d3c664dd894ff6",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.725Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "ninjamation",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-win32.png",
-      "sha256": "36e02e04f8c4f18ab67913d7e75a7d66004695a419bf72360f2e4ae3dd4af3c8",
+      "sha256": "16f5f3a699733b2d991acc40fbbbb96b42c7df9b2ebe153a542eafde8b311e0c",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.524Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-linux.png",
-      "sha256": "a9fbb9cd79f08ff490cac765606fd150ae0b05898e1c2327a9050070f0cc05e0",
+      "sha256": "dd2b5b204145978d95ff1df28f4efd2eb4b68188f85de26b1edba0c81ed3c5ec",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed the intentional OutCall source-recovery fail-closed denial on Linux at desktop; not evidence of entitled or sellable rendering"
+      "approvedAt": "2026-09-22T15:21:04.732Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-win32.png",
-      "sha256": "0b5a8a6b6ca8bf72686985dc93b80fefa3fafc48a2f90fc9902bbc32330d6ea2",
+      "sha256": "0d96679b854e31bb17542d951de9fd21e949e4a36e5e2905c6c266d1ed7ed524",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed the intentional OutCall source-recovery fail-closed denial on Windows at desktop; not evidence of entitled or sellable rendering"
+      "approvedAt": "2026-09-22T15:21:04.732Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-linux.png",
-      "sha256": "d6b8504ec41d029f52a3a697c6ade296e3a89c9616faf4d3d1df557939a02052",
+      "sha256": "79b65ce83a23fc46a9e35899294d5dd8063ae2a9de306b423c7b9189470d4ae4",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed the intentional OutCall source-recovery fail-closed denial on Linux at mobile; not evidence of entitled or sellable rendering"
+      "approvedAt": "2026-09-22T15:21:04.736Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-win32.png",
-      "sha256": "155b24f72148c14b3fd63bb40d8551bb199c8e2228703a0ecc7584d6a6fdb89a",
+      "sha256": "b4ff1037d5a37a4abec2c3931a4457d28f1b11110223c61bf2e9abde322d099d",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed the intentional OutCall source-recovery fail-closed denial on Windows at mobile; not evidence of entitled or sellable rendering"
+      "approvedAt": "2026-09-22T15:05:04.525Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-linux.png",
-      "sha256": "9f5692572637ecd71d1ffde67ee0854664c6b37a97bd7e7762a63991ac0db2e9",
+      "sha256": "55ffdb6e4c67698e6adcc6647a24321154cac0c9422fcf041cc3106b4478f5f9",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed the intentional OutCall source-recovery fail-closed denial on Linux at tablet; not evidence of entitled or sellable rendering"
+      "approvedAt": "2026-09-22T15:21:04.741Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "outcall",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-win32.png",
-      "sha256": "da4015ee80640ace825ee4ad27166f2d514cf85c770d09c867b963dd7a2a9550",
+      "sha256": "9ff33e790a7fbe59ae1837579bf61c5d95eccac295966580282614f3374e3ea4",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed the intentional OutCall source-recovery fail-closed denial on Windows at tablet; not evidence of entitled or sellable rendering"
+      "approvedAt": "2026-09-22T15:05:04.525Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-linux.png",
-      "sha256": "fbe52954ad1e8b4c2789369fed42f97a78f406c6621bb08e1705c81ce62cdc7e",
+      "sha256": "c69ce4efd651bfca4dcb3133f6451a36ff37214aeaceffb17513bb8c479e6103",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.746Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop-win32.png",
-      "sha256": "8c8f74702a7875e2b6f38dd79d8b0496979b0cbfe740aaeda50d8cc3c3d459a9",
+      "sha256": "7fec432732d0db906c8db76fd52100528672379a4d5f85805157e93b791b6581",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.526Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-linux.png",
-      "sha256": "5fa7779e2be07927375f3359d2b112ec3aa0794e549b4b2ccb771eb75f466709",
+      "sha256": "59e97956c4d915864395d49eea9176b90bbfabea9b838311c5c609a05fd49551",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.751Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-win32.png",
-      "sha256": "04de11c0f75ce5b485e623183fc2199ba8eb3d16bcae1f9a0e20ad74bb79bd68",
+      "sha256": "d73da93ffe126a590e1e6d67b279663b61b2e0580f197365e026ed9ab2952dcb",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.526Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-linux.png",
-      "sha256": "9c866e4b80728efd3f6a03966a4248dc66785c4d378fb3389bad69eeaf21b44f",
+      "sha256": "46e20fdfddb222007f5e7bbfa724d127eb2ffddc8e7a1bf6d7215b9272678c8d",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.757Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "pulsedesk",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-win32.png",
-      "sha256": "b10537c53283cea29a424127dd57d0fec2aea6688204ef821175fc4f262a953f",
+      "sha256": "c85d3ab32a5fc0d1480d5bbe7f95903e796a04c894cee74a55457e5a486339dd",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.526Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-linux.png",
-      "sha256": "7db4759674bd050dc65520d29513d41cd1b0603825e1f2023d943b0140fb976f",
+      "sha256": "f1901208a2e82f0fcaa3b1005a12f79ea9db92b055c019398d5b96c1f2214b97",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.762Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-win32.png",
-      "sha256": "bfdec95545c08c3da7db8085c84c23753f197a0a65e40d18b9c4a51b8ba7d3df",
+      "sha256": "99083d775f7660d43632aea8b8e5453da5e27b83f8f8d6fa813cc3a089b93dd0",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.528Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-linux.png",
-      "sha256": "55da09a17fc8d35986aa58e68543f735eb789b8786bf2b371438ef2337b8da80",
+      "sha256": "56918ad60bec5d8b8f507810a742e389a1d0cf558fd4ffc48d100b7f7f1efdd8",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.769Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-win32.png",
-      "sha256": "0bd434c123ab3e613f3d030d1b30ec4635edafb81276d350807a043c3aaef1b9",
+      "sha256": "6cdb06c9c1d2edb64d89ef721cc44decfabfe21ebf8e539698d27aa5c61d794a",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.529Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-linux.png",
-      "sha256": "17191d1d40b6f95f716457439b1a8f3e5761348ee13bb8da9f2fc76901658087",
+      "sha256": "b9ba98fe7c5c420892d71e9fe6b5a5104cd9ab00d369c93aa91e3c59c4db4155",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.775Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "snapproofos",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-win32.png",
-      "sha256": "c5ba6d522dc62daa215c328c7828bc9a526ef2935617b2b26c7facbe781eeaf1",
+      "sha256": "6dfc61b2d503348d7a9b8b44af31ee9ef1ffdbce24d750a642cd95f9a7a405a0",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.530Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-linux.png",
-      "sha256": "e4074e663a7c30bcd8d5055b77f02d3276a87f819dbdfd1dca0d50f4e931de83",
+      "sha256": "688ee8c312b6d6382f83bc29b5aab3bf83f7a8195bbf03ffdb896e4f048f1fb3",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.781Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-win32.png",
-      "sha256": "b36311d8ec0969c208ff185aa2edc37e2c447ffe0d2ee08cdc094d5c4baa7789",
+      "sha256": "bd3015be5bb012368cab4db3c64f0fdd680505c0d5f586bd9d2c0a82ca92e487",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.530Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-linux.png",
-      "sha256": "88ce3158faa99741af3b040e103b5236f246a039bfe4af0e24f76e258e75a3a7",
+      "sha256": "7de5f8120758ee441214da10ce66a432ee7145257be36921781f9595c755e8d4",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.787Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-win32.png",
-      "sha256": "cd1e5870c6e4d83134714e83868bff0c80fff5e6ece6cc1ea52c78872c69fa2f",
+      "sha256": "fba4638247c04a98b08105fcd43370b73451e8e846df9fc2b4dffc9bc838c1ef",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.531Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-linux.png",
-      "sha256": "372b5785202d617e4db43e94a583f1e9117f2939ad486d03669324a68184aff1",
+      "sha256": "86855461306d4cbf5789690581b60bf277c9c593d4644ba5834c1296622f4ec8",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.794Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "studyforge-ai",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-win32.png",
-      "sha256": "ff2b13ac0481aca51dd29e58df76db1f045518aaa5e3924afed18fdc6e655d3e",
+      "sha256": "55df3074beb2d43fa520abc34db65ecc47fb995634efc45907cdbc120eb6f9dc",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.532Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-linux.png",
-      "sha256": "e1983cb571331cd5dc0accda5ab54756f11178e1099f71f1748305751a8dd33f",
+      "sha256": "68c80462a0b58ce1d203c03eef9f9a4b3163016258a5b50d33b77df791d31657",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.802Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop-win32.png",
-      "sha256": "e87dc41ca2c52812d2df1a6288a76f185a9ea9840d64c2d734c5a06caf91bdfb",
+      "sha256": "7268311b9e8ac825cd3605a844a2cf3697374cdd7c09d284ea19db9c5a68310f",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.533Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-linux.png",
-      "sha256": "79abae1d3a73a9d5777ff89e5602d61361cb2c29e4ab2e920ec01a809c337240",
+      "sha256": "033ed11d94991a3399ae457695dabe5a8c27019551cca22b76f57edf5fb2d9b1",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.807Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-win32.png",
-      "sha256": "6580a4c1e4b77ce421e29734c5d976e9ab095e55899fbbc93e1504fc0111db16",
+      "sha256": "f55b84f0f02fc897d0fa1328689a2a6a4e6bbd3db0c6fdb471331c6ceaa89e38",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.533Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-linux.png",
-      "sha256": "668b7c69b03b7cf56b8edf644f52fc4d70bce177ab3dc8c2ee321f6cda681142",
+      "sha256": "3961de78fc6e8c2a4a9b9cf50f50e7b26e1f4cb1e44dbaff5593e3c9b2eeab29",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.814Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "techdeck",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-win32.png",
-      "sha256": "5d79aa8de09a3d90f0a2c3470fb9b83283a8067bd529fbc9420942f72474fa9c",
+      "sha256": "e26c46eed9346823f42e3457e086dc05f6f4657c8066ab20fc153c7d04958548",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.534Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-linux.png",
-      "sha256": "fd97f50c7da83bd9e63d055dfa3d5934fcffc57705ced29c8988cbf5fee9e70b",
+      "sha256": "cc41488c7a5f1e4e05c8b407e4ff51d907d42e7479d0bb54f3f1d2d5e937be17",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.819Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-win32.png",
-      "sha256": "20a37395c58ad7aae9ab85fa99bdfe5f508fba344c43b85540e34086b4d01420",
+      "sha256": "23504aa85afad773592bf392e9ff87fa3febaf6e0d798a4f1f8b053e55faf99b",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.534Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-linux.png",
-      "sha256": "61d6b614cab9218ee3a6e2df636d3c7d89f0a4aa2aec8e523bac339067828664",
+      "sha256": "ed9e1b1d40057b753740df7ba01d3dcc59bc6be2bafd6f70477607f6cfe2b19e",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.824Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-win32.png",
-      "sha256": "ea5b0a73620ca4346959f149e3725f091f4c8edfb3497d365c96d6a1ecd1eed7",
+      "sha256": "cc81d214fa4bf1b3cb852b93ea07cddaa819b9324710d4ad380686d3a1b222fd",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.535Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-linux.png",
-      "sha256": "4cee7abc0c8ec3ba9f7e8ba23875c0b15f177fb63beab5317cb8781d664fe204",
+      "sha256": "41f724b87e7a89eace93ec337d2badcb2039be6dbd08ada88cfb7552aeb547f5",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.829Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "torqueshed",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-win32.png",
-      "sha256": "59e416b49b93785145d6acdde56d7b9b1dfeaa1781582cc3a5fdc717d490d23b",
+      "sha256": "00936c43b456de8d09c4bf40b2b9185dcb2a0f58345fc9220ef48d2a226a6006",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.535Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-linux.png",
-      "sha256": "f90c91c13a2e001b1b8ffc6d0b8746cf94f15f7c86fc857988d46318d453cdc3",
+      "sha256": "0cde7e2617156dd35a3a7e3782073bcf970f5a93a8652450da395834dc4d75ce",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.835Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "desktop",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-win32.png",
-      "sha256": "4a559e1b4dd8742bc6f699184bfb684f941b7ac3977f2ca17aa22cbbc3c9f0d1",
+      "sha256": "3775936d14d89953efcaf0490d78e651a9cf48dec279d8eabb43f2a076889be9",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.536Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-linux.png",
-      "sha256": "fa541cae9c7a529ba46381723b82caf6b17c74ef1f4352ceef04746acef7d2ab",
+      "sha256": "098321054c001a1e10cf7cf86dbfcfa7bd67c19041cd6220c31e1f8efb0511a4",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.840Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "mobile",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-win32.png",
-      "sha256": "74364f7d44ce9ccb5e9f43553e39f3ec840c64390b755dae10c4c979d576ca2a",
+      "sha256": "25f391fddbf8c3f913322a35aa66295953842b64f1386bacfc769b0f4d6349de",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.536Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-linux.png",
-      "sha256": "6c90f2c125800b3099959ed7911005369283b77b2b40d4ccba6ff23a4a40b55b",
+      "sha256": "a5ebd54c7edbec24d24f6edee11981174ed799f58f83d1f247244ad2d93419e4",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:21:04.846Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     },
     {
       "moduleSlug": "tradeflowkit",
       "viewport": "tablet",
       "platform": "win32",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-win32.png",
-      "sha256": "93d2cc83e220b0c97174bee5c96d81f8c25453307296b95c83fbf88a9b06f70f",
+      "sha256": "c7949abfcfd8505804934e9382b6f65657033d4c38a09428480476e23bec85e7",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-05T08:13:06.713Z",
-      "reason": "Reviewed end-user outcome copy alignment and entitled module rendering on Linux and Windows at desktop, tablet, and mobile widths"
+      "approvedAt": "2026-09-22T15:05:04.536Z",
+      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
     }
   ]
 }

@@ -15,7 +15,9 @@ import {
   resetFailedLogins,
   sessionNeedsRefresh,
 } from '../lib/auth.js';
-import { checkRateLimit } from '../lib/rate-limiter.js';
+import { listBrowserSessions, revokeBrowserSession } from '../lib/auth-browser-sessions.js';
+import { issueEmailChange, confirmEmailChange, isEmailChangeToken, cancelEmailChange } from '../lib/auth-email-change.js';
+import { checkPersistentAuthRateLimit as checkRateLimit } from '../lib/auth-request-limits.js';
 import {
   ensureFreeAccountAppsWithDatabase,
   ensurePersonalTenantWithDatabase,
@@ -33,6 +35,7 @@ import {
 } from '../lib/tenant-invitations.js';
 import {
   AuthMfaError,
+  verifySensitiveActionMfa,
   beginAuthMfaEnrollment,
   confirmAuthMfaEnrollment,
   consumeAuthMfaLoginChallenge,
@@ -45,12 +48,13 @@ import {
 } from '../lib/auth-mfa.js';
 import {
   confirmEmailVerificationToken,
-  invalidateEmailVerificationTokens,
   issueEmailVerificationToken,
 } from '../lib/email-verification.js';
 import {
   buildEmailVerificationUrl,
   sendEmailVerification,
+  sendEmailChangeConfirmation,
+  sendEmailChangedNotice,
 } from '../lib/email-service.js';
 import { resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
 
@@ -67,6 +71,18 @@ function setAuthResponseHeaders(reply: any) {
   reply.header('Cache-Control', 'no-store');
   reply.header('Pragma', 'no-cache');
   reply.header('Referrer-Policy', 'no-referrer');
+}
+
+async function limitSensitiveAccountChange(request: any, reply: any) {
+  if (!await checkRateLimit(`account-change:${request.user.id}:${request.routeOptions.url}`, 10, 15 * 60_000)) {
+    return reply.code(429).send({ error: 'Too many account-change attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' });
+  }
+}
+
+async function requireAccountChangeCode(request: any, reply: any) {
+  if (await verifySensitiveActionMfa(request.user.id, request.body ?? {})) return true;
+  reply.code(403).send({ error: 'Enter a current authenticator code or an unused recovery code to confirm this change.', code: 'MFA_VERIFICATION_REQUIRED' });
+  return false;
 }
 
 function getMfaChallengeCookieOptions() {
@@ -127,7 +143,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/register', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
-    if (!checkRateLimit(`register:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+    if (!await checkRateLimit(`register:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
     }
 
@@ -185,8 +201,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     if (emailErr) return reply.code(400).send({ error: emailErr, code: 'VALIDATION_ERROR' });
     const normalizedEmail = email!.trim().toLowerCase();
     if (
-      !checkRateLimit(`email-verification:ip:${ip}`, EMAIL_VERIFICATION_RATE_LIMIT, AUTH_RATE_WINDOW_MS)
-      || !checkRateLimit(`email-verification:email:${normalizedEmail}`, EMAIL_VERIFICATION_RATE_LIMIT, AUTH_RATE_WINDOW_MS)
+      !await checkRateLimit(`email-verification:ip:${ip}`, EMAIL_VERIFICATION_RATE_LIMIT, AUTH_RATE_WINDOW_MS)
+      || !await checkRateLimit(`email-verification:email:${normalizedEmail}`, EMAIL_VERIFICATION_RATE_LIMIT, AUTH_RATE_WINDOW_MS)
     ) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
     }
@@ -198,6 +214,15 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     setAuthResponseHeaders(reply);
     const { token } = (request.body ?? {}) as { token?: string };
+    if (isEmailChangeToken(token)) {
+      if (!await checkRateLimit(`confirm-email-change:${getIp(request)}`, 20, AUTH_RATE_WINDOW_MS)) return reply.code(429).send({ error: 'Too many attempts. Try again later.', code: 'RATE_LIMITED' });
+      const changed = await confirmEmailChange(token);
+      if (!changed) return reply.code(400).send({ error: 'Verification link is invalid or expired.', code: 'EMAIL_VERIFICATION_INVALID' });
+      reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
+      const notice = await sendEmailChangedNotice(changed.oldEmail);
+      await logAudit(changed.userId, 'email_change_notice', changed.userId, { deliveryAccepted: notice.ok, provider: notice.provider }, request.ip);
+      return { ok: true, emailChanged: true, signedOutEverywhere: true, verifiedAt: changed.verifiedAt.toISOString() };
+    }
     const confirmed = await confirmEmailVerificationToken(token ?? '');
     if (!confirmed) {
       return reply.code(400).send({ error: 'Verification link is invalid or expired.', code: 'EMAIL_VERIFICATION_INVALID' });
@@ -215,7 +240,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/register-with-invite', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
-    if (!checkRateLimit(`register:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+    if (!await checkRateLimit(`register:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
     }
 
@@ -311,7 +336,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/login', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
-    if (!checkRateLimit(`login:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+    if (!await checkRateLimit(`login:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
     }
 
@@ -325,7 +350,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    if (!checkRateLimit(`login:${ip}:${normalizedEmail}`, LOGIN_PER_ACCOUNT_LIMIT, AUTH_RATE_WINDOW_MS)) {
+    if (!await checkRateLimit(`login:${ip}:${normalizedEmail}`, LOGIN_PER_ACCOUNT_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many login attempts for this account. Please try again later.', code: 'RATE_LIMITED' });
     }
 
@@ -394,7 +419,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/login/mfa', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
-    if (!checkRateLimit(`login-mfa:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+    if (!await checkRateLimit(`login-mfa:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many MFA attempts. Please sign in again later.', code: 'RATE_LIMITED' });
     }
     const challengeToken = String((request as any).cookies?.[MFA_CHALLENGE_COOKIE_NAME] ?? '');
@@ -443,12 +468,26 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
   });
 
+  app.get('/v1/auth/sessions', { preHandler: [authenticate] }, async (request: any, reply) => {
+    setAuthResponseHeaders(reply);
+    return { sessions: await listBrowserSessions(request.user.id, request.user.tokenVersion, request.authTokenFingerprint) };
+  });
+  app.post('/v1/auth/sessions/:id/revoke', { preHandler: [authenticate] }, async (request: any, reply) => {
+    setAuthResponseHeaders(reply);
+    const id = String(request.params.id ?? '');
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return reply.code(404).send({ error: 'Session not found', code: 'SESSION_NOT_FOUND' });
+    const result = await revokeBrowserSession(request.user.id, id, request.authTokenFingerprint);
+    if (!result) return reply.code(404).send({ error: 'Session not found', code: 'SESSION_NOT_FOUND' });
+    if (result.currentSessionRevoked) reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
+    return result;
+  });
+
   app.get('/v1/auth/mfa/status', { preHandler: [authenticate] }, async (request: any, reply) => {
     setAuthResponseHeaders(reply);
     return getAuthMfaStatus(request.user.id);
   });
 
-  app.post('/v1/auth/mfa/setup', { preHandler: [authenticate] }, async (request: any, reply) => {
+  app.post('/v1/auth/mfa/setup', { preHandler: [authenticate, limitSensitiveAccountChange] }, async (request: any, reply) => {
     setAuthResponseHeaders(reply);
     try {
       const setup = await beginAuthMfaEnrollment({ userId: request.user.id, email: request.user.email });
@@ -459,7 +498,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/v1/auth/mfa/verify', { preHandler: [authenticate] }, async (request: any, reply) => {
+  app.post('/v1/auth/mfa/verify', { preHandler: [authenticate, limitSensitiveAccountChange] }, async (request: any, reply) => {
     setAuthResponseHeaders(reply);
     const { code } = (request.body ?? {}) as any;
     if (!code || typeof code !== 'string') {
@@ -474,7 +513,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/v1/auth/mfa/disable', { preHandler: [authenticate] }, async (request: any, reply) => {
+  app.post('/v1/auth/mfa/disable', { preHandler: [authenticate, limitSensitiveAccountChange] }, async (request: any, reply) => {
     setAuthResponseHeaders(reply);
     const { password, code, recoveryCode } = (request.body ?? {}) as any;
     if (!password || typeof password !== 'string') {
@@ -494,7 +533,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/v1/auth/mfa/recovery-codes', { preHandler: [authenticate] }, async (request: any, reply) => {
+  app.post('/v1/auth/mfa/recovery-codes', { preHandler: [authenticate, limitSensitiveAccountChange] }, async (request: any, reply) => {
     setAuthResponseHeaders(reply);
     const { code, recoveryCode } = (request.body ?? {}) as any;
     try {
@@ -633,7 +672,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/forgot-password', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
-    if (!checkRateLimit(`forgot:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+    if (!await checkRateLimit(`forgot:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
     }
 
@@ -708,7 +747,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return { user: sanitizeUser(updated) };
   });
 
-  app.put('/v1/auth/change-password', { preHandler: [authenticate] }, async (request, reply) => {
+  app.put('/v1/auth/change-password', { preHandler: [authenticate, limitSensitiveAccountChange] }, async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     setAuthResponseHeaders(reply);
     const user = (request as any).user;
@@ -730,6 +769,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: 'Current password is incorrect', code: 'INVALID_CREDENTIALS' });
     }
 
+    if (!await requireAccountChangeCode(request, reply)) return reply;
     const passwordHash = await hashPassword(newPassword);
     const [updated] = await db.update(users).set({
       passwordHash,
@@ -752,7 +792,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return { user: sanitizeUser(updated), message: 'Password changed successfully' };
   });
 
-  app.put('/v1/auth/change-email', { preHandler: [authenticate] }, async (request, reply) => {
+  app.put('/v1/auth/change-email', { preHandler: [authenticate, limitSensitiveAccountChange] }, async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     setAuthResponseHeaders(reply);
     const user = (request as any).user;
@@ -779,31 +819,17 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: 'Email already in use', code: 'EMAIL_EXISTS' });
     }
 
-    const oldEmail = user.email;
-    const [updated] = await db.update(users).set({
-      email: normalizedEmail,
-      emailVerifiedAt: null,
-      tokenVersion: sql`token_version + 1`,
-      updatedAt: new Date(),
-    }).where(eq(users.id, user.id)).returning();
-    await invalidateEmailVerificationTokens(user.id);
-    await logAudit(user.id, 'email_changed', user.id, { oldEmail, newEmail: normalizedEmail }, request.ip);
-    await logUserActivity(user.id, 'email_changed', 'user', user.id, { oldEmail, newEmail: normalizedEmail });
-
-    const token = signToken({
-      userId: updated.id,
-      email: updated.email,
-      role: updated.role,
-      tokenVersion: updated.tokenVersion,
-      sessionType: 'platform',
-    });
-
-    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
-
-    return { user: sanitizeUser(updated), message: 'Email updated successfully' };
+    if (!await requireAccountChangeCode(request, reply)) return reply;
+    const pending = await issueEmailChange(user.id, normalizedEmail);
+    const delivery = await sendEmailChangeConfirmation({ to: normalizedEmail, verifyUrl: buildEmailVerificationUrl(pending.token), expiresAt: pending.expiresAt });
+    if (!delivery.ok) {
+      await cancelEmailChange(user.id, pending.id);
+      return reply.code(503).send({ error: 'We could not send the confirmation email. Your current sign-in email is unchanged. Try again later.', code: 'EMAIL_CHANGE_DELIVERY_UNAVAILABLE' });
+    }
+    return reply.code(202).send({ pendingVerification: true, message: 'Check your new email for a confirmation link. Your current sign-in email stays active until you confirm.' });
   });
 
-  app.post('/v1/auth/request-deletion', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/v1/auth/request-deletion', { preHandler: [authenticate, limitSensitiveAccountChange] }, async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const user = (request as any).user;
     const { password } = request.body as any;
@@ -817,6 +843,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: 'Password is incorrect', code: 'INVALID_CREDENTIALS' });
     }
 
+    if (!await requireAccountChangeCode(request, reply)) return reply;
     if (user.role === 'admin') {
       return reply.code(400).send({ error: 'Admin accounts cannot self-delete. Contact another admin.', code: 'ADMIN_CANNOT_SELF_DELETE' });
     }

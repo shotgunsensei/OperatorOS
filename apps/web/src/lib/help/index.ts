@@ -3,10 +3,11 @@ import { OPERATOROS_GUIDE, PLATFORM_COMMAND_GUIDE } from './operatoros-guides';
 import { PRIMARY_MODULE_GUIDES } from './primary-module-guides';
 import type { HelpGuide, HelpPageGuide } from './types';
 import { MODULE_GLOSSARY } from './module-glossary';
+import { MODULE_SETUP_GUIDES } from './module-setup';
 
 export type { HelpGuide, HelpGuideKind, HelpPageGuide } from './types';
 
-export const HELP_CONTENT_VERSION = '2026.09.09-v2';
+export const HELP_CONTENT_VERSION = '2026.09.21-v3';
 
 export const HELP_GUIDES: readonly HelpGuide[] = [
   OPERATOROS_GUIDE,
@@ -86,5 +87,6 @@ export function helpSearchText(guide: HelpGuide, page: HelpPageGuide): string {
     page.access ?? '',
     ...(page.notes ?? []),
     ...(MODULE_GLOSSARY[guide.id]?.flat() ?? []),
+    ...Object.values(MODULE_SETUP_GUIDES[guide.id] ?? {}),
   ].join(' ').toLocaleLowerCase();
 }

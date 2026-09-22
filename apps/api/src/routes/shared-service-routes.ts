@@ -107,7 +107,7 @@ export async function registerSharedServiceRoutes(app: FastifyInstance): Promise
   }, async (request, reply) => {
     const providers = await getSharedProviderStatuses();
     let queues: Record<string, unknown> = {};
-    try { queues = await getSharedServiceQueueHealth() as Record<string, unknown>; } catch { /* readiness owns DB failure */ }
+    try { queues = await getSharedServiceQueueHealth(tenantAndUser(request).tenantId) as Record<string, unknown>; } catch { /* readiness owns DB failure */ }
     return reply.send({
       providers,
       attachments: getAttachmentServiceStatus(),

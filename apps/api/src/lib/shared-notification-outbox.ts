@@ -390,7 +390,9 @@ export async function processOutboxMessage(row: Record<string, unknown>, executo
       destination: String(row.destination),
       subject: row.subject ? String(row.subject) : null,
       body: String(row.body),
-      idempotencyKey: String(row.idempotency_key),
+      // Shared vendor accounts need a delivery identity unique to this
+      // organization and outbox row, even when caller-supplied keys match.
+      idempotencyKey: `outbox:${String(row.tenant_id)}:${String(row.id)}`,
     });
     await recordNotificationAttempt(row, {
       adapterName: adapter.status.name,

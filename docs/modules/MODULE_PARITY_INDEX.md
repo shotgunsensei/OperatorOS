@@ -1,5 +1,60 @@
 # OperatorOS module parity index
 
+## PR #102 release regression repair (2026-09-22)
+
+Status: **PARITY UNCHANGED / LOCAL BROWSER AND VISUAL VERIFIED / LIVE ACCEPTANCE OPEN**.
+No module availability, entitlement, provider status, or production readiness
+has been widened by this test repair.
+
+| Module or surface | Repair and fresh evidence | Remaining gate |
+| --- | --- | --- |
+| OperatorOS account / TradeFlowKit guidance | Persistent sign-in fixture isolation; pending email-confirmation and current first-action assertions; 17 focused checks pass, followed by 8/8 guidance checks after tightening the first-action assertion | Clean-checkout aggregate API gate |
+| BrandForge OS, StudyForge AI, CallCommand AI, SnapProofOS, Operator Pool Hall, Script Ops | Browser tests follow collapsed navigation and exact form labels; all six persistence/sign-in journeys pass together on Windows without retries; complete Linux browser suite passes 24/24 | GitHub checks for current head; deployed acceptance |
+| All 13 module visual contracts | Reviewed 78 desktop/tablet/mobile Linux and Windows references; both platforms pass 4/4 visual, accessibility, route, and identity tests with updates disabled; OutCall remains unavailable | GitHub checks for current head; deployed acceptance |
+
+Exact commands, environment, counts, and local-harness limitations are recorded
+in [implementation status](../IMPLEMENTATION_STATUS.md#pr-102-release-gate-repair-2026-09-22).
+
+## Shared customer and account security overlay (2026-09-21 continuation)
+
+Status: **PARITY UNCHANGED / LOCAL DATABASE-BACKED CANDIDATE / NOT DEPLOYED**.
+
+| Module or surface | Implemented change | Evidence and remaining gate |
+| --- | --- | --- |
+| Module shells | Shared tenant customer search and common contact editor, gated by destination module access | PostgreSQL read/write/viewer/foreign-tenant/session tests; synthetic UI; no deployed acceptance |
+| TradeFlowKit | Select shared identity; publish new customers to the directory; prevent manual same-name silent merging; explain reactivation for inactive matches; shared edits refresh editable customer rows | Persistent revenue/import/shared-customer and reactivation regressions pass; live upgrade and legacy duplicate review open |
+| BrandForge OS | Saved customer selection, independent brand name, durable tenant-composite link and audited changes | Persistent brand/link tests and synthetic autofill/mobile checks; publishing integrations open |
+| SnapProofOS | Saved customer selection; new customer publication to shared directory; live contact projection, current shared identity search, and new-report lookup; private notes retained | Persistent retry/tenant/report/search regressions; shared edits do not rewrite historical reports; legacy unlinked records and deployed acceptance open |
+| OperatorOS account | Shared authentication limits, fresh second-factor checks, pending email confirmation, individual browser revocation | Database-backed auth/security/SSO regressions; real inbox and deployed cookie/session journeys open |
+| Shared service configuration | Saved references/callback flags no longer imply verified delivery | Persistent provider-save/read tests; no vendor activation |
+
+Final focused runner: **154 passed / 0 failed / 0 skipped**; clean/repeated v63
+release verified in disposable PostgreSQL 16. Final synthetic browser: **18/18**;
+site-selection follow-up: **16/16**; provider-readiness follow-up: **14/14**.
+PR #102 review follow-up: **24/24** disposable-database checks in 37.645 seconds,
+including inactive customer recovery and current shared-identity search.
+Selected Microsoft 365, Google,
+QuickBooks Online, Facebook, LinkedIn, and X connectors remain implementation
+targets. Details: [shared customer/security report](SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md).
+
+## Customer workflow and connection readiness overlay (2026-09-21)
+
+Status: **PARITY UNCHANGED / LOCAL IMPLEMENTATION / LIVE ACCEPTANCE OPEN**.
+
+| Module or surface | Change | Evidence and remaining gate |
+| --- | --- | --- |
+| OperatorOS and all 13 modules | First task, required connections, completion check, canonical setup link; targeted language audit across 198 Help pages | Source and synthetic browser checks; no new deployed parity claim |
+| TradeFlowKit, TechDeck, PulseDesk | Existing guided dashboards retained; shared delivery and connection guidance improved | 11 existing synthetic presentation cases pass; persistent/provider acceptance still open |
+| PulseDesk | Email-connection loading, error, and retry states | Synthetic failed-load/recovery case passes; live mailbox import remains unimplemented |
+| Shared services / SnapProofOS and file-using modules | New private ClamAV scan adapter; file-service setup guidance | 5 local protocol and 4 rescan boundary tests pass; live engine, signature freshness, and database-backed upload/download/rescan acceptance open |
+| Shared email delivery | Resend duplicate-send key and organization-specific outbox identity | 2 intercepted transport/outbox tests pass; inbox delivery and database integration open |
+| Organization service summaries | All 12 queue metrics now use tenant predicates | 2 generated-SQL checks pass; real database isolation test open |
+
+Full details: [customer readiness report](CUSTOMER_WORKFLOW_READINESS_2026-09-21.md).
+ClamAV is disabled until configured; no module gate, role, plan, or availability
+has been widened. The report distinguishes implemented repairs from proposed
+Microsoft 365 intake, NHTSA lookup, and other future vendor work.
+
 ## Ecosystem guided workflow and administration overlay (2026-09-11)
 
 Status: **PARITY UNCHANGED / LOCAL CANDIDATE VERIFIED**.

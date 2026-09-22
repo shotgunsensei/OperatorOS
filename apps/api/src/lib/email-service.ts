@@ -188,6 +188,19 @@ async function sendTransactionalEmail(input: TransactionalEmail): Promise<SendRe
   }
 }
 
+export async function sendEmailChangeConfirmation(input: EmailVerificationInput): Promise<SendResult> {
+  const text = `Confirm your new OperatorOS sign-in email using this link: ${input.verifyUrl}\nThe link expires in one hour. Your current sign-in email will keep working until you confirm. If you did not request this change, ignore this message.`;
+  return sendTransactionalEmail({ to: input.to, subject: 'Confirm your new OperatorOS sign-in email', text,
+    html: `<p>Confirm your new OperatorOS sign-in email.</p><p><a href="${escapeAttr(input.verifyUrl)}">Confirm new email</a></p><p>This link expires in one hour. Your current sign-in email keeps working until you confirm. If you did not request this change, ignore this message.</p>`,
+    testId: 'operatoros-test-email-change',
+  });
+}
+
+export async function sendEmailChangedNotice(to: string): Promise<SendResult> {
+  const text = 'Your OperatorOS sign-in email was changed after verification. Existing sessions have been signed out. If you did not make this change, contact OperatorOS support immediately.';
+  return sendTransactionalEmail({ to, subject: 'Your OperatorOS sign-in email changed', text, html: `<p>${text}</p>`, testId: 'operatoros-test-email-change-notice' });
+}
+
 export async function sendInviteEmail(input: InviteEmailInput): Promise<SendResult> {
   return sendTransactionalEmail({
     to: input.to,

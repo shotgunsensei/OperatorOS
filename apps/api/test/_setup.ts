@@ -164,6 +164,10 @@ export async function ensureSchemaReady() {
   // one-shot grandfather boundary, then immediately reapplies v60.
   const { ensureForwardCommerceContract } = await import('../src/lib/application-stack-billing-db-init.js');
   await ensureForwardCommerceContract();
+  const { ensureSharedCustomerLinks } = await import('../src/lib/shared-customer-db-init.js');
+  await ensureSharedCustomerLinks();
+  const { ensureAuthSecurityControls } = await import('../src/lib/auth-security-db-init.js');
+  await ensureAuthSecurityControls();
 }
 
 export function uniqueId(prefix: string) {

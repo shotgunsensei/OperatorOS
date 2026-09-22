@@ -32,7 +32,12 @@ test('Core Suite trial remains server-owned and does not impersonate billing or 
   assert.match(ui, /Your records are preserved/);
   assert.match(authRoutes, /\/v1\/auth\/email-verification\/request/);
   assert.match(authRoutes, /\/v1\/auth\/email-verification\/confirm/);
-  assert.match(authRoutes, /emailVerifiedAt: null/);
+  // A replacement address stays pending; the verified sign-in identity is
+  // changed only after the new address proves ownership.
+  const emailChange = read('apps/api/src/lib/auth-email-change.ts');
+  assert.match(authRoutes, /issueEmailChange\(user.id, normalizedEmail\)/);
+  assert.match(authRoutes, /pendingVerification: true/);
+  assert.match(emailChange, /email_verified_at=NOW\(\)/);
   assert.match(verification, /createHash\('sha256'\)/);
   assert.match(verification, /fingerprintEmail\(currentUser\.email\) !== verification\.email_fingerprint/);
   assert.doesNotMatch(verification, /token:\s*text\(|token:\s*varchar\(/);

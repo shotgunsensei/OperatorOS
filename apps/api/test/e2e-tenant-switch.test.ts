@@ -69,6 +69,8 @@ let modB: any;
 
 // Captured during journey for cleanup.
 const cleanupTenantIds: string[] = [];
+// Persistent IP budgets span API instances; this suite owns a synthetic client.
+const clientAddress = `2001:db8:${uniqueId('client').slice(-12).match(/.{4}/g)!.join(':')}::34`;
 
 before(async () => {
   await ensureSchemaReady();
@@ -178,6 +180,7 @@ test('member of two tenants: picker lists both, switch flips active context, sco
   //     the cookie returned here.
   const loginRes = await app.inject({
     method: 'POST', url: '/v1/auth/login',
+    remoteAddress: clientAddress,
     payload: { email: alice.email, password: alicePassword },
   });
   assert.equal(loginRes.statusCode, 200, `login: ${loginRes.body}`);
@@ -289,6 +292,7 @@ test('super_admin: "Show all tenants" reveals non-member tenants and switching i
   // Login as super_admin.
   const loginRes = await app.inject({
     method: 'POST', url: '/v1/auth/login',
+    remoteAddress: clientAddress,
     payload: { email: superAdmin.email, password: superAdminPassword },
   });
   assert.equal(loginRes.statusCode, 200, `super login: ${loginRes.body}`);

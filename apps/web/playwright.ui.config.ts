@@ -5,7 +5,7 @@ import { stripExternalProviderEnvironment } from '../../scripts/parity/lib/datab
 // is started. Authenticated runtime acceptance uses playwright.config.ts.
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'core-suite-guided-polish.spec.ts',
+  testMatch: ['core-suite-guided-polish.spec.ts', 'customer-readiness.spec.ts', 'shared-customers.spec.ts'],
   workers: 1,
   retries: 0,
   timeout: 90_000,

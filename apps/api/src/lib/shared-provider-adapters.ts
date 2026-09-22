@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { getAiProvider, getProviderInfo, type AiCompletionRequest, type AiCompletionResponse } from './ai-provider.js';
 import { resolveTelephonyConfig, restAuthHeader } from './telephony.js';
 import {
@@ -88,7 +89,13 @@ class ResendEmailAdapter implements OutboundProviderAdapter {
     if (!apiKey || !from) throw new ProviderDisabledError('email');
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        // Resend retains keys for 24 hours; the durable outbox remains the
+        // long-term authority. Hashing bounds the key and removes customer data.
+        'Idempotency-Key': `operatoros-email-${createHash('sha256').update(input.idempotencyKey).digest('hex')}`,
+      },
       signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
         from,

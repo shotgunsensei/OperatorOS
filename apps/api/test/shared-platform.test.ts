@@ -129,6 +129,14 @@ test('P22-PROVIDER-001: live readiness fails closed while deterministic mode is 
   assert.equal(deterministic.state, 'degraded');
   assert.equal(deterministic.reasonCode, 'DETERMINISTIC_TEST_ADAPTER');
   assert.equal(deterministic.externalDelivery, false);
+  const savedOnly = await saveProviderConfiguration({
+    tenantId: ownerA.currentTenantId!, actorUserId: ownerA.id,
+    providerKey: uniqueId('oauth.saved'), kind: 'oauth', mode: 'live', callbackReady: true,
+    secretReference: 'vault://test/unverified-connection',
+  });
+  assert.equal(savedOnly.state, 'configured');
+  assert.equal(savedOnly.reasonCode, 'LIVE_CONNECTION_UNVERIFIED');
+  assert.equal(savedOnly.externalDelivery, false);
   const rows = await listProviderConfigurations(ownerA.currentTenantId!);
   assert.equal(JSON.stringify(rows).includes('ciphertext'), false);
   assert.equal((await listProviderConfigurations(ownerB.currentTenantId!)).some(row => row.providerKey === key), false);

@@ -1,5 +1,223 @@
 # OperatorOS implementation status
 
+## PR #102 release-gate repair (2026-09-22)
+
+The pushed `359b92a` candidate failed GitHub Actions run `35734961213`:
+the API suite had **1,514 passed / 3 failed / 0 skipped**, six browser journeys
+failed, and two visual tests stopped at stale reference images. The production
+build succeeded. This supersedes any inference that the earlier focused checks
+proved the complete release gate.
+
+Repairs preserve the production security policy and release thresholds:
+
+- Tenant-switch fixtures use a separate synthetic client address so their
+  sign-ins do not consume the same persistent IP budget as unrelated suites.
+- The email-change contract checks pending confirmation and verified replacement,
+  matching the new flow; the customer guidance check follows the current first
+  action and workflow component.
+- Browser journeys open collapsed navigation groups before following their links
+  and identify campaign/brief fields precisely. Pool Hall uses its module menu
+  for the player profile, avoiding the additional workflow shortcut.
+- OutCall's visual test checks its current unavailable message and administrator
+  restriction; the unavailable-state exclusion for other modules is retained.
+- All 78 desktop, tablet, and mobile reference images were reviewed for the shared
+  customer header, guided dashboards, and collapsed sections on Linux and Windows.
+  Explicit capture uses `--update-snapshots=all` so small copy changes below the
+  normal comparison tolerance also receive current reference images. Ordinary
+  release comparisons and accessibility thresholds are unchanged.
+
+Focused disposable PostgreSQL 16 regression:
+**17 passed / 0 failed / 0 skipped** in **42.470 seconds**. All four workspace
+typechecks passed. The six previously failing browser journeys now pass together
+on Windows (**6/6**, no retries, about two minutes). Windows visual regeneration
+completed all four tests across 13 module contracts and three viewport sizes;
+the fresh comparison with updates disabled also passed **4/4** (2.3 minutes).
+The first-action assertion was subsequently tightened and its file passed **8/8**.
+
+The initial local Linux API run finished **1,508 passed / 9 failed / 0 skipped**
+in **847.405 seconds**. All nine failures came from the source-quarantine tests
+calling Git in a container that had initially received tracked files without Git
+metadata. After copying the actual shallow repository metadata and restoring its
+index, that test file passed **10/10** in **0.811 seconds**; these counts overlap.
+The original three CI API failures did not recur. This is not recorded as a
+fully passing aggregate API gate; a fresh GitHub run must establish that evidence.
+The Linux production build passed all four typechecks and generated all 35 pages.
+Clean apply/reapply/verification and **32/32** integration checks passed against
+the disposable database. The complete Linux production-host browser suite passed
+**24/24** (6.9 minutes), and all four visual tests passed both during capture
+(2.6 minutes) and in a fresh comparison with updates disabled (1.9 minutes).
+Production core preflight and the 13-module visual/hash contract passed.
+After the explicit all-image capture correction, the filtered OutCall/TradeFlowKit
+comparison passed **4/4** again on Linux (23.5 seconds) and Windows (22.2 seconds),
+with updates disabled on both platforms.
+
+Environment: Windows Node 24.16.0; Linux Ubuntu 24.04 Playwright 1.61.1 container,
+Node 20.20.2, pnpm 10.34.5, pinned Chromium, PostgreSQL 16, synthetic credentials,
+deterministic provider mode, and the repository's readiness-gated runtime/proxy.
+The Linux container required `NODE_OPTIONS=--dns-result-order=ipv4first` to keep
+its Next bind address and loopback readiness lookup consistent. This is a local
+container setting, not a production configuration or application-code change.
+
+Commands (Linux uses the disposable CI environment from the release workflow):
+
+```text
+node scripts/verify-customer-workflows.mjs apps/api/test/core-suite-trial-static.test.ts apps/api/test/customer-experience-contract.test.ts apps/api/test/e2e-tenant-switch.test.ts apps/api/test/account-security-upgrades.test.ts
+node --import tsx --test apps/api/test/customer-experience-contract.test.ts
+corepack pnpm typecheck
+pnpm test:api
+node --import tsx --test apps/api/test/module-source-snapshots.test.ts
+pnpm test:integration
+pnpm build:production
+node scripts/parity/run-browser-tests.mjs --suite polish --grep "BrandForgeOS persists|StudyForge AI persists|CallCommand AI persists|SnapProofOS persists|Operator Pool Hall persists|Script Ops persists"
+PARITY_UPDATE_SNAPSHOTS=1 node scripts/parity/run-browser-tests.mjs --suite all
+node scripts/parity/run-browser-tests.mjs --suite visual
+PARITY_MODULE_FILTER=outcall PARITY_UPDATE_SNAPSHOTS=1 node scripts/parity/run-browser-tests.mjs --suite visual
+PARITY_MODULE_FILTER=outcall node scripts/parity/run-browser-tests.mjs --suite visual
+node scripts/parity/verify-visual-contracts.mjs
+node scripts/production-env-preflight.mjs --core
+git diff --check
+```
+
+Logs: `build/pr102-linux-{api,source-tests,integration,build,browser,visual-verify,preflight}.log`
+and `build/pr102-windows-{focused,visual,visual-verify}.log`. Capturing new images
+does not itself prove a comparison pass; the separate update-disabled runs above
+provide that evidence. GitHub acceptance is tracked by the checks attached to
+[PR #102](https://github.com/shotgunsensei/OperatorOS/pull/102) for its current head;
+the local aggregate API limitation above must not be reported as a green CI run.
+No deployment, vendor activation, schema change, or production-data change occurs.
+
+## PR #102 review follow-up
+
+Reviewed base: `75d2c292341ef5188c286b5ae657e33e8f778117` on
+`codex/customer-workflow-readiness`. Both customer behavior findings are fixed:
+
+- Manual TradeFlowKit creation against an inactive, unarchived directory name
+  returns `409 SHARED_CUSTOMER_INACTIVE` with administrator reactivation guidance.
+  The record remains inactive, no duplicate is created, and the existing directory
+  reactivation flow makes it selectable again. The uniqueness rule is unchanged.
+- SnapProofOS customer search uses the active shared organization name and the
+  same active primary-contact ordering used for display, before its result limit.
+  It preserves company search and legacy/unavailable-directory snapshot fallback,
+  does not match a stale snapshot email when the active shared email was cleared,
+  treats wildcard characters literally, and keeps every join tenant-scoped.
+- This PR's new lint-pass claims were removed from all three evidence documents.
+  The existing package script does not override `AGENTS.md`'s verification policy;
+  no lint/formatting release-gate approval is claimed by this follow-up.
+
+Fresh focused verification: **24 passed, 0 failed, 0 skipped**, in **37.645 seconds**,
+using disposable PostgreSQL 16 and generated test credentials. Coverage includes
+inactive-name rejection/reactivation/reuse, current name/email search, tenant
+isolation, cleared email, legacy fallback, and existing import/revenue/proof flows.
+The fresh production build passed deployment-scope/catalog checks, all four
+workspace typechecks, and API/runner/web builds with 35 generated pages.
+`git diff --check` passed. Browser tests were not rerun because the follow-up
+changes server-side search/creation behavior and documentation only.
+
+```powershell
+node scripts/verify-customer-workflows.mjs apps/api/test/shared-customers.test.ts apps/api/test/tradeflowkit-customer-import.test.ts apps/api/test/tradeflowkit-revenue-flow.test.ts apps/api/test/snapproofos-db.test.ts
+$env:INTERNAL_API_URL='http://localhost:5001'
+corepack pnpm build:production
+git diff --check
+```
+
+Logs: `build/pr102-review-tests.log` and `build/pr102-review-build.log`.
+No schema, provider configuration, or production data change is required.
+Rollback is the scoped application-code revert. This local verification preceded
+the approved push of `359b92a`; no deployment occurred.
+
+## Shared customers, account security, and selected connections (2026-09-21 continuation)
+
+Status: **LOCAL IMPLEMENTATION / DATABASE VERIFIED / NOT DEPLOYED**.
+The same `codex/customer-workflow-readiness` candidate now adds tenant-owned
+shared customer search/editing in module headers and customer selection in
+TradeFlowKit, BrandForge OS, and SnapProofOS. Current contact details are reused;
+private notes and historical invoice/report contents are not copied. Tenant,
+viewer, entitlement, module-session, revision-conflict, and foreign-key checks
+remain server-owned. Manual same-name TradeFlowKit creation no longer silently
+merges into a shared customer; the user must select the existing record.
+
+Account work adds persistent authentication limits across servers, fresh MFA
+verification for sensitive account changes, confirmation before changing the
+sign-in email, and individually revocable observed browser sessions. Generic
+saved provider settings no longer claim verified external delivery.
+
+Docker became available during this continuation. New disposable PostgreSQL 16
+tests supersede the earlier host-unavailable note below for this scope. The
+initial wider regression sweep passed **172/172**, no failures/skips, in
+128.313 seconds. Final `node scripts/verify-customer-workflows.mjs` passed
+**154/154**, no failures/skips, in **110.330 seconds** after duplicate protection
+and provider-readiness corrections. These are overlapping suites, not an additive
+326-test claim. Its disposable runner strips external provider configuration,
+generates test-only secrets, and removes only its own container.
+
+The ordered v63/63 release clean-applied in **16,154 ms**, reapplied idempotently
+in **642 ms**, and passed independent verification. No production apply occurred.
+Final production build, all four typechecks, and **18/18** synthetic
+browser checks passed (50.7 seconds). After the final site-selection preservation
+repair, shared-customer/SnapProof regressions passed **16/16** (23.714 seconds).
+Provider configuration/delivery distinction regressions passed **14/14**
+(22.354 seconds). These focused reruns also overlap the larger suite.
+Security scanning
+found no runtime findings or unresolved advisories; the existing two disclosed
+patched high-advisory exceptions remain.
+
+Two later test expectations were corrected without skips: the duplicate test
+used a customer's old name after another test renamed it, and the provider test
+expected a saved setting to mean verified delivery. A late TradeFlowKit input
+change also exposed an out-of-scope variable in its separate edit form; it was
+removed before rebuilding.
+
+The SnapProof shared-selection path also preserves explicitly selected service
+sites, contacts, and private notes. Saved provider configuration remains compatible
+with the existing startup configuration checks while its public status says
+`configured` and `externalDelivery=false`; it does not disable the platform simply
+because external delivery has not yet been verified.
+
+The chosen vendor targets are **Microsoft 365, Google Workspace, QuickBooks
+Online, Facebook, LinkedIn, and X**. Their live connectors/publishers remain
+unimplemented and unconnected; app registration/consent and provider acceptance
+are additional work, not the only remaining work. Organization MFA policies,
+passkeys/workplace login, saved onboarding/attention workflows, spend controls,
+legacy unlinked-customer review, and full deployed module acceptance remain open.
+
+See [the implementation and connection handoff](modules/SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md)
+for changed behavior, migration/rollback, repeatable commands, provider workflows,
+account owners, primary references, and completion evidence. No commit, push,
+deployment, external message, provider purchase, or production-data change was made.
+
+## Customer instructions, connection readiness, and file scanning (2026-09-21)
+
+Status: **LOCAL IMPLEMENTATION / PRODUCTION AND FULL WORKFLOW ACCEPTANCE OPEN**.
+Branch `codex/customer-workflow-readiness`, starting from clean `665c4e2`.
+The 15 Help guides / 198 page instructions pass the targeted plain-language
+check. OperatorOS and all 13 modules gain first-task and connection guidance.
+Shared services gains service checklists, honest loading/error states, collapsed
+advanced settings, and responsive controls. PulseDesk connection errors recover
+through a retry. Organization queue summaries now filter every count and age
+by the trusted tenant. Resend receives stable, organization-specific retry keys.
+A default-off private ClamAV adapter integrates with existing file quarantine
+and scan jobs; uncertain scan results cannot release files. An audited,
+administrator-only rescan action recovers eligible failed/unavailable checks.
+
+Focused source/unit/protocol checks pass **31/31**, with no failures/skips.
+Production build, all four workspace typechecks, and diff checks pass.
+The first successful synthetic browser run passes
+**14/14** (final confirmation: 58.4 seconds), including all module setup cards and the existing
+11 main-module presentation cases, with no serious/critical accessibility
+findings in audited regions. The separate quality-gate suite passes **20/20**.
+The security scan passes with no runtime findings
+or unresolved advisories; the two previously disclosed high advisory patch
+exceptions remain. Exact commands, final confirmation results, configuration,
+module-by-module gaps, vendor suggestions, artifacts, and rollback appear in
+[the customer readiness report](modules/CUSTOMER_WORKFLOW_READINESS_2026-09-21.md).
+
+No schema change or production action occurred. Local Docker's Linux engine
+is unavailable, so database-backed shared-service and full module acceptance
+are unverified. Vendor activation, real ClamAV engine acceptance, database-backed file-rescan
+acceptance, live mailbox/publishing connectors, deployed SSO, and the full
+authenticated visual/workflow sweep remain open. This is not completion of the
+request to make every module fully operational.
+
 ## Ecosystem, OperatorOS, admin, and messenger polish (2026-09-11)
 
 Status: **LOCAL CANDIDATE VERIFIED / NO DEPLOYMENT OR PARITY PROMOTION**.

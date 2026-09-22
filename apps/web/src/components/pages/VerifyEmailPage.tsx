@@ -1,26 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Loader2, ShieldAlert } from 'lucide-react';
 import { authApi } from '@/lib/auth';
 import { brand } from '@/lib/brand';
 import { colors } from '../SaasLayout';
 
 export default function VerifyEmailPage({ onSwitch }: { onSwitch: (page: 'login') => void }) {
+  const [emailChanged, setEmailChanged] = useState(false);
   const [state, setState] = useState<'working' | 'verified' | 'invalid'>('working');
+  const started = useRef(false);
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token') ?? '';
     if (!token) {
       setState('invalid');
       return;
     }
-    void authApi.confirmEmailVerification(token).then(() => {
+    // Remove the one-use secret before any request or later navigation.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token');
+    window.history.replaceState(null, '', `${url.pathname}?mode=verify-email`);
+    void authApi.confirmEmailVerification(token).then(result => {
+      setEmailChanged(Boolean(result.emailChanged));
       setState('verified');
-      const url = new URL(window.location.href);
-      url.searchParams.delete('token');
-      window.history.replaceState(null, '', `${url.pathname}?mode=verify-email`);
     }).catch(() => setState('invalid'));
   }, []);
 
@@ -33,7 +39,7 @@ export default function VerifyEmailPage({ onSwitch }: { onSwitch: (page: 'login'
   const detail = state === 'working'
     ? 'Checking the single-use link with OperatorOS…'
     : state === 'verified'
-      ? 'Your account is now eligible for verified-account features, including the seven-day flagship application trial.'
+      ? emailChanged ? 'Your sign-in email has been updated. Sign in with your new email to continue. Your other sessions have been signed out.' : 'Your email is verified. You can now continue to your account.'
       : 'The link may have expired or already been used. Sign in to request a new one.';
 
   return (

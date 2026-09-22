@@ -6,8 +6,44 @@ import { getSharedSecretVaultReadiness, storeEncryptedSecretReference } from './
 import { getAttachmentContent, getAttachmentServiceStatus } from './shared-attachments.js';
 import { getSharedServiceQueueHealth, getSharedServiceWorkerStatus } from './shared-service-worker.js';
 import { sanitizeSharedMetadata } from './shared-service-safety.js';
+import { enqueueSharedJob } from './shared-background-jobs.js';
+import { writeAudit } from './audit.js';
 
 type Executor = Pick<typeof db, 'execute'>;
+
+export async function requestAttachmentRescan(input: {
+  tenantId: string; moduleId: string; attachmentId: string; actorUserId: string;
+}, request?: unknown, database: Pick<typeof db, 'transaction'> = db) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.attachmentId)) {
+    throw Object.assign(new Error('Choose a valid file.'), { code: 'ATTACHMENT_ID_INVALID' });
+  }
+  if (!getAttachmentServiceStatus().scanner.configured) {
+    throw Object.assign(new Error('Connect the file safety service before trying again.'), { code: 'ATTACHMENT_SCANNER_UNAVAILABLE' });
+  }
+  return database.transaction(async tx => {
+    const result = await tx.execute(sql`
+      UPDATE shared_attachments SET scan_status = 'pending', version = version + 1, updated_at = NOW()
+      WHERE id = ${input.attachmentId} AND tenant_id = ${input.tenantId}
+        AND module_id = ${input.moduleId} AND deleted_at IS NULL
+        AND scan_status IN ('unavailable', 'error')
+      RETURNING id, version
+    `);
+    const attachment = result.rows[0];
+    if (!attachment) throw Object.assign(new Error('This file is not available for another safety check. Refresh to see its current status.'), { code: 'ATTACHMENT_RESCAN_NOT_FOUND' });
+    await enqueueSharedJob({
+      tenantId: input.tenantId, moduleId: input.moduleId, requestedByUserId: input.actorUserId,
+      handlerKey: 'shared.attachment.scan.v1', payload: { attachmentId: input.attachmentId },
+      idempotencyKey: `rescan:${input.attachmentId}:${attachment.version}`,
+    }, tx);
+    await writeAudit({
+      tenantId: input.tenantId, actorUserId: input.actorUserId,
+      targetType: 'shared_attachment', targetId: input.attachmentId,
+      action: 'shared_attachment_rescan_requested', after: { scanStatus: 'pending', version: attachment.version },
+    }, request, tx);
+    return { attachmentId: input.attachmentId, scanStatus: 'pending' as const };
+  });
+}
+
 export const SHARED_API_TOKEN_SCOPES = Object.freeze([
   'directory:read', 'attachments:read', 'attachments:write', 'notifications:write',
   'jobs:write', 'exports:read', 'exports:write', 'usage:read', 'search:read', 'webhooks:write',
@@ -29,7 +65,11 @@ function providerHealth(input: {
   const callbackRequired = input.kind === 'oauth' || input.kind === 'webhook';
   if (!input.hasSecret) return { state: 'blocked', reasonCode: 'LIVE_CREDENTIAL_REFERENCE_MISSING', externalDelivery: false };
   if (callbackRequired && !input.callbackReady) return { state: 'blocked', reasonCode: 'LIVE_CALLBACK_NOT_READY', externalDelivery: false };
-  return { state: 'ready', reasonCode: null, externalDelivery: true };
+  // A saved reference and an operator-entered callback flag do not run an
+  // adapter or prove that a vendor accepted anything.
+  // The persisted health_state describes configuration completeness and is also
+  // read by startup. Keep that contract separate from external delivery proof.
+  return { state: 'ready', reasonCode: 'LIVE_CONNECTION_UNVERIFIED', externalDelivery: false };
 }
 
 function providerJson(row: Record<string, unknown>) {
@@ -42,7 +82,7 @@ function providerJson(row: Record<string, unknown>) {
     providerKey: String(row.provider_key),
     kind: String(row.provider_kind),
     mode,
-    state: health.state,
+    state: health.state === 'ready' ? 'configured' : health.state,
     reasonCode: health.reasonCode,
     externalDelivery: health.externalDelivery,
     callbackReady: Boolean(row.callback_ready),
@@ -113,7 +153,7 @@ export async function saveProviderConfiguration(input: {
         END,
         health_reason_code = CASE
           WHEN EXCLUDED.mode = 'live' AND COALESCE(EXCLUDED.secret_reference_id, shared_provider_configs.secret_reference_id) IS NOT NULL
-            AND (EXCLUDED.provider_kind NOT IN ('oauth','webhook') OR EXCLUDED.callback_ready) THEN NULL
+            AND (EXCLUDED.provider_kind NOT IN ('oauth','webhook') OR EXCLUDED.callback_ready) THEN 'LIVE_CONNECTION_UNVERIFIED'
           WHEN EXCLUDED.mode = 'test' THEN 'DETERMINISTIC_TEST_ADAPTER'
           WHEN EXCLUDED.mode = 'disabled' THEN 'PROVIDER_DISABLED'
           WHEN COALESCE(EXCLUDED.secret_reference_id, shared_provider_configs.secret_reference_id) IS NULL THEN 'LIVE_CREDENTIAL_REFERENCE_MISSING'
@@ -153,7 +193,7 @@ export async function getSharedPlatformOverview(tenantId: string) {
   const [providers, runtimeProviders, queueHealth, counts] = await Promise.all([
     listProviderConfigurations(tenantId),
     getSharedProviderStatuses(),
-    getSharedServiceQueueHealth(),
+    getSharedServiceQueueHealth(tenantId),
     db.execute(sql`
       SELECT
         (SELECT COUNT(*)::int FROM shared_attachments WHERE tenant_id = ${tenantId} AND scan_status IN ('pending','unavailable','infected','error') AND deleted_at IS NULL) AS quarantined_attachments,

@@ -53,7 +53,18 @@ async function apiDownload(path: string, options: RequestInit = {}): Promise<Blo
   return res.blob();
 }
 
+function accountChangeCode(value = '') {
+  const code = value.trim();
+  return /^\d{6}$/.test(code) ? { code } : code ? { recoveryCode: code } : {};
+}
+
+export interface AccountSession {
+  id: string; deviceLabel: string; sessionType: 'platform' | 'module'; moduleSlug: string | null;
+  firstSeenAt: string; lastSeenAt: string; expiresAt: string; current: boolean;
+}
 export const authApi = {
+  sessions: (): Promise<{ sessions: AccountSession[] }> => apiFetch('/auth/sessions'),
+  revokeSession: (id: string): Promise<{ revoked: boolean; currentSessionRevoked: boolean }> => apiFetch(`/auth/sessions/${encodeURIComponent(id)}/revoke`, { method: 'POST' }),
   register: (email: string, password: string, name: string) =>
     apiFetch('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name }) }),
 
@@ -92,14 +103,14 @@ export const authApi = {
   updateProfile: (data: { name?: string; avatarUrl?: string }) =>
     apiFetch('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
 
-  changePassword: (currentPassword: string, newPassword: string) =>
-    apiFetch('/auth/change-password', { method: 'PUT', body: JSON.stringify({ currentPassword, newPassword }) }),
+  changePassword: (currentPassword: string, newPassword: string, securityCode?: string) =>
+    apiFetch('/auth/change-password', { method: 'PUT', body: JSON.stringify({ currentPassword, newPassword, ...accountChangeCode(securityCode) }) }),
 
-  changeEmail: (newEmail: string, password: string) =>
-    apiFetch('/auth/change-email', { method: 'PUT', body: JSON.stringify({ newEmail, password }) }),
+  changeEmail: (newEmail: string, password: string, securityCode?: string) =>
+    apiFetch('/auth/change-email', { method: 'PUT', body: JSON.stringify({ newEmail, password, ...accountChangeCode(securityCode) }) }),
 
-  requestDeletion: (password: string) =>
-    apiFetch('/auth/request-deletion', { method: 'POST', body: JSON.stringify({ password }) }),
+  requestDeletion: (password: string, securityCode?: string) =>
+    apiFetch('/auth/request-deletion', { method: 'POST', body: JSON.stringify({ password, ...accountChangeCode(securityCode) }) }),
 
   mfaStatus: () => apiFetch('/auth/mfa/status'),
 
@@ -323,6 +334,8 @@ export const sharedPlatformApi = {
     return apiFetch(`/tenants/${tenantId}/data-fabric/workflows/${encodeURIComponent(workflowKey)}/readiness${query}`);
   },
   dataFabricActivity: (tenantId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/activity`),
+  rescanAttachment: (tenantId: string, attachmentId: string, moduleSlug: string) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/attachments/${encodeURIComponent(attachmentId)}/rescan`, { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
   dataFabricRun: (tenantId: string, runId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/runs/${runId}`),
   replayDataFabricInbox: (tenantId: string, inboxId: string) =>
     apiFetch(`/tenants/${tenantId}/data-fabric/inbox/${inboxId}/replay`, { method: 'POST' }),
@@ -720,6 +733,8 @@ export interface NinjaPoolOnlineRoom {
 }
 
 export interface BrandForgeBrand {
+  directoryOrganizationId?: string | null;
+  sharedCustomer?: SharedCustomer | null;
   id: string;
   name: string;
   description: string | null;
@@ -1414,6 +1429,16 @@ export interface TradeFlowKitBulkResult {
   totalCents?: number;
   records: Array<{ id: string; version: number; paymentId?: string; amountCents?: number }>;
 }
+
+export interface SharedCustomer {
+  id: string; name: string; website: string | null; email: string | null;
+  phone: string | null; address: string | null; contactId: string | null; version: number; revision: string;
+}
+export const sharedCustomersApi = {
+  update: (moduleSlug: string, customer: SharedCustomer): Promise<SharedCustomer> => apiFetch(`/modules/${encodeURIComponent(moduleSlug)}/shared-customers/${encodeURIComponent(customer.id)}`, { method: 'PATCH', body: JSON.stringify({ expectedRevision: customer.revision, name: customer.name, email: customer.email || null, phone: customer.phone || null, address: customer.address || null, website: customer.website || null }) }),
+  list: (moduleSlug: string, search = '', offset = 0): Promise<{ customers: SharedCustomer[]; canWrite: boolean; pagination: { hasMore: boolean } }> =>
+    apiFetch(`/modules/${encodeURIComponent(moduleSlug)}/shared-customers?search=${encodeURIComponent(search)}&offset=${offset}`) as Promise<any>,
+};
 
 export type DirectoryModuleSlug = 'tradeflowkit' | 'techdeck' | 'pulsedesk';
 export interface DirectoryPagination { total: number; limit: number; offset: number; hasMore: boolean }
@@ -2379,7 +2404,7 @@ export const moduleShellApi = {
       apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/payment-link`, {
         method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
       }) as Promise<{ checkoutUrl: string | null; replay: boolean }>,
-    createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
+    createCustomer: (input: TradeFlowKitCustomerImportRow & { directoryOrganizationId?: string }): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
     updateCustomer: (id: string, input: TradeFlowKitCustomerImportRow & { expectedVersion: number }): Promise<TradeFlowKitCustomer> =>
       apiFetch(`/modules/tradeflowkit/customers/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,

@@ -1,0 +1,11 @@
+.card { margin: 16px 0; padding: 18px 20px; border: 1px solid #334155; border-radius: 14px; background: #111c2f; color: #f1f5f9; line-height: 1.65; overflow-wrap: anywhere; }
+.card h3, .card h4 { margin: 0 0 6px; color: #f8fafc; font-size: 16px; }
+.card p { margin: 0 0 12px; color: #cbd5e1; }
+.card summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: #93c5fd; font-weight: 650; }
+.card summary::before { content: '+'; margin-right: 10px; }
+.card details[open] summary::before { content: '−'; }
+.card a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; border: 1px solid #64748b; border-radius: 8px; color: #f8fafc; text-decoration: none; gap: 8px; }
+.card a:hover { background: #24324a; }
+.card :is(a,summary):focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }
+.card .note { font-size: 13px; }
+@media(max-width: 480px) { .card { padding: 14px; } }

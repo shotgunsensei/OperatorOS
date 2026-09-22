@@ -1,5 +1,7 @@
 'use client';
 
+import SharedCustomerPicker from './SharedCustomerPicker';
+
 import CoreSuiteSection from './CoreSuiteSection';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
@@ -143,6 +145,7 @@ export default function TradeFlowKitRevenueFlow({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
+  const [sharedCustomerId, setSharedCustomerId] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -234,8 +237,8 @@ export default function TradeFlowKitRevenueFlow({
   function createCustomer(event: FormEvent) {
     event.preventDefault();
     void run(async () => {
-      const created = await moduleShellApi.tradeflowkit.createCustomer({ name: customerName, email: customerEmail || undefined });
-      setCustomerName(''); setCustomerEmail(''); setCustomerId(created.id);
+      const created = await moduleShellApi.tradeflowkit.createCustomer({ directoryOrganizationId: sharedCustomerId || undefined, name: customerName, email: customerEmail || undefined });
+      setCustomerName(''); setCustomerEmail(''); setSharedCustomerId(''); setCustomerId(created.id);
     });
   }
 
@@ -399,7 +402,7 @@ export default function TradeFlowKitRevenueFlow({
       {loading ? <div style={{ color: c.muted, padding: '18px 0' }}>Loading revenue records…</div> : (
         <>
           {canWrite ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
-            <form data-testid="tradeflowkit-customer-create" onSubmit={createCustomer} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>1. Customer</strong><input aria-label="Customer name" required maxLength={160} placeholder="Customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={input} /><input aria-label="Customer email" type="email" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={input} /><button disabled={pending || customerName.trim().length < 2} style={button()}><Plus size={14} /> Add customer</button></form>
+            <form data-testid="tradeflowkit-customer-create" onSubmit={createCustomer} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>1. Customer</strong><SharedCustomerPicker moduleSlug="tradeflowkit" value={sharedCustomerId} onSelect={row => { setSharedCustomerId(row?.id ?? ''); setCustomerName(row?.name ?? ''); setCustomerEmail(row?.email ?? ''); }} /><input aria-label="Customer name" readOnly={Boolean(sharedCustomerId)} required maxLength={160} placeholder="Customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={input} /><input aria-label="Customer email" readOnly={Boolean(sharedCustomerId)} type="email" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={input} /><button disabled={pending || customerName.trim().length < 2} style={button()}><Plus size={14} /> {sharedCustomerId ? 'Use shared customer' : 'Add customer'}</button></form>
             <form onSubmit={importCustomers} data-testid="tradeflowkit-customer-import" style={{ ...panel, flex: '1 1 240px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>Import customers</strong>
               <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: name, email, phone, address, notes. Maximum 100 rows and 256 KB.</span>

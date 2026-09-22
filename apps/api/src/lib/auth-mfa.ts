@@ -229,6 +229,17 @@ export async function createAuthMfaLoginChallenge(userId: string) {
   return token;
 }
 
+/** A login session alone is not sufficient for an enrolled account's sensitive
+ * changes. Recovery credentials are consumed under the existing row lock. */
+export async function verifySensitiveActionMfa(userId: string, input: { code?: unknown; recoveryCode?: unknown }) {
+  const status = await getAuthMfaStatus(userId);
+  if (!status.enabled) return true;
+  const code = typeof input.code === 'string' && input.code.length <= 12 ? input.code : undefined;
+  const recoveryCode = typeof input.recoveryCode === 'string' && input.recoveryCode.length <= 80 ? input.recoveryCode : undefined;
+  if (!code && !recoveryCode) return false;
+  return db.transaction(tx => verifyMfaCredential({ userId, code, recoveryCode, consumeRecoveryCode: true }, tx));
+}
+
 export async function consumeAuthMfaLoginChallenge(input: { challengeToken: string; code?: string; recoveryCode?: string }) {
   const tokenHash = challengeHash(input.challengeToken);
   return db.transaction(async tx => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { moduleShellApi } from '../../lib/auth';
 
 const emailServiceName = (provider: string) => ({
@@ -24,16 +24,33 @@ export default function PulseDeskConnectorConsole({ mode }: { mode: 'inbound' | 
   const [capabilities, setCapabilities] = useState<{ deterministicTestAdapter: boolean; liveMailboxAdapters: boolean; liveMailboxSetupReason?: string }>({ deterministicTestAdapter: false, liveMailboxAdapters: false });
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const load = async () => {
-    const response = await moduleShellApi.pulsedesk.listConnectors();
-    setConnectors(response.connectors ?? []);
-    setCapabilities(response.capabilities ?? { deterministicTestAdapter: false, liveMailboxAdapters: false });
-  };
-  useEffect(() => { void load(); }, []);
-  const run = async (label: string, action: () => Promise<unknown>) => { setBusy(true); setNotice(''); try { await action(); setNotice(`${label} completed.`); await load(); } catch (error) { setNotice(error instanceof Error ? error.message : `${label} failed.`); } finally { setBusy(false); } };
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const requestVersion = useRef(0);
+  const load = useCallback(async () => {
+    const version = ++requestVersion.current;
+    setLoading(true); setLoadError('');
+    try {
+      const response = await moduleShellApi.pulsedesk.listConnectors();
+      if (version !== requestVersion.current) return;
+      setConnectors(response.connectors ?? []);
+      setCapabilities(response.capabilities ?? { deterministicTestAdapter: false, liveMailboxAdapters: false });
+    } catch {
+      if (version === requestVersion.current) {
+        setConnectors([]);
+        setLoadError('We could not load your email connections. Try again. Your saved settings have not changed.');
+      }
+    } finally { if (version === requestVersion.current) setLoading(false); }
+  }, []);
+  useEffect(() => { void load(); return () => { requestVersion.current++; }; }, [load]);
+  const run = async (label: string, action: () => Promise<unknown>) => { setBusy(true); setNotice(''); try { await action(); setNotice(`${label} completed.`); await load(); } catch { setNotice(`${label} could not be confirmed. Reload and check the saved result before trying again.`); } finally { setBusy(false); } };
+  if (loading || loadError) return <section data-testid="pulsedesk-connector-console" aria-label="Email connections" style={{ padding: 20, borderRadius: 16, background: '#f7fbff', color: '#102a43', border: '1px solid #c9e2f4' }}>
+    <h2>Email connections</h2>
+    {loading ? <p role="status">Loading email connections…</p> : <div role="alert"><p>{loadError}</p><button style={{ minHeight: 44, padding: '10px 16px', background: '#0d6f9c', color: '#fff', border: 0, borderRadius: 8 }} onClick={() => void load()}>Try again</button></div>}
+  </section>;
   return <section id="pulsedesk-connectors" className="pdc" data-testid="pulsedesk-connector-console" data-connector-view={mode}>
     <header><div><span>{mode === 'inbound' ? 'Incoming requests' : 'Email connections'}</span><h2>{mode === 'inbound' ? 'Operations request intake' : 'Mailbox connection status'}</h2><p>{mode === 'inbound' ? 'Use the protected operations request form today and review earlier mailbox activity here. Mailbox import is not connected yet; requests can still be created directly.' : 'See which supported email services can turn incoming operational messages into requests. Mailbox import is not connected yet; use the protected request form or create requests directly.'}</p></div><strong>Operations only · no patient or clinical data</strong></header>
-    {!capabilities.liveMailboxAdapters && <p role="status" className="pdc-boundary"><b>Email connections are not available yet.</b> {capabilities.liveMailboxSetupReason || 'This screen will not change an external mailbox.'}</p>}
+    {!capabilities.liveMailboxAdapters && <p role="status" className="pdc-boundary"><b>Email connections are not available yet.</b> Use the request form or create a request directly while mailbox import is unavailable.</p>}
     {notice && <p role="status" className="pdc-notice">{notice}</p>}
     {mode === 'integrations' && capabilities.deterministicTestAdapter && <form onSubmit={event => { event.preventDefault(); const data=new FormData(event.currentTarget); void run('Sample connection setup',()=>moduleShellApi.pulsedesk.createConnector({provider:data.get('provider'),label:data.get('label'),mailboxAddress:data.get('mailboxAddress'),mode:'test',secretReference:null,callbackReady:false})); event.currentTarget.reset(); }}>
       <label>Email service<select name="provider" required><option value="sendgrid">SendGrid</option><option value="imap">Standard email mailbox</option><option value="google">Google Workspace</option><option value="microsoft">Microsoft 365</option></select></label>
