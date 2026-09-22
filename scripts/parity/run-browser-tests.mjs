@@ -120,7 +120,9 @@ try {
   }
   if (suite === 'visual' || suite === 'all') {
     const visualArgs = ['test', '--config', 'playwright.visual.config.ts'];
-    if (process.env.PARITY_UPDATE_SNAPSHOTS === '1') visualArgs.push('--update-snapshots');
+    // Explicit regeneration must capture current copy even when a small text
+    // change falls below the normal full-page comparison tolerance.
+    if (process.env.PARITY_UPDATE_SNAPSHOTS === '1') visualArgs.push('--update-snapshots=all');
     const visualResult = await runCaptured(process.execPath, [playwrightCli, ...visualArgs], {
       cwd: webRoot,
       env: runtimeEnv,

@@ -1,5 +1,91 @@
 # OperatorOS implementation status
 
+## PR #102 release-gate repair (2026-09-22)
+
+The pushed `359b92a` candidate failed GitHub Actions run `35734961213`:
+the API suite had **1,514 passed / 3 failed / 0 skipped**, six browser journeys
+failed, and two visual tests stopped at stale reference images. The production
+build succeeded. This supersedes any inference that the earlier focused checks
+proved the complete release gate.
+
+Repairs preserve the production security policy and release thresholds:
+
+- Tenant-switch fixtures use a separate synthetic client address so their
+  sign-ins do not consume the same persistent IP budget as unrelated suites.
+- The email-change contract checks pending confirmation and verified replacement,
+  matching the new flow; the customer guidance check follows the current first
+  action and workflow component.
+- Browser journeys open collapsed navigation groups before following their links
+  and identify campaign/brief fields precisely. Pool Hall uses its module menu
+  for the player profile, avoiding the additional workflow shortcut.
+- OutCall's visual test checks its current unavailable message and administrator
+  restriction; the unavailable-state exclusion for other modules is retained.
+- All 78 desktop, tablet, and mobile reference images were reviewed for the shared
+  customer header, guided dashboards, and collapsed sections on Linux and Windows.
+  Explicit capture uses `--update-snapshots=all` so small copy changes below the
+  normal comparison tolerance also receive current reference images. Ordinary
+  release comparisons and accessibility thresholds are unchanged.
+
+Focused disposable PostgreSQL 16 regression:
+**17 passed / 0 failed / 0 skipped** in **42.470 seconds**. All four workspace
+typechecks passed. The six previously failing browser journeys now pass together
+on Windows (**6/6**, no retries, about two minutes). Windows visual regeneration
+completed all four tests across 13 module contracts and three viewport sizes;
+the fresh comparison with updates disabled also passed **4/4** (2.3 minutes).
+The first-action assertion was subsequently tightened and its file passed **8/8**.
+
+The initial local Linux API run finished **1,508 passed / 9 failed / 0 skipped**
+in **847.405 seconds**. All nine failures came from the source-quarantine tests
+calling Git in a container that had initially received tracked files without Git
+metadata. After copying the actual shallow repository metadata and restoring its
+index, that test file passed **10/10** in **0.811 seconds**; these counts overlap.
+The original three CI API failures did not recur. This is not recorded as a
+fully passing aggregate API gate; a fresh GitHub run must establish that evidence.
+The Linux production build passed all four typechecks and generated all 35 pages.
+Clean apply/reapply/verification and **32/32** integration checks passed against
+the disposable database. The complete Linux production-host browser suite passed
+**24/24** (6.9 minutes), and all four visual tests passed both during capture
+(2.6 minutes) and in a fresh comparison with updates disabled (1.9 minutes).
+Production core preflight and the 13-module visual/hash contract passed.
+After the explicit all-image capture correction, the filtered OutCall/TradeFlowKit
+comparison passed **4/4** again on Linux (23.5 seconds) and Windows (22.2 seconds),
+with updates disabled on both platforms.
+
+Environment: Windows Node 24.16.0; Linux Ubuntu 24.04 Playwright 1.61.1 container,
+Node 20.20.2, pnpm 10.34.5, pinned Chromium, PostgreSQL 16, synthetic credentials,
+deterministic provider mode, and the repository's readiness-gated runtime/proxy.
+The Linux container required `NODE_OPTIONS=--dns-result-order=ipv4first` to keep
+its Next bind address and loopback readiness lookup consistent. This is a local
+container setting, not a production configuration or application-code change.
+
+Commands (Linux uses the disposable CI environment from the release workflow):
+
+```text
+node scripts/verify-customer-workflows.mjs apps/api/test/core-suite-trial-static.test.ts apps/api/test/customer-experience-contract.test.ts apps/api/test/e2e-tenant-switch.test.ts apps/api/test/account-security-upgrades.test.ts
+node --import tsx --test apps/api/test/customer-experience-contract.test.ts
+corepack pnpm typecheck
+pnpm test:api
+node --import tsx --test apps/api/test/module-source-snapshots.test.ts
+pnpm test:integration
+pnpm build:production
+node scripts/parity/run-browser-tests.mjs --suite polish --grep "BrandForgeOS persists|StudyForge AI persists|CallCommand AI persists|SnapProofOS persists|Operator Pool Hall persists|Script Ops persists"
+PARITY_UPDATE_SNAPSHOTS=1 node scripts/parity/run-browser-tests.mjs --suite all
+node scripts/parity/run-browser-tests.mjs --suite visual
+PARITY_MODULE_FILTER=outcall PARITY_UPDATE_SNAPSHOTS=1 node scripts/parity/run-browser-tests.mjs --suite visual
+PARITY_MODULE_FILTER=outcall node scripts/parity/run-browser-tests.mjs --suite visual
+node scripts/parity/verify-visual-contracts.mjs
+node scripts/production-env-preflight.mjs --core
+git diff --check
+```
+
+Logs: `build/pr102-linux-{api,source-tests,integration,build,browser,visual-verify,preflight}.log`
+and `build/pr102-windows-{focused,visual,visual-verify}.log`. Capturing new images
+does not itself prove a comparison pass; the separate update-disabled runs above
+provide that evidence. GitHub acceptance is tracked by the checks attached to
+[PR #102](https://github.com/shotgunsensei/OperatorOS/pull/102) for its current head;
+the local aggregate API limitation above must not be reported as a green CI run.
+No deployment, vendor activation, schema change, or production-data change occurs.
+
 ## PR #102 review follow-up
 
 Reviewed base: `75d2c292341ef5188c286b5ae657e33e8f778117` on
@@ -36,7 +122,8 @@ git diff --check
 
 Logs: `build/pr102-review-tests.log` and `build/pr102-review-build.log`.
 No schema, provider configuration, or production data change is required.
-Rollback is the scoped application-code revert. No push or deployment occurred.
+Rollback is the scoped application-code revert. This local verification preceded
+the approved push of `359b92a`; no deployment occurred.
 
 ## Shared customers, account security, and selected connections (2026-09-21 continuation)
 

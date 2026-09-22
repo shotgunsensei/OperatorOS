@@ -113,6 +113,8 @@ test('every module receives organization context and customer-facing account nav
 test('six representative customer workflows expose a plain first action and trust boundary', () => {
   const home = read('apps/web/src/components/pages/MyAppsPage.tsx');
   const tradeFlowKit = read('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
+  const tradeFlowKitOperations = read('apps/web/src/components/module-shells/TradeFlowKitOperations.tsx');
+  const workday = read('apps/web/src/lib/core-suite-workday.ts');
   const tradeFlowKitStyles = read('apps/web/src/components/module-shells/TradeFlowKitShell.module.css');
   const tradeFlowKitRevenue = read('apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx');
   const torqueShed = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
@@ -127,7 +129,9 @@ test('six representative customer workflows expose a plain first action and trus
   assert.match(home, /tenantApi\.ensurePersonal/);
   assert.doesNotMatch(home, /Get organization setup help|operatoros\.net\/john/);
 
-  assert.match(tradeFlowKit, /Start with a lead/);
+  assert.match(tradeFlowKit, /CoreSuiteJourney moduleId="tradeflowkit"/);
+  assert.match(tradeFlowKitOperations, /<CoreSuiteWorkdayBrief/);
+  assert.match(workday, /label: 'Add or import customers', href: '\/customers'/);
   assert.match(tradeFlowKit, /Protected by OperatorOS/);
   assert.match(tradeFlowKitStyles, /\.shell\[data-theme='dark'\][\s\S]*color-scheme:\s*dark/);
   assert.match(tradeFlowKitStyles, /@media \(prefers-color-scheme: dark\)/);

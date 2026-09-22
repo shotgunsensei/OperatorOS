@@ -1,5 +1,20 @@
 # OperatorOS module parity index
 
+## PR #102 release regression repair (2026-09-22)
+
+Status: **PARITY UNCHANGED / LOCAL BROWSER AND VISUAL VERIFIED / LIVE ACCEPTANCE OPEN**.
+No module availability, entitlement, provider status, or production readiness
+has been widened by this test repair.
+
+| Module or surface | Repair and fresh evidence | Remaining gate |
+| --- | --- | --- |
+| OperatorOS account / TradeFlowKit guidance | Persistent sign-in fixture isolation; pending email-confirmation and current first-action assertions; 17 focused checks pass, followed by 8/8 guidance checks after tightening the first-action assertion | Clean-checkout aggregate API gate |
+| BrandForge OS, StudyForge AI, CallCommand AI, SnapProofOS, Operator Pool Hall, Script Ops | Browser tests follow collapsed navigation and exact form labels; all six persistence/sign-in journeys pass together on Windows without retries; complete Linux browser suite passes 24/24 | GitHub checks for current head; deployed acceptance |
+| All 13 module visual contracts | Reviewed 78 desktop/tablet/mobile Linux and Windows references; both platforms pass 4/4 visual, accessibility, route, and identity tests with updates disabled; OutCall remains unavailable | GitHub checks for current head; deployed acceptance |
+
+Exact commands, environment, counts, and local-harness limitations are recorded
+in [implementation status](../IMPLEMENTATION_STATUS.md#pr-102-release-gate-repair-2026-09-22).
+
 ## Shared customer and account security overlay (2026-09-21 continuation)
 
 Status: **PARITY UNCHANGED / LOCAL DATABASE-BACKED CANDIDATE / NOT DEPLOYED**.
