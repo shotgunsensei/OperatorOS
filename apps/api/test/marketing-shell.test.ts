@@ -101,8 +101,8 @@ test('marketing shell · brand components present and exported', () => {
   // The navbar must toggle CTA based on the AuthProvider session.
   const nav = read('src/components/marketing/MarketingNavbar.tsx');
   assert.match(nav, /useAuth/);
-  assert.match(nav, /Open console/);
-  assert.match(nav, /Launch OperatorOS/);
+  assert.match(nav, /Open workspace/);
+  assert.match(nav, /Get started/);
 });
 
 test('marketing shell · robots disallows /app, manifest rebranded', () => {
@@ -177,7 +177,7 @@ test('marketing shell · signed-in visitors auto-redirect to canonical My Apps',
   // their workspace so / behaves as a "land me in the console" entry
   // point. The check has to happen client-side because AuthProvider's
   // /me call hydrates only after mount.
-  const src = read('src/app/page.tsx');
+  const src = read('src/components/marketing/AudienceHome.tsx');
   assert.match(src, /'use client'/);
   assert.match(src, /useAuth/);
   assert.match(src, /window\.location\.replace\(DEFAULT_OPERATOROS_NAVIGATION_URLS\.appsUrl\)/);
@@ -521,23 +521,14 @@ test('marketing shell · HTTP — /robots.txt disallows /app', { concurrency: fa
 // Phase 2 — homepage section assembly.
 // ---------------------------------------------------------------------------
 
-test('marketing phase 2 · homepage composes the ecosystem sections in hierarchy-first order', () => {
+test('marketing audience entry · homepage leads with the three choices and preserves the full catalog', () => {
   const src = read('src/app/page.tsx');
-  for (const marker of ['Hero', 'PlatformPositioning', 'ModuleGatewayGrid',
-                        'CommandOrbit', 'HowItWorks', 'FinalCta']) {
-    assert.match(src, new RegExp(`<${marker}\\b`), `home should render <${marker}>`);
-  }
-  // The complete hierarchy-led application grid appears before the secondary
-  // orbit treatment so visitors see all main and companion applications first.
-  const order = ['Hero', 'PlatformPositioning', 'ModuleGatewayGrid',
-                 'CommandOrbit', 'HowItWorks', 'FinalCta'];
-  const positions = order.map(name => src.indexOf(`<${name}`));
-  for (let i = 1; i < positions.length; i++) {
-    assert.ok(
-      positions[i] > positions[i - 1] && positions[i - 1] >= 0,
-      `expected ${order[i]} after ${order[i - 1]} in src/app/page.tsx`,
-    );
-  }
+  assert.match(src, /<AudienceHome\b/);
+  assert.doesNotMatch(src, /<ModuleGatewayGrid\b|<CommandOrbit\b/);
+  const home = read('src/components/marketing/AudienceHome.tsx');
+  assert.match(home, /AUDIENCE_LANES\.map/);
+  assert.match(home, /href="\/modules"/);
+  assert.match(read('src/app/modules/page.tsx'), /<ModuleGatewayGrid\b/);
 });
 
 test('marketing phase 2 · section components exist with required test-ids', () => {
@@ -614,6 +605,9 @@ test('marketing phase 2 · auth-aware CTA helper centralizes the targeting rule'
 test('marketing phase 2 · no buzzwords in homepage copy', () => {
   // Brief explicitly bans "revolutionary", "game-changing", "next-gen".
   const files = [
+    'src/components/marketing/AudienceHome.tsx',
+    'src/components/marketing/AudienceDetail.tsx',
+    'src/lib/audience-lanes.ts',
     'src/components/marketing/sections/Hero.tsx',
     'src/components/marketing/sections/CommandOrbit.tsx',
     'src/components/marketing/sections/PlatformPositioning.tsx',
@@ -632,19 +626,14 @@ test('marketing phase 2 · no buzzwords in homepage copy', () => {
   }
 });
 
-test('marketing phase 3 · homepage composes pricing teaser and trust section in order', () => {
-  const src = read('src/app/page.tsx');
-  const order = [
-    'Hero', 'PlatformPositioning', 'ModuleGatewayGrid', 'CommandOrbit',
-    'HowItWorks', 'PricingTeaser', 'TrustSection', 'FinalCta',
-  ];
-  const positions = order.map(name => src.indexOf(`<${name}`));
-  for (let i = 1; i < positions.length; i++) {
-    assert.ok(
-      positions[i] > positions[i - 1] && positions[i - 1] >= 0,
-      `expected <${order[i]}> after <${order[i - 1]}> in src/app/page.tsx`,
-    );
-  }
+test('marketing audience entry · plan choice and shared-customer scope remain explicit', () => {
+  const home = read('src/components/marketing/AudienceHome.tsx');
+  assert.match(home, /href="\/pricing"/);
+  assert.match(home, /TradeFlowKit, BrandForge OS, and SnapProofOS/);
+  assert.match(home, /Linked details stay current; approved reports keep their original information/);
+  const detail = read('src/components/marketing/AudienceDetail.tsx');
+  assert.match(detail, /lanePricingPath\(lane\)/);
+  assert.match(detail, /lane\.connectionNote/);
 });
 
 test('marketing phase 3 · /pricing renders the pricing + trust sections inside the marketing shell', () => {

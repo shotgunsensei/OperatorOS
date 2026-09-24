@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import Link from '@/components/marketing/MarketingLink';
 import OperatorLogo from '../brand/OperatorLogo';
 import { brand } from '@/lib/design-tokens';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -15,9 +15,9 @@ const COL_PRODUCT = [
 ];
 
 const COL_MODULES = [
-  { href: '/modules#module-tradeflowkit', label: 'TradeFlowKit' },
-  { href: '/modules#module-pulsedesk', label: 'PulseDesk' },
-  { href: '/modules#module-techdeck', label: 'TechDeck' },
+  { href: '/for/trades', label: 'TradeFlowKit' },
+  { href: '/for/healthcare-legal', label: 'PulseDesk' },
+  { href: '/for/msps', label: 'TechDeck' },
 ];
 
 const COL_ACTIONS = [
@@ -67,7 +67,7 @@ export default function MarketingFooter() {
               marginTop: 14,
               fontSize: 13,
               lineHeight: 1.6,
-              color: brand.textMuted,
+              color: brand.textSecondary,
               maxWidth: 320,
             }}
           >
@@ -93,7 +93,7 @@ export default function MarketingFooter() {
           flexWrap: 'wrap',
           gap: 8,
           fontSize: 12,
-          color: brand.textMuted,
+          color: brand.textSecondary,
         }}
       >
         <span>© {year} OperatorOS. All rights reserved.</span>

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const baseUrl = process.env.BRAND_E2E_BASE_URL ?? 'http://127.0.0.1:5000';
+const assetBaseUrl = process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000';
 
 test.describe('OperatorOS canonical branding', () => {
   test('desktop marketing, icon metadata, and social artwork use the intended variants', async ({ page, request }) => {
@@ -8,11 +9,12 @@ test.describe('OperatorOS canonical branding', () => {
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByTestId('marketing-navbar').locator('[data-brand-asset="operatoros-lockup"]')).toBeVisible();
-    await expect(page.getByTestId('marketing-hero').getByAltText('OperatorOS.net')).toBeVisible();
+    await expect(page.getByTestId('marketing-hero-title')).toHaveText('You run the business.Choose your lane.');
+    await expect(page.getByTestId('audience-lanes').getByRole('link')).toHaveCount(3);
     await expect(page.locator('[data-brand-asset="operatoros-mark"]').first()).toBeVisible();
     await expect(page.locator('link[rel="icon"][href*="operatoros-mark.png"]')).toHaveCount(1);
 
-    const manifestResponse = await request.get(`${baseUrl}/manifest.json`);
+    const manifestResponse = await request.get(`${assetBaseUrl}/manifest.json`);
     expect(manifestResponse.ok()).toBe(true);
     expect(await manifestResponse.json()).toMatchObject({
       icons: [{
@@ -23,11 +25,11 @@ test.describe('OperatorOS canonical branding', () => {
       }],
     });
 
-    const faviconResponse = await request.get(`${baseUrl}/favicon.ico`);
+    const faviconResponse = await request.get(`${assetBaseUrl}/favicon.ico`);
     expect(faviconResponse.status()).toBe(200);
     expect(faviconResponse.headers()['content-type']).toContain('image/png');
 
-    const socialResponse = await request.get(`${baseUrl}/opengraph-image`);
+    const socialResponse = await request.get(`${assetBaseUrl}/opengraph-image`);
     expect(socialResponse.status()).toBe(200);
     expect(socialResponse.headers()['content-type']).toContain('image/png');
     expect((await socialResponse.body()).byteLength).toBeGreaterThan(100_000);

@@ -72,12 +72,12 @@ test('public SEO · social image and truthful JSON-LD are wired into initial HTM
   assert.doesNotMatch(seo, /aggregateRating/, 'schema must not advertise ratings that do not exist');
 });
 
-test('public SEO · footer module links target public module-card anchors', () => {
+test('public SEO · footer flagships target their audience pages and catalog anchors remain available', () => {
   const footer = read('src/components/marketing/MarketingFooter.tsx');
   const grid = read('src/components/marketing/sections/ModuleGatewayGrid.tsx');
 
-  for (const slug of ['tradeflowkit', 'pulsedesk', 'techdeck']) {
-    assert.match(footer, new RegExp(`/modules#module-${slug}`));
+  for (const [slug, name] of [['trades', 'TradeFlowKit'], ['healthcare-legal', 'PulseDesk'], ['msps', 'TechDeck']]) {
+    assert.match(footer, new RegExp(`href: '/for/${slug}', label: '${name}'`));
   }
   for (const companionSlug of ['ninjamation', 'ninja-pool-hall', 'ninja-launch-kit', 'torqueshed']) {
     assert.doesNotMatch(footer, new RegExp(`/modules#module-${companionSlug}`));

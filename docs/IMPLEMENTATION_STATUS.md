@@ -1,5 +1,31 @@
 # OperatorOS implementation status
 
+## Audience landing pages and release preparation (2026-09-24)
+
+Status: **SOURCE/LOCAL VERIFIED; CANDIDATE CI AND PUBLICATION OPEN**. The public
+homepage now offers Trade Companies, MSPs, and Healthcare / Legal-office operations,
+leading to focused TradeFlowKit, TechDeck, and PulseDesk pages. The full catalog
+remains available. The selected application survives pricing and sign-in; prices,
+roles, billing, and access remain server-owned. Public sign-in links no longer
+prefetch cross-host authentication, and footer contrast has been corrected.
+
+The campaign kit contains **12 graphics and 12 captions** for Facebook, LinkedIn,
+and X, with original ImageGen art, exact prompts, dimensions, and editable source.
+Three website photographs total 215,060 bytes. Per-lane social previews, canonical
+URLs, FAQs, and sitemap entries are present. No social post or vendor was activated.
+
+Fresh Windows validation: production build and all four workspace typechecks;
+final web build (38 static pages); disposable clean v63 apply and compiled supervisor
+readiness; core preflight; **61/61** focused API/source/HTTP contracts, **4/4** brand
+asset contracts, **12/12** exact-host browser checks (39.4 seconds, no retries or
+skips), and route integrity with **0 failures**. The five new audience browser tests
+are now part of the release runner. No lint or formatting pass is claimed. Full
+candidate CI on Node 20 and deployment remain separate from these local checks.
+
+See [the complete scope, commands, rollback, and open release work](AUDIENCE_RELEASE_PREP_2026-09-24.md).
+The current provider, backup/restore, production customer-write, and account-security
+acceptance limits remain open. PulseDesk is operations-only; OutCall stays unavailable.
+
 ## PR #102 production publication (2026-09-22)
 
 The reviewed changes are merged at

@@ -1,5 +1,17 @@
 # OperatorOS module parity index
 
+## Audience entry and release-preparation overlay (2026-09-24)
+
+Status: **PARITY UNCHANGED / LOCAL VERIFIED / NEW PUBLICATION OPEN**.
+
+| Surface | Change and fresh evidence | Remaining gate |
+| --- | --- | --- |
+| OperatorOS public entry | Three business paths, concise outcome pages, shared-customer explanation, readable footer, secure full-document sign-in links; compiled production build, four typechecks, 61 focused source/HTTP contracts and 12 exact-host browser checks pass without skips | Full candidate CI, reviewed publication, live page/sign-in acceptance |
+| TradeFlowKit / TechDeck / PulseDesk | Dedicated public information pages and matching pricing selection retained through sign-in; scope and vendor limits are explicit | Existing module/provider acceptance is unchanged; legal use is internal office operations only |
+| Marketing assets | 12 PNGs, 12 captions, four matching website social previews; dimensions and bytes verified | New route publication before campaign use; no social account publication performed |
+
+Commands, limitations, and rollback: [audience release preparation](../AUDIENCE_RELEASE_PREP_2026-09-24.md).
+
 ## v63 production publication (2026-09-22)
 
 Status: **DEPLOYED / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER ACCEPTANCE OPEN**.

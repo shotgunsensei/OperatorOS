@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import Link from '@/components/marketing/MarketingLink';
 import { ArrowRight, Check, Minus, Plus } from 'lucide-react';
 import {
   COMPANION_MODULES,
@@ -32,9 +32,10 @@ const money = (cents: number | null | undefined) => cents == null
   ? 'Price unavailable'
   : `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
-export default function PricingSection() {
+export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: { initialCoreProduct?: CoreProductKey }) {
   const { user, loading: authLoading } = useAuth();
-  const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>('tradeflowkit');
+  const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>(initialCoreProduct);
+  React.useEffect(() => setCoreProduct(initialCoreProduct), [initialCoreProduct]);
   const [freeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>('snapproofos');
   const [additionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>([]);
   const [additionalSeats, setAdditionalSeats] = React.useState(0);
@@ -166,7 +167,7 @@ export default function PricingSection() {
 
   const continueToCheckout = async () => {
     if (!user) {
-      window.location.href = '/login?next=/pricing%23build-stack';
+      window.location.href = `/login?next=${encodeURIComponent(`/pricing?product=${coreProduct}#build-stack`)}`;
       return;
     }
     if (viewerRole !== 'owner') {

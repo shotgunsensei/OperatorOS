@@ -7,6 +7,7 @@ import TrustSection from '@/components/marketing/sections/TrustSection';
 import FinalCta from '@/components/marketing/sections/FinalCta';
 import { marketingPricingFaqs } from '@/lib/marketing-pricing';
 import { buildPublicMetadata, serializeJsonLd } from '@/lib/seo';
+import { selectedCoreProduct } from '@/lib/audience-lanes';
 
 export const metadata: Metadata = buildPublicMetadata({
   title: 'OperatorOS Application Stack Pricing',
@@ -31,7 +32,8 @@ const pricingFaqJsonLd = {
 /**
  * Public pricing and stack configurator.
  */
-export default function MarketingPricingPage() {
+export default async function MarketingPricingPage({ searchParams }: { searchParams: Promise<{ product?: string | string[] }> }) {
+  const product = selectedCoreProduct((await searchParams).product);
   return (
     <MarketingLayout testId="page-marketing-pricing">
       <script
@@ -41,7 +43,7 @@ export default function MarketingPricingPage() {
       />
       <style>{`.pricing-page-root, .pricing-page-root * { box-sizing: border-box; }`}</style>
       <div className="pricing-page-root">
-        <PricingSection />
+        <PricingSection initialCoreProduct={product} />
         <PricingFaq />
         <TrustSection
           heading="Operators trust OperatorOS with the work that has to stay running."

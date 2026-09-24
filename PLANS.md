@@ -2,6 +2,23 @@
 
 Status: current execution plan
 
+## Audience-first release preparation (2026-09-24)
+
+The v63 shared-customer/security changes were merged and published on 2026-09-22;
+the older local-only statements below are historical. The current acquisition
+candidate adds three audience lanes, focused information pages, choice-preserving
+pricing/sign-in, accessible public chrome, and a matching social kit. Production
+build/typechecks, 61 focused source/HTTP checks, 12 exact-host browser checks, four
+brand checks, and route integrity pass locally. Full candidate CI and publication
+are next; see [current evidence](docs/AUDIENCE_RELEASE_PREP_2026-09-24.md).
+
+The full-release priorities remain: provider adapters and accepted live delivery
+for Microsoft 365/Google, QuickBooks Online, Facebook/LinkedIn/X; customer-write
+and account-security production acceptance; the outstanding credential recovery
+confirmation; durable scheduled backups and restore rehearsal; saved onboarding,
+shared attention, workplace login/MFA policy, and spend controls. This marketing
+pass does not present those items as complete.
+
 ## Shared customer and security continuation (2026-09-21)
 
 Implemented locally: shared tenant customer selection in TradeFlowKit,
