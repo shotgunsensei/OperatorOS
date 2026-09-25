@@ -97,7 +97,7 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
   assert.equal(
     packageJson.scripts['build:production'],
-    'pnpm verify:deployment-scope && pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build',
+    'pnpm verify:deployment-scope && pnpm verify:techdeck:resolution-contract && pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build',
   );
   assert.equal(packageJson.dependencies.pnpm, undefined);
   assert.equal(packageJson.pnpm, undefined);

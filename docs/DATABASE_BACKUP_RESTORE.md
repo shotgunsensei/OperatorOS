@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints the current 63 ordered step identifiers without secrets
+`db:plan` is read-only and prints the current 64 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -45,7 +45,24 @@ The release is idempotent and additive. Do not run imported child migrations,
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
 
-### Release v63 shared customers and account security
+### Release v64 Resolution Intelligence storage
+
+The manifest appends `techdeck_resolution_intelligence_tables`: 27 tenant-owned
+tables with source-revision constraints, immutable raw evidence, typed relationships
+and search projections. No source fixture or customer data is automatically imported.
+Review the [data model](techdeck/resolution-intelligence-data-model.md) and current
+implementation evidence before separately backing up/applying development and
+production. Both must verify **v64/64**, ending in that step, before publication.
+The server's routine wake verifies only; it cannot upgrade a v63 database.
+
+Keep the existing shared schema and new additive tables during an application
+rollback. For data rollback restore the full approved pre-release backup to a new
+database, reconcile and switch after authorization. Never drop just these tables
+from a live shared database. Reject destructive schema-diff proposals in Replit.
+The TradeFlowKit declarative tenant-key alignment in this source release matches
+existing initialized constraints; it adds no separate migration or data rewrite.
+
+### Historical release v63 shared customers and account security
 
 The ordered manifest appends v62 `shared_customer_links` and v63
 `auth_security_controls`. Back up both the explicitly selected production database

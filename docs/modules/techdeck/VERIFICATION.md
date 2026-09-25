@@ -1,5 +1,27 @@
 # TechDeck zero-gap verification
 
+## Resolution Intelligence Phase 1 overlay (2026-09-25)
+
+The storage foundation adds a formal export schema, packaged canonical prompt,
+27 tables with tenant/source constraints, immutable accepted raw revisions,
+typed FixGraph and exact/full-text index projections. Fourteen focused checks
+pass without skips; a separate restored v63 database upgrades and verifies at
+v64/64. Clean apply/reapply integration passes 47/47; production build, 29/29
+exact-host journeys (including both existing TechDeck workflows), and 4/4 visual
+checks pass. The two corrected local aggregate expectations and required fresh
+GitHub gate are recorded in
+[implementation status](../../IMPLEMENTATION_STATUS.md).
+
+This is storage evidence only. Intake/secret screening, authenticated APIs,
+search, knowledge generation, UI and the private incident import remain open.
+There is no customer-facing feature or new provider claim. See the
+[data model](../../techdeck/resolution-intelligence-data-model.md) and
+[release preparation](../../RELEASE_V64_PREPARATION.md).
+
+The earlier consolidation evidence below is historical. Its no-lint and
+startup-apply descriptions do not describe current source: root ESLint exists,
+and routine production startup verifies the release without applying it.
+
 Evidence date: 2026-07-29
 
 This is source/local consolidation state 4 evidence. It does not claim a

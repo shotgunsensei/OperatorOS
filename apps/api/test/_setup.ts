@@ -168,6 +168,8 @@ export async function ensureSchemaReady() {
   await ensureSharedCustomerLinks();
   const { ensureAuthSecurityControls } = await import('../src/lib/auth-security-db-init.js');
   await ensureAuthSecurityControls();
+  const { ensureTechDeckResolutionTables } = await import('../src/lib/techdeck-resolution-db-init.js');
+  await ensureTechDeckResolutionTables();
 }
 
 export function uniqueId(prefix: string) {

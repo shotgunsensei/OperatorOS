@@ -12,15 +12,20 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 63);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 64);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 63);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 63);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 64);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 64);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS[58].id, 'core_suite_trial_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS[59].id, 'forward_commerce_contract');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'auth_security_controls');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'techdeck_resolution_intelligence_tables');
+  assert.equal(
+    createHash('sha256').update(JSON.stringify(release.DATABASE_RELEASE_STEPS.slice(0, 63))).digest('hex'),
+    '5b547e421d71452b9281dcd67b8c7d2566e265124715243505156c06a866529c',
+    'v64 must append to the immutable first 63 release steps',
+  );
   assert.equal(
     createHash('sha256')
       .update(JSON.stringify(release.DATABASE_RELEASE_STEPS.slice(0, 59)))

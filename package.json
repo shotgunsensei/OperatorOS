@@ -118,9 +118,10 @@
     "dev:runner": "pnpm --dir apps/runner-gateway dev",
     "dev:web": "pnpm --dir apps/web dev",
     "build": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web build",
-    "build:production": "pnpm verify:deployment-scope && pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build",
+    "build:production": "pnpm verify:deployment-scope && pnpm verify:techdeck:resolution-contract && pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build",
     "start": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web start",
-    "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web --filter ./apps/torqueshed-native typecheck"
+    "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web --filter ./apps/torqueshed-native typecheck",
+    "verify:techdeck:resolution-contract": "node scripts/techdeck/generate-resolution-contract.mjs && node scripts/techdeck/generate-resolution-storage.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",

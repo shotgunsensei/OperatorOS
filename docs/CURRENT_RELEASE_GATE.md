@@ -1,5 +1,22 @@
 # OperatorOS current release gate
 
+## Resolution Intelligence v64 source candidate - PUBLICATION NOT PERFORMED (2026-09-25)
+
+The source manifest now ends at v64/64 `techdeck_resolution_intelligence_tables`.
+It adds the TechDeck export/storage foundation and reconciles the missing
+TradeFlowKit ORM tenant keys from a historical branch. Ingestion, UI and AI remain
+later work; no private incident is seeded. Local build, 47 integration checks,
+29 browser journeys and four visual checks pass. The two corrected local API
+expectations and required complete exact-revision GitHub gate are documented in
+[implementation status](IMPLEMENTATION_STATUS.md).
+
+Before publishing this source, separately back up/apply/verify both Replit
+development and production to v64. Routine serving startup cannot apply it.
+No production database or deployment was accessed for this change. Follow
+[the v64 preparation record](RELEASE_V64_PREPARATION.md) and
+[backup/restore runbook](DATABASE_BACKUP_RESTORE.md). The older live evidence
+below remains historical and does not establish the state of this candidate.
+
 ## Shared customers and account security v63 - LIVE / SOURCE AND DATABASE VERIFIED / PROVIDER ACCEPTANCE OPEN (2026-09-22)
 
 PR #102 is merged at `74fdfeaff89b88b39073269066954b6f0787c7ad`.
