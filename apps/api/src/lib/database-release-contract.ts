@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 63,
+  releaseVersion: 64,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -70,4 +70,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'callcommand_guided_setup', kind: 'ddl' },
   { id: 'shared_customer_links', kind: 'ddl' },
   { id: 'auth_security_controls', kind: 'ddl' },
+  { id: 'techdeck_resolution_intelligence_tables', kind: 'ddl' },
 ] as const);

@@ -1,5 +1,34 @@
 # OperatorOS module parity index
 
+## Resolution Intelligence storage and branch reconciliation (2026-09-25)
+
+Status: **PARITY UNCHANGED / PHASE 1 STORAGE IMPLEMENTED / WORKFLOW ACCEPTANCE OPEN**.
+
+| Surface | Current scope/evidence | Remaining gate |
+| --- | --- | --- |
+| TechDeck Resolution Intelligence / FixGraph | Versioned schema, immutable source/revision storage, tenant constraints, graph and search projections; 14 focused checks pass; disposable v63 -> v64 upgrade; 47 integration checks, build, 29 browser journeys and 4 visual checks pass | Fresh complete CI after correcting two local release expectations; production backup/apply; ingestion, screening, APIs, search, documents and UI |
+| Ticket Completion Prompt | Exact prompt/shortcut and packaged version 1.0 schema/template; generation checked during build | Authenticated settings/API and copy/download controls |
+| CAM WAL example | Sanitized fixture preserves failed actions, temporal side effect, recovery, qualified warning and pending validation | Later authorized private incident import and query acceptance |
+| TradeFlowKit | Recovered ORM tenant declarations match four unique constraints, seventeen composite FKs and four indexes in the existing applied database; focused regression passes | Candidate release/CI; no new customer behavior or schema mutation |
+
+See [current evidence](../IMPLEMENTATION_STATUS.md) and the
+[data model](../techdeck/resolution-intelligence-data-model.md). These additions do
+not promote any module's historical restoration count or live readiness level.
+
+## TechDeck Resolution Intelligence planning overlay (2026-09-25)
+
+Status: **PARITY UNCHANGED / PLANNED / FEATURE NOT IMPLEMENTED**.
+
+| Surface | Current scope and fresh evidence | Remaining gate |
+| --- | --- | --- |
+| TechDeck Resolution Intelligence / FixGraph | Repository audit and phased implementation plan; exact canonical closeout prompt and shortcut saved; example JSON and source pointers checked; existing production build, four workspace typechecks, lint and 4/4 build-run catalog tests pass | Review plan, then implement and verify storage, ingestion, search, evidence/graph, document workflows and UI; no new runtime capability accepted |
+| Ticket Completion Prompt in TechDeck settings | Repository document prepared; exact text and version 1.0 example verified | Settings route, copy/download controls, formal schema and authenticated API remain planned |
+| CAM WAL incident | Acceptance requirements and qualified service/Wi-Fi warning documented | Synthetic fixture and later authorized private real-incident import/search verification; neither performed here |
+
+No historical source-restoration capability count or module readiness level changes.
+See [the implementation plan](../techdeck/resolution-intelligence-implementation-plan.md)
+and [fresh scope/verification evidence](../IMPLEMENTATION_STATUS.md).
+
 ## Audience entry and release-preparation overlay (2026-09-24)
 
 Status: **PARITY UNCHANGED / LOCAL VERIFIED / NEW PUBLICATION OPEN**.

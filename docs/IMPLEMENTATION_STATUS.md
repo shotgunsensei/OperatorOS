@@ -1,5 +1,105 @@
 # OperatorOS implementation status
 
+## TechDeck Resolution Intelligence Phase 1 and branch reconciliation (2026-09-25)
+
+Status: **STORAGE IMPLEMENTED / LOCAL VERIFICATION RECORDED / CI REQUIRED BEFORE MERGE / NOT DEPLOYED**.
+The user's continuation approved Prompt 2; subsequent authorization covers Git
+commit/push/PR/merge. Phase 1 now includes the formal version 1.0 export schema,
+packaged canonical prompt/template, 27 tenant-owned storage tables, 435 named
+constraints, 38 explicit indexes, immutable raw revisions and typed FixGraph.
+The [data model](techdeck/resolution-intelligence-data-model.md) maps every source
+section and documents limits, authorization, screening and rollback boundaries.
+
+The root release is **v64/64**, ending in
+`techdeck_resolution_intelligence_tables`; the first 63 steps are unchanged.
+No intake route, scanner, search API, document-generation action, UI, embedding or
+AI provider is exposed by this storage phase. Those remain subsequent work. The
+synthetic CAM WAL fixture is test-only; no private customer incident was imported.
+
+Branch review also recovered missing TradeFlowKit tenant-key declarations from
+`codex/replit-schema-deploy-fix`, matching the existing initializer rather than
+replaying its obsolete v59/startup changes. A database comparison verifies four
+unique constraints, seventeen composite foreign keys and four supporting indexes.
+Other prior work was already contained in main or patch-equivalent. See
+[v64 preparation and branch reconciliation](RELEASE_V64_PREPARATION.md).
+
+Validation environment: Windows PowerShell, Node 24.16.0, Corepack pnpm 10.34.5,
+PostgreSQL 16 in a dedicated loopback disposable container. No persistent developer
+or production database was used. Focused contract/storage checks pass **14/14**;
+the TradeFlowKit applied-schema regression passes **1/1**, all with zero skips.
+The v63 backup was restored to a separate disposable database; supported v64
+`db:apply` and independent `db:verify` pass. No formatting pass or live deployment
+acceptance is claimed.
+
+| Exact command / gate | Fresh local result |
+| --- | --- |
+| `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/techdeck-resolution-contract.test.ts test/techdeck-resolution-database.test.ts` | 14 passed, 0 failed/skipped; subsequently included in the required integration gate. |
+| `corepack pnpm --dir apps/api exec tsx --test test/tradeflowkit-schema-contract.test.ts` | 1 passed, 0 failed/skipped; validates real PostgreSQL catalog against ORM keys. |
+| `corepack pnpm db:apply`, then `corepack pnpm db:verify` | PASS on a separately restored v63 disposable backup, upgrading to v64/64. Apply used the documented explicit release-mode flag. |
+| `corepack pnpm test:integration` (through release runner) | 47 passed, 0 failed/skipped, after clean root apply, reapply and independent verify. |
+| `corepack pnpm test:unit` (through release runner) | 52 passed, 0 failed/skipped. |
+| `corepack pnpm test:api` (through release runner) | Initial aggregate: 1,532 tests, 1,530 passed, 2 failed, 0 skipped. Both failures were stale release expectations: v63 identity and the exact build-command string before the new generated-contract check. Corrected below; do not label this original aggregate green. |
+| `corepack pnpm --dir apps/api exec tsx --test test/phase15-release-identity.test.ts test/replit-unified-runtime.test.ts` | Fresh correction verification: 9 passed, 0 failed/skipped. No test was removed, skipped or weakened. A fresh complete GitHub API gate is required before merge. |
+| `corepack pnpm build:production` (through release runner) | PASS: generated-contract checks, catalog tests, four workspace typechecks, SDK/API/runner compilation, Next 15.5.25 and 38/38 static pages. |
+| `corepack pnpm lint` (through release runner) | PASS using the current root ESLint command; no formatting claim. |
+| Route and visual static gates | 1,304 active route capabilities, 974 crawl routes, 0 failures; all 13 visual contracts pass. |
+| `node scripts/parity/run-browser-tests.mjs --suite all` (through release runner) | Exact-host compiled-supervisor browser journeys: 29/29 passed; separate visual/accessibility cases: 4/4 passed; 0 failed/skipped/retried. |
+| `node scripts/production-env-preflight.mjs --core` (through release runner) | PASS with the isolated non-production configuration. |
+| `corepack pnpm verify:release` | Completed all 14 stages: 13 passed, API aggregate failed only on the two corrected stale expectations above. The preserved local aggregate is not a clean 14/14 result; the fresh exact-revision GitHub run is the required final merge gate. |
+
+Full orchestration uses `corepack pnpm verify:release`, the checked-in CI environment
+contract with synthetic test secrets, `PARITY_DATABASE_IS_DISPOSABLE=1`,
+`OPERATOROS_DETERMINISTIC_PROVIDER_MODE=1`, and only the owned PostgreSQL container
+on loopback port 55464. Logs and machine summaries are under `build/resolution-*.log`
+and `build/parity/`; exact-revision GitHub run artifacts are the final merge gate.
+The first interrupted run during branch reconciliation is excluded from pass claims.
+Non-fatal pnpm/Next warnings retain their existing package-manager/edge-runtime
+meaning and do not substitute for any gate.
+
+## TechDeck Resolution Intelligence audit and plan (2026-09-25)
+
+Status: **PLANNED / DOCUMENTATION ONLY / FEATURE NOT IMPLEMENTED**. The supplied
+Prompt 1 explicitly says “Do not implement yet”; Prompt 2 follows review of its
+plan. The repository audit is complete and the full phased design is saved in
+[the Resolution Intelligence implementation plan](techdeck/resolution-intelligence-implementation-plan.md).
+The [canonical closeout prompt](prompts/MSP_RESOLUTION_CLOSEOUT_PROMPT.md) and
+[memory shortcut](prompts/MSP_RESOLUTION_CLOSEOUT_SHORTCUT.md) preserve the supplied
+text exactly. TechDeck settings integration, storage, ingestion, search, AI,
+FixGraph and the real incident import remain planned work.
+
+The plan reuses current tenant/module authority, shared clients, assets, tickets,
+documents, evidence, audit and jobs. It explicitly addresses raw-export retention
+versus the existing credential-storage prohibition, the missing formal validation
+schema/embedding provider, role-safe search, qualified side-effect causality, and
+the repository's additive migration/restore policy. No existing module capability,
+parity count, provider readiness or production acceptance has been promoted.
+
+Fresh verification on Windows PowerShell, Node **24.16.0**, Corepack pnpm
+**10.34.5**, base source `994308311c702d67b6e4047748e07ccb3d7c6fbd`:
+
+| Command/check | Result and evidence boundary |
+| --- | --- |
+| Inline Node assertions through `node --input-type=module` | PASS: full prompt and shortcut equal the exact attachment slices; all 17 human sections retained; machine JSON parses with 24 top-level keys and schema version 1.0; 15 plan sections; 37 existing source pointers and all relative plan links resolve. This validates documentation, not an ingestion engine. |
+| `corepack pnpm db:plan` | PASS, exit 0; read-only manifest v63, 63 steps, ending in `auth_security_controls`; no database connection/apply. |
+| `$env:INTERNAL_API_URL='http://localhost:5001'; corepack pnpm build:production` | PASS, exit 0; deployment scope and catalog checks, **4/4** catalog tests, **0 failed / 0 skipped**, all four workspace typechecks, API/runner/SDK compilation and Next **15.5.25** production build with **38/38** static pages. Existing source baseline only. |
+| `corepack pnpm lint` | PASS, exit 0; current root ESLint command. Contrary to the older AGENTS.md description, this script exists in the inspected checkout. Its scope is the configured syntax/safety rules; no formatting pass is claimed. |
+| `git diff --check` | PASS; no whitespace errors in tracked documentation changes. Git reported its existing Windows LF-to-CRLF conversion notice. |
+
+Canonical prompt: **13,112 UTF-8 bytes**, SHA-256
+`3d0283064bcb14240d229d94c096d6dc897a2fd5a2d12b323bf78b88df9c2004`.
+Build warnings were non-fatal: the invoked pnpm process warned about
+`managePackageManagerVersions`, and Next reported the existing edge-runtime static
+generation limitation. Standalone workspace typechecks and root lint passed even
+though Next's internal build steps skip those checks.
+
+No dependencies were installed, no application code changed, and no DB-backed
+feature tests, browser feature tests, full release suite, remote CI, live provider
+call, customer import, production migration, deployment or publication was run
+for this documentation task. Later implementation must produce its own fresh
+focused, database, browser and release evidence. Work is on
+`codex/techdeck-resolution-intelligence-plan`; this entry does not claim a commit,
+push or PR.
+
 ## Audience landing pages and release preparation (2026-09-24)
 
 Status: **SOURCE/LOCAL VERIFIED; CANDIDATE CI AND PUBLICATION OPEN**. The public

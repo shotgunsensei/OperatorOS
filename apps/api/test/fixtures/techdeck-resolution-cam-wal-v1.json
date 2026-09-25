@@ -1,0 +1,301 @@
+{
+  "schema_version": "1.0",
+  "export_type": "msp_incident_closeout",
+  "incident": {
+    "incident_id": null,
+    "external_ticket_id": null,
+    "title": "Synthetic CAM WAL storage and recovery case",
+    "organization": "Synthetic MSP tenant",
+    "client": "Synthetic client",
+    "technician": null,
+    "opened_at": null,
+    "closed_at": null,
+    "status": "Follow-up required",
+    "severity": null,
+    "business_impact": "Low free disk space; temporary Wi-Fi and remote-access loss during recovery."
+  },
+  "affected_assets": [
+    {
+      "asset_type": "workstation",
+      "hostname": "SYNTHETIC-CAM-01",
+      "device_name": "Synthetic workstation",
+      "manufacturer": null,
+      "model": null,
+      "serial_number": null,
+      "operating_system": "Windows 11 Pro",
+      "os_version": "24H2",
+      "os_build": "10.0.26100.8457",
+      "ip_addresses": [],
+      "mac_addresses": [],
+      "role": null
+    }
+  ],
+  "environment": {
+    "domain": null,
+    "tenant": null,
+    "network": null,
+    "location": null,
+    "applications": [
+      "Windows servicing",
+      "Microsoft Edge WebView2"
+    ],
+    "services": [
+      "camsvc"
+    ],
+    "vendors": [
+      "Microsoft"
+    ]
+  },
+  "issue": {
+    "summary": "Oversized CapabilityAccessManager WAL occupied disk space during a Windows servicing investigation.",
+    "symptoms": [
+      "Windows 11 disk keeps filling",
+      "Low disk space",
+      "WebView crashes"
+    ],
+    "user_reported_symptoms": [],
+    "technician_observed_symptoms": [],
+    "error_codes": [
+      "0x800f0915",
+      "0xe0000008"
+    ],
+    "event_ids": [],
+    "error_messages": [],
+    "affected_components": [
+      "CapabilityAccessManager.db-wal",
+      "msedgewebview2.exe",
+      "camsvc"
+    ],
+    "first_observed_at": null
+  },
+  "evidence": [
+    {
+      "evidence_id": "measurement-1",
+      "timestamp": null,
+      "type": "file_size",
+      "source": "Supplied case summary, synthetic fixture",
+      "description": "Observed CapabilityAccessManager.db size",
+      "value": 19922944,
+      "units": "bytes",
+      "path": "C:\\ProgramData\\Microsoft\\Windows\\CapabilityAccessManager\\CapabilityAccessManager.db",
+      "confidence": "CONFIRMED"
+    },
+    {
+      "evidence_id": "measurement-2",
+      "timestamp": null,
+      "type": "file_size",
+      "source": "Supplied case summary, synthetic fixture",
+      "description": "Observed CapabilityAccessManager.db-shm size",
+      "value": 115343360,
+      "units": "bytes",
+      "path": "C:\\ProgramData\\Microsoft\\Windows\\CapabilityAccessManager\\CapabilityAccessManager.db-shm",
+      "confidence": "CONFIRMED"
+    },
+    {
+      "evidence_id": "measurement-3",
+      "timestamp": null,
+      "type": "file_size",
+      "source": "Supplied case summary, synthetic fixture",
+      "description": "Observed CapabilityAccessManager.db-wal size",
+      "value": 59398270752,
+      "units": "bytes",
+      "path": "C:\\ProgramData\\Microsoft\\Windows\\CapabilityAccessManager\\CapabilityAccessManager.db-wal",
+      "confidence": "CONFIRMED"
+    }
+  ],
+  "diagnostics": [
+    {
+      "sequence": 1,
+      "timestamp": null,
+      "action": "Inspect protected CAM directory",
+      "command": null,
+      "purpose": "Identify storage use",
+      "expected_result": null,
+      "actual_result": "Normal elevated administrator access denied; a SYSTEM scheduled task inspected the directory.",
+      "outcome": "PARTIAL",
+      "risk_level": "MEDIUM"
+    }
+  ],
+  "commands_scripts": [],
+  "changes_made": [],
+  "failed_actions": [
+    {
+      "action": "Rename the live WAL",
+      "reason_failed": "File remained in use",
+      "error": null,
+      "side_effect": null,
+      "lesson": "A live protected database WAL must not be treated as an ordinary disposable cache."
+    }
+  ],
+  "successful_actions": [
+    {
+      "action": "Restore camsvc to automatic/running and reboot",
+      "result": "Wi-Fi and remote access returned on the observed endpoint.",
+      "evidence": "Supplied chronology; no universal dependency established."
+    },
+    {
+      "action": "Rename oversized WAL, confirm replacement is in use, then delete old file",
+      "result": "Approximately 55.3 GiB reclaimed.",
+      "evidence": "Reported reclaimed space."
+    }
+  ],
+  "side_effects": [
+    {
+      "triggering_action": "Temporarily disable camsvc and reboot",
+      "effect": "Wi-Fi network discovery was unavailable after reboot on this endpoint.",
+      "severity": "HIGH",
+      "recovery_action": "Restore camsvc to automatic/running and reboot",
+      "recovered": true
+    }
+  ],
+  "root_cause": {
+    "summary": "An oversized CAM WAL accounted for substantial disk usage; the reason for its growth was not established.",
+    "category": "Storage",
+    "confidence": "HIGH",
+    "evidence": [
+      "measurement-3"
+    ],
+    "contributing_factors": [],
+    "secondary_effects": [],
+    "not_proven": [
+      "WAL growth cause",
+      "Causal connection to each servicing or WebView error",
+      "Universal camsvc dependency for Wi-Fi"
+    ]
+  },
+  "resolution": {
+    "summary": "Removed the old oversized WAL after replacement use was confirmed; restored access and initiated cumulative updates.",
+    "final_actions": [
+      "Confirm Windows functions against replacement WAL",
+      "Delete old WAL",
+      "Initiate cumulative updates"
+    ],
+    "permanent_fix": null,
+    "temporary_workaround": null
+  },
+  "validation": {
+    "performed": [
+      "Windows functioning against replacement WAL",
+      "Wi-Fi and remote access returned"
+    ],
+    "successful": [
+      "Windows functioning against replacement WAL",
+      "Wi-Fi and remote access returned"
+    ],
+    "failed": [],
+    "pending": [
+      "Post-update DISM validation",
+      "Post-update SFC validation"
+    ]
+  },
+  "current_status": {
+    "primary_remediation": "COMPLETE",
+    "user_functionality": "RESTORED",
+    "validation": "PARTIAL",
+    "monitoring_required": "YES",
+    "follow_up_required": "YES",
+    "recommended_ticket_state": "Follow-up pending"
+  },
+  "follow_up": [
+    {
+      "action": "Validate post-update servicing and system files",
+      "priority": "Normal",
+      "owner": null,
+      "due": null
+    }
+  ],
+  "classification": {
+    "category": "Windows servicing and storage",
+    "subcategory": null,
+    "cause_type": null,
+    "platforms": [
+      "Windows 11"
+    ],
+    "applications": [
+      "WebView2"
+    ],
+    "services": [
+      "camsvc"
+    ],
+    "technologies": [
+      "SQLite WAL"
+    ],
+    "tags": [
+      "capability-access-manager",
+      "disk-space",
+      "failed-remediation"
+    ],
+    "security_relevant": null,
+    "hardware_relevant": null,
+    "network_relevant": null,
+    "kb_candidate": true,
+    "automation_candidate": true,
+    "recurrence_risk": null
+  },
+  "automation_opportunity": {
+    "candidate": true,
+    "name": "CAM WAL health monitor",
+    "trigger": "Configured WAL-size or free-space threshold; no universal numeric threshold established by this case.",
+    "inputs": [
+      "WAL size",
+      "C: free space",
+      "Windows build",
+      "camsvc status"
+    ],
+    "diagnostic_logic": [
+      "Collect read-only measurements",
+      "Compare to technician-configured thresholds"
+    ],
+    "safe_actions": [
+      "Alert",
+      "Collect evidence"
+    ],
+    "approval_required_actions": [
+      "Delete active WAL",
+      "Disable camsvc",
+      "Modify protected ACLs"
+    ],
+    "risks": [
+      "Remote connectivity loss",
+      "Database consistency risk"
+    ],
+    "estimated_time_savings_minutes": null
+  },
+  "knowledge": {
+    "kb_title": "Investigate oversized CapabilityAccessManager WAL with recovery safeguards",
+    "one_line_resolution": "Removed the old oversized WAL after replacement use was confirmed; restored access and initiated cumulative updates.",
+    "warnings": [
+      "Disabling camsvc was followed by loss of Wi-Fi network discovery after reboot on this endpoint. Do not treat permanent camsvc disablement as a routine remediation, especially on remote Wi-Fi-dependent endpoints."
+    ],
+    "lessons_learned": [
+      "Preserve failed actions and confirm replacement use before removing old files."
+    ],
+    "escalation_conditions": [
+      "Protected file remains in use",
+      "Remote connectivity is at risk",
+      "Servicing validation remains unsuccessful"
+    ],
+    "reusable_ip_opportunities": [
+      "Read-only disk and WAL health monitor",
+      "Technician training scenario"
+    ]
+  },
+  "artifact_log_references": [],
+  "security": {
+    "credentials_present": false,
+    "credentials_redacted": true,
+    "security_incident_suspected": null,
+    "security_notes": null
+  },
+  "data_quality": {
+    "overall_confidence": "MODERATE",
+    "missing_important_information": [
+      "Exact command transcript",
+      "Incident timestamps",
+      "Post-update DISM/SFC results",
+      "Original cause of WAL growth"
+    ],
+    "conflicting_information": [],
+    "assumptions": []
+  }
+}
