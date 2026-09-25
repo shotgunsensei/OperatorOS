@@ -109,6 +109,7 @@ try {
       'e2e/ninja-pool-hall-phase30.spec.ts',
       'e2e/brandforgeos-phase31.spec.ts',
       'e2e/phase39-accessibility-performance.spec.ts',
+      'e2e/audience-lanes.spec.ts',
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);

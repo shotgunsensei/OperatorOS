@@ -1,5 +1,40 @@
 # OperatorOS current release gate
 
+## Shared customers and account security v63 - LIVE / SOURCE AND DATABASE VERIFIED / PROVIDER ACCEPTANCE OPEN (2026-09-22)
+
+PR #102 is merged at `74fdfeaff89b88b39073269066954b6f0787c7ad`.
+Exact-merge [release CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/35750772167)
+and [native CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/35750772172)
+passed: 1,517 API, 52 unit, 32 integration, 24 browser journeys, and four
+visual/accessibility cases; no skips. The Replit publishing failure occurred
+after build because production lacked the two new ordered database release steps.
+
+With the owner's explicit authorization, public traffic was paused and an
+encrypted production backup was validated before the supported v63 apply.
+Production independently verified v63/63. Replit's subsequent proposal to drop
+the new schema was cancelled; its older development database was separately
+backed up and converged to v63/63. No generated drop or development-data overwrite
+was approved. The apply process used one-shot authority; the runtime remains
+verify-only. Existing personal-workspace backfill differences are reconciled in
+[the complete v63 evidence](RELEASE_V63_EVIDENCE.md).
+
+Replit publication completed, and public readiness returns HTTP 200 with that
+exact merge, immutable build `22a89e74549fcde123f916b5`, built
+`2026-09-22T17:22:48.097Z`, deployed `2026-09-22T17:35:47.641Z`, and v63/63
+ending in `auth_security_controls`. The repository's public runtime verifier
+passed **47/47**. Chrome's existing signed-in owner session reached the workspace,
+completed SSO to TradeFlowKit, BrandForge OS, and SnapProofOS, and saw the same
+saved organization customer in all three Shared customers panels. My Apps returned
+to the workspace. No business record or provider configuration was changed during
+that browser inspection.
+
+This proves publication, source/database identity, health/readiness, host routing,
+and SSO launch/callback checks. Customer write acceptance, real inbox/call/payment
+delivery, social publishing, Microsoft 365/Google/QuickBooks connectors, and
+restore rehearsal remain separate scopes. OutCall stays unavailable. Production
+PITR is enabled; scheduled backups remain off. The encrypted temporary recovery
+copies supplement PITR and are not durable offsite backup storage.
+
 ## CallCommand v61 - LIVE READY / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER ACCEPTANCE OPEN (2026-09-11)
 
 PR #98 merged at `cb47800fc1476825949a9476c7f3a5fe1a9e9312` after exact-head

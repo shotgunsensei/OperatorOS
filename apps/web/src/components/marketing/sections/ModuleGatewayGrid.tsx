@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import Link from '@/components/marketing/MarketingLink';
 import { ArrowUpRight, Boxes, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
 import { brand } from '@/lib/brand';
 import {

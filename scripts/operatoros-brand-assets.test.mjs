@@ -59,12 +59,15 @@ test('metadata, manifests, and legacy favicon route use the text-free mark', asy
 });
 
 test('readable marketing uses the full lockup and social artwork uses the canonical signature', async () => {
-  const hero = await readFile(join(web, 'src', 'components', 'marketing', 'sections', 'Hero.tsx'), 'utf8');
+  const navbar = await readFile(join(web, 'src', 'components', 'marketing', 'MarketingNavbar.tsx'), 'utf8');
   const social = await readFile(join(web, 'src', 'app', 'opengraph-image.tsx'), 'utf8');
   const seo = await readFile(join(web, 'src', 'lib', 'seo.ts'), 'utf8');
+  const generator = await readFile(join(root, 'scripts', 'build-audience-campaign.mjs'), 'utf8');
+  const socialImage = await readFile(join(web, 'public', 'media', 'audiences', 'choose-your-lane-social.png'));
 
-  assert.match(hero, /OPERATOROS_LOGO_PATH/);
-  assert.match(social, /SOCIAL_OPERATOR_MARK/);
-  assert.match(social, /Operator<\/span><span[^>]*>OS/);
+  assert.match(navbar, /OperatorLogo/);
+  assert.match(social, /choose-your-lane-social\.png/);
+  assert.match(generator, /brand\/operatoros-mark\.png/);
+  assert.deepEqual(pngIdentity(socialImage), { width: 1200, height: 630, bitDepth: 8, colorType: 6 });
   assert.match(seo, /brand\/operatoros-logo\.png/);
 });

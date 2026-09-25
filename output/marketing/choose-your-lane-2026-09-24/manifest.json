@@ -1,0 +1,102 @@
+{
+  "created": "2026-09-24",
+  "generator": "ImageGen photography + editable ImageResponse composition",
+  "assets": [
+    {
+      "file": "exports/trades-square.png",
+      "width": 1080,
+      "height": 1080,
+      "bytes": 1247273,
+      "destination": "https://operatoros.net/for/trades",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/msps-square.png",
+      "width": 1080,
+      "height": 1080,
+      "bytes": 1220153,
+      "destination": "https://operatoros.net/for/msps",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/healthcare-legal-square.png",
+      "width": 1080,
+      "height": 1080,
+      "bytes": 1149234,
+      "destination": "https://operatoros.net/for/healthcare-legal",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/choose-your-lane-square.png",
+      "width": 1080,
+      "height": 1080,
+      "bytes": 808427,
+      "destination": "https://operatoros.net",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/trades-portrait.png",
+      "width": 1080,
+      "height": 1350,
+      "bytes": 1499057,
+      "destination": "https://operatoros.net/for/trades",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/msps-portrait.png",
+      "width": 1080,
+      "height": 1350,
+      "bytes": 1447142,
+      "destination": "https://operatoros.net/for/msps",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/healthcare-legal-portrait.png",
+      "width": 1080,
+      "height": 1350,
+      "bytes": 1400704,
+      "destination": "https://operatoros.net/for/healthcare-legal",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/choose-your-lane-portrait.png",
+      "width": 1080,
+      "height": 1350,
+      "bytes": 1046969,
+      "destination": "https://operatoros.net",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/trades-landscape.png",
+      "width": 1200,
+      "height": 630,
+      "bytes": 728589,
+      "destination": "https://operatoros.net/for/trades",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/msps-landscape.png",
+      "width": 1200,
+      "height": 630,
+      "bytes": 697807,
+      "destination": "https://operatoros.net/for/msps",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/healthcare-legal-landscape.png",
+      "width": 1200,
+      "height": 630,
+      "bytes": 701249,
+      "destination": "https://operatoros.net/for/healthcare-legal",
+      "status": "prepared-not-published"
+    },
+    {
+      "file": "exports/choose-your-lane-landscape.png",
+      "width": 1200,
+      "height": 630,
+      "bytes": 528038,
+      "destination": "https://operatoros.net",
+      "status": "prepared-not-published"
+    }
+  ]
+}

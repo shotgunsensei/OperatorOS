@@ -2,17 +2,19 @@ import type { Metadata } from 'next';
 
 export const SITE_ORIGIN = 'https://operatoros.net';
 export const SITE_NAME = 'OperatorOS';
-export const DEFAULT_TITLE = 'OperatorOS — The Command Layer for Modern Operations';
+export const DEFAULT_TITLE = 'OperatorOS — Choose the tools for your business';
 export const DEFAULT_DESCRIPTION =
-  'The modular command layer for modern business operations. One console, every tool your team launches. Powered by Shotgun Ninjas.';
+  'Choose your business lane: TradeFlowKit for trade companies, TechDeck for MSPs, or PulseDesk for healthcare and legal-office operations. One OperatorOS account.';
 export const SOCIAL_IMAGE_PATH = '/opengraph-image';
 export const SOCIAL_IMAGE_ALT =
-  'OperatorOS — one command layer for modern business operations';
+  'Choose your OperatorOS lane: Trade Companies, MSPs, or Healthcare / Legal-office operations.';
 
 interface PublicPageMetadata {
   title: string;
   description: string;
   path: `/${string}` | '/';
+  imagePath?: `/${string}`;
+  imageAlt?: string;
 }
 
 export function absoluteUrl(path: `/${string}` | '/'): string {
@@ -23,6 +25,8 @@ export function buildPublicMetadata({
   title,
   description,
   path,
+  imagePath = SOCIAL_IMAGE_PATH,
+  imageAlt = SOCIAL_IMAGE_ALT,
 }: PublicPageMetadata): Metadata {
   const canonical = absoluteUrl(path);
 
@@ -39,10 +43,10 @@ export function buildPublicMetadata({
       locale: 'en_US',
       images: [
         {
-          url: SOCIAL_IMAGE_PATH,
+          url: imagePath,
           width: 1200,
           height: 630,
-          alt: SOCIAL_IMAGE_ALT,
+          alt: imageAlt,
         },
       ],
     },
@@ -50,7 +54,7 @@ export function buildPublicMetadata({
       card: 'summary_large_image',
       title,
       description,
-      images: [SOCIAL_IMAGE_PATH],
+      images: [imagePath],
     },
   };
 }

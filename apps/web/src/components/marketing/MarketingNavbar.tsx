@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/marketing/MarketingLink';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
@@ -16,9 +16,8 @@ interface NavLink {
 }
 
 const NAV_LINKS: NavLink[] = [
-  { href: '/', label: 'Platform' },
-  { href: '/modules', label: 'Applications' },
-  { href: '/ecosystem', label: 'Ecosystem' },
+  { href: '/', label: 'Find your fit' },
+  { href: '/modules', label: 'All apps' },
   { href: '/how-it-works', label: 'How it works' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/help', label: 'Help' },
@@ -52,7 +51,7 @@ export default function MarketingNavbar() {
   useEffect(() => setMobileOpen(false), [pathname]);
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
+    if (href === '/') return pathname === '/' || pathname?.startsWith('/for/');
     return pathname?.startsWith(href);
   };
 
@@ -191,7 +190,7 @@ export default function MarketingNavbar() {
                   className="operatoros-cta-primary"
                   data-testid="cta-go-to-console"
                 >
-                  Open console <ArrowRight size={14} />
+                  Open workspace <ArrowRight size={14} />
                 </Link>
               ) : (
                 <>
@@ -203,11 +202,11 @@ export default function MarketingNavbar() {
                     Sign in
                   </Link>
                   <Link
-                    href="/login"
+                    href="/login?mode=register"
                     className="operatoros-cta-primary"
                     data-testid="cta-launch-console"
                   >
-                    Launch OperatorOS <ArrowRight size={14} />
+                    Get started <ArrowRight size={14} />
                   </Link>
                 </>
               )
@@ -289,7 +288,7 @@ export default function MarketingNavbar() {
                     style={{ flex: 1, justifyContent: 'center' }}
                     data-testid="cta-mobile-go-to-console"
                   >
-                    Open console <ArrowRight size={14} />
+                    Open workspace <ArrowRight size={14} />
                   </Link>
                 ) : (
                   <>
@@ -302,12 +301,12 @@ export default function MarketingNavbar() {
                       Sign in
                     </Link>
                     <Link
-                      href="/login"
+                      href="/login?mode=register"
                       className="operatoros-cta-primary"
                       style={{ flex: 1, justifyContent: 'center' }}
                       data-testid="cta-mobile-launch-console"
                     >
-                      Launch OperatorOS <ArrowRight size={14} />
+                      Get started <ArrowRight size={14} />
                     </Link>
                   </>
                 )

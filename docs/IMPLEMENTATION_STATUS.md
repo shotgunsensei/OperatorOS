@@ -1,5 +1,80 @@
 # OperatorOS implementation status
 
+## Audience landing pages and release preparation (2026-09-24)
+
+Status: **SOURCE/LOCAL VERIFIED; CANDIDATE CI AND PUBLICATION OPEN**. The public
+homepage now offers Trade Companies, MSPs, and Healthcare / Legal-office operations,
+leading to focused TradeFlowKit, TechDeck, and PulseDesk pages. The full catalog
+remains available. The selected application survives pricing and sign-in; prices,
+roles, billing, and access remain server-owned. Public sign-in links no longer
+prefetch cross-host authentication, and footer contrast has been corrected.
+
+The campaign kit contains **12 graphics and 12 captions** for Facebook, LinkedIn,
+and X, with original ImageGen art, exact prompts, dimensions, and editable source.
+Three website photographs total 215,060 bytes. Per-lane social previews, canonical
+URLs, FAQs, and sitemap entries are present. No social post or vendor was activated.
+
+Fresh Windows validation: production build and all four workspace typechecks;
+final web build (38 static pages); disposable clean v63 apply and compiled supervisor
+readiness; core preflight; **61/61** focused API/source/HTTP contracts, **4/4** brand
+asset contracts, **12/12** exact-host browser checks (39.4 seconds, no retries or
+skips), and route integrity with **0 failures**. The five new audience browser tests
+are now part of the release runner. No lint or formatting pass is claimed. Full
+candidate CI on Node 20 and deployment remain separate from these local checks.
+
+See [the complete scope, commands, rollback, and open release work](AUDIENCE_RELEASE_PREP_2026-09-24.md).
+The current provider, backup/restore, production customer-write, and account-security
+acceptance limits remain open. PulseDesk is operations-only; OutCall stays unavailable.
+
+## PR #102 production publication (2026-09-22)
+
+The reviewed changes are merged at
+`74fdfeaff89b88b39073269066954b6f0787c7ad`. The exact-merge
+[release CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/35750772167)
+and [native CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/35750772172)
+passed. Release artifacts record **1,517/1,517 API**, **52/52 unit**,
+**32/32 integration**, **24/24 production-host browser journeys**, and
+**4/4 visual/accessibility cases**, with no skipped tests. Workspace typechecks,
+the production build, clean database apply/reapply, and core preflight completed.
+This supersedes the earlier local aggregate limitation recorded below. It does
+not change the repository's lint/formatting verification policy.
+
+The owner authorized the publishing repair and publication. The failed Replit
+promotion was caused by its production database remaining at v61 while the
+merged code requires v63. Public traffic was paused, a fresh encrypted production
+backup was validated, and the supported one-shot apply plus independent verify
+completed at **v63/63**. The existing backfill added one missing personal workspace,
+one owner membership, and its three standard free-app grants; users,
+subscriptions, customer, brand, and webhook counts were unchanged.
+
+Replit then proposed removing the new production schema to match its stale
+development database. That attempt was cancelled before approval. A separate
+development backup, supported apply, and independent v63/63 verification removed
+the mismatch. Production-data overwrite remained off, and persistent database
+apply authority is absent. Replit's provisioning, security scan, production
+build, bundle, and promotion completed, and public traffic resumed.
+
+Public readiness confirms that exact merge, immutable build
+`22a89e74549fcde123f916b5`, built `2026-09-22T17:22:48.097Z`, deployed
+`2026-09-22T17:35:47.641Z`, and **v63/63** ending in `auth_security_controls`.
+The repository public runtime verifier passed **47/47** with the expected
+commit supplied explicitly. Health, routing, PKCE launch redirects, callback
+reachability, and the unavailable OutCall boundary passed. No auth, entitlement,
+readiness, or tenant guard was relaxed to make publication succeed.
+
+Chrome's existing signed-in owner session opened the workspace and completed SSO
+to TradeFlowKit, BrandForge OS, and SnapProofOS. Their current dashboards loaded,
+and all three Shared customers panels offered the same existing organization
+customer. My Apps returned to the workspace. This read-only browser inspection
+did not create/edit business records or activate a provider. Replit's empty
+publication marker was preserved separately, and its clean checkout again tracks
+the exact merged `main` source.
+
+Commands, exact CI results, recovery evidence, aggregate reconciliation, and
+remaining acceptance limits are recorded in
+[v63 publication evidence](RELEASE_V63_EVIDENCE.md). No real provider delivery,
+customer write journey, purchase, or social publication is claimed by these checks.
+
 ## PR #102 release-gate repair (2026-09-22)
 
 The pushed `359b92a` candidate failed GitHub Actions run `35734961213`:

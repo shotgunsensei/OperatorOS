@@ -33,7 +33,7 @@ async function assertNoHorizontalOverflow(page: Page) {
   );
 }
 
-test('homepage leads with the canonical application hierarchy and complete active inventory', async ({
+test('application catalog retains the canonical hierarchy and complete active inventory', async ({
   page,
 }) => {
   const runtimeErrors: string[] = [];
@@ -53,19 +53,8 @@ test('homepage leads with the canonical application hierarchy and complete activ
     }
   });
 
-  await page.goto(`${WEB}/`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByTestId('marketing-module-grid')).toBeVisible();
-
-  const hierarchyPrecedesOrbit = await page.evaluate(() => {
-    const hierarchy = document.querySelector('[data-testid="marketing-module-grid"]');
-    const orbit = document.querySelector('[data-testid="marketing-orbit"]');
-    return Boolean(
-      hierarchy &&
-        orbit &&
-        hierarchy.compareDocumentPosition(orbit) & Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-  });
-  expect(hierarchyPrecedesOrbit).toBe(true);
+  await page.goto(`${WEB}/modules`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('page-modules-grid')).toBeVisible();
 
   const mainCards = page.locator('[data-application-type="main-module"]');
   await expect(mainCards).toHaveCount(3);
@@ -134,8 +123,8 @@ test('marketing footer exposes exactly the three main modules and linked parent 
 }) => {
   await page.goto(`${WEB}/modules`, { waitUntil: 'domcontentloaded' });
   const footer = page.getByTestId('marketing-footer');
-  const moduleLinks = footer.getByTestId('footer-column-modules').locator('a');
-  expect(await moduleLinks.allTextContents()).toEqual(['TradeFlowKit', 'PulseDesk', 'TechDeck']);
+  const moduleLinks = footer.getByTestId('footer-column-applications').locator('a');
+  await expect(moduleLinks).toHaveText(['TradeFlowKit', 'PulseDesk', 'TechDeck']);
   await expect(footer.getByTestId('footer-attribution').getByRole('link')).toHaveAttribute(
     'href',
     'https://shotgunninjas.com',

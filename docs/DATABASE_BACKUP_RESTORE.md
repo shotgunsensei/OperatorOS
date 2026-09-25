@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints the current 61 ordered step identifiers without secrets
+`db:plan` is read-only and prints the current 63 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -44,6 +44,35 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+### Release v63 shared customers and account security
+
+The ordered manifest appends v62 `shared_customer_links` and v63
+`auth_security_controls`. Back up both the explicitly selected production database
+and Replit's separate development database before their respective supported
+one-shot applies. Production traffic must be paused during its release operation.
+Verify both databases at v63/63 before requesting Replit publication; a stale
+development schema can cause Replit to propose dropping the newly added
+production tables and columns. Cancel that proposal and converge development
+through `db:apply`; do not approve the drops or overwrite production data.
+
+Confirm the validated BrandForge tenant-composite shared customer foreign key,
+the shared customer address/link columns, and the three account security tables
+using the supported verifier. Reconcile users, tenants, memberships, module
+grants, subscriptions, shared customers, brands, proof customers, and webhook
+deliveries. Existing idempotent backfills can create a missing personal workspace
+and its standard free-app grants; investigate and explain count changes rather
+than assuming every aggregate must be unchanged.
+
+Keep `OPERATOROS_DATABASE_RELEASE_MODE` out of the serving environment. Replit's
+production-data copy must stay off. Require live readiness to identify the
+reviewed merge, the new build, and v63/63 ending in `auth_security_controls`.
+The additive schema may remain during an application rollback, but reverting
+account code also removes its new security guarantees. A database rollback uses
+the restore-to-new-database procedure, never ad hoc table or column deletion.
+
+See [v63 publication evidence](RELEASE_V63_EVIDENCE.md) for this release's recovery,
+reconciliation, CI, and live-verification records.
 
 ### Release v61 guided setup
 

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { absoluteUrl } from '@/lib/seo';
+import { AUDIENCE_LANES, lanePath } from '@/lib/audience-lanes';
 
 const PUBLIC_ROUTES = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
@@ -17,9 +18,9 @@ const PUBLIC_ROUTES = [
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return PUBLIC_ROUTES.map(({ path, changeFrequency, priority }) => ({
+  return [...PUBLIC_ROUTES.map(({ path, changeFrequency, priority }) => ({
     url: absoluteUrl(path),
     changeFrequency,
     priority,
-  }));
+  })), ...AUDIENCE_LANES.map(lane => ({ url: absoluteUrl(lanePath(lane)), changeFrequency: 'monthly' as const, priority: 0.9 }))];
 }
