@@ -85,6 +85,7 @@ import { registerNinjaPoolOnlineRoutes } from './ninja-pool-online-routes.js';
 import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradeflowkit-routes.js';
 import { registerTechDeckRoutes } from './techdeck-routes.js';
 import { registerTechDeckLiteralRoutes } from './techdeck-literal-routes.js';
+import { registerTechDeckResolutionRoutes } from './techdeck-resolution-routes.js';
 import { registerTorqueShedRoutes } from './torqueshed-routes.js';
 import { registerTorqueAssistRoutes } from './torque-assist-routes.js';
 import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
@@ -608,6 +609,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTradeFlowKitRecurringRoutes(app);
   await registerTechDeckRoutes(app);
   await registerTechDeckLiteralRoutes(app);
+  await registerTechDeckResolutionRoutes(app);
   await registerTorqueShedRoutes(app);
   await registerTorqueAssistRoutes(app);
   await registerTorqueShedSocialRoutes(app);

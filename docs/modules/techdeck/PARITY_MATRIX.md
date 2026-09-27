@@ -1,5 +1,20 @@
 # TechDeck zero-gap parity matrix
 
+## Resolution Intelligence Phase 2 overlay (2026-09-27 UTC)
+
+This new subsystem is tracked separately from the historical imported-source
+counts below. Phase 1 storage is merged and CI-verified; Phase 2 ingestion is
+implemented with 43 focused and 1,561 full API checks passing without skips.
+Production build, 76 integration checks, 30 browser journeys and 4 visual cases
+pass. After the final timestamp correction, 43 focused, 76 integration, a fresh
+build and 3 TechDeck production browser checks passed again. Exact chronology,
+scope and the existing mobile Help overlap are tracked in
+[implementation status](../../IMPLEMENTATION_STATUS.md). Phase 3 technician
+pages, search/read/history and prompt settings remain open; no production
+readiness or source-restoration count is promoted. See the
+[API contract](../../techdeck/resolution-intelligence-api.md) and
+[review evidence](../../techdeck/resolution-intelligence-phase2-review.md).
+
 ## Phase 20 truth notice (2026-08-08)
 
 The "zero-gap" matrix below is historical implementation evidence, not current

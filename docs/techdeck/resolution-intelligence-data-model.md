@@ -2,14 +2,16 @@
 
 Phase 1 / supplied Prompt 2, 2026-09-25. Public name: **Resolution Intelligence**;
 internal relationship model: **FixGraph**. This release provides the export
-contract and PostgreSQL storage foundation. Import, validation services, search
-endpoints, document generation, AI, analytics and UI are subsequent phases.
+contract and PostgreSQL storage foundation. The 2026-09-27 Phase 2 continuation
+adds the [validated ingestion API](resolution-intelligence-api.md) on these same
+tables. Search endpoints, document generation, AI, analytics and UI are subsequent
+phases. Storage definitions and the release manifest remain unchanged.
 
 ## Authority and release
 
 The root manifest appends v64 `techdeck_resolution_intelligence_tables` after the
 immutable first 63 steps. `db:plan` reviews it without connecting; `db:apply` is
-the only supported apply path. It runs under the existing release advisory lock.
+the supported explicit release apply path. It runs under the existing release advisory lock.
 Normal production startup calls the read-only catalog verifier and fails closed
 when the release is absent. No fixture or customer record is seeded at startup.
 
@@ -120,16 +122,17 @@ not implemented by this storage release. Every original field remains in raw tex
 checksummed in PostgreSQL. Optional human text is also capped at 1 MiB. Ordinary
 text columns cap at 100,000 bytes. Duplicate identity is unique per
 `(tenant_id, fingerprint, normalizer_version)`; another tenant can independently
-retain identical evidence. Reprocessing uses a new revision and normalizer
-version instead of modifying the old source.
+retain identical evidence. Accepted changed evidence uses a new revision instead
+of modifying the old source; each revision records the normalizer version that
+produced it. An algorithm change must increment that normalizer version.
 
-ADR-0013 prohibits ordinary credential storage. The future intake service must
-screen the complete raw JSON, unknown extensions and optional human report, reject
-secrets before persistence, then derive screened projections. Accepted input is
-preserved untouched. `security_screened=true` is a required server attestation;
-the database cannot detect arbitrary secrets and JSON Schema is not a scanner.
-No import route is exposed in this phase, so there is no user-facing path that
-can bypass an unimplemented scanner.
+ADR-0013 prohibits ordinary credential storage. The Phase 2 intake service screens
+the complete raw JSON, unknown extensions and optional human report, rejects
+detected secrets before persistence, then derives screened projections. Accepted
+input is preserved untouched. `security_screened=true` attests that the recorded
+heuristic version ran; it cannot guarantee detection of every arbitrary secret.
+JSON Schema and database constraints are not secret scanners. Callers must review
+and redact source before import. See the [API screening contract](resolution-intelligence-api.md#screening-and-source-attribution).
 
 Imported text is untrusted data, never instructions to an AI or command runner.
 Original command text is evidence, and safe-action labels are source claims.
@@ -139,9 +142,11 @@ entitlements, visibility changes and all audit events remain server-owned.
 The existing application uses tenant-qualified services and guards rather than
 per-request PostgreSQL RLS roles. This phase adds composite tenant constraints,
 not a new RLS identity model. The database tests prove referential isolation;
-they do not prove future route authorization. Before any API is exposed, enforce
-tenant membership + TechDeck entitlement + read/write role and incident visibility
-for every list/detail/raw/graph/search/document operation. Search must join the
+they do not prove route authorization. Phase 2 separately verifies native/headless
+intake authority and replay/reprocess visibility in database-backed API tests.
+Future list/detail/raw/graph/search/document operations must enforce tenant
+membership + TechDeck entitlement + read/write role and incident visibility.
+Search must join the
 current incident ACL and active revision; a stale projection must not widen access.
 
 ## FixGraph and search

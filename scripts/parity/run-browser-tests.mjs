@@ -102,6 +102,7 @@ try {
     const browserArgs = [
       'test',
       'e2e/sso-v1.spec.ts',
+      'e2e/techdeck-resolution-ingestion.spec.ts',
       'e2e/parity-route-control.spec.ts',
       'e2e/twilio-compliance.spec.ts',
       'e2e/callcommand-guided-setup.spec.ts',

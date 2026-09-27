@@ -95,6 +95,15 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
         animations: 'disabled',
         maxDiffPixelRatio: 0.005,
       });
+      if (!process.env.PARITY_CAPTURE_MODULE || process.env.PARITY_CAPTURE_MODULE === contract.moduleSlug) {
+        const evidenceRoot = resolve(process.cwd(), '../../build/parity/visual-current');
+        mkdirSync(evidenceRoot, { recursive: true });
+        await page.screenshot({
+          path: resolve(evidenceRoot, `${contract.moduleSlug}-${viewport.name}.png`),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
       if (process.env.PHASE48_CAPTURE_TRADEFLOWKIT === '1' && contract.moduleSlug === 'tradeflowkit') {
         const evidenceRoot = resolve(process.cwd(), '../../docs/phase-48/screenshots');
         mkdirSync(evidenceRoot, { recursive: true });

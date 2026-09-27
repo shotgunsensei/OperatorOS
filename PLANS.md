@@ -2,6 +2,19 @@
 
 Status: current execution plan
 
+## TechDeck Resolution Intelligence continuation (2026-09-27 UTC)
+
+PR #104 merged Phase 1 contract/storage in `8f8e370`; its exact-revision GitHub
+release gate passed. The current continuation implements Phase 2 / Prompt 3:
+screened, tenant-authorized native/headless preview/import and admin reprocessing,
+deterministic provenance, transactional audit and idempotency on v64. Fresh local
+gates are recorded in [implementation status](docs/IMPLEMENTATION_STATUS.md).
+The next phase is Technician V1 (Prompt 4 + exact/FTS portions of 5 + 10): actual
+import/detail/search/history pages and prompt settings, followed by linked drafts.
+See the [phase map](docs/techdeck/resolution-intelligence-implementation-plan.md#12-implementation-phases-and-exit-criteria)
+and [API guide](docs/techdeck/resolution-intelligence-api.md). No deployment,
+customer incident import, embedding provider or AI feature is implied.
+
 ## Audience-first release preparation (2026-09-24)
 
 The v63 shared-customer/security changes were merged and published on 2026-09-22;

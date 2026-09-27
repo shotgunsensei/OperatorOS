@@ -1,6 +1,23 @@
 # TechDeck Resolution Intelligence implementation plan
 
-Status: **PLAN COMPLETE; PHASE 1 STORAGE IMPLEMENTED; WORKFLOW PHASES OPEN**
+Status: **PHASES 0–2 IMPLEMENTED; PHASE 2 LOCALLY VERIFIED; TECHNICIAN V1 NEXT**
+
+Phase 2 continuation (2026-09-27 UTC): the latest merged implementation is
+`ac6b49c` in PR #104, merged as `8f8e370`. The exact merged-revision
+[release gate passed](https://github.com/shotgunsensei/OperatorOS/actions/runs/36188543284).
+The user's review/continue instruction authorizes Prompt 3. The native/headless
+validate/import API, admin reprocessing, bounded strict parser, credential
+screening, deterministic normalization, atomic audit and deduplication are now
+implemented. No new release step is needed beyond v64. See the
+[API contract](resolution-intelligence-api.md) and
+[current verification](../IMPLEMENTATION_STATUS.md).
+
+The next implementation phase is **Phase 3: Technician V1**, mapping to Prompt 4,
+the exact/full-text portions of Prompt 5, and Prompt 10. Section 12 is the persisted
+prompt-to-phase list. The canonical closeout prompt and shortcut are linked in
+this document; the complete original multi-prompt attachment is not present in
+the repository. Historical audit findings below describe the starting state and
+must be read with these dated implementation overlays.
 
 Phase 1 continuation (2026-09-25): the user's review/continue instruction authorized
 Prompt 2. The formal export contract, typed storage and FixGraph foundation are
@@ -591,6 +608,11 @@ URL. Do not mark missing infrastructure as a passed/skipped security test. CI us
 Node 20; local Node 24 results require separate CI confirmation.
 
 ## 12. Implementation phases and exit criteria
+
+Current progress: phases 0 and 1 are complete; Phase 2 is implemented and locally
+verified. Candidate CI and publication remain separate gates. Phase 3 is next. Later phases remain
+open. The mapping below preserves the supplied prompt numbering and original
+exit criteria; it does not imply that later features are available.
 
 | Phase | Supplied prompt mapping | Concrete output and exit gate |
 | --- | --- | --- |

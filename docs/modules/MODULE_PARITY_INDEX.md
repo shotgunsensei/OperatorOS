@@ -1,5 +1,20 @@
 # OperatorOS module parity index
 
+## Resolution Intelligence ingestion continuation (2026-09-27 UTC)
+
+Status: **PARITY COUNTS UNCHANGED / PHASE 2 IMPLEMENTED / LOCAL VERIFICATION PASSED**.
+
+| Surface | Current scope/evidence | Remaining gate |
+| --- | --- | --- |
+| TechDeck Resolution Intelligence / FixGraph | Phase 1 merge CI confirmed; Phase 2 native/headless validate/import and admin reprocess, source screening, tenant authority, immutable revisions, atomic audit/dedupe and deterministic projections; 1,561 full API, 30 browser and 4 visual cases pass; final timestamp correction reverified with 43 focused, 76 integration, fresh build and 3 TechDeck browser cases; zero skips | Candidate CI and separately authorized release; Phase 3 read/search/history/UI; existing mobile Help overlap follow-up |
+| Ticket Completion Prompt | Canonical prompt/shortcut and packaged schema/template preserved; prompt map recovered in implementation plan section 12 | Phase 3 settings, authenticated copy/download and actual technician workflow |
+| CAM WAL example | Synthetic fixture exercises exact measurements, failure, temporal side effect, recovery, warnings and pending validation; source is not executed or fetched | Later private real-incident import with an explicit tenant/client mapping |
+
+See [current gate evidence](../IMPLEMENTATION_STATUS.md),
+[the completed-phase review](../techdeck/resolution-intelligence-phase2-review.md)
+and [the API contract](../techdeck/resolution-intelligence-api.md). Storage stays
+v64; existing source-restoration counts and production acceptance remain unchanged.
+
 ## Resolution Intelligence storage and branch reconciliation (2026-09-25)
 
 Status: **PARITY UNCHANGED / PHASE 1 STORAGE IMPLEMENTED / WORKFLOW ACCEPTANCE OPEN**.
