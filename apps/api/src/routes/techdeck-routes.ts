@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
+import { insertTechDeckDocumentRevision as insertRevision, resolutionDocumentReadable, resolutionDocumentCurrent, resolutionDocumentAudience } from '../lib/techdeck-document-policy.js';
 import {
   activityFeed,
   directoryOrganizations,
@@ -174,7 +175,7 @@ async function attachmentObjectExists(request: FastifyRequest, objectType: strin
   if (objectType === 'document') {
     const [row] = await db.select({ id: techdeckDocuments.id }).from(techdeckDocuments).where(and(
       eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, objectId), isNull(techdeckDocuments.archivedAt),
-      inArray(techdeckDocuments.minimumRole, documentVisibility(request)),
+      inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request),
     )).limit(1);
     return !!row;
   }
@@ -190,6 +191,11 @@ function documentVisibility(request: FastifyRequest) {
   if (context.viaPlatformRole || context.role === 'owner') return ['member', 'admin', 'owner'];
   if (context.role === 'admin') return ['member', 'admin'];
   return ['member'];
+}
+
+function documentSourceGate(request: FastifyRequest) {
+  const context = (request as any).tenantContext as TechDeckContext;
+  return resolutionDocumentReadable({ tenantId: context.tenantId, actorUserId: user(request), role: context.role }, techdeckDocuments.id);
 }
 
 async function assertTechDeckReferences(request: FastifyRequest, references: {
@@ -214,7 +220,7 @@ async function assertTechDeckReferences(request: FastifyRequest, references: {
   if (references.documentId) {
     const [row] = await db.select({ id: techdeckDocuments.id }).from(techdeckDocuments).where(and(
       eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, references.documentId), isNull(techdeckDocuments.archivedAt),
-      inArray(techdeckDocuments.minimumRole, documentVisibility(request)),
+      inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request),
     )).limit(1);
     if (!row) throw new TechDeckOpsValidationError('REFERENCE_NOT_FOUND', 'documentId');
   }
@@ -252,31 +258,16 @@ function parseDocument(raw: unknown, mode: 'create' | 'patch') {
   return { patch, changeNote: result.changeNote, expectedVersion: parseTechDeckVersion(body).expectedVersion };
 }
 
-async function insertRevision(executor: any, document: typeof techdeckDocuments.$inferSelect, actorId: string, changeNote: string | null) {
-  await executor.insert(techdeckDocumentRevisions).values({
-    tenantId: document.tenantId,
-    documentId: document.id,
-    version: document.version,
-    title: document.title,
-    summary: document.summary,
-    content: document.content,
-    status: document.status,
-    minimumRole: document.minimumRole,
-    tags: document.tags,
-    changeNote,
-    createdByUserId: actorId,
-  });
-}
-
 export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/v1/modules/techdeck/workspace', { preHandler: [...readGuards] }, async (request) => {
+  app.get('/v1/modules/techdeck/workspace', { preHandler: [...readGuards] }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
     const tenantId = tenant(request);
     const visibility = documentVisibility(request);
     const [configurationItems, relationships, folders, documents, evidence, reports, timeEntries, comments] = await Promise.all([
       db.select().from(techdeckAssets).where(and(eq(techdeckAssets.tenantId, tenantId), isNull(techdeckAssets.deletedAt))).orderBy(desc(techdeckAssets.updatedAt)).limit(250),
       db.select().from(techdeckConfigurationRelationships).where(and(eq(techdeckConfigurationRelationships.tenantId, tenantId), isNull(techdeckConfigurationRelationships.deletedAt))).orderBy(desc(techdeckConfigurationRelationships.createdAt)).limit(500),
       db.select().from(techdeckDocumentFolders).where(and(eq(techdeckDocumentFolders.tenantId, tenantId), isNull(techdeckDocumentFolders.archivedAt))).orderBy(asc(techdeckDocumentFolders.name)).limit(250),
-      db.select().from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenantId), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, visibility))).orderBy(desc(techdeckDocuments.updatedAt)).limit(250),
+      db.select().from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenantId), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, visibility), documentSourceGate(request))).orderBy(desc(techdeckDocuments.updatedAt)).limit(250),
       db.select().from(techdeckEvidence).where(and(eq(techdeckEvidence.tenantId, tenantId), isNull(techdeckEvidence.archivedAt))).orderBy(desc(techdeckEvidence.createdAt)).limit(250),
       db.select().from(techdeckReports).where(and(eq(techdeckReports.tenantId, tenantId), isNull(techdeckReports.archivedAt))).orderBy(desc(techdeckReports.createdAt)).limit(100),
       db.select().from(techdeckTimeEntries).where(and(eq(techdeckTimeEntries.tenantId, tenantId), isNull(techdeckTimeEntries.deletedAt))).orderBy(desc(techdeckTimeEntries.workedAt)).limit(250),
@@ -408,24 +399,29 @@ export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void
   });
 
   app.get('/v1/modules/techdeck/documents', { preHandler: [...readGuards] }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
     let limit;
     try { limit = pageLimit(request.query); } catch (error) { if (validationFailure(reply, error)) return; throw error; }
-    return db.select().from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenant(request)), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)))).orderBy(desc(techdeckDocuments.updatedAt)).limit(limit);
+    return db.select().from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenant(request)), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request))).orderBy(desc(techdeckDocuments.updatedAt)).limit(limit);
   });
 
   app.get('/v1/modules/techdeck/documents/:id', { preHandler: [...readGuards] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenantId = tenant(request);
-    const [document] = await db.select().from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, id), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)))).limit(1);
+    const [document] = await db.select().from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, id), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request))).limit(1);
     if (!document) return notFound(reply, 'document');
     const moduleId = await techDeckModuleId();
-    const [revisions, outboundLinks, inboundLinks, attachments] = await Promise.all([
-      db.select().from(techdeckDocumentRevisions).where(and(eq(techdeckDocumentRevisions.tenantId, tenantId), eq(techdeckDocumentRevisions.documentId, id))).orderBy(desc(techdeckDocumentRevisions.version)),
-      db.select().from(techdeckDocumentLinks).where(and(eq(techdeckDocumentLinks.tenantId, tenantId), eq(techdeckDocumentLinks.sourceDocumentId, id))),
-      db.select().from(techdeckDocumentLinks).where(and(eq(techdeckDocumentLinks.tenantId, tenantId), eq(techdeckDocumentLinks.targetDocumentId, id))),
+    const visibleDocuments = () => db.select({ id: techdeckDocuments.id }).from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenantId), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request)));
+    const [revisions, outboundLinks, inboundLinks, attachments, sourceRows] = await Promise.all([
+      db.select().from(techdeckDocumentRevisions).where(and(eq(techdeckDocumentRevisions.tenantId, tenantId), eq(techdeckDocumentRevisions.documentId, id), inArray(techdeckDocumentRevisions.minimumRole, documentVisibility(request)))).orderBy(desc(techdeckDocumentRevisions.version)),
+      db.select().from(techdeckDocumentLinks).where(and(eq(techdeckDocumentLinks.tenantId, tenantId), eq(techdeckDocumentLinks.sourceDocumentId, id), inArray(techdeckDocumentLinks.targetDocumentId, visibleDocuments()))),
+      db.select().from(techdeckDocumentLinks).where(and(eq(techdeckDocumentLinks.tenantId, tenantId), eq(techdeckDocumentLinks.targetDocumentId, id), inArray(techdeckDocumentLinks.sourceDocumentId, visibleDocuments()))),
       listAttachments({ tenantId, moduleId, objectType: 'document', objectId: id }),
+      db.execute(sql`SELECT l.incident_id AS "incidentId",l.revision AS "sourceRevision",l.document_version AS "documentVersion",i.active_revision AS "currentRevision",i.minimum_role AS "minimumRole"
+        FROM techdeck_resolution_document_links l JOIN techdeck_resolution_incidents i ON i.tenant_id=l.tenant_id AND i.id=l.incident_id
+        WHERE l.tenant_id=${tenantId} AND l.document_id=${id} ORDER BY l.incident_id,l.revision`),
     ]);
-    return { ...document, revisions, outboundLinks, inboundLinks, attachments };
+    return reply.header('Cache-Control', 'no-store').send({ ...document, revisions, outboundLinks, inboundLinks, attachments, resolutionSources: sourceRows.rows });
   });
 
   app.post('/v1/modules/techdeck/documents', { preHandler: [...writeGuards] }, async (request, reply) => {
@@ -458,7 +454,7 @@ export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void
     const actorId = user(request);
     const [current] = await db.select().from(techdeckDocuments).where(and(
       eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, id), isNull(techdeckDocuments.archivedAt),
-      inArray(techdeckDocuments.minimumRole, documentVisibility(request)),
+      inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request),
     )).limit(1);
     if (!current) return notFound(reply, 'document');
     if (current.status !== 'draft') return reply.code(409).send({ error: 'Only draft documents can be edited', code: 'DOCUMENT_NOT_DRAFT' });
@@ -471,7 +467,7 @@ export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void
     }
     catch (error) { if (validationFailure(reply, error)) return; throw error; }
     const updated = await db.transaction(async tx => {
-      const [document] = await tx.update(techdeckDocuments).set({ ...input.patch, version: sql`${techdeckDocuments.version} + 1`, updatedByUserId: actorId, updatedAt: new Date() }).where(and(eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, id), eq(techdeckDocuments.version, input.expectedVersion), eq(techdeckDocuments.status, 'draft'), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)))).returning();
+      const [document] = await tx.update(techdeckDocuments).set({ ...input.patch, version: sql`${techdeckDocuments.version} + 1`, updatedByUserId: actorId, updatedAt: new Date() }).where(and(eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, id), eq(techdeckDocuments.version, input.expectedVersion), eq(techdeckDocuments.status, 'draft'), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request), resolutionDocumentAudience(tenantId, techdeckDocuments.id, String(input.patch.minimumRole ?? current.minimumRole)))).returning();
       if (!document) return null;
       await insertRevision(tx, document, actorId, input.changeNote);
       await audit(tx, { tenantId, userId: actorId, action: 'updated', entityType: 'document', entityId: id, metadata: { changedFields: Object.keys(input.patch), version: document.version } });
@@ -490,8 +486,9 @@ export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void
       const tenantId = tenant(request);
       const actorId = user(request);
       const [document] = await db.transaction(async tx => {
-        const rows = await tx.update(techdeckDocuments).set({ status: to, [actorColumn]: actorId, [dateColumn]: new Date(), version: sql`${techdeckDocuments.version} + 1`, updatedByUserId: actorId, updatedAt: new Date() }).where(and(eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, id), eq(techdeckDocuments.status, from), eq(techdeckDocuments.version, expectedVersion), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)))).returning();
+        const rows = await tx.update(techdeckDocuments).set({ status: to, [actorColumn]: actorId, [dateColumn]: new Date(), version: sql`${techdeckDocuments.version} + 1`, updatedByUserId: actorId, updatedAt: new Date() }).where(and(eq(techdeckDocuments.tenantId, tenantId), eq(techdeckDocuments.id, id), eq(techdeckDocuments.status, from), eq(techdeckDocuments.version, expectedVersion), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request), resolutionDocumentCurrent(tenantId, techdeckDocuments.id))).returning();
         if (!rows[0]) return [];
+        await insertRevision(tx, rows[0], actorId, `Workflow transition: ${from} to ${to}`);
         await audit(tx, { tenantId, userId: actorId, action: to, entityType: 'document', entityId: id, metadata: { fromStatus: from, toStatus: to } });
         return rows;
       });
@@ -511,7 +508,7 @@ export async function registerTechDeckRoutes(app: FastifyInstance): Promise<void
     const { id } = request.params as { id: string };
     if (id === targetDocumentId) return reply.code(400).send({ error: 'A document cannot link to itself', code: 'DOCUMENT_LINK_SELF_FORBIDDEN' });
     const tenantId = tenant(request);
-    const documents = await db.select({ id: techdeckDocuments.id }).from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenantId), inArray(techdeckDocuments.id, [id, targetDocumentId]), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request))));
+    const documents = await db.select({ id: techdeckDocuments.id }).from(techdeckDocuments).where(and(eq(techdeckDocuments.tenantId, tenantId), inArray(techdeckDocuments.id, [id, targetDocumentId]), isNull(techdeckDocuments.archivedAt), inArray(techdeckDocuments.minimumRole, documentVisibility(request)), documentSourceGate(request)));
     if (documents.length !== 2) return notFound(reply, 'document');
     const [link] = await db.insert(techdeckDocumentLinks).values({ tenantId, sourceDocumentId: id, targetDocumentId, label, createdByUserId: user(request) }).returning();
     await audit(db, { tenantId, userId: user(request), action: 'linked', entityType: 'document', entityId: id, metadata: { targetDocumentId } });

@@ -10,6 +10,7 @@ import { parseResolutionJson, ResolutionInputError } from '../lib/techdeck-resol
 import { machineEvidenceExportSchema } from '../../../../packages/sdk/src/techdeck-resolution.js';
 import { ticketCompletionPrompt, ticketCompletionShortcut, ticketCompletionPromptSha256, machineEvidenceTemplate } from '../generated/techdeck-resolution-contract.js';
 import { listResolutionIncidents, resolutionSummary, resolutionDetail, resolutionSection, resolutionHistory, downloadResolutionRaw, updateResolutionIncident, searchResolutionIncidents, relatedResolutionIncidents, resolutionLinkOptions, resolutionFilters } from '../lib/techdeck-resolution-workspace.js';
+import { previewResolutionDraft, createResolutionDraft, listResolutionDocuments, linkResolutionDocument } from '../lib/techdeck-resolution-documents.js';
 
 const nativeBase = '/v1/modules/techdeck/resolution-intelligence';
 const headlessBase = '/v1/headless/techdeck/resolution-intelligence';
@@ -77,6 +78,13 @@ export async function registerTechDeckResolutionRoutes(parent: FastifyInstance) 
     });
     const reads = { onRequest: [...readGuards, nativeContext] };
     const writes = { onRequest: [...nativeGuards, nativeContext, limit] };
+    app.get(`${nativeBase}/documents`, reads, request => listResolutionDocuments(contexts.get(request)!, request.query as Record<string, unknown>));
+    app.post(`${nativeBase}/incidents/:id/document-links`, writes, request => linkResolutionDocument(contexts.get(request)!, (request.params as { id: string }).id, request.body));
+    app.post(`${nativeBase}/incidents/:id/document-drafts/preview`, writes, request => previewResolutionDraft(contexts.get(request)!, (request.params as { id: string }).id, request.body));
+    app.post(`${nativeBase}/incidents/:id/document-drafts`, writes, async (request, reply) => {
+      const result = await createResolutionDraft(contexts.get(request)!, (request.params as { id: string }).id, request.body, String(request.headers['idempotency-key'] ?? ''));
+      return reply.code('replayed' in result || 'existing' in result && result.existing ? 200 : 201).send(result);
+    });
     app.get(`${nativeBase}/capabilities`, reads, async request => ({
       canWrite: contexts.get(request)!.role !== 'viewer' && ['user', 'manager'].includes((request as any).tenantModuleAccessLevel),
       canManage: ['admin', 'owner'].includes(contexts.get(request)!.role) && ['user', 'manager'].includes((request as any).tenantModuleAccessLevel),

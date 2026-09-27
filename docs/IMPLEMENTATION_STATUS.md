@@ -1,5 +1,90 @@
 # OperatorOS implementation status
 
+## TechDeck Resolution Intelligence Phase 4 continuation (2026-09-27 UTC)
+
+Status: **EVIDENCE-DERIVED DOCUMENTS IMPLEMENTED / LOCAL VERIFICATION PASSED / NOT DEPLOYED**.
+Branch `codex/techdeck-evidence-documents` starts from clean fetched main
+`c800265`, an empty publication marker after PR #106 / Phase 3 merge `307a774`.
+The merge run was cancelled. The publication-marker
+[release run](https://github.com/shotgunsensei/OperatorOS/actions/runs/36334015348)
+failed API/integration because the Phase 3 test's private database-name regex
+rejected CI's `operatoros_phase21_release`; its 31 browser and 4 visual cases
+passed. Phase 3/4 tests now reuse the unchanged root disposable-database guard.
+The guard accepts that CI service name and still rejects missing opt-in,
+non-loopback targets, persistent names and connection-parameter overrides.
+
+Implemented Phase 4 / deterministic Prompt 7: nonpersistent KB/runbook preview,
+explicit source/privacy review, idempotent linked drafts, existing document
+editing/revisions/review/approval/publication, many-to-one incident references,
+paginated linked knowledge and source-change warnings. Generic document reads,
+links, references, attachments and mutations enforce all linked sources; broader
+compliance packets exclude these documents/activity and declare that exclusion.
+No schema step, AI provider, embedding or public-library feature is added.
+See [the document guide](techdeck/resolution-intelligence-documents.md) and
+[the consistency, visual and security review](techdeck/resolution-intelligence-phase4-review.md).
+
+Environment: Windows PowerShell, Node 24.19.0, pnpm 10.34.5. All database tests
+use the task-owned PostgreSQL 16 container `operatoros-resolution-phase4-disposable`,
+loopback 55467, database `operatoros_resolution_phase4_test`. `CI=true`,
+`PARITY_DATABASE_IS_DISPOSABLE=1`, deterministic provider mode, synthetic test
+secrets and no live provider credentials. API/unit/integration use test mode;
+build/preflight/browser use production mode and `INTERNAL_API_URL=http://localhost:5001`.
+Browser runs use the compiled readiness supervisor and canonical-host loopback TLS.
+
+| Exact command / check | Fresh result |
+| --- | --- |
+| `OPERATOROS_DATABASE_RELEASE_MODE=apply`; `corepack pnpm db:apply` on owned database | PASS, v64/64 |
+| `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/techdeck-resolution-documents.test.ts test/techdeck-ops-workflows.test.ts test/techdeck-state5-workflow.test.ts test/help-center-contract.test.ts` | 20 passed, 0 failed/skipped/cancelled/todo; 12 new document cases, 3 existing TechDeck cases and 5 Help cases |
+| `corepack pnpm typecheck` | PASS, all four workspaces; final production build repeats this gate |
+| `corepack pnpm test:unit` | 52 passed, 0 failed/skipped/cancelled/todo |
+| `corepack pnpm verify:hardening:phase39` | PASS: secret scanner/dependencies, 15 script and 16 API/preflight checks; SBOM regenerated |
+| `corepack pnpm test:route-integrity`; `node scripts/parity/verify-visual-contracts.mjs` | PASS: 1,304 historical active capabilities, 974 crawl routes, 0 failures; 13 static visual contracts |
+| `corepack pnpm test:api` | 1,587 passed, 0 failed/skipped/cancelled/todo; 617.4s |
+| `corepack pnpm test:integration` | 102 passed, 0 failed/skipped/cancelled/todo, 51.4s; isolated schema reset, root apply/reapply and independent verification |
+| `corepack pnpm build:production` | PASS after canonical detail-route and full-document response corrections: generated contracts, four workspace typechecks, SDK/API/runner builds and Next production build (38 pages) |
+| `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/techdeck-literal-static.test.ts test/phase51-route-applications.test.ts`; `corepack pnpm test:route-integrity` | 7 passed, 0 failed/skipped/cancelled/todo; fresh route inventory still 1,304 capabilities / 974 routes / 0 failures after the allowlist fix |
+| `corepack pnpm preflight:production -- --core`; `corepack pnpm db:plan` | PASS; manifest remains v64/64 |
+| `node scripts/parity/run-browser-tests.mjs --suite all` | Final clean-database aggregate: **32 browser journeys passed (6.5m), 4 visual cases passed (1.6m)**; 0 failed/skipped/retries, unchanged baselines/tolerance. Earlier failed/interrupted aggregate retained separately |
+| `$env:PARITY_BROWSER_GREP='TechDeck evidence documents'; node scripts/parity/run-browser-tests.mjs --suite e2e` | Corrected focused run: 1 passed, 0 failed/skipped/retries, 22.0s; final aggregate reruns it |
+
+Fresh logs use `build/resolution-phase4-*.log`; the source-only CI guard probe is
+`build/resolution-phase4-database-guard.log` and opens no connection. Initial
+focused testing found a missing required actor field in the synthetic directory
+fixture, corrected before the passing focused run. The first browser attempt
+failed on a missing canonical document-detail allowlist entry. The second reached
+editing and exposed discarded detail metadata, alongside an exact-label selector
+failure in the draft picker. Routing/detail merge and the test locator were
+corrected; production artifacts rebuilt. Failed attempts remain in
+`build/resolution-phase4-browser-focused.log` and `-focused-2.log`; the passing
+focused attempt is `-focused-3.log`. The final build is
+`build/resolution-phase4-build-final-2.log`. The initial aggregate and its runtime
+log are `-browser-all.log` and `-browser-all-runtime.log`. Its failing retry was
+terminated after confirming the rate-limit cause. The new test now uses a separate
+synthetic client address at the trusted local proxy, matching the SSO harness;
+the production limit remains 10 logins per 15 minutes. Final verification uses
+the guarded disposable reset helper (`node build/resolution-phase4-reset.mjs`),
+fresh `OPERATOROS_DATABASE_RELEASE_MODE=apply; corepack pnpm db:apply`, then
+`Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE` before the full browser/visual
+command. An initial startup attempt correctly rejected the leftover apply-mode
+variable before serving; that environment-only correction is retained in
+`-browser-startup-rejected.log` and `-browser-startup-runtime.log`.
+Clean database/browser logs are `-final-reset.log`, `-final-apply.log`
+and `-browser-all-final.log`. Final gates have no skips; no policy thresholds
+were relaxed. Six final synthetic screenshots are retained under
+[`docs/techdeck/evidence/phase4/`](techdeck/evidence/phase4/README.md).
+The final API/integration source was unchanged by the browser fixes, which changed
+only web routing/detail merge and test setup/locators/capture. Candidate CI, Linux screenshots and target-deployment
+acceptance remain separate gates. No lint or formatting result is claimed.
+
+Phase 5 (semantic retrieval, remaining Prompt 5) is next. No embedding or AI
+provider is activated. Historical source parity counts remain unchanged. The
+working changes are uncommitted; no push or deployment was performed.
+Cleanup verified the owned container ID before removing
+`operatoros-resolution-phase4-disposable` and its disposable volume. Runtime
+ports 443/5000/5001/5002 are closed. The five unrelated CallCommand screenshots
+regenerated by shared tests were restored; final `git diff --check` passes.
+
+
 ## TechDeck Resolution Intelligence Phase 3 continuation (2026-09-27 UTC)
 
 Status: **TECHNICIAN V1 IMPLEMENTED / LOCAL VERIFICATION PASSED / NOT DEPLOYED**.

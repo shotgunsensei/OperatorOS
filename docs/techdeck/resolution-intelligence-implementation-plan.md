@@ -1,6 +1,17 @@
 # TechDeck Resolution Intelligence implementation plan
 
-Status: **PHASES 0–3 IMPLEMENTED; PHASE 3 LOCALLY VERIFIED; NOT DEPLOYED**
+Status: **PHASES 0–4 IMPLEMENTED; LOCAL VERIFICATION PASSED; NOT DEPLOYED**
+
+Phase 4 continuation (2026-09-27 UTC): Phase 3 merged via PR #106 (`307a774`);
+fetched main `c800265` is an empty publication marker. This candidate adds
+deterministic KB/runbook previews, linked drafts, document editing/revisions,
+existing approval, multiple sources, generic-route source access and stale-source
+protection. Final local gates pass: 1,587 API, 102 integration, 32 browser journeys
+and 4 visual cases, plus build/typechecks and supporting gates. See the
+[completed review](resolution-intelligence-phase4-review.md),
+[document guide](resolution-intelligence-documents.md) and
+[current verification](../IMPLEMENTATION_STATUS.md). The cancelled merge CI run
+is not release acceptance. Storage remains v64/64.
 
 Phase 3 continuation (2026-09-27 UTC): latest fetched main is `0c74dc5`, merging
 Phase 2 implementation `ce69284` in PR #105. Its merge release gate failed on a
@@ -12,8 +23,8 @@ See the [Phase 3 review](resolution-intelligence-phase3-review.md),
 [API contract](resolution-intelligence-api.md) and
 [current verification](../IMPLEMENTATION_STATUS.md). Storage remains v64.
 
-The next implementation phase is **Phase 4: Evidence-derived documents**,
-mapping to the deterministic portion of Prompt 7. Section 12 is the persisted
+The next implementation phase after this candidate is **Phase 5: Semantic retrieval**,
+mapping to the remaining portion of Prompt 5. Section 12 is the persisted
 prompt-to-phase list. The canonical closeout prompt and shortcut are linked in
 this document; the complete original multi-prompt attachment is not present in
 the repository. Historical audit findings below describe the starting state and
@@ -609,10 +620,10 @@ Node 20; local Node 24 results require separate CI confirmation.
 
 ## 12. Implementation phases and exit criteria
 
-Current progress: phases 0–3 are implemented and locally verified; exact gate
-results and the corrected browser-test chronology are recorded in
+Current progress: phases 0–4 are implemented and locally verified. Exact gate
+results and the browser-test corrections and clean rerun are recorded in
 [implementation status](../IMPLEMENTATION_STATUS.md). Candidate CI and publication
-remain separate gates. Phase 4 is next. Later phases remain open. The mapping below preserves the supplied prompt numbering and original
+remain separate gates. Phase 5 is next. Later phases remain open. The mapping below preserves the supplied prompt numbering and original
 exit criteria; it does not imply that later features are available.
 
 | Phase | Supplied prompt mapping | Concrete output and exit gate |

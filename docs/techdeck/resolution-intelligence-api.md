@@ -1,9 +1,11 @@
 # Resolution Intelligence API
 
-Phases 2–3 / supplied Prompts 3, 4, exact/full-text portions of 5, and 10,
+Phases 2–4 / supplied Prompts 3, 4, exact/full-text portions of 5, deterministic 7, and 10,
 2026-09-27 UTC. Ingestion and the technician workspace use the existing v64
-storage release. Document generation, embeddings, research, analytics and
-command execution remain later scope. See the Phase 3 review for verification.
+storage release. Phase 4 adds deterministic document previews, draft creation,
+multiple source links and a knowledge library with generic document access and
+approval protections. See [the document API contract](resolution-intelligence-documents.md#api-contract).
+Embeddings, AI research and analytics remain later scope; commands are inert.
 
 ## Endpoints and authority
 

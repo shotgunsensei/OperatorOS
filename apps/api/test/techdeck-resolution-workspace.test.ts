@@ -12,6 +12,7 @@ import { registerTechDeckResolutionRoutes } from '../src/routes/techdeck-resolut
 import { importResolutionExport, type ResolutionContext } from '../src/lib/techdeck-resolution-ingestion.js';
 import { extractResolutionIdentifiers } from '../src/lib/techdeck-resolution-search.js';
 import { ticketCompletionPrompt, ticketCompletionPromptSha256 } from '../src/generated/techdeck-resolution-contract.js';
+import { assertDisposableDatabaseEnvironment } from '../../../scripts/parity/lib/database.mjs';
 
 const rawText = readFileSync(new URL('./fixtures/techdeck-resolution-cam-wal-v1.json', import.meta.url), 'utf8');
 const base = '/v1/modules/techdeck/resolution-intelligence';
@@ -30,7 +31,7 @@ async function imported(title: string, actor = owner, change?: (data: any) => vo
   return importResolutionExport(context(actor), { rawText: JSON.stringify(data), humanReport: null, links: {} }, randomUUID());
 }
 before(async () => {
-  const url = new URL(process.env.DATABASE_URL ?? 'invalid:'); assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)); assert.match(url.pathname, /(?:test|disposable|ci)/i); assert.equal(process.env.PARITY_DATABASE_IS_DISPOSABLE, '1'); assert.equal(process.env.APP_ENV, 'test');
+  assertDisposableDatabaseEnvironment(process.env); assert.equal(process.env.APP_ENV, 'test');
   await ensureSchemaReady(); ({ signToken } = await import('../src/lib/auth.js'));
   for (let index = 0; index < 7; index++) actors.push(await createTestUser());
   [owner, foreign, member, viewer, moduleViewer, admin, portal] = actors;

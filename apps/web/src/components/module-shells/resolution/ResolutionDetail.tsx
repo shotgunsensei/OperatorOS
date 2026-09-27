@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { display, label, resolutionRequest, resolutionBase, saveText, useResolution, type RecordRow, type Page } from './resolution-client';
 import { Fields, IncidentCards, LinkPicker, LoadState, Status } from './ResolutionShared';
 import ResolutionImport from './ResolutionImport';
+import ResolutionDocuments from './ResolutionDocuments';
 import styles from './Resolution.module.css';
 
 const names: Record<string, string> = { actions: 'Timeline and attempts', side_effects: 'Side effects and recovery', validations: 'Validation evidence', commands: 'Commands and scripts', evidence_links: 'Evidence and measurements', incident_assets: 'Affected devices', root_causes: 'Root cause claims', followups: 'Follow-up work', quality_notes: 'Missing or conflicting information' };
@@ -65,6 +66,7 @@ export default function ResolutionDetail({ tenantId, id, history, canWrite, canM
       <EvidenceSection key={`${row.version}-side_effects`} tenantId={tenantId} id={id} name="side_effects" count={row.section_counts.side_effects} revision={row.active_revision} open />
       {Object.entries(row.section_counts).filter(([name, count]) => !['warnings', 'validations', 'actions', 'side_effects'].includes(name) && Number(count) > 0).map(([name, count]) => <EvidenceSection key={`${row.version}-${name}`} tenantId={tenantId} id={id} name={name} count={Number(count)} revision={row.active_revision} />)}
       <details className={styles.section}><summary>Incident classification and native record links</summary><div><Fields row={row} omit={['section_counts']} /></div></details>
+      <ResolutionDocuments key={`documents-${row.version}`} tenantId={tenantId} incident={row} canWrite={canWrite} hrefFor={hrefFor} />
       <section className={styles.panel}><h2>Related incidents</h2><p className={styles.muted}>Shared exact identifiers explain these matches. Relevance is not a probability of successful repair.</p><LoadState loading={related.loading} error={related.error} retry={related.reload} />{related.data && <IncidentCards items={related.data.items} hrefFor={hrefFor} />}</section>
       {canWrite && <ReviewEditor key={row.version} tenantId={tenantId} row={row} canManage={canManage} canSetOwnerVisibility={canSetOwnerVisibility} onArchived={() => setArchived(true)} reload={detail.reload} />}
     </>}

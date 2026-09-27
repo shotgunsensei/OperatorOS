@@ -8,6 +8,7 @@ import { IncidentCards, LinkPicker, LoadState } from './ResolutionShared';
 import ResolutionDetail from './ResolutionDetail';
 import ResolutionImport from './ResolutionImport';
 import ResolutionPrompt from './ResolutionPrompt';
+import ResolutionDocuments from './ResolutionDocuments';
 import styles from './Resolution.module.css';
 
 function SearchWorkspace({ tenantId, canWrite, hrefFor }: { tenantId: string; canWrite: boolean; hrefFor: (path: string) => string }) {
@@ -51,10 +52,10 @@ export default function TechDeckResolutionWorkspace({ tenantId, route, hrefFor }
   const access = useResolution<{ canWrite: boolean; canManage: boolean; canDownloadRaw: boolean; canSetOwnerVisibility: boolean }>(tenantId, '/capabilities');
   const view = route.resolutionView ?? 'home';
   return <div className={styles.workspace} id="techdeck-resolution" data-testid="techdeck-resolution-workspace">
-    <nav className={styles.toolbar} aria-label="Resolution workspace"><Link href={hrefFor('/resolution-intelligence')} aria-current={view === 'home' ? 'page' : undefined}>Recent incidents</Link><Link href={hrefFor('/resolution-intelligence/search')} aria-current={view === 'search' ? 'page' : undefined}>Search</Link>{access.data?.canWrite && <Link href={hrefFor('/resolution-intelligence/import')} aria-current={view === 'import' ? 'page' : undefined}>Import closeout pack</Link>}<Link href={hrefFor('/settings/ai-integration/ticket-completion-prompt')} aria-current={view === 'prompt' ? 'page' : undefined}>Prompt and templates</Link></nav>
+    <nav className={styles.toolbar} aria-label="Resolution workspace"><Link href={hrefFor('/resolution-intelligence')} aria-current={view === 'home' ? 'page' : undefined}>Recent incidents</Link><Link href={hrefFor('/resolution-intelligence/search')} aria-current={view === 'search' ? 'page' : undefined}>Search</Link>{access.data?.canWrite && <Link href={hrefFor('/resolution-intelligence/import')} aria-current={view === 'import' ? 'page' : undefined}>Import closeout pack</Link>}<Link href={hrefFor('/resolution-intelligence/kb')} aria-current={view === 'kb' ? 'page' : undefined}>Linked knowledge</Link><Link href={hrefFor('/settings/ai-integration/ticket-completion-prompt')} aria-current={view === 'prompt' ? 'page' : undefined}>Prompt and templates</Link></nav>
     <LoadState loading={access.loading} error={access.error} retry={access.reload} />
     {access.data && <>{!access.data.canWrite && <p className={styles.notice}>Read-only access: review saved evidence and search short identifiers. Importing and editing require technician write access.</p>}
-      {view === 'prompt' ? <ResolutionPrompt tenantId={tenantId} /> : view === 'import' ? access.data.canWrite ? <ResolutionImport tenantId={tenantId} hrefFor={hrefFor} /> : <p role="alert" className={styles.error}>Your current access does not allow evidence imports.</p> : route.recordId ? <ResolutionDetail tenantId={tenantId} id={route.recordId} history={view === 'history'} canWrite={access.data.canWrite} canManage={access.data.canManage} canDownloadRaw={access.data.canDownloadRaw} canSetOwnerVisibility={access.data.canSetOwnerVisibility} hrefFor={hrefFor} /> : <SearchWorkspace tenantId={tenantId} canWrite={access.data.canWrite} hrefFor={hrefFor} />}
+      {view === 'prompt' ? <ResolutionPrompt tenantId={tenantId} /> : view === 'kb' ? <ResolutionDocuments tenantId={tenantId} hrefFor={hrefFor} /> : view === 'import' ? access.data.canWrite ? <ResolutionImport tenantId={tenantId} hrefFor={hrefFor} /> : <p role="alert" className={styles.error}>Your current access does not allow evidence imports.</p> : route.recordId ? <ResolutionDetail tenantId={tenantId} id={route.recordId} history={view === 'history'} canWrite={access.data.canWrite} canManage={access.data.canManage} canDownloadRaw={access.data.canDownloadRaw} canSetOwnerVisibility={access.data.canSetOwnerVisibility} hrefFor={hrefFor} /> : <SearchWorkspace tenantId={tenantId} canWrite={access.data.canWrite} hrefFor={hrefFor} />}
     </>}
   </div>;
 }

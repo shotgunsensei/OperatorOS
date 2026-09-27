@@ -51,3 +51,4 @@
 .assetMap { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
 @media(max-width:850px) { .cards { grid-template-columns:1fr; } }
 @media(max-width:600px) { .stats,.filters,.fields,.assetMap { grid-template-columns:1fr; } .workspace { gap:16px; } .panel,.card { padding:16px; } .toolbar { gap:7px; } .toolbar a { padding:7px 10px; font-size:13px; } .stat strong { font-size:25px; } .section > div { padding:0 12px 12px; } .command { font-size:12px; } }
+.draftPreview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 32rem; overflow: auto; padding: 1rem; border: 1px solid #263348; border-radius: 8px; background: #080d16; font-size: .82rem; line-height: 1.65; }

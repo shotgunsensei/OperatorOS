@@ -1,5 +1,22 @@
 # TechDeck zero-gap parity matrix
 
+## Resolution Intelligence Phase 4 overlay (2026-09-27 UTC)
+
+Evidence-derived KB/runbook previews and linked drafts now use the existing
+document editor, revision store and review/approval/publication workflow.
+Additional incident links preserve edits. Every linked source restricts generic
+document access; changed source revisions block workflow advancement. Broader
+compliance packets exclude these documents and declare the exclusion.
+Twenty focused, 1,587 API, 102 integration, 32 browser journeys and 4 visual cases
+pass, plus production build/typechecks, hardening and supporting gates. Browser
+navigation/detail issues were corrected and the final aggregate ran on a clean
+disposable database; no baselines or policy limits were weakened. See
+[implementation status](../../IMPLEMENTATION_STATUS.md) for exact evidence and
+[the document guide](../../techdeck/resolution-intelligence-documents.md) for
+scope and rollback constraints. Storage stays v64; historical parity counts and
+deployment readiness are not promoted. Phase 5 semantic retrieval remains next.
+
+
 ## Resolution Intelligence Phase 3 overlay (2026-09-27 UTC)
 
 Technician V1 is implemented above the merged v64 storage/ingestion foundation:

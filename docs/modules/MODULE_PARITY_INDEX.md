@@ -1,5 +1,19 @@
 # OperatorOS module parity index
 
+## Resolution Intelligence document continuation (2026-09-27 UTC)
+
+Status: **PARITY COUNTS UNCHANGED / PHASE 4 IMPLEMENTED / LOCAL VERIFICATION PASSED**.
+
+| Surface | Current scope/evidence | Remaining gate |
+| --- | --- | --- |
+| TechDeck Resolution Intelligence / linked knowledge | Deterministic previews, linked KB/runbook drafts, existing editor/revisions/approval, many-to-one provenance, source access on generic documents, stale-source protection and compliance exclusion; 20 focused, 1,587 API, 102 integration, 32 browser and 4 visual checks pass with build/typechecks and supporting gates | Candidate CI and separately authorized target-deployment acceptance/release |
+| Prompt map | Phase 4 maps to deterministic Prompt 7; canonical prompt unchanged; storage v64 | Phase 5 semantic retrieval requires verified environment/provider capabilities |
+
+See [implementation status](../IMPLEMENTATION_STATUS.md) and the
+[document guide](../techdeck/resolution-intelligence-documents.md). Source parity
+counts and deployed-readiness claims are unchanged.
+
+
 ## Resolution Intelligence Technician V1 continuation (2026-09-27 UTC)
 
 Status: **PARITY COUNTS UNCHANGED / PHASE 3 IMPLEMENTED / LOCAL VERIFICATION PASSED**.

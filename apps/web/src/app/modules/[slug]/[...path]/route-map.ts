@@ -50,6 +50,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/resolution-intelligence': { sectionId: 'techdeck-resolution', label: 'Resolution Intelligence' },
     '/resolution-intelligence/search': { sectionId: 'techdeck-resolution', label: 'Search Resolution Evidence' },
     '/resolution-intelligence/import': { sectionId: 'techdeck-resolution', label: 'Import Resolution Evidence' },
+    '/resolution-intelligence/kb': { sectionId: 'techdeck-resolution', label: 'Evidence-derived Knowledge' },
     '/settings/ai-integration/ticket-completion-prompt': { sectionId: 'techdeck-resolution', label: 'Ticket Completion Prompt' },
     '/resolution-intelligence/ai-integration/ticket-completion-prompt': { sectionId: 'techdeck-resolution', label: 'Ticket Completion Prompt' },
     '/dashboard': { sectionId: 'techdeck-overview', label: 'Overview', redirectPath: '/' },
@@ -419,7 +420,7 @@ export function resolveCoreModuleDeepLink(
     const [resource] = pathSegments;
     if (resource === 'assets' || resource === 'inventory') return { sectionId: 'techdeck-inventory', label: 'Configuration Item' };
     if (resource === 'runbooks') return { sectionId: 'techdeck-runbooks', label: 'Runbook' };
-    if (resource === 'documents' || resource === 'kb' || resource === 'knowledge-base') return { sectionId: 'techdeck-documentation', label: 'Document' };
+    if (resource === 'documentation' || resource === 'documents' || resource === 'kb' || resource === 'knowledge-base') return { sectionId: 'techdeck-documentation', label: 'Document' };
     if (resource === 'tickets') return { sectionId: 'techdeck-ticket-queue', label: 'Ticket Record' };
     if (resource === 'clients') return { sectionId: 'techdeck-directory', label: 'Managed Client Record' };
     if (resource === 'evidence') return { sectionId: 'techdeck-evidence', label: 'Evidence Record' };
