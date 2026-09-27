@@ -2,6 +2,21 @@
 
 Status: current execution plan
 
+## TechDeck evidence-derived documents continuation (2026-09-27 UTC)
+
+Phase 3 merged in PR #106 (`307a774`); fetched main is `c800265`, an empty
+publication marker. Phase 4 / deterministic Prompt 7 adds previewed KB/runbook
+drafts in existing documents, generic-route source guards, many-to-one links,
+stale-source approval protection and document editing/revisions. Local verification
+passes on `codex/techdeck-evidence-documents`: 1,587 API, 102 integration,
+32 browser journeys and 4 visual cases, plus production build and supporting gates.
+The exact-merge Phase 3
+release run was cancelled, not accepted as green CI. See the
+[document guide](docs/techdeck/resolution-intelligence-documents.md),
+[completed review](docs/techdeck/resolution-intelligence-phase4-review.md) and
+[current evidence](docs/IMPLEMENTATION_STATUS.md). Storage remains v64.
+Phase 5 semantic retrieval is next; no AI, embeddings or deployment is enabled.
+
 ## TechDeck Resolution Intelligence continuation (2026-09-27 UTC)
 
 PR #104 merged Phase 1 contract/storage in `8f8e370`; its exact-revision GitHub

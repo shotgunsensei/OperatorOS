@@ -98,7 +98,9 @@ export async function buildTechDeckCompliancePacket(input: {
       details, tags, version, created_at, updated_at FROM techdeck_assets WHERE tenant_id=${input.tenantId} AND deleted_at IS NULL ORDER BY id`),
     db.execute(sql`SELECT id, page_type, title, slug, summary, content, status, minimum_role, tags, version,
       reviewed_at, approved_at, published_at, created_at, updated_at FROM techdeck_documents
-      WHERE tenant_id=${input.tenantId} AND archived_at IS NULL ORDER BY id`),
+      WHERE tenant_id=${input.tenantId} AND archived_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM techdeck_resolution_document_links source_link WHERE source_link.tenant_id=techdeck_documents.tenant_id AND source_link.document_id=techdeck_documents.id)
+      ORDER BY id`),
     db.execute(sql`SELECT e.id, e.title, e.evidence_type, e.summary, e.source_reference, e.observed_at, e.tags,
       e.version, e.created_at, COALESCE(jsonb_agg(jsonb_build_object('sha256', f.sha256, 'name', f.original_name,
       'attachmentId', f.shared_attachment_id)) FILTER (WHERE f.id IS NOT NULL), '[]'::jsonb) AS files
@@ -116,7 +118,10 @@ export async function buildTechDeckCompliancePacket(input: {
         FROM techdeck_license_keys k WHERE k.tenant_id=p.tenant_id AND k.product_id=p.id), '[]'::jsonb) AS keys
       FROM techdeck_license_products p WHERE p.tenant_id=${input.tenantId} AND p.archived_at IS NULL ORDER BY p.id`),
     db.execute(sql`SELECT action, entity_type, entity_id, metadata, created_at FROM activity_feed
-      WHERE tenant_id=${input.tenantId} AND (entity_type LIKE 'techdeck_%' OR action LIKE 'techdeck_%') ORDER BY created_at, id LIMIT 5000`),
+      WHERE tenant_id=${input.tenantId} AND (entity_type LIKE 'techdeck_%' OR action LIKE 'techdeck_%')
+        AND NOT EXISTS (SELECT 1 FROM techdeck_resolution_document_links source_link WHERE source_link.tenant_id=activity_feed.tenant_id
+          AND (source_link.document_id=activity_feed.entity_id OR source_link.document_id=activity_feed.metadata->>'targetDocumentId'))
+      ORDER BY created_at, id LIMIT 5000`),
   ]);
   const dataEntries: ZipEntry[] = [
     { name: 'records/activity.json', content: json(activity.rows) },
@@ -133,6 +138,7 @@ export async function buildTechDeckCompliancePacket(input: {
     tenantId: input.tenantId,
     moduleId: input.moduleId,
     filters: stableValue(input.filters),
+    exclusions: ['Incident-linked documents and their document activity require source-level authorization and are excluded from this tenant-wide packet.'],
     entries: dataEntries.map(entry => ({
       path: entry.name,
       bytes: entry.content.length,

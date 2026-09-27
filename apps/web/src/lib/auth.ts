@@ -1305,6 +1305,8 @@ export interface TechDeckDocument {
   id: string; title: string; slug: string; pageType: string; summary: string | null; content: string;
   status: 'draft' | 'in_review' | 'approved' | 'published' | 'archived'; minimumRole: 'member' | 'admin' | 'owner';
   tags: string[]; version: number; updatedAt: string; directoryOrganizationId: string | null; directorySiteId: string | null;
+  resolutionSources?: Array<{ incidentId: string; sourceRevision: number; documentVersion: number; currentRevision: number; minimumRole: string }>;
+  revisions?: Array<{ id: string; version: number; title: string; content: string; status: string; changeNote: string | null }>;
 }
 export interface TechDeckEvidence {
   id: string; title: string; evidenceType: string; summary: string | null; configurationItemId: string | null; documentId: string | null; ticketId: string | null; observedAt: string | null; createdAt: string;
@@ -2239,6 +2241,8 @@ export const moduleShellApi = {
       apiFetch('/modules/techdeck/relationships', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckConfigurationRelationship>,
     createDocument: (input: { title: string; pageType: string; content: string; summary?: string; directoryOrganizationId?: string }): Promise<TechDeckDocument> =>
       apiFetch('/modules/techdeck/documents', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckDocument>,
+    updateDocument: (id: string, input: { expectedVersion: number; title: string; content: string; changeNote: string }): Promise<TechDeckDocument> =>
+      apiFetch(`/modules/techdeck/documents/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TechDeckDocument>,
     transitionDocument: (id: string, expectedVersion: number, transition: 'review' | 'approve' | 'publish'): Promise<TechDeckDocument> =>
       apiFetch(`/modules/techdeck/documents/${encodeURIComponent(id)}/${transition}`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<TechDeckDocument>,
     createEvidence: (input: { title: string; evidenceType: string; summary?: string; configurationItemId?: string }): Promise<TechDeckEvidence> =>

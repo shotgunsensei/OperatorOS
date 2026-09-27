@@ -18,7 +18,7 @@ export default function ResolutionPrompt({ tenantId }: { tenantId: string }) {
   }, [tenantId, retry]);
   async function copy(key: string, title: string) { try { await navigator.clipboard.writeText(data![key]); setStatus(`${title} copied.`); } catch { setStatus('Clipboard access is unavailable. Use Download or select the text below.'); } }
   return <>
-    <section className={styles.panel}><h2>One canonical closeout format</h2><p>Use the full prompt in your existing troubleshooting conversation. The shortcut invokes that prompt; the JSON template is the export shape, and JSON Schema is the validation contract.</p><p className={styles.muted}>Schema version 1.0 · Exact and full-text search are available. AI research, embeddings, and generated document drafts are not enabled in this phase.</p>{sha && <small className={styles.source}>Canonical prompt SHA-256: {sha}</small>}</section>
+    <section className={styles.panel}><h2>One canonical closeout format</h2><p>Use the full prompt in your existing troubleshooting conversation. The shortcut invokes that prompt; the JSON template is the export shape, and JSON Schema is the validation contract.</p><p className={styles.muted}>Schema version 1.0 · Exact and full-text search and evidence-derived document drafts are available. AI research and embeddings are not enabled.</p>{sha && <small className={styles.source}>Canonical prompt SHA-256: {sha}</small>}</section>
     {error && <div className={styles.error} role="alert">{error} <button onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
     {!data && !error && <p role="status">Loading canonical prompt assets…</p>}
     <p role="status" aria-live="polite">{status}</p>

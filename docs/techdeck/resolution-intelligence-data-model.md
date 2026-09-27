@@ -5,7 +5,11 @@ internal relationship model: **FixGraph**. This release provides the export
 contract and PostgreSQL storage foundation. The 2026-09-27 Phase 2 continuation
 adds the [validated ingestion API](resolution-intelligence-api.md) on these same
 tables. Phase 3 adds native permission-filtered reads/search and the technician
-UI; document generation, AI and analytics remain subsequent phases. Storage definitions and the release manifest remain unchanged.
+UI. Phase 4 adds deterministic drafts using existing documents, document
+revisions and tenant-composite `techdeck_resolution_document_links`; no new
+table or release step is required. AI and analytics remain later phases. See
+[the document contract](resolution-intelligence-documents.md) for source access,
+revision provenance and application rollback requirements.
 
 ## Authority and release
 

@@ -15,6 +15,10 @@ export async function resolutionRequest<T = RecordRow>(tenantId: string, path: s
       RESOLUTION_REDACTION_REQUIRED: 'Remove or redact credentials before continuing.',
       RESOLUTION_INTERNAL_ACCESS_REQUIRED: 'Resolution evidence is available to internal technicians only.',
       RESOLUTION_IMPORT_CONFLICT: 'This source conflicts with a retained import. Ask an administrator to review it.',
+      RESOLUTION_DRAFT_PREVIEW_CHANGED: 'The evidence or access changed. Prepare and review a fresh preview.',
+      RESOLUTION_DRAFT_REVIEW_REQUIRED: 'Review the draft and confirm its internal audience before saving.',
+      RESOLUTION_DRAFT_UNAVAILABLE: 'A document already exists for this source, but it is unavailable for your current access.',
+      RESOLUTION_DRAFT_AUDIENCE_MISMATCH: 'Choose a KB or runbook draft whose audience is at least as restrictive as this incident.',
     };
     const issues = (data.issues ?? []).slice(0, 8).map((issue: RecordRow) => `${issue.path || '/'}: ${issue.expected}`).join('; ');
     throw new Error(`${messages[data.code] ?? (response.status === 403 ? 'Your current access does not allow this action.' : response.status === 401 ? 'Your session has expired. Sign in through OperatorOS.' : data.error ?? 'The request could not be completed.')} ${data.code ? `(${data.code})` : ''}${issues ? ` — ${issues}` : ''}`);

@@ -30,7 +30,7 @@ export interface TechDeckRouteState {
   title: string;
   subtitle: string;
   recordId?: string;
-  resolutionView?: 'home' | 'search' | 'import' | 'detail' | 'history' | 'prompt';
+  resolutionView?: 'home' | 'search' | 'import' | 'detail' | 'history' | 'prompt' | 'kb';
 }
 
 export const TECHDECK_THEME: ModuleThemeTokens = {
@@ -114,6 +114,7 @@ export function resolveTechDeckRoute(routePath?: string): TechDeckRouteState {
   const root = segments[0];
   if (path === '/settings/ai-integration/ticket-completion-prompt' || path === '/resolution-intelligence/ai-integration/ticket-completion-prompt') return { ...state('resolution', path), title: 'Ticket completion prompt', resolutionView: 'prompt' };
   if (root === 'resolution-intelligence') {
+    if (path === '/resolution-intelligence/kb') return { ...state('resolution', path), title: 'Evidence-derived knowledge', resolutionView: 'kb' };
     if (segments.length === 1) return { ...state('resolution', path), resolutionView: 'home' };
     if (segments.length === 2 && ['search', 'import'].includes(segments[1])) return { ...state('resolution', path), title: segments[1] === 'import' ? 'Import resolution evidence' : 'Search resolution evidence', resolutionView: segments[1] as 'search' | 'import' };
     if (segments[1] === 'incidents' && /^[a-zA-Z0-9_-]{1,36}$/.test(segments[2] ?? '') && (segments.length === 3 || segments.length === 4 && segments[3] === 'history')) return { ...state('resolution', path, segments[2]), title: segments[3] === 'history' ? 'Source revision history' : 'Incident evidence', resolutionView: segments[3] === 'history' ? 'history' : 'detail' };

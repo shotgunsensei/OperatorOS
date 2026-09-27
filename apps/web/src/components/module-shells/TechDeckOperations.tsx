@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import TechDeckDocumentEditor from './TechDeckDocumentEditor';
 import { AlertTriangle, BarChart3, CheckCircle2, Clock3, Download, FileCheck2, GitBranch, Network, Plus, RefreshCw, ServerCog, ShieldCheck } from 'lucide-react';
 import {
   directoryApi,
@@ -116,7 +117,8 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove, ar
       if (exact.value && requested?.kind === 'configuration') {
         merged.configurationItems = prependUnique(workspace.configurationItems, exact.value as TechDeckAsset);
       } else if (exact.value && requested?.kind === 'document') {
-        merged.documents = prependUnique(workspace.documents, exact.value as TechDeckDocument);
+        // The detail carries source references and revisions absent from workspace rows.
+        merged.documents = [exact.value as TechDeckDocument, ...workspace.documents.filter(row => row.id !== requested.id)];
       } else if (exact.value && requested?.kind === 'evidence') {
         merged.evidence = prependUnique(workspace.evidence, exact.value as TechDeckEvidence);
       } else if (exact.value && requested?.kind === 'report') {
@@ -286,6 +288,7 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove, ar
       </Panel>}
 
       {(area === 'documentation' || area === 'runbooks') && <Panel id={area === 'runbooks' ? 'techdeck-runbooks' : 'techdeck-documentation'} title={area === 'runbooks' ? 'Runbooks' : 'Documentation'} icon={<FileCheck2 size={17} />}>
+        {requestedRecord?.kind === 'document' && resolutionHrefFor && data?.documents.filter(row => row.id === requestedRecord.id).map(row => <TechDeckDocumentEditor key={`${row.id}-${row.version}`} document={row} canWrite={canWrite} canApprove={canApprove} hrefFor={resolutionHrefFor} reload={load} />)}
         {canWrite && <form className="td-form td-doc-form" onSubmit={createDocument} data-testid="techdeck-document-create-form">
           <input required aria-label="Document title" placeholder="Document title" value={document.title} onChange={event => setDocument({ ...document, title: event.target.value })} />
           <select aria-label="Document type" value={document.pageType} onChange={event => setDocument({ ...document, pageType: event.target.value })}>{['documentation', 'runbook', 'knowledge_base', 'procedure', 'network_diagram', 'configuration_standard'].map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select>
