@@ -9,6 +9,7 @@ import {
   Gauge,
   KeyRound,
   Network,
+  Search,
   Settings,
   ShieldCheck,
   TicketCheck,
@@ -20,7 +21,7 @@ import type { ModuleRouteManifestGroup, ModuleThemeTokens } from '@/components/m
 export type TechDeckRouteArea =
   | 'overview' | 'tickets' | 'directory' | 'inventory' | 'network' | 'lifecycle'
   | 'documentation' | 'runbooks' | 'evidence' | 'reports' | 'time' | 'calendar'
-  | 'portal' | 'licenses' | 'status' | 'compliance' | 'webhooks' | 'api-tokens' | 'settings';
+  | 'portal' | 'licenses' | 'status' | 'compliance' | 'webhooks' | 'api-tokens' | 'settings' | 'resolution';
 
 export interface TechDeckRouteState {
   area: TechDeckRouteArea;
@@ -29,6 +30,7 @@ export interface TechDeckRouteState {
   title: string;
   subtitle: string;
   recordId?: string;
+  resolutionView?: 'home' | 'search' | 'import' | 'detail' | 'history' | 'prompt';
 }
 
 export const TECHDECK_THEME: ModuleThemeTokens = {
@@ -59,6 +61,7 @@ export const TECHDECK_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
     { id: 'lifecycle', canonicalPath: '/lifecycle', label: 'Lifecycle', icon: Activity, activeMatch: { kind: 'prefix' } },
   ] },
   { id: 'knowledge-evidence', label: 'Knowledge and evidence', items: [
+    { id: 'resolution', canonicalPath: '/resolution-intelligence', label: 'Resolution Intelligence', icon: Search, activeMatch: { kind: 'prefix' } },
     { id: 'documentation', canonicalPath: '/documentation', label: 'Documentation', icon: FileCheck2, activeMatch: { kind: 'prefix' } },
     { id: 'runbooks', canonicalPath: '/runbooks', label: 'Runbooks', icon: ShieldCheck, activeMatch: { kind: 'prefix' } },
     { id: 'evidence', canonicalPath: '/evidence', label: 'Evidence', icon: FileLock2, activeMatch: { kind: 'prefix' } },
@@ -78,6 +81,7 @@ export const TECHDECK_NAVIGATION: readonly ModuleRouteManifestGroup[] = [
 ] as const;
 
 const copy: Record<TechDeckRouteArea, Pick<TechDeckRouteState, 'eyebrow' | 'title' | 'subtitle'>> = {
+  resolution: { eyebrow: 'Learn from service evidence', title: 'Resolution Intelligence', subtitle: 'Find prior incidents, understand what failed, and keep the evidence behind each resolution.' },
   overview: { eyebrow: 'MSP operations', title: 'Operations overview', subtitle: 'See the tickets, systems, deadlines, and client commitments that need attention now.' },
   tickets: { eyebrow: 'Move support work forward', title: 'Ticket queue', subtitle: 'Triage, assign, update, and resolve support work without losing priority or response targets.' },
   directory: { eyebrow: 'Know every environment', title: 'Clients and sites', subtitle: 'Keep client organizations, sites, contacts, and service details ready for the technician handling the work.' },
@@ -108,6 +112,12 @@ export function resolveTechDeckRoute(routePath?: string): TechDeckRouteState {
   const path = `/${raw.replace(/^\/(?:modules|apps)\/techdeck\/?/u, '').split('/').filter(Boolean).join('/')}`;
   const segments = path.split('/').filter(Boolean);
   const root = segments[0];
+  if (path === '/settings/ai-integration/ticket-completion-prompt' || path === '/resolution-intelligence/ai-integration/ticket-completion-prompt') return { ...state('resolution', path), title: 'Ticket completion prompt', resolutionView: 'prompt' };
+  if (root === 'resolution-intelligence') {
+    if (segments.length === 1) return { ...state('resolution', path), resolutionView: 'home' };
+    if (segments.length === 2 && ['search', 'import'].includes(segments[1])) return { ...state('resolution', path), title: segments[1] === 'import' ? 'Import resolution evidence' : 'Search resolution evidence', resolutionView: segments[1] as 'search' | 'import' };
+    if (segments[1] === 'incidents' && /^[a-zA-Z0-9_-]{1,36}$/.test(segments[2] ?? '') && (segments.length === 3 || segments.length === 4 && segments[3] === 'history')) return { ...state('resolution', path, segments[2]), title: segments[3] === 'history' ? 'Source revision history' : 'Incident evidence', resolutionView: segments[3] === 'history' ? 'history' : 'detail' };
+  }
   if (!root || root === 'dashboard' || root === 'm' && !segments[1]) return state('overview', '/');
   if (root === 'm' && segments[1] === 'tickets') return state('tickets', '/tickets');
   if (root === 'm' && segments[1] === 'time') return state('time', '/time');

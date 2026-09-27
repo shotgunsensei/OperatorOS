@@ -1,5 +1,21 @@
 # OperatorOS module parity index
 
+## Resolution Intelligence Technician V1 continuation (2026-09-27 UTC)
+
+Status: **PARITY COUNTS UNCHANGED / PHASE 3 IMPLEMENTED / LOCAL VERIFICATION PASSED**.
+
+| Surface | Current scope/evidence | Remaining gate |
+| --- | --- | --- |
+| TechDeck Resolution Intelligence / FixGraph | Phase 2 merge PR #105 inspected; source-scanner fixture failure corrected. Phase 3 native/embedded import, detail, exact/full-text search, revision history, native links, review/archive, audited raw download and real counts implemented; 14 focused, 1,575 API, 90 integration checks pass; 30 existing browser journeys plus the corrected new journey and 4 visual cases pass across the documented runs | Candidate CI and separately authorized release; Phase 4 linked evidence-derived document drafts |
+| Ticket Completion Prompt | Authenticated settings plus alias, canonical version/hash, distinct template/schema and copy/download controls; production browser download equals the canonical LF-normalized prompt byte-for-byte | Candidate CI and separately authorized release |
+| CAM WAL example | Synthetic source demonstrates failure, qualified warning, temporal side effect and pending validation; commands remain inert text | Later explicitly tenant-targeted private real-incident import |
+
+See [current evidence](../IMPLEMENTATION_STATUS.md),
+[Phase 3 review](../techdeck/resolution-intelligence-phase3-review.md) and
+[API contract](../techdeck/resolution-intelligence-api.md). Storage remains v64;
+these additions do not promote historical source parity or production readiness.
+
+
 ## Resolution Intelligence ingestion continuation (2026-09-27 UTC)
 
 Status: **PARITY COUNTS UNCHANGED / PHASE 2 IMPLEMENTED / LOCAL VERIFICATION PASSED**.

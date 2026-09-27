@@ -17,7 +17,7 @@ import {
 
 export type TechDeckOperationsArea = 'inventory' | 'network' | 'lifecycle' | 'documentation' | 'runbooks' | 'evidence' | 'reports' | 'time';
 
-interface Props { tenantKey: string; canWrite: boolean; canApprove: boolean; area: TechDeckOperationsArea; recordId?: string }
+interface Props { tenantKey: string; canWrite: boolean; canApprove: boolean; area: TechDeckOperationsArea; recordId?: string; resolutionHrefFor?: (path: string) => string }
 
 const assetTypes: TechDeckAssetType[] = ['server', 'workstation', 'firewall', 'switch', 'access_point', 'vlan', 'subnet', 'ip_address', 'public_ip', 'application', 'domain', 'license', 'certificate', 'credential_reference', 'other'];
 const healthOptions: TechDeckAssetHealth[] = ['unknown', 'healthy', 'warning', 'critical', 'offline'];
@@ -80,7 +80,7 @@ function saveBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function TechDeckOperations({ tenantKey, canWrite, canApprove, area, recordId }: Props) {
+export default function TechDeckOperations({ tenantKey, canWrite, canApprove, area, recordId, resolutionHrefFor }: Props) {
   const [data, setData] = useState<TechDeckWorkspaceResponse | null>(null);
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,6 +241,7 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove, ar
           : <><AlertTriangle size={16} /><span>The requested {requestedRecordState.kind} is not available in this organization.</span></>}
       </div>}
       {error && <div className="td-error" role="alert"><AlertTriangle size={16} />{error}</div>}
+      {recordId && requestedRecordState?.found && requestedRecordState.kind === 'configuration' && resolutionHrefFor && <p><a href={resolutionHrefFor(`/resolution-intelligence?assetId=${encodeURIComponent(recordId)}`)}>View this device’s resolution history</a></p>}
 
       {['inventory', 'network', 'lifecycle'].includes(area) && <div className="td-summary">
         <Summary label="Managed assets" value={data?.configurationItems.length ?? 0} Icon={ServerCog} />
@@ -263,6 +264,7 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove, ar
         <div className="td-list">
           {data?.configurationItems.map(row => <article className="td-row" key={row.id} data-record-id={row.id} data-active={requestedRecord?.kind === 'configuration' && requestedRecord.id === row.id}>
             <div><strong>{row.name}</strong><small>{row.type.replaceAll('_', ' ')} · {organizationName(row.directoryOrganizationId)} · {row.hostname || row.ipAddress || row.cidr || row.serialNumber || 'details incomplete'}</small></div>
+            {resolutionHrefFor && <a href={resolutionHrefFor(`/resolution-intelligence?assetId=${encodeURIComponent(row.id)}`)}>Resolution history</a>}
             {canWrite ? <select aria-label={`Health for ${row.name}`} value={row.health} disabled={busy === `item-${row.id}`} onChange={event => setHealth(row, event.target.value as TechDeckAssetHealth)}>{healthOptions.map(value => <option key={value}>{value}</option>)}</select> : <Status value={row.health} />}
           </article>)}
           {!data?.configurationItems.length && <Empty text="No configuration items registered for this organization." />}

@@ -4,8 +4,8 @@ Phase 1 / supplied Prompt 2, 2026-09-25. Public name: **Resolution Intelligence*
 internal relationship model: **FixGraph**. This release provides the export
 contract and PostgreSQL storage foundation. The 2026-09-27 Phase 2 continuation
 adds the [validated ingestion API](resolution-intelligence-api.md) on these same
-tables. Search endpoints, document generation, AI, analytics and UI are subsequent
-phases. Storage definitions and the release manifest remain unchanged.
+tables. Phase 3 adds native permission-filtered reads/search and the technician
+UI; document generation, AI and analytics remain subsequent phases. Storage definitions and the release manifest remain unchanged.
 
 ## Authority and release
 

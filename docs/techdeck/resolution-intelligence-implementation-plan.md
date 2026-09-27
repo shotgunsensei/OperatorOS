@@ -1,19 +1,19 @@
 # TechDeck Resolution Intelligence implementation plan
 
-Status: **PHASES 0–2 IMPLEMENTED; PHASE 2 LOCALLY VERIFIED; TECHNICIAN V1 NEXT**
+Status: **PHASES 0–3 IMPLEMENTED; PHASE 3 LOCALLY VERIFIED; NOT DEPLOYED**
 
-Phase 2 continuation (2026-09-27 UTC): the latest merged implementation is
-`ac6b49c` in PR #104, merged as `8f8e370`. The exact merged-revision
-[release gate passed](https://github.com/shotgunsensei/OperatorOS/actions/runs/36188543284).
-The user's review/continue instruction authorizes Prompt 3. The native/headless
-validate/import API, admin reprocessing, bounded strict parser, credential
-screening, deterministic normalization, atomic audit and deduplication are now
-implemented. No new release step is needed beyond v64. See the
+Phase 3 continuation (2026-09-27 UTC): latest fetched main is `0c74dc5`, merging
+Phase 2 implementation `ce69284` in PR #105. Its merge release gate failed on a
+synthetic private-key header in a negative test; the fixture correction preserves
+the rejected input and fresh hardening passes. Phase 3 adds the technician
+import/detail/search/history workspace and prompt settings, with native/embedded
+routes, permission-filtered retrieval and source-attributed evidence.
+See the [Phase 3 review](resolution-intelligence-phase3-review.md),
 [API contract](resolution-intelligence-api.md) and
-[current verification](../IMPLEMENTATION_STATUS.md).
+[current verification](../IMPLEMENTATION_STATUS.md). Storage remains v64.
 
-The next implementation phase is **Phase 3: Technician V1**, mapping to Prompt 4,
-the exact/full-text portions of Prompt 5, and Prompt 10. Section 12 is the persisted
+The next implementation phase is **Phase 4: Evidence-derived documents**,
+mapping to the deterministic portion of Prompt 7. Section 12 is the persisted
 prompt-to-phase list. The canonical closeout prompt and shortcut are linked in
 this document; the complete original multi-prompt attachment is not present in
 the repository. Historical audit findings below describe the starting state and
@@ -609,9 +609,10 @@ Node 20; local Node 24 results require separate CI confirmation.
 
 ## 12. Implementation phases and exit criteria
 
-Current progress: phases 0 and 1 are complete; Phase 2 is implemented and locally
-verified. Candidate CI and publication remain separate gates. Phase 3 is next. Later phases remain
-open. The mapping below preserves the supplied prompt numbering and original
+Current progress: phases 0–3 are implemented and locally verified; exact gate
+results and the corrected browser-test chronology are recorded in
+[implementation status](../IMPLEMENTATION_STATUS.md). Candidate CI and publication
+remain separate gates. Phase 4 is next. Later phases remain open. The mapping below preserves the supplied prompt numbering and original
 exit criteria; it does not imply that later features are available.
 
 | Phase | Supplied prompt mapping | Concrete output and exit gate |
