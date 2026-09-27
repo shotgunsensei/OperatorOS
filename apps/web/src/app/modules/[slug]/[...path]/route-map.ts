@@ -47,6 +47,11 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/access-denied': { sectionId: 'tradeflowkit-access-denied-route', label: 'Access Denied' },
   },
   techdeck: {
+    '/resolution-intelligence': { sectionId: 'techdeck-resolution', label: 'Resolution Intelligence' },
+    '/resolution-intelligence/search': { sectionId: 'techdeck-resolution', label: 'Search Resolution Evidence' },
+    '/resolution-intelligence/import': { sectionId: 'techdeck-resolution', label: 'Import Resolution Evidence' },
+    '/settings/ai-integration/ticket-completion-prompt': { sectionId: 'techdeck-resolution', label: 'Ticket Completion Prompt' },
+    '/resolution-intelligence/ai-integration/ticket-completion-prompt': { sectionId: 'techdeck-resolution', label: 'Ticket Completion Prompt' },
     '/dashboard': { sectionId: 'techdeck-overview', label: 'Overview', redirectPath: '/' },
     '/m': { sectionId: 'techdeck-overview', label: 'Overview', redirectPath: '/' },
     '/m/tickets': { sectionId: 'techdeck-ticket-queue', label: 'Ticket Queue', redirectPath: '/tickets' },
@@ -409,6 +414,7 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'clients') return { sectionId: 'tradeflowkit-directory', label: 'Directory Organization' };
     if (['customers', 'quotes', 'invoices', 'payments'].includes(resource)) return { sectionId: 'tradeflowkit-revenue-flow', label: 'Revenue Record' };
   }
+  if (slug === 'techdeck' && pathSegments[0] === 'resolution-intelligence' && pathSegments[1] === 'incidents' && /^[a-zA-Z0-9_-]{1,36}$/.test(pathSegments[2] ?? '') && (pathSegments.length === 3 || pathSegments.length === 4 && pathSegments[3] === 'history')) return { sectionId: 'techdeck-resolution', label: pathSegments[3] === 'history' ? 'Source Revision History' : 'Incident Evidence' };
   if (slug === 'techdeck' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'assets' || resource === 'inventory') return { sectionId: 'techdeck-inventory', label: 'Configuration Item' };

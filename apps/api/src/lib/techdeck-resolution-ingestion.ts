@@ -7,12 +7,12 @@ import { normalizeResolutionExport, RESOLUTION_NORMALIZER_VERSION } from './tech
 import { RESOLUTION_REDACTOR_VERSION } from './techdeck-resolution-redaction.js';
 import { ResolutionInputError, sha256, validateResolutionExport } from './techdeck-resolution-validation.js';
 
-export type ResolutionContext = { tenantId: string; moduleId: string; actorUserId: string; role: 'member' | 'admin' | 'owner'; tokenId?: string; correlationId?: string };
+export type ResolutionContext = { tenantId: string; moduleId: string; actorUserId: string; role: 'viewer' | 'member' | 'admin' | 'owner'; tokenId?: string; correlationId?: string };
 export type ResolutionLinks = { directoryOrganizationId?: string; directorySiteId?: string; ticketId?: string; assets?: Array<{ index: number; assetId: string }> };
 export type ResolutionInput = { rawText: string; humanReport: string | null; links: ResolutionLinks };
 type Executor = Pick<typeof db, 'execute'>;
 const storage = new Map(resolutionStorageTables.map(table => [table.name as string, table.columns as Record<string, string>]));
-const ranks = { member: 0, admin: 1, owner: 2 };
+const ranks = { viewer: 0, member: 0, admin: 1, owner: 2 };
 
 export function parseResolutionInput(body: unknown, reprocess = false): ResolutionInput & { expectedVersion?: number } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new ResolutionInputError('RESOLUTION_BODY_INVALID', 400);
@@ -77,6 +77,7 @@ async function visibleIncident(context: ResolutionContext, id: string, executor:
   return row;
 }
 export async function importResolutionExport(context: ResolutionContext, input: ResolutionInput, idempotencyKey: string, reprocess?: { incidentId: string; expectedVersion: number }) {
+  if (context.role === 'viewer') throw new ResolutionInputError('RESOLUTION_WRITE_REQUIRED', 403);
   if (!/^[A-Za-z0-9_.:-]{8,160}$/.test(idempotencyKey)) throw new ResolutionInputError('RESOLUTION_IDEMPOTENCY_KEY_REQUIRED', 400);
   if (reprocess && ranks[context.role] < ranks.admin) throw new ResolutionInputError('RESOLUTION_ADMIN_REQUIRED', 403);
   const prepared = prepareResolutionImport(input); // All source checks precede persistence.

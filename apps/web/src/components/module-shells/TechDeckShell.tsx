@@ -54,6 +54,7 @@ const TechDeckTicketQueue = dynamic(() => import('./TechDeckTicketQueue'), { loa
 const TechDeckOperations = dynamic(() => import('./TechDeckOperations'), { loading: RouteLoading });
 const TechDeckLiteralConsole = dynamic(() => import('./TechDeckLiteralConsole'), { loading: RouteLoading });
 const TechDeckWorkdayBrief = dynamic(() => import('./TechDeckWorkdayBrief'), { loading: RouteLoading });
+const TechDeckResolutionWorkspace = dynamic(() => import('./resolution/TechDeckResolutionWorkspace'), { loading: RouteLoading });
 const BusinessDirectory = dynamic(() => import('./BusinessDirectory'), { loading: RouteLoading });
 
 const overviewRoutes: Array<{ area: TechDeckRouteArea; label: string; summary: string; path: string; Icon: LucideIcon }> = [
@@ -153,13 +154,14 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
       pageHeaderTestId="techdeck-module-header"
       mobileNavigation="drawer"
       collapsibleNavigation
-      workflow={<CoreSuiteJourney moduleId="techdeck" path={route.canonicalPath} hrefFor={hrefFor} />}
+      workflow={route.area === 'resolution' ? undefined : <CoreSuiteJourney moduleId="techdeck" path={route.canonicalPath} hrefFor={hrefFor} />}
       testId="techdeck-module-shell"
       dataAttributes={{ 'data-techdeck-route': route.area }}
     >
       <style>{techDeckRouteCss}</style>
       {hasTenantContext && adapter.tenantId && (
         <>
+          {route.area === 'resolution' && <TechDeckResolutionWorkspace key={`${adapter.tenantId}-${user?.id}-${route.canonicalPath}`} tenantId={adapter.tenantId} route={route} hrefFor={hrefFor} />}
           {route.area === 'overview' && (
             <section className="techdeck-overview" id="techdeck-overview" data-testid="techdeck-overview-route">
               <TechDeckWorkdayBrief tenantKey={adapter.tenantId} hrefFor={hrefFor} />
@@ -189,7 +191,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
 
           {route.area === 'directory' && (
             <section id="techdeck-directory" data-testid="techdeck-directory-route">
-              <BusinessDirectory moduleSlug="techdeck" tenantKey={adapter.tenantId} canWrite={canWriteModule} canArchive={canManageModule} />
+              <BusinessDirectory moduleSlug="techdeck" tenantKey={adapter.tenantId} canWrite={canWriteModule} canArchive={canManageModule} resolutionHrefFor={hrefFor} />
             </section>
           )}
 
@@ -201,6 +203,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
               canApprove={canManageModule}
               area={route.area as 'inventory' | 'network' | 'lifecycle' | 'documentation' | 'runbooks' | 'evidence' | 'reports' | 'time'}
               recordId={route.recordId}
+              resolutionHrefFor={hrefFor}
             />
           )}
 
@@ -221,6 +224,7 @@ export default function TechDeckShell({ routePath }: TechDeckShellProps) {
               <SettingsRow label="Identity and access" value="OperatorOS manages sign-in, subscription access, roles, and workspace membership." />
               <SettingsRow label="Managed operations" value="TechDeck keeps technical documentation, infrastructure records, service evidence, and support work with the correct organization." />
               <SettingsRow label="Command boundary" value="Runbooks remain documentation-only. The public TechDeck application does not execute arbitrary commands." />
+              <Link className="techdeck-action" href={hrefFor('/settings/ai-integration/ticket-completion-prompt')}>Ticket completion prompt and import templates</Link>
             </section>
           )}
         </>
@@ -238,6 +242,7 @@ function SettingsRow({ label, value }: { label: string; value: string }) {
 }
 
 const techDeckRouteCss = `
+  @media (max-width:720px) { body:has([data-testid="techdeck-module-shell"]) .operatoros-floating-contact { display:none !important; } }
   [data-testid="techdeck-module-shell"] { box-sizing:border-box; width:100%; min-width:0; }
   [data-testid="techdeck-module-shell"] *,[data-testid="techdeck-module-shell"] *:before,[data-testid="techdeck-module-shell"] *:after { box-sizing:border-box; min-width:0; }
   [data-testid="techdeck-module-shell"]:before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(circle at 12% 0%,rgba(56,189,248,.14),transparent 30rem),repeating-linear-gradient(90deg,transparent 0 89px,rgba(56,189,248,.018) 90px 91px); }

@@ -38,8 +38,8 @@ function routeSelection(moduleSlug: DirectoryModuleSlug): { tab: Tab; organizati
 }
 
 export default function BusinessDirectory({
-  moduleSlug, tenantKey, canWrite, canArchive,
-}: { moduleSlug: DirectoryModuleSlug; tenantKey: string; canWrite: boolean; canArchive: boolean }) {
+  moduleSlug, tenantKey, canWrite, canArchive, resolutionHrefFor,
+}: { moduleSlug: DirectoryModuleSlug; tenantKey: string; canWrite: boolean; canArchive: boolean; resolutionHrefFor?: (path: string) => string }) {
   const [tab, setTab] = useState<Tab>('organizations');
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [contacts, setContacts] = useState<DirectoryContact[]>([]);
@@ -110,6 +110,7 @@ export default function BusinessDirectory({
             {tab === 'sites' && <SiteList rows={sites} />}
           </div>
           <div className="directory-editor">
+            {moduleSlug === 'techdeck' && selectedOrganization && resolutionHrefFor && <p><a href={resolutionHrefFor(`/resolution-intelligence?clientId=${encodeURIComponent(selectedOrganization.id)}`)}>View resolution history for {selectedOrganization.name}</a></p>}
             {!canWrite ? <div className="directory-state" data-testid="business-directory-read-only"><ShieldAlert size={18} /><div><strong>Read-only directory</strong><p>You can review organizations, contacts, and sites, but this access level cannot change them.</p></div></div> : <>
             {tab === 'organizations' && <OrganizationEditor moduleSlug={moduleSlug} rows={organizations} contacts={contacts} detail={detail} selected={selectedOrganization} canArchive={canArchive} saving={saving} run={run} select={setSelectedId} />}
             {tab === 'contacts' && <ContactEditor rows={contacts} canArchive={canArchive} saving={saving} run={run} moduleSlug={moduleSlug} />}

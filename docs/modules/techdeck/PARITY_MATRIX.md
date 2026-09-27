@@ -1,5 +1,27 @@
 # TechDeck zero-gap parity matrix
 
+## Resolution Intelligence Phase 3 overlay (2026-09-27 UTC)
+
+Technician V1 is implemented above the merged v64 storage/ingestion foundation:
+native and embedded import/detail/search/history, prompt settings and downloads,
+native client/device history links, warning-first evidence and inert commands.
+Tenant, role, active revision and archive filters govern every read and score;
+raw downloads require administrator authority and append an audit. Review and
+archive use optimistic versions. Exact/full-text search is enabled; semantic
+search, AI research and document generation remain later scope.
+
+Fourteen focused workspace checks, 1,575 API and 90 integration tests, production
+build/typechecks, hardening, preflight and route/static visual contracts pass.
+Thirty unchanged browser journeys plus the corrected new technician journey
+and four visual cases pass across the documented runs; refer to
+[implementation status](../../IMPLEMENTATION_STATUS.md) for exact final counts
+and limitations. The [Phase 3 review](../../techdeck/resolution-intelligence-phase3-review.md)
+records the merged CI fixture correction, security findings and subsequent
+source-backed remediation review. Historical source restoration counts below
+are unchanged. Phase 4 evidence-derived document drafts are next; there is no
+production-readiness promotion or deployment.
+
+
 ## Resolution Intelligence Phase 2 overlay (2026-09-27 UTC)
 
 This new subsystem is tracked separately from the historical imported-source

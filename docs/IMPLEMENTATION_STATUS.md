@@ -1,5 +1,80 @@
 # OperatorOS implementation status
 
+## TechDeck Resolution Intelligence Phase 3 continuation (2026-09-27 UTC)
+
+Status: **TECHNICIAN V1 IMPLEMENTED / LOCAL VERIFICATION PASSED / NOT DEPLOYED**.
+Branch: `codex/techdeck-resolution-workspace`; clean starting main `0c74dc5`
+merged PR #105 (`ce69284`). The exact merge release gate failed on a synthetic
+private-key fixture header. The fixture now constructs the same negative input;
+the unchanged hardening scanner passes locally. See the
+[completed-phase review](techdeck/resolution-intelligence-phase3-review.md).
+
+Implemented Phase 3 / Prompt 4 + exact/full-text parts of 5 + Prompt 10 from
+[the persisted prompt list](techdeck/resolution-intelligence-implementation-plan.md#12-implementation-phases-and-exit-criteria):
+native and embedded import, detail, search, history and prompt settings; source
+copy/download; native record links; visible warnings/failures/pending validation;
+permission-filtered reads/counts/related matches, optimistic review/archive and
+audited administrator raw source. The canonical prompt is unchanged. v64 remains
+the database manifest; no migration or provider activation was added. Phase 4
+(evidence-derived document drafts) is next, not implemented by this continuation.
+
+Environment: Windows, Node 24.19.0, pnpm 10.34.5, PostgreSQL 16. Every database-backed
+command targets the task-owned disposable container
+`operatoros-resolution-phase3-disposable`, loopback 55466, database
+`operatoros_resolution_phase3_test`. `PARITY_DATABASE_IS_DISPOSABLE=1`, `CI=true`,
+`OPERATOROS_DETERMINISTIC_PROVIDER_MODE=1`; external provider secrets absent.
+API/unit/integration use `APP_ENV=test`, `NODE_ENV=test`. Build/preflight/browser
+use production mode with `INTERNAL_API_URL=http://localhost:5001`; browser runs
+use the production readiness supervisor and canonical-host loopback TLS proxy.
+No persistent developer database or production data was used.
+
+| Exact command / gate | Fresh result |
+| --- | --- |
+| `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/techdeck-resolution-workspace.test.ts` | 14 passed, 0 failed/skipped/cancelled/todo, including timestamp precision, legacy port matching, role/tenant/revision/archive gates and raw download capability |
+| `corepack pnpm test:unit` | 52 passed, 0 failed/skipped/cancelled/todo |
+| `corepack pnpm verify:hardening:phase39` | PASS: source secret-pattern scan 0 findings, dependencies 0 unresolved advisories (two existing documented patched exceptions), 15 script + 16 API/preflight tests passed; SBOM regenerated |
+| `corepack pnpm build:production` | PASS after parser/cursor/port/capability, owner-visibility, site-picker and archive-display corrections: generated contracts, four workspace typechecks, SDK/API/runner and Next 38-page build |
+| `corepack pnpm preflight:production -- --core`; `corepack pnpm db:plan` | PASS; manifest remains v64/64 |
+| `corepack pnpm test:route-integrity`; `node scripts/parity/verify-visual-contracts.mjs` | PASS: 1,304 historical active capabilities, 974 crawl routes, 0 failures; 13 visual contracts passed |
+| `corepack pnpm test:api` | **1,575 passed**, 0 failed/skipped/cancelled/todo; fresh full rerun after the Help wording and parser/cursor/port/capability corrections |
+| `corepack pnpm test:integration` | **90 passed**, 0 failed/skipped/cancelled/todo, after isolated schema reset, explicit root apply/reapply and independent verification |
+| `node scripts/parity/run-browser-tests.mjs --suite all` | 30 browser journeys passed, 1 failed at the new test's last logout assertion (including its retry); all 4 visual cases passed with unchanged baselines/tolerance. The final assertion used a separate request client without Chromium's loopback resolver. This run is retained as a failed aggregate, not relabeled green |
+| `$env:PARITY_BROWSER_GREP='TechDeck Resolution Technician V1'; node scripts/parity/run-browser-tests.mjs --suite e2e` | Final corrected journey: **1 passed**, 0 failed/skipped/retries, 20.2s. Same production artifacts; only the test changed. Same-origin browser fetch proves `401 AUTH_REQUIRED`, host-only cookie removal and a persisted session-revocation record after logout |
+
+The final browser coverage is therefore **30 unchanged journeys plus the freshly
+passing new journey**, and **4 visual cases**, across the two runs above. It is
+not a claim that the failed aggregate was rerun. The new journey verifies preview
+without persistence, confirmed import, warning/pending/failed evidence, inert
+command copy, diagnostic POST search, metadata review, byte-exact audited raw
+download, byte-exact canonical prompt, exact/embedded routes, archive clearing
+and local logout. Desktop/mobile axe audits and overflow assertions pass. Nine
+synthetic screenshots are retained under `docs/techdeck/evidence/phase3/`.
+
+Codex Security scan `be7e35ab-faa2-42ea-ba76-2a800efda826` sealed the pre-fix snapshot
+with four medium source-validated parser findings. All four risky structures
+were corrected and independently source-reviewed; follow-up found no additional
+security concern. The safety filter blocked isolated reproduction, so runtime
+DoS timing remains unmeasured. The frozen report is preserved separately from
+post-fix verification. Exact scope and evidence are in the Phase 3 review.
+
+Fresh final logs: `build/resolution-phase3-api-final.log`,
+`resolution-phase3-integration-final.log`, `resolution-phase3-workspace-final.log`,
+`resolution-phase3-unit-final.log`, `resolution-phase3-build-release.log`,
+`resolution-phase3-hardening-release.log`, `resolution-phase3-browser-release.log`
+and `resolution-phase3-browser-verified.log` in the same `build/` directory.
+Supporting preflight, plan, route and static visual logs use the same phase prefix.
+Early failed tests are retained as diagnostic
+history, not counted as successful gates. No repository-defined lint/format gate
+exists. Candidate CI, Linux screenshot verification and target deployment
+acceptance are separate gates; no production-readiness promotion, commit, push,
+deployment or publication is claimed.
+
+Cleanup: the task-owned disposable container and volume were removed after
+verification, and the browser supervisor/proxy stopped. Generated screenshots
+for unrelated CallCommand tests were restored; Phase 3 evidence is retained.
+`git diff --check` passed with the repository's configured Windows line endings.
+
+
 ## TechDeck Resolution Intelligence Phase 2 and completed-phase sweep (2026-09-27 UTC)
 
 Status: **INGESTION IMPLEMENTED / LOCAL VERIFICATION PASSED / NOT DEPLOYED**.

@@ -1,9 +1,9 @@
-# Resolution Intelligence ingestion API
+# Resolution Intelligence API
 
-Phase 2 / supplied Prompt 3, 2026-09-27 UTC. This implements ingestion on the
-existing v64 storage release. Technician pages, source downloads, incident
-reads/search, history UI and prompt settings are Phase 3. Document generation,
-embeddings, research, analytics and command execution are not enabled here.
+Phases 2–3 / supplied Prompts 3, 4, exact/full-text portions of 5, and 10,
+2026-09-27 UTC. Ingestion and the technician workspace use the existing v64
+storage release. Document generation, embeddings, research, analytics and
+command execution remain later scope. See the Phase 3 review for verification.
 
 ## Endpoints and authority
 
@@ -20,7 +20,7 @@ only identity, tenant, module and entitlement authority.
 | `POST /v1/headless/techdeck/resolution-intelligence/exports/validate` | OperatorOS service token with `techdeck:resolution:import` | Same safe preview |
 | `POST /v1/headless/techdeck/resolution-intelligence/exports` | Same service token, plus `Idempotency-Key` | Import with effective record role `member` |
 
-Native guards authorize before JSON body parsing. Viewers, module read-only
+Native ingestion guards authorize before JSON body parsing. Viewers, module read-only
 grants, customer portal assignments, suspended tenants, disabled modules and
 missing entitlements are denied. `X-Tenant-Id` is a revalidated requested
 selection, never source authority. A module session cannot select another module
@@ -71,11 +71,11 @@ assets, sites or tickets.
 
 Reprocessing takes the same envelope plus a positive integer `expectedVersion`
 from the last receipt. It requires the caller to resubmit the desired source;
-this phase has no raw-export retrieval endpoint. It appends a new revision,
+administrators can retrieve permitted raw revisions through the Phase 3 API below. It appends a new revision,
 retains prior source and normalized children, and returns a new version.
 Unspecified parent client/site/ticket links are retained. Per-asset mappings
 must be supplied for the new revision. Changing the parent organization without
-a site clears the old site. No mapping-clearing or visibility-edit API is added.
+a site clears the old site. Phase 3 metadata updates can explicitly clear parent links and narrow visibility, as described below.
 
 Server-owned fields such as `tenantId`, actor, role, `securityScreened`, review
 status and version outside the documented reprocess field are rejected. Unknown
@@ -211,3 +211,58 @@ incident ingestion remain separately authorized operations.
 See [the phase map](resolution-intelligence-implementation-plan.md#12-implementation-phases-and-exit-criteria),
 [the storage contract](resolution-intelligence-data-model.md) and
 [current verification](../IMPLEMENTATION_STATUS.md) for scope and evidence.
+
+## Phase 3 native technician workspace
+
+The following paths share `/v1/modules/techdeck/resolution-intelligence` (or the
+same-origin `/api/modules/techdeck/resolution-intelligence` browser proxy).
+All responses are `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
+No corresponding headless read/search routes are registered.
+
+| Method and suffix | Authority / behavior |
+| --- | --- |
+| `GET /capabilities` | Internal tenant reader with TechDeck read access. Returns `canWrite`, `canManage`, `canDownloadRaw`, `canSetOwnerVisibility`; these describe server policy and do not replace authorization. |
+| `GET /prompt`, `/shortcut`, `/template`, `/schema` | Same read guard, packaged canonical assets. Optional `version=1.0`, `download=1`; schema version and canonical prompt SHA-256 response headers. Template and formal schema are distinct. |
+| `GET /incidents`, `/summary` | Visible active incidents and real counts; optional `clientId`, `assetId`, `review`, `validation` filters. No unfiltered aggregate disclosure. |
+| `GET /incidents/:id` | Visible active incident, safe classification and authorized section counts. No raw source or human report. |
+| `GET /incidents/:id/sections/:section` | Allowlisted normalized sections, active revision, source pointers, bounded pagination. Relationship target visibility is checked before both counts and expansion. |
+| `GET /incidents/:id/history` | Visible incident's immutable revision metadata, normalization warnings and counts; excludes raw source/human report. |
+| `GET /incidents/:id/raw/:revision` | Tenant administrator/owner plus module read access and incident visibility; exact accepted source attachment. Read and audit append occur in one transaction. Module read-only administrators retain this read capability. |
+| `GET /search?q=...` | Internal reader; at most 200 UTF-8 bytes. Suitable for a short nonsecret identifier, not diagnostic logs. |
+| `POST /search` | Internal member/admin/owner plus module write access. `{ q, clientId?, assetId?, review?, validation?, limit?, cursor? }`; at most 100,000 UTF-8 bytes, secret screening, no diagnostic text in URL or audit. |
+| `GET /incidents/:id/related` | Up to 20 visible active incidents sharing stored exact identifiers; explanation includes those identifiers. No inferred causation or repair probability. |
+| `GET /link-options?kind=client|site|asset|ticket&q=...` | Active tenant-native choices, max 30; `q` at most 100 characters. Site requires `clientId`. |
+| `PATCH /incidents/:id` | Write access and `expectedVersion`. May update `reviewStatus` and replace native parent `links`; `{}` clears links. Admin/owner may narrow `minimumRole` no higher than their own authority. Raw source and revision-bound device observations require reprocess. |
+| `POST /incidents/:id/archive` | Admin/owner plus module write access, visible incident, `{ expectedVersion }`. Optimistic version and transactional audit; all active retrieval excludes archived incidents. |
+
+Tenant viewers and module viewers may use GET reads when membership, entitlement
+and module access are valid. They cannot POST search, import, reprocess or edit.
+Portal assignments are excluded. Foreign and hidden IDs are not enumerated.
+
+Lists use descending creation timestamp/ID cursors retaining PostgreSQL
+microseconds. Section/history cursors bind tenant, role, incident version and
+active revision; changes invalidate stale cursors. Page size defaults to 20, max 100.
+Search uses offset cursors up to 10,000; sections/history up to 15,000. Cursors bind
+the query/filter context but are not authorization credentials.
+
+Search authorizes the candidate relation before exact and full-text ranking.
+Typed errors, contextual event IDs and ports, explicit service/host/build labels,
+paths and basenames are checked; bare numbers are not classified as event IDs.
+Up to 100 distinct identifiers (each max2,000 bytes) are considered. The first 8,000
+characters feed PostgreSQL English full-text ranking; `fullTextTruncated=true`
+is returned and displayed for longer text. Exact matches rank ahead of prose,
+with match reasons, warning/failed-action counts and actual validation status.
+Legacy normalize-v1 port references use explicit `port` context in safe active
+search documents, without reading raw source or rewriting accepted revisions.
+Related incident matching uses stored identifiers; it does not use this legacy
+port compatibility fallback. Semantic retrieval and embeddings remain disabled.
+
+Browser routes work on `techdeck.operatoros.net` and under `/modules/techdeck`:
+`/resolution-intelligence`, `/search`, `/import`, `/incidents/:id`, and
+`/incidents/:id/history` (the last four relative to `/resolution-intelligence`).
+The prompt page is `/settings/ai-integration/ticket-completion-prompt`, with alias
+`/resolution-intelligence/ai-integration/ticket-completion-prompt`.
+The UI validates before import, requires a redaction acknowledgement and explicit
+confirmation, displays warnings/pending validation before source commands, and
+copies commands strictly as inert text. Client/device histories filter explicit
+native record links. No live provider, embedding job or command runner is added.

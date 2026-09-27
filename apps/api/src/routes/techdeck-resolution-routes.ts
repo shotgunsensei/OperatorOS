@@ -7,11 +7,15 @@ import { resolveTenantModuleAccess, tenantHasModuleEntitlement } from '../lib/te
 import { checkPersistentAuthRateLimit } from '../lib/auth-request-limits.js';
 import { importResolutionExport, parseResolutionInput, prepareResolutionImport, validateResolutionLinks, type ResolutionContext } from '../lib/techdeck-resolution-ingestion.js';
 import { parseResolutionJson, ResolutionInputError } from '../lib/techdeck-resolution-validation.js';
+import { machineEvidenceExportSchema } from '../../../../packages/sdk/src/techdeck-resolution.js';
+import { ticketCompletionPrompt, ticketCompletionShortcut, ticketCompletionPromptSha256, machineEvidenceTemplate } from '../generated/techdeck-resolution-contract.js';
+import { listResolutionIncidents, resolutionSummary, resolutionDetail, resolutionSection, resolutionHistory, downloadResolutionRaw, updateResolutionIncident, searchResolutionIncidents, relatedResolutionIncidents, resolutionLinkOptions, resolutionFilters } from '../lib/techdeck-resolution-workspace.js';
 
 const nativeBase = '/v1/modules/techdeck/resolution-intelligence';
 const headlessBase = '/v1/headless/techdeck/resolution-intelligence';
 const contexts = new WeakMap<FastifyRequest, ResolutionContext>();
 const nativeGuards = [requireTenantMember, requireTenantModuleAccess('techdeck'), requireTenantModuleWriteAccess];
+const readGuards = [requireTenantMember, requireTenantModuleAccess('techdeck')];
 
 async function internalTechnician(context: ResolutionContext): Promise<void> {
   const tenant = await db.execute(sql`SELECT id FROM tenants WHERE id=${context.tenantId} AND status='active'`);
@@ -21,7 +25,7 @@ async function internalTechnician(context: ResolutionContext): Promise<void> {
 }
 async function nativeContext(request: FastifyRequest) {
   const tenant = (request as any).tenantContext as TenantContext;
-  if (!tenant || !['member', 'admin', 'owner'].includes(tenant.role)) throw new ResolutionInputError('RESOLUTION_ACCESS_DENIED', 403);
+  if (!tenant || !['viewer', 'member', 'admin', 'owner'].includes(tenant.role)) throw new ResolutionInputError('RESOLUTION_ACCESS_DENIED', 403);
   const module = await db.execute(sql`SELECT id FROM modules WHERE slug='techdeck'`);
   if (!module.rows[0]) throw new ResolutionInputError('RESOLUTION_ACCESS_DENIED', 403);
   const context: ResolutionContext = { tenantId: tenant.tenantId, moduleId: String(module.rows[0].id), actorUserId: String((request as any).user.id), role: tenant.role as ResolutionContext['role'], correlationId: request.id };
@@ -54,6 +58,7 @@ async function limit(request: FastifyRequest, reply: FastifyReply) {
 
 export async function registerTechDeckResolutionRoutes(parent: FastifyInstance) {
   await parent.register(async app => {
+    app.addHook('onSend', async (_request, reply, payload) => { reply.header('Cache-Control', 'no-store'); reply.header('X-Content-Type-Options', 'nosniff'); return payload; });
     // Scope the strict buffer parser and safe errors to these intake endpoints only.
     app.removeContentTypeParser('application/json');
     app.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: 4 * 1_048_576 }, (_request, body, done) => {
@@ -68,8 +73,46 @@ export async function registerTechDeckResolutionRoutes(parent: FastifyInstance) 
       if (statusCode === 415) return reply.code(415).send({ error: 'JSON content type required', code: 'RESOLUTION_CONTENT_TYPE_REQUIRED' });
       // SQL errors may contain source values; never pass the error object to the logger or caller.
       request.log.error({ code: 'RESOLUTION_IMPORT_FAILED', requestId: request.id }, 'Resolution evidence request failed');
-      return reply.code(500).send({ error: 'Resolution evidence could not be saved', code: 'RESOLUTION_IMPORT_FAILED' });
+      return reply.code(500).send({ error: 'Resolution request could not be completed', code: 'RESOLUTION_REQUEST_FAILED' });
     });
+    const reads = { onRequest: [...readGuards, nativeContext] };
+    const writes = { onRequest: [...nativeGuards, nativeContext, limit] };
+    app.get(`${nativeBase}/capabilities`, reads, async request => ({
+      canWrite: contexts.get(request)!.role !== 'viewer' && ['user', 'manager'].includes((request as any).tenantModuleAccessLevel),
+      canManage: ['admin', 'owner'].includes(contexts.get(request)!.role) && ['user', 'manager'].includes((request as any).tenantModuleAccessLevel),
+      canDownloadRaw: ['admin', 'owner'].includes(contexts.get(request)!.role),
+      canSetOwnerVisibility: contexts.get(request)!.role === 'owner',
+    }));
+    for (const asset of ['prompt', 'shortcut', 'template', 'schema'] as const) app.get(`${nativeBase}/${asset}`, reads, async (request, reply) => {
+      const query = request.query as Record<string, unknown>;
+      if (Object.keys(query).some(key => !['version', 'download'].includes(key)) || query.version !== undefined && query.version !== '1.0' || query.download !== undefined && query.download !== '1') throw new ResolutionInputError('RESOLUTION_QUERY_INVALID', 400);
+      const content = asset === 'prompt' ? ticketCompletionPrompt : asset === 'shortcut' ? ticketCompletionShortcut : JSON.stringify(asset === 'template' ? machineEvidenceTemplate : machineEvidenceExportSchema, null, 2) + '\n';
+      reply.header('X-Resolution-Schema-Version', '1.0').header('X-Resolution-Prompt-Sha256', ticketCompletionPromptSha256);
+      if (query.download === '1') reply.header('Content-Disposition', `attachment; filename="techdeck-resolution-${asset}.${asset === 'prompt' || asset === 'shortcut' ? 'txt' : 'json'}"`);
+      return reply.type(asset === 'prompt' || asset === 'shortcut' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8').send(content);
+    });
+    app.get(`${nativeBase}/incidents`, reads, request => listResolutionIncidents(contexts.get(request)!, resolutionFilters(request.query)));
+    app.get(`${nativeBase}/summary`, reads, request => resolutionSummary(contexts.get(request)!, resolutionFilters(request.query)));
+    app.get(`${nativeBase}/link-options`, reads, request => resolutionLinkOptions(contexts.get(request)!, request.query as Record<string, unknown>));
+    app.get(`${nativeBase}/search`, { onRequest: [...readGuards, nativeContext, limit] }, request => searchResolutionIncidents(contexts.get(request)!, request.query as Record<string, unknown>));
+    app.post(`${nativeBase}/search`, writes, request => {
+      if (!request.body || typeof request.body !== 'object' || Array.isArray(request.body)) throw new ResolutionInputError('RESOLUTION_BODY_INVALID', 400);
+      return searchResolutionIncidents(contexts.get(request)!, request.body as Record<string, unknown>, true);
+    });
+    app.get(`${nativeBase}/incidents/:id`, reads, request => resolutionDetail(contexts.get(request)!, (request.params as { id: string }).id));
+    app.get(`${nativeBase}/incidents/:id/sections/:section`, reads, request => {
+      const { id, section } = request.params as { id: string; section: string };
+      return resolutionSection(contexts.get(request)!, id, section, resolutionFilters(request.query));
+    });
+    app.get(`${nativeBase}/incidents/:id/history`, reads, request => resolutionHistory(contexts.get(request)!, (request.params as { id: string }).id, resolutionFilters(request.query)));
+    app.get(`${nativeBase}/incidents/:id/related`, reads, request => relatedResolutionIncidents(contexts.get(request)!, (request.params as { id: string }).id));
+    app.get(`${nativeBase}/incidents/:id/raw/:revision`, reads, async (request, reply) => {
+      const { id, revision } = request.params as { id: string; revision: string };
+      const source = await downloadResolutionRaw(contexts.get(request)!, id, /^\d+$/.test(revision) ? Number(revision) : NaN);
+      return reply.header('Content-Disposition', `attachment; filename="resolution-${id}-revision-${revision}.json"`).type('application/json; charset=utf-8').send(source);
+    });
+    app.patch(`${nativeBase}/incidents/:id`, writes, request => updateResolutionIncident(contexts.get(request)!, (request.params as { id: string }).id, request.body));
+    app.post(`${nativeBase}/incidents/:id/archive`, writes, request => updateResolutionIncident(contexts.get(request)!, (request.params as { id: string }).id, request.body, true));
     for (const [base, guards] of [[nativeBase, [...nativeGuards, nativeContext, limit]], [headlessBase, [headlessContext, limit]]] as const) {
       // Authorize before parsing potentially sensitive/expensive source text.
       app.post(`${base}/exports/validate`, { onRequest: [...guards], bodyLimit: 4 * 1_048_576 }, async (request, reply) => {
