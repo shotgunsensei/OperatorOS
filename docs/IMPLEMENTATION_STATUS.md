@@ -1,5 +1,102 @@
 # OperatorOS implementation status
 
+## TechDeck Resolution Intelligence Phase 2 and completed-phase sweep (2026-09-27 UTC)
+
+Status: **INGESTION IMPLEMENTED / LOCAL VERIFICATION PASSED / NOT DEPLOYED**.
+The latest fetched `main` is `8f8e370`, PR #104, with implementation commit
+`ac6b49c`. Its exact-merge [GitHub release gate passed](https://github.com/shotgunsensei/OperatorOS/actions/runs/36188543284);
+the earlier pending-CI note below remains the historical Phase 1 record. Work here
+is on `codex/techdeck-resolution-ingestion` and has not been committed or pushed.
+
+The user's continuation selects **Phase 2 / Prompt 3** from
+[the persisted prompt map](techdeck/resolution-intelligence-implementation-plan.md#12-implementation-phases-and-exit-criteria).
+Implemented: five native/headless validate/import/admin-reprocess routes, strict
+bounded JSON/schema validation, recursive credential screening, exact immutable
+source, deterministic tenant-scoped facts/graph/search projections, explicit
+existing-resource mappings, concurrent dedupe, actor-bound idempotency,
+optimistic revision control, transactional platform audit and persistent rate
+limits. No release step is added; schema stays **v64/64**. See the
+[API contract](techdeck/resolution-intelligence-api.md) and
+[consistency/security/visual review](techdeck/resolution-intelligence-phase2-review.md).
+
+The completed foundation security diff covered all 33 files with zero validated
+findings. Additional Phase 2 review identified and rechecked fixes for credential
+key/prefix gaps, costly scanner/parser inputs, multiline normalization, projection
+amplification, numeric precision and per-observation SQL. No concrete reported
+Phase 2 finding remains open. Screening remains a heuristic; its stored success
+flag is not a guarantee that arbitrary source text contains no secrets.
+
+Fresh environment: Windows PowerShell, Node **24.19.0**, Corepack pnpm **10.34.5**,
+PostgreSQL 16 in the task-owned `operatoros-resolution-phase2-disposable`
+container, bound only to `127.0.0.1:55465`, database
+`operatoros_resolution_phase2_test`. Tests set `CI=true`,
+`PARITY_DATABASE_IS_DISPOSABLE=1`, synthetic non-production auth/encryption
+secrets and `APP_ENV=NODE_ENV=test`. Build/runtime set both environments to
+`production`, `INTERNAL_API_URL=http://localhost:5001`, `RUNNER_MODE=disabled`
+and the checked-in exact-host URL contract. The browser harness strips external
+provider credentials, enables its deterministic provider mode, maps canonical
+hosts to the loopback TLS proxy and starts `scripts/start-unified-runtime.mjs`.
+Production apply mode is absent. No persistent developer or production database
+is touched.
+
+| Exact command / fresh gate | Result |
+| --- | --- |
+| `corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/techdeck-resolution-contract.test.ts test/techdeck-resolution-database.test.ts test/techdeck-resolution-validation.test.ts test/techdeck-resolution-ingestion.test.ts` | **43 passed**, 0 failed/skipped/cancelled/todo |
+| `corepack pnpm typecheck` | PASS, all four workspaces; repeated successfully by production build after the browser-test additions |
+| `corepack pnpm test:unit` | **52 passed**, 0 failed/skipped/cancelled/todo |
+| `corepack pnpm test:api` | **1,561 passed**, 0 failed/skipped/cancelled/todo; required web HTTP fixture supplied by the checked-in runner; precedes the final timestamp-range correction described below |
+| `corepack pnpm test:integration` | **76 passed**, 0 failed/skipped/cancelled/todo, after owned disposable schema reset, root apply/reapply with `OPERATOROS_DATABASE_RELEASE_MODE=apply` and independent verify |
+| `corepack pnpm build:production` | PASS: generated contract/storage checks, four workspace typechecks, SDK/API/runner compilation and Next production build with 38 static pages |
+| `corepack pnpm preflight:production -- --core` and `corepack pnpm db:plan` | PASS; core configuration valid and ordered manifest remains v64/64 |
+| `corepack pnpm test:route-integrity` and `node scripts/parity/verify-visual-contracts.mjs` | PASS: 1,304 existing active route capabilities, 974 crawl routes, 0 failures; 13 visual contracts, 0 failures |
+| `node scripts/parity/run-browser-tests.mjs --suite all` | **30 browser journeys + 4 visual/accessibility cases passed**, 0 failures/skips/retries; production supervisor, existing exact-host workflows, new Phase 2 proxy/token journey and current screenshots |
+| Final correction gate: the focused command above, `corepack pnpm test:integration`, `corepack pnpm build:production`, then `node scripts/parity/run-browser-tests.mjs --suite e2e` with the filter below | **43 focused + 76 integration + 3 TechDeck production browser cases passed**, all with 0 failures/skips/retries; fresh production build/typechecks passed |
+
+The final targeted browser filter was set in PowerShell as:
+
+```powershell
+$env:PARITY_BROWSER_GREP='TechDeck production ingestion|TechDeck persists|TechDeck literal restoration'
+node scripts/parity/run-browser-tests.mjs --suite e2e
+```
+
+Fresh logs are `build/resolution-phase2-*.log`, gate results are
+`build/resolution-phase2-gates.json`, and machine test summaries are in
+`build/parity/`. Final correction logs and results are separately retained as
+`build/resolution-phase2-final-*.log` and `build/resolution-phase2-final-gates.json`.
+During final checks, a read-only PostgreSQL probe confirmed that year zero,
+accepted by JavaScript dates, cannot be stored as a PostgreSQL timestamp. The
+normalizer now preserves unsupported UTC years in source with an unresolved-date
+warning and a null projection. Pure, database revision and production-proxy
+regressions cover the correction. The earlier 1,561-test full API result is not
+misrepresented as a rerun after that final change; fresh focused, integration,
+build and TechDeck runtime checks are the relevant final verification.
+
+Early ingestion-development runs exposed two fixture setup
+mistakes (reused identity name and a stale module-status field); both were fixed
+before the green focused/full API gates. A bounded scanner regression also
+failed during development and was corrected and independently retested. No test
+was skipped or weakened to obtain a pass. The complete `verify:release` aggregate
+was not invoked in this continuation; no lint or formatting result is claimed.
+
+Current desktop/tablet/mobile captures were manually inspected and retained in
+`docs/techdeck/evidence/phase2/`. Automated comparisons, horizontal-overflow,
+accessible-name and WCAG checks pass. One existing mobile visual follow-up remains:
+the floating Help launcher can cover card copy at some scroll positions. It is
+recorded for Phase 3 layout work; approved baselines were not regenerated. Routine
+browser tests also rewrote five unrelated CallCommand screenshot artifacts; only
+those test-produced changes were restored to their clean starting contents.
+The test harness stopped its runtime/proxy, and the verified task-owned
+disposable container and anonymous volume were removed after final verification.
+Other containers and persistent databases were left intact.
+
+Next: **Phase 3 / Prompt 4 + exact/FTS portions of 5 + 10**, for real technician
+import/detail/search/history and prompt-settings pages. Search/read/raw APIs,
+documents, AI/embeddings, analytics and the private CAM incident are still later
+work. Fresh Node 20/Linux CI for this candidate and any merge, production
+backup/apply, deployment and private customer import remain separate gates. This
+local continuation does not promote TechDeck's historical parity counts or claim
+new production readiness.
+
 ## TechDeck Resolution Intelligence Phase 1 and branch reconciliation (2026-09-25)
 
 Status: **STORAGE IMPLEMENTED / LOCAL VERIFICATION RECORDED / CI REQUIRED BEFORE MERGE / NOT DEPLOYED**.

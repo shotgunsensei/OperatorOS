@@ -47,7 +47,7 @@ export async function requestAttachmentRescan(input: {
 export const SHARED_API_TOKEN_SCOPES = Object.freeze([
   'directory:read', 'attachments:read', 'attachments:write', 'notifications:write',
   'jobs:write', 'exports:read', 'exports:write', 'usage:read', 'search:read', 'webhooks:write',
-  'techdeck:read', 'techdeck:write',
+  'techdeck:read', 'techdeck:write', 'techdeck:resolution:import',
 ]);
 
 function scopeKey(moduleId?: string | null): string {

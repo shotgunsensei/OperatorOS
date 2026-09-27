@@ -1,5 +1,26 @@
 # TechDeck zero-gap verification
 
+## Resolution Intelligence Phase 2 overlay (2026-09-27 UTC)
+
+The completed Phase 1 merge `8f8e370` has a successful exact-revision GitHub gate.
+Phase 2 now adds screened native/headless ingestion and administrator reprocessing
+on v64. Fresh focused checks pass 43/43, unit checks 52/52 and the complete API
+gate 1,561/1,561, with zero failures/skips. Integration 76/76, production build,
+30/30 browser journeys and 4/4 visual/accessibility cases pass. The final timestamp
+boundary correction was separately reverified with 43/43 focused checks, 76/76
+integration checks, a fresh build/typecheck and 3/3 TechDeck production browser
+cases. Current desktop/tablet/mobile captures were inspected; the existing mobile
+Help-launcher overlap is recorded for Phase 3. See
+[the authoritative current results](../../IMPLEMENTATION_STATUS.md).
+
+The immutable foundation diff received a complete 33-file security review with
+zero validated findings. Separate Phase 2 review fixes and heuristic limits are
+recorded in [the sweep report](../../techdeck/resolution-intelligence-phase2-review.md).
+The [API guide](../../techdeck/resolution-intelligence-api.md) documents current
+authority, source retention, revision, error and replay contracts. Technician
+pages and incident reads/search/history/settings remain Phase 3. No deployment
+or private incident import is implied, and historical parity totals are unchanged.
+
 ## Resolution Intelligence Phase 1 overlay (2026-09-25)
 
 The storage foundation adds a formal export schema, packaged canonical prompt,
