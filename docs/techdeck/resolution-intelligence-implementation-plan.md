@@ -1,6 +1,16 @@
 # TechDeck Resolution Intelligence implementation plan
 
-Status: **PHASES 0–4 IMPLEMENTED; LOCAL VERIFICATION PASSED; NOT DEPLOYED**
+Status: **PHASES 0–4 IMPLEMENTED AND DEPLOYED; LOCAL/CI GATES AND LIVE OWNER READ CHECKS PASSED**
+
+Publication overlay (2026-09-27 UTC): Phase 4 merge `aa3e2ea` passed the complete
+exact-merge CI gate and is live as build `be3ad2cb7e0d27e741a20ef0`. The owner
+authorized the backed-up production v64 recovery and republish. Both Replit
+databases independently verify v64/64; public runtime verification passes 47/47.
+Owner SSO, Resolution/linked-knowledge/import/prompt routes, prompt copy/checksum,
+read-only search, refresh and My Apps return passed on the deployed target.
+Production writes, other-role/tenant acceptance, live logout, providers and restore
+rehearsal remain separate. See [release evidence](../RELEASE_V64_EVIDENCE.md).
+The earlier candidate history below is retained; Phase 5 remains the next phase.
 
 Phase 4 continuation (2026-09-27 UTC): Phase 3 merged via PR #106 (`307a774`);
 fetched main `c800265` is an empty publication marker. This candidate adds

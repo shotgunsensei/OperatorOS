@@ -1,5 +1,32 @@
 # OperatorOS current release gate
 
+## Resolution Intelligence v64 - LIVE / SOURCE AND DATABASE VERIFIED (2026-09-27)
+
+Phase 4 merge `aa3e2ea08d4e60f2a5342c3395d73ec2f4948f81` was reviewed in Replit's
+clean checkout before publication; development independently verifies v64/64. Failed publish
+`3c764b6a` passed Build/Bundle and failed Promote on database verification.
+Read-only inspection and the full production verifier confirmed the missing
+raw-evidence immutability trigger. After owner authorization, production was
+paused, an encrypted logical backup was verified, and the supported root release
+completed. Production independently verifies v64/64 in 803 ms; development
+verifies in 789 ms. The function and enabled trigger are present; eleven recorded
+data aggregates are unchanged. The startup security requirement remains enforced.
+
+Exact-merge CI passed 1,587 API, 52 unit, 102 integration, 32 browser and four
+visual cases, with no failures/skips. Replit republish completed, with
+development-data overwrite off and no persistent apply authority. Public readiness
+returns HTTP 200 with that exact commit, application build
+`be3ad2cb7e0d27e741a20ef0`, deployed `2026-09-27T21:07:53.585Z`, and v64/64.
+The public runtime verifier passes **47/47**. Existing-owner Chrome checks pass
+launcher-to-TechDeck SSO, Resolution/linked-knowledge/import/prompt routes,
+canonical prompt copying/checksum, empty exact-identifier search, deep-link
+refresh and My Apps return. No production incident/document was created.
+Real-data write acceptance, other-role isolation on target, live logout,
+provider acceptance and restore rehearsal remain separate scopes. See
+[v64 recovery evidence](RELEASE_V64_EVIDENCE.md) and
+[implementation status](IMPLEMENTATION_STATUS.md). Phase 5 semantic retrieval
+is the next feature phase.
+
 ## Resolution Intelligence v64 source candidate - PUBLICATION NOT PERFORMED (2026-09-25)
 
 The source manifest now ends at v64/64 `techdeck_resolution_intelligence_tables`.
