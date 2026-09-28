@@ -55,6 +55,17 @@ implementation evidence before separately backing up/applying development and
 production. Both must verify **v64/64**, ending in that step, before publication.
 The server's routine wake verifies only; it cannot upgrade a v63 database.
 
+Table/index parity alone does not establish v64 readiness. The ordered release
+also installs `tdri_preserve_raw_export()` and the enabled
+`tdri_raw_export_immutable` trigger. The 2026-09-27 Replit publish copied 27
+Resolution tables but left these objects absent in production while development
+had them; startup correctly remained closed. Run the supported backed-up root
+apply and independent verification for the selected production database, rather
+than relying on Replit's generated schema diff. See the
+[read-only deployment diagnosis](techdeck/resolution-intelligence-v64-deployment-diagnosis.md).
+The subsequently authorized backed-up root apply and independent v64/64 passes
+are recorded in [v64 recovery evidence](RELEASE_V64_EVIDENCE.md).
+
 Keep the existing shared schema and new additive tables during an application
 rollback. For data rollback restore the full approved pre-release backup to a new
 database, reconcile and switch after authorization. Never drop just these tables

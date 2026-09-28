@@ -1,8 +1,11 @@
 # Evidence-derived TechDeck documents
 
-Phase 4 / deterministic Prompt 7, 2026-09-27. This is the local candidate on
-`codex/techdeck-evidence-documents`; local verification passes and deployment
-acceptance remains separate. See the [completed review](resolution-intelligence-phase4-review.md).
+Phase 4 / deterministic Prompt 7, 2026-09-27. The candidate from
+`codex/techdeck-evidence-documents` merged as `aa3e2ea` and is deployed after
+local/CI verification and the authorized v64 recovery. Live owner read checks
+pass; production document-write acceptance remains separate. See the
+[release evidence](../RELEASE_V64_EVIDENCE.md) and
+[completed review](resolution-intelligence-phase4-review.md).
 The feature reuses existing versioned documents and review/approve/publish.
 Storage remains v64/64.
 

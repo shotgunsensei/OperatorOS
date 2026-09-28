@@ -1,5 +1,67 @@
 # OperatorOS implementation status
 
+## TechDeck v64 authorized production recovery (2026-09-27 UTC)
+
+Status: **PUBLISHED / EXACT SOURCE AND DATABASE VERIFIED / LIVE OWNER READ CHECKS PASSED**.
+The owner authorized migration and republish. Exact Phase 4 merge
+`aa3e2ea08d4e60f2a5342c3395d73ec2f4948f81` passed the complete
+[CI release gate](https://github.com/shotgunsensei/OperatorOS/actions/runs/36347620046):
+1,587 API, 52 unit, 102 integration, 32 browser and four visual cases; no failures
+or skips. Replit's clean source matched that revision.
+
+With production paused and a verified encrypted logical backup supplementing
+seven-day PITR, the supported root `db:apply` completed in 12,000 ms. Final
+independent production `db:verify` passes v64/64 in 803 ms; development passes in
+789 ms. The immutable trigger/function are present and all eleven recorded
+platform/customer/Resolution aggregates are unchanged. Replit republish completed
+with development-data overwrite off and no serving apply flag.
+No test suite was run against either Replit database. Exact commands, environment,
+backup validation, the interrupted initial apply, successful idempotent completion,
+counts and publication results are in [v64 recovery evidence](RELEASE_V64_EVIDENCE.md).
+Application source is unchanged; no new lint or formatting result is claimed.
+
+Live readiness returns HTTP 200, exact merge `aa3e2ea`, application build
+`be3ad2cb7e0d27e741a20ef0`, deployed `2026-09-27T21:07:53.585Z`, and v64/64.
+PowerShell `$env:OPERATOROS_EXPECTED_RELEASE_COMMIT='aa3e2ea08d4e60f2a5342c3395d73ec2f4948f81';
+node scripts/verify-production-runtime.mjs` passes **47/47**, zero failures.
+Chrome's existing owner session completed launcher-to-TechDeck SSO, opened
+Resolution/linked-knowledge/import/prompt routes, copied the 13,112-character
+canonical prompt with its matching checksum, ran an empty exact-identifier
+search, refreshed its deep link and returned through My Apps. No console errors
+or horizontal overflow were observed on the inspected desktop pages. No
+production fixture or document write was performed. Real-data write acceptance,
+other-role/tenant target checks, live logout, provider delivery and restore
+rehearsal remain outside this operational check. Phase 5 remains next.
+
+## TechDeck v64 Replit publication diagnosis (2026-09-27 UTC)
+
+Historical initial status: **STARTUP BLOCKER CONFIRMED / DEVELOPMENT v64 VERIFIED**.
+The later owner authorization and recovery results above supersede the initial
+authorization/production blockers in this diagnostic record.
+Chrome inspection of failed Replit build `3c764b6a` confirms Build/Bundle passed
+and Promote failed when database verification exited. Read-only production
+catalog queries find all 27 Resolution tables and an ALWAYS-generated search
+vector, but zero `tdri_raw_export_immutable` triggers and no
+`tdri_preserve_raw_export()` function. Development has both. Neither database
+reports unvalidated Resolution constraints or invalid/unready Resolution indexes.
+These aggregates do not replace full production release verification.
+
+Replit's clean checkout is Phase 4 merge `aa3e2ea08d4e60f2a5342c3395d73ec2f4948f81`.
+The exact read-only shell command
+`git status --short && git rev-parse HEAD && corepack pnpm db:verify` passes against
+its normal development database: **v64/64, 3884ms**. Production was inspected
+through the SQL console with Enable Editing off; exact SELECTs, results, limits,
+and the prepared backed-up root-apply recovery are in the
+[deployment diagnosis](techdeck/resolution-intelligence-v64-deployment-diagnosis.md).
+No production backup/apply, customer-data mutation, publish, or runtime/security
+setting change occurred. No test suite ran against either Replit database.
+Application source is unchanged; no new automated-test, lint, or formatting
+result is claimed. Local read-only `corepack pnpm --silent db:plan` reports
+v64/64 ending in `techdeck_resolution_intelligence_tables`; `git diff --check`
+passes for the documentation update on `codex/techdeck-v64-release-diagnosis`.
+Phase 5 remains the next feature phase; production recovery
+and affected target acceptance remain open.
+
 ## TechDeck Resolution Intelligence Phase 4 continuation (2026-09-27 UTC)
 
 Status: **EVIDENCE-DERIVED DOCUMENTS IMPLEMENTED / LOCAL VERIFICATION PASSED / NOT DEPLOYED**.
