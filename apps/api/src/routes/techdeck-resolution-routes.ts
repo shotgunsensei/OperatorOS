@@ -11,6 +11,7 @@ import { machineEvidenceExportSchema } from '../../../../packages/sdk/src/techde
 import { ticketCompletionPrompt, ticketCompletionShortcut, ticketCompletionPromptSha256, machineEvidenceTemplate } from '../generated/techdeck-resolution-contract.js';
 import { listResolutionIncidents, resolutionSummary, resolutionDetail, resolutionSection, resolutionHistory, downloadResolutionRaw, updateResolutionIncident, searchResolutionIncidents, relatedResolutionIncidents, resolutionLinkOptions, resolutionFilters } from '../lib/techdeck-resolution-workspace.js';
 import { previewResolutionDraft, createResolutionDraft, listResolutionDocuments, linkResolutionDocument } from '../lib/techdeck-resolution-documents.js';
+import { semanticStatus, saveSemanticSettings, previewSemanticIndex, queueSemanticIndex, semanticIndexStatus } from '../lib/techdeck-resolution-embeddings.js';
 
 const nativeBase = '/v1/modules/techdeck/resolution-intelligence';
 const headlessBase = '/v1/headless/techdeck/resolution-intelligence';
@@ -78,6 +79,11 @@ export async function registerTechDeckResolutionRoutes(parent: FastifyInstance) 
     });
     const reads = { onRequest: [...readGuards, nativeContext] };
     const writes = { onRequest: [...nativeGuards, nativeContext, limit] };
+    app.get(`${nativeBase}/semantic`, reads, request => semanticStatus(contexts.get(request)!));
+    app.put(`${nativeBase}/semantic`, writes, request => saveSemanticSettings(contexts.get(request)!, request.body));
+    app.get(`${nativeBase}/incidents/:id/semantic`, reads, request => semanticIndexStatus(contexts.get(request)!, (request.params as { id: string }).id));
+    app.post(`${nativeBase}/incidents/:id/semantic/preview`, writes, request => previewSemanticIndex(contexts.get(request)!, (request.params as { id: string }).id, request.body));
+    app.post(`${nativeBase}/incidents/:id/semantic/index`, writes, request => queueSemanticIndex(contexts.get(request)!, (request.params as { id: string }).id, request.body));
     app.get(`${nativeBase}/documents`, reads, request => listResolutionDocuments(contexts.get(request)!, request.query as Record<string, unknown>));
     app.post(`${nativeBase}/incidents/:id/document-links`, writes, request => linkResolutionDocument(contexts.get(request)!, (request.params as { id: string }).id, request.body));
     app.post(`${nativeBase}/incidents/:id/document-drafts/preview`, writes, request => previewResolutionDraft(contexts.get(request)!, (request.params as { id: string }).id, request.body));

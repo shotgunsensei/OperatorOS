@@ -1,5 +1,19 @@
 # OperatorOS module parity index
 
+## Resolution Intelligence semantic continuation (2026-09-29)
+
+**PARITY COUNTS UNCHANGED / PHASE 5 SOURCE IMPLEMENTED / PROVIDER DISABLED**.
+
+| Surface | Current evidence | Remaining gate |
+| --- | --- | --- |
+| TechDeck Resolution Intelligence | Reviewed indexing, OpenAI adapter, bounded hybrid retrieval, tenant/role/current-revision enforcement, usage cap and explicit fallback; 36 focused local checks; full 14/14 release stages, 1,593 API, 108 integration, 52 unit, 32 browser and 4 visual checks pass | Exact CI gate; separately approved v65 release, real provider/model judgment and deployed acceptance |
+| Existing exact/text search and documents | Available with semantic/provider setup absent; linked knowledge retains existing source access; complete local release/browser regressions pass without retries | Deployed acceptance after authorized publication |
+
+The [semantic guide](../techdeck/resolution-intelligence-semantic-search.md) and
+[implementation status](../IMPLEMENTATION_STATUS.md) distinguish source, test,
+provider and live evidence. This addition does not change historical module
+restoration parity or turn AI research into an available feature.
+
 ## Resolution Intelligence document continuation (2026-09-27 UTC)
 
 Status: **PARITY COUNTS UNCHANGED / PHASE 4 IMPLEMENTED / LOCAL VERIFICATION PASSED**.

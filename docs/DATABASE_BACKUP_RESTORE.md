@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints the current 64 ordered step identifiers without secrets
+`db:plan` is read-only and prints the current 65 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -45,7 +45,21 @@ The release is idempotent and additive. Do not run imported child migrations,
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
 
-### Release v64 Resolution Intelligence storage
+### Release v65 optional semantic search storage
+
+The candidate appends `techdeck_resolution_semantic_tables` after v64. It adds
+tenant settings and revision-bound embeddings with portable PostgreSQL arrays.
+No provider activation, incident backfill, extension install or customer-data
+export occurs in the release. See the
+[semantic search guide](techdeck/resolution-intelligence-semantic-search.md).
+Read-only pgvector capability checks and an independently approved extension
+setup are separate from ordinary schema release. Exact/text search remains
+available without that extension. Back up and independently apply/verify v65/65
+on both deployment databases before publishing this candidate. The previously
+published v64 evidence below does not verify v65. Restore-to-new-database is the
+rollback path; disabling semantic search is a non-destructive feature rollback.
+
+### Release v64 Resolution Intelligence storage (previous release)
 
 The manifest appends `techdeck_resolution_intelligence_tables`: 27 tenant-owned
 tables with source-revision constraints, immutable raw evidence, typed relationships

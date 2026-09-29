@@ -1,5 +1,11 @@
 # Resolution Intelligence API
 
+Phase 5 / v65 additions are defined in the
+[semantic search API contract](resolution-intelligence-semantic-search.md#native-api-additions).
+They add reviewed background indexing and opt-in hybrid search. OpenAI activation
+is disabled; the existing intake endpoints do not automatically enqueue embeddings.
+The Phase 2–4 contract below remains applicable to those earlier surfaces.
+
 Phases 2–4 / supplied Prompts 3, 4, exact/full-text portions of 5, deterministic 7, and 10,
 2026-09-27 UTC. Ingestion and the technician workspace use the existing v64
 storage release. Phase 4 adds deterministic document previews, draft creation,

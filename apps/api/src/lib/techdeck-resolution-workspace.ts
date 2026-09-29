@@ -5,6 +5,7 @@ import { appendActivityEvent } from './shared-usage-activity.js';
 import { parseResolutionInput, validateResolutionLinks, type ResolutionContext } from './techdeck-resolution-ingestion.js';
 import { ResolutionInputError, sha256 } from './techdeck-resolution-validation.js';
 import { extractResolutionIdentifiers, resolutionSearchText } from './techdeck-resolution-search.js';
+import { semanticQuery, semanticStatus, EMBEDDING_REDACTOR, SEMANTIC_CANDIDATE_LIMIT, type SemanticQuery } from './techdeck-resolution-embeddings.js';
 
 type Executor = Pick<typeof db, 'execute'>;
 type Filters = { clientId?: string; assetId?: string; review?: string; validation?: string; limit: number; cursor?: string };
@@ -71,7 +72,7 @@ export async function resolutionSummary(context: ResolutionContext, filters: Fil
   const result = await db.execute(sql`SELECT count(*)::int AS incidents,count(*) FILTER(WHERE i.review_status='unreviewed')::int AS unreviewed,
     count(*) FILTER(WHERE i.follow_up_required IS TRUE OR i.validation_status IS DISTINCT FROM 'COMPLETE' AND i.validation_status IS DISTINCT FROM 'PASSED')::int AS needs_validation
     FROM techdeck_resolution_incidents i WHERE ${visibility(context)} ${filtersClause(filters)}`);
-  return { ...result.rows[0], searchMode: 'exact_and_full_text', embeddings: 'not_enabled' };
+  return { ...result.rows[0], searchMode: 'hybrid_v2_exact_first', embeddings: (await semanticStatus(context)).state };
 }
 function sectionGate(section: string, context: ResolutionContext): SQL {
   // Cross-incident edges are authorized at the target too, before counts or expansion.
@@ -145,9 +146,12 @@ export async function updateResolutionIncident(context: ResolutionContext, id: s
 }
 
 export async function searchResolutionIncidents(context: ResolutionContext, input: Record<string, unknown>, large = false) {
-  const filters = resolutionFilters(input, ['q']);
+  const filters = resolutionFilters(input, ['q','semantic']);
+  if (input.semantic !== undefined && input.semantic !== '1') throw new ResolutionInputError('RESOLUTION_QUERY_INVALID',400);
   const text = resolutionSearchText(input.q, large), identifiers = extractResolutionIdentifiers(text);
-  const scope = sha256(JSON.stringify([context.tenantId, context.role, text, filters.clientId, filters.assetId, filters.review, filters.validation]));
+  const authorized = sql`SELECT i.* FROM techdeck_resolution_incidents i WHERE ${visibility(context)} ${filtersClause(filters)}`;
+  const semantic: SemanticQuery = input.semantic === '1' ? await semanticQuery(context,text,authorized) : { state:'not_requested' };
+  const scope = sha256(JSON.stringify([context.tenantId, context.role, text, filters.clientId, filters.assetId, filters.review, filters.validation,input.semantic,semantic.state,semantic.identity,semantic.settingsVersion]));
   const offset = offsetCursor(filters.cursor, scope, 10_000);
   const ports = identifiers.filter(identifier => identifier.kind === 'port');
   // normalize-v1 did not project port rows. Match explicit port context in its
@@ -162,21 +166,47 @@ export async function searchResolutionIncidents(context: ResolutionContext, inpu
       : sql`identifier.kind=${identifier.kind} AND identifier.normalized_value=${identifier.value}`), sql` OR `) : sql`FALSE`;
   // MATERIALIZED is deliberate: candidate authorization precedes each retrieval signal.
   // Diagnostic prose is parameterized and never included in audit or response metadata.
-  const result = await db.execute(sql`WITH authorized AS MATERIALIZED (SELECT i.* FROM techdeck_resolution_incidents i WHERE ${visibility(context)} ${filtersClause(filters)}),
+  const vectorCandidates = semantic.vector && semantic.identity ? sql`vector_candidates AS MATERIALIZED (
+    SELECT e.* FROM techdeck_resolution_embeddings e JOIN authorized i ON i.tenant_id=e.tenant_id AND i.id=e.incident_id AND i.active_revision=e.revision AND i.version=e.source_version
+    JOIN techdeck_resolution_semantic_settings setting ON setting.tenant_id=e.tenant_id AND setting.enabled AND setting.version=${semantic.settingsVersion}
+    WHERE e.status='ready' AND e.provider=${semantic.identity.provider} AND e.model=${semantic.identity.model} AND e.dimensions=${semantic.identity.dimensions} AND e.redactor_version=${EMBEDDING_REDACTOR} AND e.settings_version=setting.version
+    LIMIT ${SEMANTIC_CANDIDATE_LIMIT+1}),` : sql``;
+  const vectorJoin = semantic.vector && semantic.identity ? sql`LEFT JOIN LATERAL (
+    SELECT max(1-(e.embedding::public.vector <=> ${JSON.stringify(semantic.vector)}::public.vector))::float AS score
+    FROM vector_candidates e JOIN techdeck_resolution_search_documents d ON d.tenant_id=e.tenant_id AND d.id=e.document_id AND d.incident_id=e.incident_id AND d.revision=e.revision AND d.content_sha256=e.source_hash
+    WHERE e.tenant_id=i.tenant_id AND e.incident_id=i.id AND (SELECT count(*) FROM vector_candidates)<=${SEMANTIC_CANDIDATE_LIMIT}
+  ) semantic ON true` : sql`LEFT JOIN LATERAL (SELECT NULL::float AS score) semantic ON true`;
+  const result = await db.execute(sql`WITH authorized AS MATERIALIZED (${authorized}),
+    ${vectorCandidates}
     query AS (SELECT websearch_to_tsquery('english',${text.slice(0, 8000)}) AS terms),
     ranked AS (SELECT i.id,i.title,left(i.issue_summary,500) AS issue_summary,left(i.one_line_resolution,500) AS one_line_resolution,i.validation_status,i.review_status,i.root_cause_confidence,i.created_at,i.active_revision,
       COALESCE(exact.matches,0)::int AS exact_score,COALESCE(fulltext.score,0)::float AS text_score,COALESCE(exact.reasons,'[]'::jsonb) AS match_reasons,
+      semantic.score AS semantic_score,COALESCE(metadata.score,0)::int AS metadata_score,COALESCE(metadata.reasons,'[]'::jsonb) AS metadata_reasons,
+      (i.primary_remediation='COMPLETE' AND i.validation_status IN ('COMPLETE','PASSED') AND i.follow_up_required IS FALSE AND EXISTS(SELECT 1 FROM techdeck_resolution_validations v WHERE v.tenant_id=i.tenant_id AND v.incident_id=i.id AND v.revision=i.active_revision AND v.kind='successful' AND v.claim_kind IN ('reported_fact','supported_conclusion')) AND NOT EXISTS(SELECT 1 FROM techdeck_resolution_validations v WHERE v.tenant_id=i.tenant_id AND v.incident_id=i.id AND v.revision=i.active_revision AND v.kind IN ('pending','failed'))) AS known_fix,
+      LEAST(3,(SELECT count(*)::int FROM techdeck_resolution_relationships edge JOIN techdeck_resolution_nodes target ON target.tenant_id=edge.tenant_id AND target.id=edge.target_node_id
+        JOIN authorized target_incident ON target_incident.tenant_id=target.tenant_id AND target_incident.id=target.incident_id AND target_incident.active_revision=target.revision
+        WHERE edge.tenant_id=i.tenant_id AND edge.incident_id=i.id AND edge.revision=i.active_revision AND edge.relationship_type='SUPPORTED_BY' AND edge.claim_kind IN ('reported_fact','supported_conclusion'))) AS graph_score,
       (SELECT count(*)::int FROM techdeck_resolution_warnings w WHERE w.tenant_id=i.tenant_id AND w.incident_id=i.id AND w.revision=i.active_revision) AS warning_count,
       (SELECT count(*)::int FROM techdeck_resolution_actions a WHERE a.tenant_id=i.tenant_id AND a.incident_id=i.id AND a.revision=i.active_revision AND a.kind='failed') AS failed_action_count
     FROM authorized i CROSS JOIN query
+    ${vectorJoin}
+    LEFT JOIN LATERAL (SELECT count(*) AS score,jsonb_agg(jsonb_build_object('kind',c.kind,'value',c.name)) AS reasons FROM (
+      SELECT DISTINCT component.kind,left(component.name,200) AS name FROM techdeck_resolution_components component
+      WHERE component.tenant_id=i.tenant_id AND component.incident_id=i.id AND component.revision=i.active_revision AND length(component.normalized_name)>=3 AND position(component.normalized_name IN lower(${text.slice(0,8000)}))>0
+      ORDER BY kind,name LIMIT 10) c) metadata ON true
     LEFT JOIN LATERAL (SELECT count(*) AS matches,jsonb_agg(jsonb_build_object('kind',matched.kind,'value',matched.value)) AS reasons FROM (
       SELECT DISTINCT identifier.kind,left(identifier.original_value,200) AS value FROM techdeck_resolution_identifiers identifier
       WHERE identifier.tenant_id=i.tenant_id AND identifier.incident_id=i.id AND identifier.revision=i.active_revision AND (${exact})
       UNION ${portMatches}) matched) exact ON true
     LEFT JOIN LATERAL (SELECT max(ts_rank_cd(document.search_vector,query.terms)) AS score FROM techdeck_resolution_search_documents document
       WHERE document.tenant_id=i.tenant_id AND document.incident_id=i.id AND document.revision=i.active_revision AND document.search_vector@@query.terms) fulltext ON true)
-    SELECT * FROM ranked WHERE exact_score>0 OR text_score>0 ORDER BY (exact_score>0) DESC,exact_score DESC,text_score DESC,created_at DESC,id DESC LIMIT ${filters.limit + 1} OFFSET ${offset}`);
-  return { items: result.rows.slice(0, filters.limit), nextCursor: result.rows.length > filters.limit && offset + filters.limit <= 10_000 ? encodeCursor({ scope, offset: offset + filters.limit }) : null, ranking: 'exact_then_full_text_v1', embeddings: 'not_enabled', fullTextTruncated: text.length > 8000 };
+    SELECT *, (text_score/(1+text_score)+0.25*greatest(0,coalesce(semantic_score,0))+0.02*least(metadata_score,3)+0.01*graph_score)::float AS hybrid_score
+    FROM ranked WHERE exact_score>0 OR text_score>0 OR metadata_score>0 OR semantic_score>=0.55
+    ORDER BY (exact_score>0) DESC,exact_score DESC,hybrid_score DESC,created_at DESC,id DESC LIMIT ${filters.limit + 1} OFFSET ${offset}`);
+  const items = result.rows.slice(0,filters.limit);
+  return { items, nextCursor: result.rows.length > filters.limit && offset + filters.limit <= 10_000 ? encodeCursor({ scope, offset: offset + filters.limit }) : null,
+    ranking:'hybrid_v2_exact_first', embeddings:semantic.state, fullTextTruncated:text.length>8000,
+    groups:{ bestMatches:items.map(r=>r.id),exactErrors:items.filter(r=>Array.isArray(r.match_reasons)&&r.match_reasons.some((reason:{kind:string})=>reason.kind==='error_code')).map(r=>r.id),similarIncidents:items.filter(r=>Number(r.semantic_score)>=0.55).map(r=>r.id),knownFixes:items.filter(r=>r.known_fix===true).map(r=>r.id),failedApproaches:items.filter(r=>Number(r.failed_action_count)>0).map(r=>r.id),warnings:items.filter(r=>Number(r.warning_count)>0).map(r=>r.id) } };
 }
 
 export async function relatedResolutionIncidents(context: ResolutionContext, id: string) {

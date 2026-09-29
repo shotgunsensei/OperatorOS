@@ -68,6 +68,7 @@ import { ensureAuthSecurityControls } from './auth-security-db-init.js';
 import { ensureSharedCustomerLinks } from './shared-customer-db-init.js';
 import { withDatabaseReleaseLock } from './database-release-lock.js';
 import { ensureTechDeckResolutionTables, verifyTechDeckResolutionTables } from './techdeck-resolution-db-init.js';
+import { ensureResolutionSemanticTables, verifyResolutionSemanticTables } from './techdeck-resolution-semantic-db.js';
 
 export { DATABASE_RELEASE_CONTRACT, DATABASE_RELEASE_STEPS };
 
@@ -137,6 +138,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   shared_customer_links: ensureSharedCustomerLinks,
   auth_security_controls: ensureAuthSecurityControls,
   techdeck_resolution_intelligence_tables: ensureTechDeckResolutionTables,
+  techdeck_resolution_semantic_tables: ensureResolutionSemanticTables,
   core_suite_trial_tables: ensureCoreSuiteTrialTables,
   forward_commerce_contract: ensureForwardCommerceContract,
 };
@@ -715,6 +717,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
     throw new Error(`OperatorOS database release verification failed: missing ${missing.join(', ') || 'required tables'}`);
   }
   await verifyTechDeckResolutionTables();
+  await verifyResolutionSemanticTables();
 }
 
 export async function applyOperatorOSDatabaseRelease(report: StepReporter = () => {}): Promise<void> {

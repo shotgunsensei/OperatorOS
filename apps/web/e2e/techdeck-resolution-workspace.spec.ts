@@ -56,6 +56,9 @@ test('TechDeck Resolution Technician V1 imports, searches, reviews and downloads
     await workspace.getByRole('link', { name: 'Open incident evidence →' }).click();
     await expect(workspace.getByRole('heading', { name: 'Synthetic CAM WAL closeout', exact: true })).toBeVisible();
     const incidentId = page.url().split('/').pop()!;
+    await workspace.getByText('Semantic index for this incident', { exact:true }).click();
+    await expect(workspace.getByRole('button', { name:'Review excerpts for semantic indexing' })).toBeDisabled();
+    await expect(workspace.getByText('No current index is recorded.', { exact:true })).toBeVisible();
     await expect(workspace.locator('#resolution-warnings')).toContainText('Disabling camsvc was followed by loss of Wi-Fi');
     await expect(workspace.locator('#resolution-validations')).toContainText('pending');
     await expect(workspace.locator('#resolution-side_effects')).toContainText('temporal_association');
@@ -75,6 +78,10 @@ test('TechDeck Resolution Technician V1 imports, searches, reviews and downloads
     await workspace.getByRole('button', { name: 'Search evidence', exact: true }).click();
     expect((await searchRequest).postData()).toContain('0x800f0915'); expect(page.url()).not.toContain('0x800f0915');
     const results = workspace.getByRole('region', { name: 'Search results' });
+    await workspace.getByText('Semantic search availability', { exact:true }).click();
+    await expect(workspace.getByText('Semantic search is off. An administrator must finish provider setup before enabling it.', { exact:true })).toBeVisible();
+    await expect(workspace.getByRole('button', { name:'Enable or update semantic search' })).toBeDisabled();
+    await expect(results).toContainText('Semantic matching was not requested.');
     await expect(results).toContainText('exact identifier match'); await expect(results).toContainText('PARTIAL'); await expect(results).toContainText('failed attempts');
     await assertAccessible(page); await capture(page, 'search-mobile.png');
     await page.setViewportSize({ width: 1440, height: 1050 }); await capture(page, 'search-desktop.png');

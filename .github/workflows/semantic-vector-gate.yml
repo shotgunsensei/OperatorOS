@@ -1,0 +1,49 @@
+name: Resolution semantic vector gate
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: semantic-vector-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-vector:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # pgvector 0.8.2 / PostgreSQL 16; immutable, separate from plain-PG release gate.
+        image: pgvector/pgvector@sha256:00ba258a66dac104fd5171074a0084462a64a1369d8513f3d0a634e2f24d15bc
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: semantic_disposable_only
+          POSTGRES_DB: operatoros_semantic_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d operatoros_semantic_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      CI: 'true'
+      APP_ENV: test
+      NODE_ENV: test
+      PARITY_DATABASE_IS_DISPOSABLE: '1'
+      OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1'
+      TECHDECK_VECTOR_TEST: '1'
+      DATABASE_URL: postgresql://postgres:semantic_disposable_only@127.0.0.1:5432/operatoros_semantic_test
+      SESSION_SECRET: semantic-disposable-session-secret-only
+      SSO_CODE_ENCRYPTION_SECRET: semantic-disposable-sso-encryption-secret-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify real vector storage, ranking and failure boundaries with synthetic provider responses
+        run: pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/techdeck-resolution-semantic.test.ts test/techdeck-resolution-workspace.test.ts

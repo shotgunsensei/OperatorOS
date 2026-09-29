@@ -170,6 +170,8 @@ export async function ensureSchemaReady() {
   await ensureAuthSecurityControls();
   const { ensureTechDeckResolutionTables } = await import('../src/lib/techdeck-resolution-db-init.js');
   await ensureTechDeckResolutionTables();
+  const { ensureResolutionSemanticTables } = await import('../src/lib/techdeck-resolution-semantic-db.js');
+  await ensureResolutionSemanticTables();
 }
 
 export function uniqueId(prefix: string) {
