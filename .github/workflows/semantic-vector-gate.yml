@@ -45,5 +45,9 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Apply the supported release and seed the canonical module catalog
+        env:
+          OPERATOROS_DATABASE_RELEASE_MODE: apply
+        run: pnpm db:apply
       - name: Verify real vector storage, ranking and failure boundaries with synthetic provider responses
         run: pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/techdeck-resolution-semantic.test.ts test/techdeck-resolution-workspace.test.ts

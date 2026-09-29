@@ -46,6 +46,16 @@ The separate vector CI gate uses an immutable image; the existing full gate
 continues to verify plain-Postgres degradation. Exact PR/main CI results are a
 separate delivery gate recorded in the pull request and its workflow artifacts;
 local Windows/Node 24 results do not substitute for Linux/Node 20 CI.
+The initial dedicated vector CI run `36587547144` failed its setup hooks because
+the new workflow omitted root apply/catalog seeding before focused tests. The
+workflow now runs the supported root apply with apply authority scoped to that
+step, matching the successful local sequence. No test was weakened or skipped.
+The corrected workflow sequence was rechecked on a new disposable vector database:
+root apply plus **32/32 vector/workspace checks**, zero failures/skips, in
+39,441.3681 ms. Read-only public health and readiness checks on 2026-09-29 still
+report healthy/ready commit `aa3e2ea08d4e60f2a5342c3395d73ec2f4948f81`, build
+`be3ad2cb7e0d27e741a20ef0`, database v64/64. Those reads establish the existing
+deployment baseline only; no production data or settings were changed.
 Live Phase 5 acceptance remains open:
 approved production v65 backup/apply, vector capability/provisioning, chosen
 model/dimensions/retention/cost, judged real-model retrieval and deployed browser
