@@ -1,5 +1,66 @@
 # OperatorOS implementation status
 
+## TechDeck semantic retrieval Phase 5 (2026-09-29 UTC)
+
+Status: **IMPLEMENTED / COMPLETE LOCAL RELEASE GATE PASSED / PROVIDER DISABLED**.
+
+Based on main `88b655b9`, `codex/techdeck-semantic-retrieval` implements optional
+OpenAI embeddings, tenant-reviewed excerpt previews, shared leased jobs, current
+actor/source rechecks, atomic tenant daily request limits, compatible pgvector
+retrieval and explained hybrid ranking. Existing exact/text retrieval survives
+provider/vector unavailability. The owner chose OpenAI with activation disabled;
+no real provider call, production migration, extension install or publication has
+been performed. Root manifest v65 adds two portable tables; no pgvector extension
+is installed by root apply or normal startup.
+
+Fresh local environment: Windows, Node 24, pinned pnpm 10.34.5, isolated disposable
+PostgreSQL 16 databases. Vector checks use pinned pgvector 0.8.2 plus a synthetic
+test adapter. `corepack pnpm install --frozen-lockfile`, root `typecheck` and `lint`
+pass. The focused command runs API `tsx --test --test-concurrency=1` against
+`techdeck-resolution-semantic.test.ts`, `techdeck-resolution-workspace.test.ts`
+and `database-release-contract.test.ts`: **36 passed / 0 failed / 0 skipped**.
+Initial test-fixture corrections retained foreign-tenant non-enumeration, avoided
+deleting graph-referenced identifiers, and retried the same queued job.
+
+A 2,000-chunk, three-dimensional synthetic benchmark recorded 47 ms for hybrid
+retrieval and 1.461 ms for the isolated vector aggregate with EXPLAIN ANALYZE;
+2,001 chunks caused pre-egress fallback. This is a mechanics baseline, not a
+production model/dimension, relevance or latency claim. Parallel job attempts
+respect the daily cap; changed sources and revoked actors cannot store vectors.
+The full `corepack pnpm verify:release` passed **14/14 stages** on separate plain
+PostgreSQL with provider isolation: **1,593 API, 108 integration, 52 unit, 32
+exact-host browser journeys and 4 visual checks**, zero failures/skips/todos.
+Browsers passed on their first attempt. Root typecheck/lint, apply/reapply/verify
+of v65/65, production build (38 generated pages), route/visual contracts,
+compiled readiness-gated supervisor, accessibility and core preflight passed.
+API duration was 887,426.6786 ms; the combined production-browser/visual stage
+was 613,124 ms. The final vector-focused command passed 36/36 in 41,823.9008 ms.
+The new mobile availability/review controls were visually inspected from the
+compiled run. Local artifacts: `build/semantic-focused.log`,
+`build/semantic-release.log`, `build/parity/release-gate-results.json`,
+`build/parity/api-test-summary.json`, `build/parity/integration-test-summary.json`
+and `build/parity/resolution-phase3/search-mobile.png` (ignored generated evidence).
+
+See [the semantic implementation/admin/API guide](techdeck/resolution-intelligence-semantic-search.md).
+The separate vector CI gate uses an immutable image; the existing full gate
+continues to verify plain-Postgres degradation. Exact PR/main CI results are a
+separate delivery gate recorded in the pull request and its workflow artifacts;
+local Windows/Node 24 results do not substitute for Linux/Node 20 CI.
+The initial dedicated vector CI run `36587547144` failed its setup hooks because
+the new workflow omitted root apply/catalog seeding before focused tests. The
+workflow now runs the supported root apply with apply authority scoped to that
+step, matching the successful local sequence. No test was weakened or skipped.
+The corrected workflow sequence was rechecked on a new disposable vector database:
+root apply plus **32/32 vector/workspace checks**, zero failures/skips, in
+39,441.3681 ms. Read-only public health and readiness checks on 2026-09-29 still
+report healthy/ready commit `aa3e2ea08d4e60f2a5342c3395d73ec2f4948f81`, build
+`be3ad2cb7e0d27e741a20ef0`, database v64/64. Those reads establish the existing
+deployment baseline only; no production data or settings were changed.
+Live Phase 5 acceptance remains open:
+approved production v65 backup/apply, vector capability/provisioning, chosen
+model/dimensions/retention/cost, judged real-model retrieval and deployed browser
+acceptance. Phase 6 grounded research remains separate.
+
 ## TechDeck v64 authorized production recovery (2026-09-27 UTC)
 
 Status: **PUBLISHED / EXACT SOURCE AND DATABASE VERIFIED / LIVE OWNER READ CHECKS PASSED**.

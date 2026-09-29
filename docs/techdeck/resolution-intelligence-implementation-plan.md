@@ -2,6 +2,16 @@
 
 Status: **PHASES 0–4 IMPLEMENTED AND DEPLOYED; LOCAL/CI GATES AND LIVE OWNER READ CHECKS PASSED**
 
+Phase 5 source overlay (2026-09-29): semantic retrieval is now implemented with
+OpenAI selected as the first adapter and activation explicitly disabled. See the
+[semantic guide](resolution-intelligence-semantic-search.md) for reviewed chunk
+egress, limits, retrieval policy, v65 storage and separate provider/vector gates.
+Portable `real[]` storage and query-time pgvector casting preserve plain-Postgres
+degradation without extension DDL in root apply/startup. Synthetic provider
+fixtures prove local retrieval mechanics only; live model judgment and deployment
+acceptance remain open. Historical phase-next statements below describe the v64
+baseline. Phase 6 is the next implementation scope after this source phase.
+
 Publication overlay (2026-09-27 UTC): Phase 4 merge `aa3e2ea` passed the complete
 exact-merge CI gate and is live as build `be3ad2cb7e0d27e741a20ef0`. The owner
 authorized the backed-up production v64 recovery and republish. Both Replit

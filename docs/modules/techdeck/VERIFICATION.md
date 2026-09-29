@@ -1,5 +1,15 @@
 # TechDeck zero-gap verification
 
+## Resolution Intelligence semantic Phase 5 overlay (2026-09-29)
+
+Source implementation adds optional reviewed indexing and hybrid retrieval on
+additive v65; OpenAI activation is disabled. Real pgvector storage/ranking and
+synthetic-provider failure/authorization checks pass locally. Current exact gate
+counts and remaining deployment/provider gates are in
+[implementation status](../../IMPLEMENTATION_STATUS.md) and the
+[semantic search guide](../../techdeck/resolution-intelligence-semantic-search.md).
+These results do not promote historical parity or establish real model relevance.
+
 ## Resolution Intelligence Phase 2 overlay (2026-09-27 UTC)
 
 The completed Phase 1 merge `8f8e370` has a successful exact-revision GitHub gate.

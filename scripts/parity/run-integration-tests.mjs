@@ -44,6 +44,7 @@ if (code === 0) {
     'test/techdeck-resolution-ingestion.test.ts',
     'test/techdeck-resolution-workspace.test.ts',
     'test/techdeck-resolution-documents.test.ts',
+    'test/techdeck-resolution-semantic.test.ts',
     'test/tradeflowkit-schema-contract.test.ts',
     'test/database-release-lock.integration.test.ts',
     'test/module-session-boundary.test.ts',

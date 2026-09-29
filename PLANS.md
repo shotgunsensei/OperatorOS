@@ -2,6 +2,20 @@
 
 Status: current execution plan
 
+## TechDeck semantic retrieval continuation (2026-09-29)
+
+Phase 5 implements the remaining Prompt 5 semantic portion on
+`codex/techdeck-semantic-retrieval`, based on main `88b655b9`. OpenAI is the first
+supported provider, explicitly selected by the owner with activation disabled.
+The optional adapter, reviewed indexing, shared jobs/usage limits, compatible
+vector retrieval, explained hybrid ranking and fallback states use additive v65.
+The [semantic guide](docs/techdeck/resolution-intelligence-semantic-search.md)
+documents the exact behavior and production boundaries. Fresh validation and
+remaining gates are in [implementation status](docs/IMPLEMENTATION_STATUS.md).
+Full live Phase 5 acceptance still requires production capability/provider review
+and a real judged model evaluation. Grounded research remains Phase 6; no AI
+synthesis or command execution is introduced by this implementation.
+
 ## TechDeck evidence-derived documents continuation (2026-09-27 UTC)
 
 Phase 3 merged in PR #106 (`307a774`); fetched main is `c800265`, an empty

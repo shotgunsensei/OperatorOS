@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 export const resolutionBase = '/api/modules/techdeck/resolution-intelligence';
 export type RecordRow = Record<string, any>;
-export type Page = { items: RecordRow[]; nextCursor?: string | null; fullTextTruncated?: boolean };
+export type Page = { items: RecordRow[]; nextCursor?: string | null; fullTextTruncated?: boolean; embeddings?:string };
 export async function resolutionRequest<T = RecordRow>(tenantId: string, path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(resolutionBase + path, { ...options, credentials: 'include', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': tenantId, ...options.headers } });
   const data = await response.json();
@@ -13,6 +13,10 @@ export async function resolutionRequest<T = RecordRow>(tenantId: string, path: s
       RESOLUTION_NOT_FOUND: 'This incident is unavailable for your current access or has been archived.',
       RESOLUTION_RATE_LIMIT: 'Too many requests. Wait one minute and try again.',
       RESOLUTION_REDACTION_REQUIRED: 'Remove or redact credentials before continuing.',
+      RESOLUTION_SEMANTIC_UNAVAILABLE:'Semantic search is unavailable. Check provider and organization settings; exact and text search still work.',
+      RESOLUTION_PREVIEW_CHANGED:'The evidence or provider changed. Prepare and review a new preview.',
+      RESOLUTION_EGRESS_REVIEW_REQUIRED:'Review the text and provider data-sharing requirements before continuing.',
+      RESOLUTION_EMBEDDING_SIZE_LIMIT:'This incident exceeds the 200-excerpt semantic indexing limit. Exact and text search remain available.',
       RESOLUTION_INTERNAL_ACCESS_REQUIRED: 'Resolution evidence is available to internal technicians only.',
       RESOLUTION_IMPORT_CONFLICT: 'This source conflicts with a retained import. Ask an administrator to review it.',
       RESOLUTION_DRAFT_PREVIEW_CHANGED: 'The evidence or access changed. Prepare and review a fresh preview.',

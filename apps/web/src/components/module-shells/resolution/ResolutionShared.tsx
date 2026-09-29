@@ -15,7 +15,11 @@ export function IncidentCards({ items, hrefFor }: { items: RecordRow[]; hrefFor:
   return <div className={styles.cards}>{items.map(row => <article className={styles.card} key={row.id}>
     <Status row={row} /><h3><Link href={hrefFor(`/resolution-intelligence/incidents/${row.id}`)}>{row.title ?? 'Untitled incident'}</Link></h3>
     <p>{row.one_line_resolution || row.issue_summary || 'Open the incident to review its source evidence.'}</p>
-    {row.exact_score !== undefined && <p className={styles.muted}>{row.exact_score > 0 ? `${row.exact_score} exact identifier match${row.exact_score === 1 ? '' : 'es'}` : 'Full-text evidence match'}{row.text_score > 0 ? ` · Text score ${Number(row.text_score).toFixed(3)}` : ''}</p>}
+    {row.exact_score !== undefined && <p className={styles.muted}>{row.exact_score > 0 ? `${row.exact_score} exact identifier match${row.exact_score === 1 ? '' : 'es'}` : row.text_score>0?'Full-text evidence match':row.metadata_score>0?'Matching component':'Similar incident wording'}{row.text_score > 0 ? ` · Text score ${Number(row.text_score).toFixed(3)}` : ''}</p>}
+    {row.semantic_score>=0.55&&<p className={styles.muted}>Semantic similarity: {Number(row.semantic_score).toFixed(3)} · wording similarity, not a repair success rate</p>}
+    {row.metadata_reasons?.length>0&&<p>Matching components: {row.metadata_reasons.map((reason:RecordRow)=>reason.value).join(', ')}</p>}
+    {row.graph_score>0&&<p className={styles.muted}>Supporting evidence links: {row.graph_score}{row.graph_score===3?'+':''}</p>}
+    {row.known_fix===true&&<span className={styles.tags}>Resolution with recorded passed validation</span>}
     {row.match_reasons?.length > 0 && <ul className={styles.reasons}>{row.match_reasons.slice(0, 6).map((reason: RecordRow, index: number) => <li key={index}>{label(reason.kind)}: <code>{reason.value}</code></li>)}</ul>}
     {(row.warning_count > 0 || row.failed_action_count > 0) && <p className={styles.caution}>{row.warning_count ?? 0} warnings · {row.failed_action_count ?? 0} failed attempts — review before reuse</p>}
     <Link href={hrefFor(`/resolution-intelligence/incidents/${row.id}`)}>Review evidence →</Link>

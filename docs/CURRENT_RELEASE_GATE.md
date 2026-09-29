@@ -1,5 +1,20 @@
 # OperatorOS current release gate
 
+## Resolution Intelligence Phase 5 / v65 candidate (2026-09-29)
+
+Source implementation adds reviewed, opt-in semantic retrieval. All 14 local
+release stages pass, plus 36 vector-focused checks. Exact CI remains a separate
+merge/publication gate, with results in the delivery pull request. OpenAI activation
+is disabled by owner choice. The prior v64 publication evidence remains historical
+and does not accept this candidate. Source/local/CI status is recorded in
+[implementation status](IMPLEMENTATION_STATUS.md); configuration, data egress,
+vector capability and rollback are in the
+[semantic guide](techdeck/resolution-intelligence-semantic-search.md).
+Before a separately authorized publication, back up, apply and verify v65/65 in
+both target databases and confirm exact candidate CI. A provider key alone never
+activates semantic retrieval. No production vector capability, real-model
+evaluation or new live acceptance is claimed.
+
 ## Resolution Intelligence v64 - LIVE / SOURCE AND DATABASE VERIFIED (2026-09-27)
 
 Phase 4 merge `aa3e2ea08d4e60f2a5342c3395d73ec2f4948f81` was reviewed in Replit's
