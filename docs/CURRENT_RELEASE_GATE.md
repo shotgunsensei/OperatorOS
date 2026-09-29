@@ -1,19 +1,29 @@
 # OperatorOS current release gate
 
-## Resolution Intelligence Phase 5 / v65 candidate (2026-09-29)
+## Resolution Intelligence Phase 5 / v65 - LIVE / PROVIDER DISABLED (2026-09-29)
 
-Source implementation adds reviewed, opt-in semantic retrieval. All 14 local
-release stages pass, plus 36 vector-focused checks. Exact CI remains a separate
-merge/publication gate, with results in the delivery pull request. OpenAI activation
-is disabled by owner choice. The prior v64 publication evidence remains historical
-and does not accept this candidate. Source/local/CI status is recorded in
-[implementation status](IMPLEMENTATION_STATUS.md); configuration, data egress,
-vector capability and rollback are in the
+PR #109 merge `ee9ca05e8346bdb1770932029ae8a9a8d682ef0f` is published as
+application build `8eff6d674044c40a533419b4`, deployed
+`2026-09-29T17:54:52.028Z`. Exact-main release CI passes all 14 stages:
+1,593 API, 108 integration, 52 unit, 32 browser and four visual checks, with
+zero failures/skips/browser retries. Separate exact-main vector CI passes 32/32.
+
+Both Replit databases were backed up, root-applied and independently verified
+at v65/65. All eleven recorded aggregate counts stayed unchanged in each.
+Production was paused during its backup/apply; database copy stayed off and
+serving startup remains verify-only. Public readiness reports the exact source,
+build and v65/65; the public runtime verifier passes **47/47**.
+
+OpenAI semantic search remains disabled by owner choice, with zero enabled
+organizations/embeddings and no installed production vector extension. The
+browser reaches canonical sign-in, but the prior owner session expired;
+authenticated v65 TechDeck acceptance remains pending user sign-in. Real-model
+evaluation, production write/other-role/logout acceptance and restore rehearsal
+remain separate. See [v65 release evidence](RELEASE_V65_EVIDENCE.md),
+[implementation status](IMPLEMENTATION_STATUS.md) and the
 [semantic guide](techdeck/resolution-intelligence-semantic-search.md).
-Before a separately authorized publication, back up, apply and verify v65/65 in
-both target databases and confirm exact candidate CI. A provider key alone never
-activates semantic retrieval. No production vector capability, real-model
-evaluation or new live acceptance is claimed.
+Historical v64 records below do not replace v65 acceptance. Phase 6 grounded
+research remains the next feature phase.
 
 ## Resolution Intelligence v64 - LIVE / SOURCE AND DATABASE VERIFIED (2026-09-27)
 

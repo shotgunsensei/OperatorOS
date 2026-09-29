@@ -2,10 +2,16 @@
 
 ## Resolution Intelligence semantic Phase 5 overlay (2026-09-29)
 
-Source implementation adds optional reviewed indexing and hybrid retrieval on
-additive v65; OpenAI activation is disabled. Real pgvector storage/ranking and
-synthetic-provider failure/authorization checks pass locally. Current exact gate
-counts and remaining deployment/provider gates are in
+Optional reviewed indexing and hybrid retrieval on additive v65 are published
+at `ee9ca05e`, application build `8eff6d674044c40a533419b4`. Both databases were
+backed up and independently verify v65/65; eleven tracked counts are unchanged.
+Exact-main release CI passes 14/14 stages, separate vector CI passes 32/32 and
+the live public runtime verifier passes 47/47. OpenAI activation stays disabled;
+production has no enabled organizations, embeddings or vector extension. The
+live launcher reaches canonical sign-in; the prior owner session expired, so
+authenticated v65 browser acceptance remains pending. Current exact gate counts,
+commands and remaining provider/acceptance gates are in
+[v65 release evidence](../../RELEASE_V65_EVIDENCE.md),
 [implementation status](../../IMPLEMENTATION_STATUS.md) and the
 [semantic search guide](../../techdeck/resolution-intelligence-semantic-search.md).
 These results do not promote historical parity or establish real model relevance.
