@@ -1,5 +1,44 @@
 # OperatorOS implementation status
 
+## TechDeck v65 authorized publication (2026-09-29 UTC)
+
+Status: **PUBLISHED / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER DISABLED**.
+The owner authorized source synchronization and publication. Phase 5 PR #109
+merge `ee9ca05e8346bdb1770932029ae8a9a8d682ef0f` passed exact-main
+[release CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/36591653046)
+(14/14 stages; 1,593 API, 108 integration, 52 unit, 32 browser, four visual;
+zero failures/skips/browser retries) and
+[vector CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/36591653077)
+(32/32). The prior PR browser run needed one generic route/control retry;
+the exact-main run did not. Replit's empty prior publication marker was preserved
+on a separate branch before clean main was synchronized to the approved source.
+
+Replit Linux/Node 20.20.0/pnpm 10.34.5 frozen install and root `db:plan` pass.
+Encrypted backups of both databases passed checksum and full archive decoding.
+Root apply and independent verify pass v65/65 (development 541 ms; production
+845 ms). Production was paused; all eleven tracked counts stayed unchanged in
+each database. PITR remains seven days; temporary encrypted copies do not establish
+offsite retention or restore rehearsal. No tests ran against either database.
+
+Replit publication succeeds as application build `8eff6d674044c40a533419b4`,
+deployed `2026-09-29T17:54:52.028Z`. Public readiness confirms exact source and
+v65/65 ending in `techdeck_resolution_semantic_tables`. Windows command
+`OPERATOROS_EXPECTED_RELEASE_COMMIT=ee9ca05e8346bdb1770932029ae8a9a8d682ef0f`
+(PowerShell environment assignment) plus `node scripts/verify-production-runtime.mjs`
+passes **47/47**, zero failures. Publishing UI and connector both report Live.
+Copy-development-data is off; serving apply authority is absent. No new
+application code, dependency, lint or formatting result is introduced by this
+release-evidence update.
+
+OpenAI remains disabled; production has zero semantic settings, enabled
+organizations and embeddings, and no vector extension. No provider request was
+made. Chrome reaches canonical sign-in after the prior owner session expired;
+authenticated v65 TechDeck acceptance is pending user sign-in. Real-model
+evaluation, production write/other-role/logout acceptance and restore rehearsal
+remain open. Commands, backup/count evidence, exact identities and recovery limits
+are in [v65 release evidence](RELEASE_V65_EVIDENCE.md). The earlier source/local
+candidate record below is historical and superseded by this publication overlay.
+
 ## TechDeck semantic retrieval Phase 5 (2026-09-29 UTC)
 
 Status: **IMPLEMENTED / COMPLETE LOCAL RELEASE GATE PASSED / PROVIDER DISABLED**.

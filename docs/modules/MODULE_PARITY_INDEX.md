@@ -2,16 +2,17 @@
 
 ## Resolution Intelligence semantic continuation (2026-09-29)
 
-**PARITY COUNTS UNCHANGED / PHASE 5 SOURCE IMPLEMENTED / PROVIDER DISABLED**.
+**PARITY COUNTS UNCHANGED / PHASE 5 PUBLISHED / PROVIDER DISABLED**.
 
 | Surface | Current evidence | Remaining gate |
 | --- | --- | --- |
-| TechDeck Resolution Intelligence | Reviewed indexing, OpenAI adapter, bounded hybrid retrieval, tenant/role/current-revision enforcement, usage cap and explicit fallback; 36 focused local checks; full 14/14 release stages, 1,593 API, 108 integration, 52 unit, 32 browser and 4 visual checks pass | Exact CI gate; separately approved v65 release, real provider/model judgment and deployed acceptance |
-| Existing exact/text search and documents | Available with semantic/provider setup absent; linked knowledge retains existing source access; complete local release/browser regressions pass without retries | Deployed acceptance after authorized publication |
+| TechDeck Resolution Intelligence | Reviewed indexing, OpenAI adapter, bounded hybrid retrieval, tenant/role/current-revision enforcement, usage cap and fallback; exact-main CI passes 14/14 stages, 1,593 API, 108 integration, 52 unit, 32 browser and 4 visual checks; separate vector CI 32/32. Backed-up root release verified both databases at v65/65 with eleven counts unchanged. Published ee9ca05e as build 8eff6d674044c40a533419b4; public verifier 47/47 | Provider remains off. Vector provisioning, real provider/model judgment, production writes/other-role/logout and restore acceptance remain open; authenticated v65 browser check awaits sign-in |
+| Existing exact/text search and documents | Available with semantic/provider setup absent; linked knowledge retains source access; exact-main browser regressions pass without retries; live launcher reaches canonical sign-in | Authenticated v65 read/deep-link/return acceptance awaits renewed owner session |
 
 The [semantic guide](../techdeck/resolution-intelligence-semantic-search.md) and
 [implementation status](../IMPLEMENTATION_STATUS.md) distinguish source, test,
-provider and live evidence. This addition does not change historical module
+provider and live evidence; see [v65 release evidence](../RELEASE_V65_EVIDENCE.md).
+This addition does not change historical module
 restoration parity or turn AI research into an available feature.
 
 ## Resolution Intelligence document continuation (2026-09-27 UTC)
