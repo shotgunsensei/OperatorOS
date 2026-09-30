@@ -3,8 +3,9 @@
 Verdict: **LOCAL REVENUE PATH VERIFIED; DEPLOYED PAID-CUSTOMER ACCEPTANCE OPEN**.
 Public pricing works after hydration. The confirmed acquisition defect is loss
 of Stack preferences at authentication, repaired in this isolated local candidate.
-No source publication, deployment, purchase, live price/configuration change,
-production write, or access/security change occurred.
+No deployment, purchase, live price/configuration change, production write,
+or access/security change occurred. Source publication and its required gate
+status are recorded in the full-gate continuation and PR evidence.
 
 ## Source and coordination
 
@@ -200,3 +201,71 @@ account/mode, active Price amounts/intervals or actual Checkout settlement.
 Remaining actionable gates are exact-candidate full CI, authenticated read-only
 Stripe verification, approved test-mode paid activation, and deployed workflow/
 role/logout/recovery acceptance. Push approval is pending; the branch stays local.
+
+## Full local release gate for the exact code candidate
+
+The owner subsequently authorized source publication, merge and Replit
+publication when required gates pass. No payments, secret/credential/security
+changes, destructive operations or new legal terms are included in that scope.
+
+`f610a7eaa753547664fc94cc10701b5f5d10e25e` was clean before the full local gate.
+All required ports were available; no existing process/container was stopped.
+The gate used a new temporary PostgreSQL 16 database on loopback port 55483,
+non-production synthetic secrets, stripped external-provider credentials and
+the existing compiled-supervisor/exact-host TLS harness. Run: 2026-09-30
+20:21:05-20:49:51 UTC, 28 minutes 46 seconds, Windows/Node 24.16.0/pnpm 10.34.5.
+Result: **complete, 13 stages passed, one failed; exit 1**.
+
+| Required stage | Result | Evidence |
+| --- | --- | --- |
+| FaultlineLab source catalog | PASS | 56 cases; 4/4 compiler checks |
+| Phase 39 production hardening | FAIL | Complete dependency audit reports nine unresolved advisory IDs |
+| Parity report | PASS | All 13 module reports generated |
+| Parity verification | PASS | 7,396 capabilities; no failures |
+| Four-workspace typecheck | PASS | All four workspaces |
+| Root lint | PASS | Zero warnings |
+| Unit | PASS | 52 passed; zero failed/skipped/cancelled/todos |
+| Complete API | PASS | 1,598 passed; zero failed/skipped/cancelled/todos |
+| Integration apply/reapply | PASS | 108 passed; root release reset/apply/reapply/verify |
+| Production build | PASS | Scope/contracts/catalog/typecheck; Next 38/38 |
+| Route/control static | PASS | 974 crawl routes; no failures |
+| Visual-contract static | PASS | 13 modules; no failures |
+| Exact-host browser/visual/accessibility | PASS | 35 browser + four Windows visual tests; no failures/skips/retries |
+| Core production preflight | PASS | Synthetic local production-artifact environment |
+
+The blocker is inherited, unchanged dependency input: `axios@1.19.0` through
+`apps/api -> twilio` and `brace-expansion@5.0.9` through
+`@capacitor/cli -> rimraf -> glob -> minimatch`. All dependency manifests,
+`pnpm-lock.yaml`, `pnpm-workspace.yaml` and audit exceptions match main `737a9d0f`.
+The complete report has 11 raw high disclosures, zero critical, nine unresolved
+advisory IDs; exception integrity and deployment scope pass. Source scanning
+found zero findings. Dependency policy was not weakened, waived or changed.
+
+The audit's fix ranges are `axios >=1.20.0` and `brace-expansion >=5.0.11`.
+These are report-derived targets for a separately scoped dependency update,
+not an applied fix or a claim of deployed exploitability. Seven Axios advisory
+IDs are 1240603/1240604/1240605/1240607/1240608/1240628/1240634; two brace-expansion
+IDs are 1240107/1240111. Keep exact-head CI blocking until these are remediated
+and the unchanged hardening gate passes.
+
+The failed audit short-circuited the following hardening checks. The five local
+hardening test files were run separately: **15/15 pass**, zero skips/todos.
+Their first supplemental attempt needed the known Windows process-only Git
+ownership exception; the corrected run passed. The two API hardening/preflight
+files are included in the successful whole API suite. This supplemental evidence
+does not convert the failed required stage into a pass.
+
+Artifacts: `build/parity/release-gate-results.json`, `api-test-summary.json`,
+`integration-test-summary.json`, `unit-test-summary.json`; and under
+`test-results/revenue-readiness/`, `full-release-gate.log`,
+`full-release-invocation.json`, `full-dependency-audit.json`,
+`hardening-tail-tests.log` and retained generated SBOM/screenshots.
+Only generated tracked artifacts from this run were restored after retaining
+copies. The temporary database/container and test runtime/proxy were stopped;
+the existing container, canonical AI branch and unrelated edits were preserved.
+
+No code regression was identified and no code changed during the full run.
+This subsequent documentation-only evidence update does not alter the tested
+implementation. Exact-head GitHub CI must validate the published PR revision.
+Merge and Replit publication remain blocked by required auditing; real-provider,
+deployed paid activation and recovery acceptance also remain unverified.

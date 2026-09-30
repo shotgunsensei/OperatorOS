@@ -1,5 +1,26 @@
 # OperatorOS implementation status
 
+## TradeFlowKit pricing candidate full local gate (2026-09-30 20:49 UTC)
+
+Exact code candidate `f610a7eaa753547664fc94cc10701b5f5d10e25e` completed the
+full local release gate: **13/14 stages passed; merge/deployment blocked**.
+Windows/Node 24.16.0, pinned pnpm 10.34.5, fresh loopback PostgreSQL 16 and
+stripped external-provider credentials. All 1,598 API, 108 integration, 52 unit,
+35 browser and four visual checks passed without failures/skips/todos/retries;
+typecheck, lint, production build, parity, route/visual contracts and core
+preflight passed. The only failed stage is Phase 39 dependency auditing:
+nine unresolved advisory IDs on unchanged `axios@1.19.0` (Twilio) and
+`brace-expansion@5.0.9` (Capacitor tooling); 11 raw high disclosures, zero critical,
+zero source-security findings. No dependency or scanner-exception change was
+made. The 15 hardening unit checks short-circuited by the audit pass when run
+separately. This is inherited dependency debt, not an identified pricing regression.
+
+Source publication is authorized; the isolated candidate can be reviewed in a
+draft PR. Required clean exact-head CI and dependency remediation remain gates
+before merge/publication. No production-readiness certification, live purchase,
+production write, secret/security change or unrelated AI publication occurred.
+See [complete stage evidence](TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md#full-local-release-gate-for-the-exact-code-candidate).
+
 ## TradeFlowKit first-customer revenue path (2026-09-30 UTC)
 
 Status: **ISOLATED LOCAL CANDIDATE / DEPLOYED PAID-CUSTOMER ACCEPTANCE OPEN**.
