@@ -1,5 +1,31 @@
 # OperatorOS implementation status
 
+## TradeFlowKit first-customer revenue path (2026-09-30 UTC)
+
+Status: **ISOLATED LOCAL CANDIDATE / DEPLOYED PAID-CUSTOMER ACCEPTANCE OPEN**.
+From exact main `737a9d0f`, `codex/tradeflowkit-revenue-readiness` preserves
+flagship, included companion, additional companions and seats through public
+pricing signup/sign-in and return. Anonymous live browser evidence confirms
+the previous $208 Stack lost companion/seat preferences and signup links
+omitted the pricing return; hydrated desktop/mobile pricing and public catalog
+are healthy. No price, billing, tenant, role, SSO, entitlement or database
+authority changes; no migration, publication or production write occurred.
+
+Fresh pinned install, four-workspace typecheck, zero-warning root lint,
+production build (38/38 pages), 29 focused pricing/commerce checks and 18
+disposable-PostgreSQL revenue/billing/provider checks pass with zero failures
+or skips. New desktop/mobile handoff browser acceptance passes 2/2 with no
+retries through the compiled local supervisor; the auth return is simulated,
+without submitting credentials or creating a purchase. Existing
+main release CI remains green; no new full release gate is claimed. Deployed
+owner signup, actual subscription Checkout/signed settlement/access, first
+invoice workflow/second role/logout, provider delivery and restore acceptance
+remain open. See [first-customer evidence and owner handoff](TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md).
+
+Recommend the existing $149/month five-seat TradeFlowKit pilot around a saved
+customer/job/quote/invoice and recorded off-platform payment. Stripe Connect
+merchant payments remain separate from OperatorOS subscription billing.
+
 ## TechDeck v65 authorized publication (2026-09-29 UTC)
 
 Status: **PUBLISHED / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER DISABLED**.

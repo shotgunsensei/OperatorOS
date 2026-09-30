@@ -12,6 +12,7 @@ import {
 } from '@operatoros/sdk';
 import { brand } from '@/lib/brand';
 import { billingApi, meApi } from '@/lib/auth';
+import { pricingAccountPath, type PricingSelection } from '@/lib/pricing-selection';
 import { useAuth } from '../../AuthProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
@@ -32,13 +33,21 @@ const money = (cents: number | null | undefined) => cents == null
   ? 'Price unavailable'
   : `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
-export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: { initialCoreProduct?: CoreProductKey }) {
+export default function PricingSection({ initialSelection }: { initialSelection: PricingSelection }) {
   const { user, loading: authLoading } = useAuth();
-  const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>(initialCoreProduct);
-  React.useEffect(() => setCoreProduct(initialCoreProduct), [initialCoreProduct]);
-  const [freeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>('snapproofos');
-  const [additionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>([]);
-  const [additionalSeats, setAdditionalSeats] = React.useState(0);
+  const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>(initialSelection.coreProduct);
+  const [freeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>(initialSelection.freeCompanionModule);
+  const [additionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>(initialSelection.additionalModules);
+  const [additionalSeats, setAdditionalSeats] = React.useState(initialSelection.additionalSeats);
+  React.useEffect(() => {
+    setCoreProduct(initialSelection.coreProduct);
+    setFreeCompanion(initialSelection.freeCompanionModule);
+    setAdditionalModules(initialSelection.additionalModules);
+    setAdditionalSeats(initialSelection.additionalSeats);
+  }, [initialSelection]);
+  const selection = { coreProduct, freeCompanionModule: freeCompanion, additionalModules, additionalSeats };
+  const signInPath = pricingAccountPath(selection);
+  const registerPath = pricingAccountPath(selection, 'register');
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [catalog, setCatalog] = React.useState<BillingCatalog | null>(null);
@@ -167,7 +176,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
 
   const continueToCheckout = async () => {
     if (!user) {
-      window.location.href = `/login?next=${encodeURIComponent(`/pricing?product=${coreProduct}#build-stack`)}`;
+      window.location.href = signInPath;
       return;
     }
     if (viewerRole !== 'owner') {
@@ -259,12 +268,12 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
             </p>
             <div className="pricing-hero-actions" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
               {!user && (
-                <Link href="/login?mode=register" data-testid="pricing-create-account" style={primaryButtonStyle}>
+                <Link href={registerPath} data-testid="pricing-create-account" style={primaryButtonStyle}>
                   Create free account <ArrowRight size={16} />
                 </Link>
               )}
               <a href="#build-stack" style={user ? primaryButtonStyle : secondaryButtonStyle}>Build Your Stack <ArrowRight size={16} /></a>
-              {!user && <Link href="/login" style={secondaryButtonStyle}>Sign In</Link>}
+              {!user && <Link href={signInPath} style={secondaryButtonStyle}>Sign In</Link>}
             </div>
             {!user && (
               <p data-testid="pricing-no-card" style={{ color: brand.textMuted, fontSize: 13, margin: '14px 0 0' }}>
@@ -425,7 +434,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               <button data-testid="stack-checkout-cta" type="button" onClick={continueToCheckout} disabled={busy || (Boolean(user) && !ownerCanCheckout)} className="pricing-control" style={{ ...primaryButtonStyle, border: 0, width: '100%', cursor: busy ? 'wait' : user && !ownerCanCheckout ? 'not-allowed' : 'pointer', opacity: user && !ownerCanCheckout ? .55 : 1 }}>
                 {busy ? 'Preparing Secure Checkout…' : !user ? 'Sign In to Continue' : accountLoading || authLoading ? 'Verifying Owner Access…' : hasExistingFlagship ? 'One Flagship Already Active' : viewerRole !== 'owner' ? 'Owner Action Required' : 'Continue to Secure Checkout'}
               </button>
-              {user ? <Link href={hasExistingFlagship || viewerRole !== 'owner' ? '/app?page=tenant-billing' : DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>{hasExistingFlagship || viewerRole !== 'owner' ? 'View organization billing state' : 'Return to OperatorOS'}</Link> : <Link href="/login" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Sign In Instead</Link>}
+              {user ? <Link href={hasExistingFlagship || viewerRole !== 'owner' ? '/app?page=tenant-billing' : DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>{hasExistingFlagship || viewerRole !== 'owner' ? 'View organization billing state' : 'Return to OperatorOS'}</Link> : <Link href={registerPath} data-testid="stack-create-account-cta" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Create free account and continue</Link>}
               <p style={{ color: brand.textMuted, fontSize: 11, textAlign: 'center', margin: 0 }}>Final price confirmed in secure Stripe Checkout before any charge.</p>
             </aside>
           </div>
@@ -439,7 +448,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
             <p style={sectionCopyStyle}>These three applications come with every OperatorOS account at no cost—no paid subscription required.</p>
           </div>
           {!user && (
-            <Link href="/login?mode=register" data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>
+            <Link href={registerPath} data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>
               Create free account <ArrowRight size={16} />
             </Link>
           )}

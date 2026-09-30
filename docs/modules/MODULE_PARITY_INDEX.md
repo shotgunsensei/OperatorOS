@@ -1,5 +1,17 @@
 # OperatorOS module parity index
 
+## TradeFlowKit acquisition continuation (2026-09-30 UTC)
+
+**PARITY COUNTS UNCHANGED / ISOLATED LOCAL HANDOFF FIX / PAID ACCEPTANCE OPEN**.
+
+| Surface | Current evidence | Remaining gate |
+| --- | --- | --- |
+| TradeFlowKit public plan → account → plan return | Live hydrated $149 pricing/catalog verified; full Stack preferences preserved locally through signup and sign-in; 29 pricing/commerce and 18 disposable revenue/provider checks, four typechecks, lint, production build and desktop/mobile browser 2/2 pass; auth return simulated without submitting credentials | Separately approved publication; deployed signup/subscription settlement/access, persistent invoice workflow, second-role/logout and recovery acceptance |
+
+This does not change module feature counts or certify live billing. Merchant
+Stripe Connect payments remain separate from the platform subscription. See
+[first-customer evidence](../TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md).
+
 ## Resolution Intelligence semantic continuation (2026-09-29)
 
 **PARITY COUNTS UNCHANGED / PHASE 5 PUBLISHED / PROVIDER DISABLED**.
