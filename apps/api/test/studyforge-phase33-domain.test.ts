@@ -143,8 +143,11 @@ test('Phase 33 retries invalid structured output and records validated AI proven
   let calls = 0;
   const provider: AiProvider = {
     name: 'fixture',
-    async complete() {
+    async complete(request) {
       calls += 1;
+      const submitted = JSON.parse(request.userPrompt);
+      if (calls === 1) assert.equal(submitted.validationFeedback, undefined);
+      else assert.equal(submitted.validationFeedback, 'keyTerms is invalid');
       return {
         text: calls === 1 ? '{"summary":"incomplete"}' : JSON.stringify(providerClaim),
         tokenCount: 77,
@@ -162,6 +165,25 @@ test('Phase 33 retries invalid structured output and records validated AI proven
   assert.equal(result.provenance.fallbackReason, null);
   assert.deepEqual(result.material, deterministic);
   assert.notEqual(result.material.qualityScore, providerClaim.qualityScore, 'provider must not self-award its quality score');
+});
+
+test('grounding feedback repairs AI questions without accepting an unsupported answer', async () => {
+  const valid = generateStudyForgeCompleteMaterial(input);
+  const invalid = structuredClone(valid);
+  invalid.mcqs[0].question = 'Which organelle does this?';
+  let calls = 0;
+  const provider: AiProvider = {
+    name: 'grounding-fixture',
+    async complete(request) {
+      calls += 1;
+      if (calls === 2) assert.equal(JSON.parse(request.userPrompt).validationFeedback, 'multiple-choice question is not grounded in its source excerpt');
+      return { text: JSON.stringify(calls === 1 ? invalid : valid), tokenCount: 20, durationMs: 1, provider: 'grounding-fixture', model: 'strict-json', version: 'v1' };
+    },
+  };
+  const result = await resolveStudyForgeCompleteGeneration({ input, mode: 'ai', provider });
+  assert.equal(calls, 2);
+  assert.deepEqual(result.material, valid);
+  assert.equal(result.provenance.effectiveMode, 'ai');
 });
 
 test('auto mode falls back deterministically while ai-required mode stays honestly unavailable', async () => {

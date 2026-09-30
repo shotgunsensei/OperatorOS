@@ -200,12 +200,18 @@ export function generateDeterministicKit(input: NinjaLaunchInput): NinjaLaunchCo
 }
 
 export function isCompleteContent(value: unknown): value is NinjaLaunchContent {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const content = value as Record<string, unknown>;
+  const validText = (item: unknown): item is string => typeof item === 'string' && item.trim().length > 0 && item.length <= 10_000;
+  const validArray = (items: unknown, validItem: (item: unknown) => boolean): boolean => Array.isArray(items) && items.length > 0 && items.length <= 30 && items.every(validItem);
+  const validObject = (item: unknown): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item);
   const strings = ['heroHeadline', 'subheadline', 'valueProposition', 'qrFlyerCopy'];
-  const arrays = ['offerStack', 'adHeadlines', 'adDescriptions', 'googleAds', 'socialPosts', 'smsPromos', 'emailSequence', 'faq', 'ctaButtons', 'launchChecklist'];
-  return strings.every((key) => typeof content[key] === 'string' && String(content[key]).trim().length > 0)
-    && arrays.every((key) => Array.isArray(content[key]) && (content[key] as unknown[]).length > 0);
+  const textArrays = ['offerStack', 'adHeadlines', 'adDescriptions', 'socialPosts', 'smsPromos', 'ctaButtons', 'launchChecklist'];
+  return strings.every((key) => validText(content[key]))
+    && textArrays.every((key) => validArray(content[key], validText))
+    && validArray(content.googleAds, (item) => validObject(item) && validText(item.headline) && validText(item.description))
+    && validArray(content.emailSequence, (item) => validObject(item) && Number.isInteger(item.day) && Number(item.day) >= 0 && Number(item.day) <= 365 && validText(item.subject) && validText(item.body))
+    && validArray(content.faq, (item) => validObject(item) && validText(item.question) && validText(item.answer));
 }
 
 function paletteFor(input: NinjaLaunchInput, brand?: NinjaLaunchBrand | null): string[] {

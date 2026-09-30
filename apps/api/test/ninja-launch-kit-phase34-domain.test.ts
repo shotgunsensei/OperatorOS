@@ -35,6 +35,24 @@ test('all 20 compiler-derived source templates produce every nonempty launch art
   }
 });
 
+test('complete content rejects malformed nested artifacts and preserves launch-day emails', () => {
+  const content = generateDeterministicKit(inputFor(NINJA_LAUNCH_SOURCE_CATALOG.templates[0]));
+  assert.equal(content.emailSequence[0].day, 0);
+  assert.equal(isCompleteContent(content), true);
+  const invalidValues = [
+    { ...content, googleAds: ['not an ad object'] },
+    { ...content, emailSequence: [{ day: '2', subject: 'Subject', body: 'Body' }] },
+    { ...content, emailSequence: [{ day: -1, subject: 'Subject', body: 'Body' }] },
+    { ...content, faq: [{ question: 'Question', answer: null }] },
+    { ...content, offerStack: [42] },
+    { ...content, socialPosts: [' '] },
+    { ...content, heroHeadline: 'x'.repeat(10_001) },
+    { ...content, ctaButtons: Array(31).fill('Review') },
+    { content },
+  ];
+  for (const value of invalidValues) assert.equal(isCompleteContent(value), false);
+});
+
 test('visual promo and template gates expose no locked content', () => {
   const template = NINJA_LAUNCH_SOURCE_CATALOG.templates[0];
   const input = inputFor(template);
@@ -74,7 +92,8 @@ test('shared AI output is schema-validated and provider failure records determin
   const input = inputFor(NINJA_LAUNCH_SOURCE_CATALOG.templates[0]);
   const validProvider = {
     name: 'contract-test',
-    async complete(request: { userPrompt: string }) {
+    async complete(request: { userPrompt: string; systemPrompt: string }) {
+      assert.match(request.systemPrompt, /never an input, deterministic, content, or kit wrapper/);
       const deterministic = JSON.parse(request.userPrompt).deterministic;
       return { text: JSON.stringify(deterministic), tokenCount: 50, durationMs: 1, provider: 'contract-test', model: 'schema-v1', version: '1' };
     },
@@ -93,4 +112,15 @@ test('shared AI output is schema-validated and provider failure records determin
   assert.equal(fallback.provider, 'deterministic');
   assert.equal(fallback.fallbackReason, 'provider unavailable');
   assert.equal(isCompleteContent(fallback.content), true);
+
+  const malformedProvider = {
+    name: 'malformed-test',
+    async complete() {
+      return { text: JSON.stringify({ ...generateDeterministicKit(input), faq: ['invalid'] }), tokenCount: 50, durationMs: 1, provider: 'malformed-test', model: 'schema-v1', version: '1' };
+    },
+  };
+  const rejected = await resolveNinjaLaunchContent(input, 'pro', 'ai', malformedProvider);
+  assert.equal(rejected.generatorMode, 'fallback');
+  assert.match(rejected.fallbackReason ?? '', /failed the complete launch-kit schema/);
+  assert.equal(isCompleteContent(rejected.content), true);
 });

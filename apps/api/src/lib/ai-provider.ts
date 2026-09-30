@@ -487,27 +487,30 @@ export class DisabledAiProvider implements AiProvider {
 
 let currentProvider: AiProvider | null = null;
 let currentProviderKey = '';
+let currentApiKey: string | undefined;
 
 export function getAiProvider(): AiProvider {
   const testEnvironment = isOperatorOSDeterministicProviderTestEnvironment();
-  const apiKey = process.env.OPENAI_API_KEY;
-  const providerKey = testEnvironment ? 'test' : (apiKey ? `openai:${process.env.OPENAI_MODEL || 'gpt-4o-mini'}` : 'disabled');
-  if (currentProvider && currentProviderKey === providerKey) return currentProvider;
+  const apiKey = testEnvironment ? undefined : process.env.OPENAI_API_KEY?.trim();
+  const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
+  const providerKey = testEnvironment ? 'test' : (apiKey ? `openai:${model}` : 'disabled');
+  if (currentProvider && currentProviderKey === providerKey && currentApiKey === apiKey) return currentProvider;
 
   if (testEnvironment) {
     currentProvider = new MockAiProvider();
   } else if (apiKey) {
-    currentProvider = new OpenAiProvider(apiKey);
+    currentProvider = new OpenAiProvider(apiKey, model);
   } else {
     currentProvider = new DisabledAiProvider();
   }
   currentProviderKey = providerKey;
+  currentApiKey = apiKey;
   return currentProvider;
 }
 
 export function getProviderInfo(): { name: 'openai' | 'test' | 'disabled'; configured: boolean } {
   const testEnvironment = isOperatorOSDeterministicProviderTestEnvironment();
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
   return {
     name: testEnvironment ? 'test' : (apiKey ? 'openai' : 'disabled'),
     configured: !testEnvironment && !!apiKey,
