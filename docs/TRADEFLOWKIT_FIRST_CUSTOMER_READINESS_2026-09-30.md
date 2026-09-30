@@ -144,3 +144,59 @@ chosen under the current contract; validate its promised pilot use separately.
 There is no evidence-based reason to build a new module or merge the unrelated
 AI candidate to unblock this pilot. The shortest path is acceptance and one
 customer outcome, with this bounded handoff repair supporting conversion.
+
+## Follow-up self-review before source publication
+
+The follow-up review found and repaired three local issues:
+
+- **Back/Refresh:** desktop and mobile reproduction failed because the chosen
+  two seats returned to zero after Back and Refresh. Selection controls now
+  replace the current pricing history entry with the complete preferences,
+  retaining campaign parameters and the existing fragment. They do not add a
+  history entry for each control change. Back, Forward and Refresh now pass.
+- **Large seat input:** the parser initially accepted safe integers too large
+  for existing PostgreSQL integer capacity. A regression failed on 2,147,483,643.
+  URL preferences now reject values beyond signed-integer capacity minus the
+  SDK's five included seats, and the increment control stops at that boundary.
+  This is representation safety, not a new price or commercial seat policy.
+- **Release coverage:** the release browser runner has an explicit file list
+  that omitted the new spec. It now includes `pricing-selection.spec.ts`.
+
+Redirect review found no new open redirect: the account path is fixed `/login`,
+its `next` is fixed `/pricing` plus allowlisted preferences, and unknown query
+authority is discarded. Existing shared `sanitizeReturnTo` remains unchanged;
+it rejects external/protocol-relative/control/backslash destinations. Canonical
+login middleware still enforces the transaction's same origin and excludes
+login/SSO callbacks. Existing PKCE/state/nonce/exact-host contracts are unchanged.
+No credential, tenant, role, Price ID or entitlement is taken from these URLs.
+
+Fresh follow-up verification: **53 focused pricing/commerce/public-URL/SSO checks
+passed, zero failed/skipped/todos**; root lint passed with zero warnings;
+`build:production` passed including four-workspace typecheck and Next 38/38.
+All **three** scoped browser tests passed, zero retries/skips, in 15.2 seconds
+through the local exact-host TLS proxy and compiled supervisor. Browser canonical
+domains were mapped to loopback; this was isolated Chromium, not John's signed-in
+browser. These checks cover desktop/mobile Back/Forward/Refresh, campaign
+retention, canonical signup/sign-in handoffs, malicious companion/query values,
+large seats and counter boundary. Authentication completion remains simulated.
+
+The initial full release gate was not rerun because the task selected bounded
+verification for this handoff slice; that is an evidence limit, not an environment
+blocker or a claim that existing main CI verifies this branch. Read-only
+`node scripts/parity/run-release-gate.mjs --plan` confirms 14 stages, including
+all 334 API test files, reset/apply/reapply integration, full exact-host browser
+and visual suites, and production preflight. It is feasible in this isolated
+environment with a fresh disposable database, provider credentials stripped,
+synthetic test secrets, and exclusive local ports 443/5000/5001/5002. The GitHub
+workflow uses Ubuntu/Node 20 and has a 60-minute timeout; this workstation uses
+Windows/Node 24 with reviewed Windows visual baselines. No complete follow-up
+release-gate result is claimed. Require the exact candidate's full PR release
+gate before merge when source publication is authorized.
+
+Live Stripe account/Price research was authorized, but no callable authenticated
+Stripe read tool was available. No sign-in, permission or secret changes were
+made to obtain access. Public configured flags still do not establish live
+account/mode, active Price amounts/intervals or actual Checkout settlement.
+Remaining actionable gates are exact-candidate full CI, authenticated read-only
+Stripe verification, approved test-mode paid activation, and deployed workflow/
+role/logout/recovery acceptance. Push approval is pending; the branch stays local.

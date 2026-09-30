@@ -22,6 +22,16 @@ owner signup, actual subscription Checkout/signed settlement/access, first
 invoice workflow/second role/logout, provider delivery and restore acceptance
 remain open. See [first-customer evidence and owner handoff](TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md).
 
+Follow-up self-review repaired Back/Refresh preference loss, bounded query seat
+values to existing integer capacity and added the browser spec to the explicit
+release runner. Fresh 53 focused checks, lint, production build/typecheck and
+three local exact-host browser checks pass without failures/skips/retries.
+Redirect/SSO authority is unchanged; campaign parameters survive preference
+updates. Full exact-candidate release CI and authenticated read-only Stripe
+account/Price verification remain open; no available Stripe read tool was found.
+The full 14-stage gate is feasible with isolated DB and exclusive loopback ports;
+it was not run during this bounded review. Source push approval remains pending.
+
 Recommend the existing $149/month five-seat TradeFlowKit pilot around a saved
 customer/job/quote/invoice and recorded off-platform payment. Stripe Connect
 merchant payments remain separate from OperatorOS subscription billing.

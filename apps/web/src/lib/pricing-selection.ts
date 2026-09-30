@@ -1,4 +1,5 @@
 import {
+  INCLUDED_SEATS,
   isEligibleCompanionModuleKey,
   normalizeStackSelection,
   type CompanionModuleKey,
@@ -20,6 +21,10 @@ export type PricingSelectionQuery = {
   seats?: string | string[];
 };
 
+// Existing PostgreSQL integer capacity, including the five bundled seats.
+// This is an input sanity boundary; checkout policy and prices stay server-owned.
+export const MAX_PRICING_ADDITIONAL_SEATS = 2_147_483_647 - INCLUDED_SEATS;
+
 /** Public preferences only. Catalog prices, billing authority and access stay server-owned. */
 export function readPricingSelection(query: PricingSelectionQuery): PricingSelection {
   const freeCompanionModule = typeof query.companion === 'string' && isEligibleCompanionModuleKey(query.companion)
@@ -35,7 +40,7 @@ export function readPricingSelection(query: PricingSelectionQuery): PricingSelec
     coreProduct: selectedCoreProduct(query.product),
     freeCompanionModule,
     additionalModules,
-    additionalSeats: Number.isSafeInteger(requestedSeats) ? requestedSeats : 0,
+    additionalSeats: Number.isSafeInteger(requestedSeats) && requestedSeats <= MAX_PRICING_ADDITIONAL_SEATS ? requestedSeats : 0,
   });
   return {
     coreProduct: normalized.coreProduct,

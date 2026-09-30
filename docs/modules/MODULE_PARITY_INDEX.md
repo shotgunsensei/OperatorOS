@@ -12,6 +12,13 @@ This does not change module feature counts or certify live billing. Merchant
 Stripe Connect payments remain separate from the platform subscription. See
 [first-customer evidence](../TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md).
 
+Follow-up: Back/Forward/Refresh and campaign retention, query seat integer
+boundary, and canonical auth handoffs pass three scoped exact-host browser
+checks through a loopback TLS proxy. Fresh 53 focused checks, lint and production
+build/typecheck pass. The release runner now includes this spec. Full candidate
+CI, actual auth/purchase settlement and live Stripe object inspection remain open;
+feature/parity counts and production readiness are unchanged.
+
 ## Resolution Intelligence semantic continuation (2026-09-29)
 
 **PARITY COUNTS UNCHANGED / PHASE 5 PUBLISHED / PROVIDER DISABLED**.

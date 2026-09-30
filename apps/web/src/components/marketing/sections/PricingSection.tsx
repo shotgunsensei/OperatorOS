@@ -12,7 +12,7 @@ import {
 } from '@operatoros/sdk';
 import { brand } from '@/lib/brand';
 import { billingApi, meApi } from '@/lib/auth';
-import { pricingAccountPath, type PricingSelection } from '@/lib/pricing-selection';
+import { MAX_PRICING_ADDITIONAL_SEATS, pricingAccountPath, pricingSelectionPath, type PricingSelection } from '@/lib/pricing-selection';
 import { useAuth } from '../../AuthProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
@@ -46,6 +46,22 @@ export default function PricingSection({ initialSelection }: { initialSelection:
     setAdditionalSeats(initialSelection.additionalSeats);
   }, [initialSelection]);
   const selection = { coreProduct, freeCompanionModule: freeCompanion, additionalModules, additionalSeats };
+  const updateSelection = (next: PricingSelection) => {
+    setCoreProduct(next.coreProduct);
+    setFreeCompanion(next.freeCompanionModule);
+    setAdditionalModules(next.additionalModules);
+    setAdditionalSeats(next.additionalSeats);
+    // Replace this history entry so Back and Refresh restore the chosen Stack
+    // without adding a history step per click or discarding campaign parameters.
+    const currentUrl = new URL(window.location.href);
+    const preferences = new URL(pricingSelectionPath(next), currentUrl.origin).searchParams;
+    for (const key of ['product', 'companion', 'additional', 'seats']) {
+      currentUrl.searchParams.delete(key);
+      const value = preferences.get(key);
+      if (value !== null) currentUrl.searchParams.set(key, value);
+    }
+    window.history.replaceState(window.history.state, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+  };
   const signInPath = pricingAccountPath(selection);
   const registerPath = pricingAccountPath(selection, 'register');
   const [busy, setBusy] = React.useState(false);
@@ -162,16 +178,13 @@ export default function PricingSection({ initialSelection }: { initialSelection:
             : null;
 
   const toggleAdditionalModule = (moduleKey: CompanionModuleKey) => {
-    setAdditionalModules(current =>
-      current.includes(moduleKey)
-        ? current.filter(key => key !== moduleKey)
-        : [...current, moduleKey],
-    );
+    updateSelection({ ...selection, additionalModules: additionalModules.includes(moduleKey)
+      ? additionalModules.filter(key => key !== moduleKey)
+      : [...additionalModules, moduleKey] });
   };
 
   const chooseFreeCompanion = (moduleKey: CompanionModuleKey) => {
-    setFreeCompanion(moduleKey);
-    setAdditionalModules(current => current.filter(key => key !== moduleKey));
+    updateSelection({ ...selection, freeCompanionModule: moduleKey, additionalModules: additionalModules.filter(key => key !== moduleKey) });
   };
 
   const continueToCheckout = async () => {
@@ -354,7 +367,7 @@ export default function PricingSection({ initialSelection }: { initialSelection:
                   </li>
                 ))}
               </ul>
-              <a href="#build-stack" onClick={() => setCoreProduct(product.key)} style={{ ...secondaryButtonStyle, width: '100%', boxSizing: 'border-box' }}>
+              <a href="#build-stack" onClick={() => updateSelection({ ...selection, coreProduct: product.key })} style={{ ...secondaryButtonStyle, width: '100%', boxSizing: 'border-box' }}>
                 Build Your Stack
               </a>
             </article>
@@ -373,7 +386,7 @@ export default function PricingSection({ initialSelection }: { initialSelection:
               <ConfiguratorStep number="1" title="Flagship Application">
                 <div className="stack-options">
                   {CORE_PRODUCTS.map(product => (
-                    <ChoiceButton key={product.key} selected={coreProduct === product.key} onClick={() => setCoreProduct(product.key)}>
+                    <ChoiceButton key={product.key} selected={coreProduct === product.key} onClick={() => updateSelection({ ...selection, coreProduct: product.key })}>
                       <strong>{product.name}</strong><span>{catalogCorePrice(product.key) == null ? 'Price unavailable' : `${money(catalogCorePrice(product.key))}/month`}</span>
                     </ChoiceButton>
                   ))}
@@ -402,11 +415,11 @@ export default function PricingSection({ initialSelection }: { initialSelection:
               </ConfiguratorStep>
               <ConfiguratorStep number="4" title="Additional Seats">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <button className="pricing-control" type="button" aria-label="Remove additional seat" onClick={() => setAdditionalSeats(value => Math.max(0, value - 1))} style={counterButtonStyle}>
+                  <button className="pricing-control" type="button" aria-label="Remove additional seat" onClick={() => updateSelection({ ...selection, additionalSeats: Math.max(0, additionalSeats - 1) })} style={counterButtonStyle}>
                     <Minus size={16} />
                   </button>
                   <output data-testid="additional-seat-count" style={{ color: brand.textPrimary, fontSize: 22, fontWeight: 800, minWidth: 34, textAlign: 'center' }}>{additionalSeats}</output>
-                  <button className="pricing-control" type="button" aria-label="Add additional seat" onClick={() => setAdditionalSeats(value => value + 1)} style={counterButtonStyle}>
+                  <button className="pricing-control" type="button" aria-label="Add additional seat" disabled={additionalSeats >= MAX_PRICING_ADDITIONAL_SEATS} onClick={() => updateSelection({ ...selection, additionalSeats: Math.min(MAX_PRICING_ADDITIONAL_SEATS, additionalSeats + 1) })} style={counterButtonStyle}>
                     <Plus size={16} />
                   </button>
                   <span style={{ color: brand.textSecondary, fontSize: 13 }}>{seatPriceCents == null ? 'Price unavailable' : `+${money(seatPriceCents)}/month per seat`}</span>

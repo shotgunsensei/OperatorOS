@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COMPANION_MODULES, CORE_PRODUCTS, calculateStackMonthlyPrice, type CompanionModuleKey } from '@operatoros/sdk';
 import { pricingAccountPath, pricingSelectionPath, readPricingSelection } from '../../web/src/lib/pricing-selection';
+import { sanitizeReturnTo } from '../../../packages/modules/public-url';
 
 test('a chosen Stack survives signup and sign-in return URLs with the same monthly total', () => {
   for (const product of CORE_PRODUCTS) {
@@ -21,6 +22,7 @@ test('a chosen Stack survives signup and sign-in return URLs with the same month
         assert.equal(authUrl.pathname, '/login');
         assert.equal(authUrl.searchParams.get('mode'), mode === 'register' ? 'register' : null);
         const next = new URL(authUrl.searchParams.get('next')!, 'https://operatoros.net');
+        assert.equal(sanitizeReturnTo(authUrl.searchParams.get('next')), `${next.pathname}${next.search}${next.hash}`);
         assert.equal(next.pathname, '/pricing');
         assert.equal(next.hash, '#build-stack');
         const restored = readPricingSelection(Object.fromEntries(next.searchParams));
@@ -47,6 +49,13 @@ test('untrusted query values cannot add excluded companions, duplicate charges, 
     assert.equal(readPricingSelection({ seats }).additionalSeats, 0);
   }
   assert.deepEqual(readPricingSelection({ product: ['techdeck', 'pulsedesk'], companion: ['ninjamation', 'snapproofos'], additional: ['brandforgeos', 'ninjamation'] }), readPricingSelection({}));
+});
+
+test('seat preferences must fit the existing integer capacity including the five included seats', () => {
+  for (const seats of ['2147483643', '2147483647', '9007199254740991']) {
+    assert.equal(readPricingSelection({ seats }).additionalSeats, 0);
+  }
+  assert.equal(readPricingSelection({ seats: '2147483642' }).additionalSeats, 2147483642);
 });
 
 test('handoff carries preferences only and has a fixed local return destination', () => {
