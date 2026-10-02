@@ -49,6 +49,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   techdeck: {
     '/resolution-intelligence': { sectionId: 'techdeck-resolution', label: 'Resolution Intelligence' },
     '/resolution-intelligence/search': { sectionId: 'techdeck-resolution', label: 'Search Resolution Evidence' },
+    '/resolution-intelligence/research': { sectionId: 'techdeck-resolution', label: 'Grounded Technician Research' },
     '/resolution-intelligence/import': { sectionId: 'techdeck-resolution', label: 'Import Resolution Evidence' },
     '/resolution-intelligence/kb': { sectionId: 'techdeck-resolution', label: 'Evidence-derived Knowledge' },
     '/settings/ai-integration/ticket-completion-prompt': { sectionId: 'techdeck-resolution', label: 'Ticket Completion Prompt' },

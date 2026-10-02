@@ -1,5 +1,6 @@
 import { generateStudyForgeCompleteMaterial } from './studyforge-phase33.js';
 import { isOperatorOSDeterministicProviderTestEnvironment } from './shared-service-safety.js';
+import { researchSections } from '../../../../packages/sdk/src/techdeck-research.js';
 
 export interface AiCompletionRequest {
   systemPrompt: string;
@@ -95,7 +96,9 @@ export class MockAiProvider implements AiProvider {
   async complete(request: AiCompletionRequest): Promise<AiCompletionResponse> {
     const start = Date.now();
     const toolType = this.detectToolType(request.systemPrompt);
-    const text = toolType === 'torque_assist'
+    const text = toolType === 'techdeck_research'
+      ? JSON.stringify({ sections: researchSections.map(title => ({ title, statements: [{ text: 'Synthetic provider: review the cited internal observations and pending validation. No independent diagnosis was performed.', classification: 'UNKNOWN', citations: [], evidenceQuotes: [] }] })) })
+      : toolType === 'torque_assist'
       ? this.generateTorqueAssistResponse(request.userPrompt)
       : toolType === 'brandforge'
         ? this.generateBrandForgeResponse(request.userPrompt)
@@ -121,6 +124,7 @@ export class MockAiProvider implements AiProvider {
   }
 
   private detectToolType(systemPrompt: string): string {
+    if (systemPrompt.includes('OPERATOROS_TECHDECK_RESEARCH_V1')) return 'techdeck_research';
     if (systemPrompt.includes('OPERATOROS_TORQUE_ASSIST_V1')) return 'torque_assist';
     if (systemPrompt.includes('OPERATOROS_BRANDFORGE_V1')) return 'brandforge';
     if (systemPrompt.includes('OPERATOROS_STUDYFORGE_V1')) return 'studyforge';

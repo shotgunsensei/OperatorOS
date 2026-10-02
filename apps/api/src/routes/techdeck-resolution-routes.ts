@@ -12,6 +12,8 @@ import { ticketCompletionPrompt, ticketCompletionShortcut, ticketCompletionPromp
 import { listResolutionIncidents, resolutionSummary, resolutionDetail, resolutionSection, resolutionHistory, downloadResolutionRaw, updateResolutionIncident, searchResolutionIncidents, relatedResolutionIncidents, resolutionLinkOptions, resolutionFilters } from '../lib/techdeck-resolution-workspace.js';
 import { previewResolutionDraft, createResolutionDraft, listResolutionDocuments, linkResolutionDocument } from '../lib/techdeck-resolution-documents.js';
 import { semanticStatus, saveSemanticSettings, previewSemanticIndex, queueSemanticIndex, semanticIndexStatus } from '../lib/techdeck-resolution-embeddings.js';
+import { researchStatus, saveResearchSettings, previewResearch, synthesizeResearch } from '../lib/techdeck-resolution-research.js';
+import { authenticate } from '../lib/auth.js';
 
 const nativeBase = '/v1/modules/techdeck/resolution-intelligence';
 const headlessBase = '/v1/headless/techdeck/resolution-intelligence';
@@ -79,6 +81,16 @@ export async function registerTechDeckResolutionRoutes(parent: FastifyInstance) 
     });
     const reads = { onRequest: [...readGuards, nativeContext] };
     const writes = { onRequest: [...nativeGuards, nativeContext, limit] };
+    app.get(`${nativeBase}/research`, reads, request => researchStatus(contexts.get(request)!));
+    app.put(`${nativeBase}/research`, writes, request => saveResearchSettings(contexts.get(request)!, request.body));
+    app.post(`${nativeBase}/research/preview`, writes, request => previewResearch(contexts.get(request)!, request.body));
+    app.post(`${nativeBase}/research/synthesize`, writes, async (request, reply) => {
+      const result = await synthesizeResearch(contexts.get(request)!, request.body);
+      // Account-version checks in the service also protect background callers;
+      // the HTTP boundary revalidates this exact session's expiry/logout too.
+      await authenticate(request, reply);
+      return reply.sent ? reply : result;
+    });
     app.get(`${nativeBase}/semantic`, reads, request => semanticStatus(contexts.get(request)!));
     app.put(`${nativeBase}/semantic`, writes, request => saveSemanticSettings(contexts.get(request)!, request.body));
     app.get(`${nativeBase}/incidents/:id/semantic`, reads, request => semanticIndexStatus(contexts.get(request)!, (request.params as { id: string }).id));
