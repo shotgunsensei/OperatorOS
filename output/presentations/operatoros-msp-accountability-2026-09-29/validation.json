@@ -1,0 +1,15 @@
+{
+  "pages": 33,
+  "applications": 13,
+  "feature_groups": 104,
+  "detailed_msp_cases": 6,
+  "module_scenarios": 39,
+  "total_illustrative_scenarios": 45,
+  "source_commit": "737a9d0fa18267c33fb01732ef5be4626e96c1e5",
+  "content_strings_checked": 427,
+  "missing_content": [],
+  "bookmarks": 33,
+  "links": 144,
+  "bytes": 202278,
+  "sha256": "a8cbaf5407c97687a42a3c3673f009f9932963328e5cc26546d48d760b40b218"
+}

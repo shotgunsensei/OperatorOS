@@ -1,0 +1,167 @@
+[
+  {
+    "page": 1,
+    "title": "Show your work",
+    "bookmark": "cover"
+  },
+  {
+    "page": 2,
+    "title": "The direct answer",
+    "bookmark": "p2"
+  },
+  {
+    "page": 3,
+    "title": "Questions a record must answer",
+    "bookmark": "p3"
+  },
+  {
+    "page": 4,
+    "title": "How a defensible record is assembled",
+    "bookmark": "p4"
+  },
+  {
+    "page": 5,
+    "title": "The daily MSP workflow",
+    "bookmark": "p5"
+  },
+  {
+    "page": 6,
+    "title": "Five different decisions",
+    "bookmark": "p6"
+  },
+  {
+    "page": 7,
+    "title": "A closeout that survives review",
+    "bookmark": "p7"
+  },
+  {
+    "page": 8,
+    "title": "Case 01 / You touched it. Now it is broken.",
+    "bookmark": "case01"
+  },
+  {
+    "page": 9,
+    "title": "Case 02 / You never warned us about that risk.",
+    "bookmark": "case02"
+  },
+  {
+    "page": 10,
+    "title": "Case 03 / We did not authorize that work.",
+    "bookmark": "case03"
+  },
+  {
+    "page": 11,
+    "title": "Case 04 / The ticket said fixed. It was not tested.",
+    "bookmark": "case04"
+  },
+  {
+    "page": 12,
+    "title": "Case 05 / Nobody told the next technician.",
+    "bookmark": "case05"
+  },
+  {
+    "page": 13,
+    "title": "Case 06 / Why are we being billed for this?",
+    "bookmark": "case06"
+  },
+  {
+    "page": 14,
+    "title": "The practical MSP evidence package",
+    "bookmark": "p14"
+  },
+  {
+    "page": 15,
+    "title": "Trustworthy records and AI limits",
+    "bookmark": "p15"
+  },
+  {
+    "page": 16,
+    "title": "Which modules actually help an MSP",
+    "bookmark": "module-map"
+  },
+  {
+    "page": 17,
+    "title": "A practical pilot for the MSP",
+    "bookmark": "p17"
+  },
+  {
+    "page": 18,
+    "title": "TechDeck / features and MSP scenarios",
+    "bookmark": "techdeck"
+  },
+  {
+    "page": 19,
+    "title": "SnapProofOS / features and MSP scenarios",
+    "bookmark": "snapproofos"
+  },
+  {
+    "page": 20,
+    "title": "Script Ops / features and MSP scenarios",
+    "bookmark": "ninjamation"
+  },
+  {
+    "page": 21,
+    "title": "FaultlineLab / features and MSP scenarios",
+    "bookmark": "faultlinelab"
+  },
+  {
+    "page": 22,
+    "title": "TradeFlowKit / features and MSP scenarios",
+    "bookmark": "tradeflowkit"
+  },
+  {
+    "page": 23,
+    "title": "PulseDesk / features and MSP scenarios",
+    "bookmark": "pulsedesk"
+  },
+  {
+    "page": 24,
+    "title": "CallCommand AI / features and MSP scenarios",
+    "bookmark": "callcommand-ai"
+  },
+  {
+    "page": 25,
+    "title": "BrandForge OS / features and MSP scenarios",
+    "bookmark": "brandforgeos"
+  },
+  {
+    "page": 26,
+    "title": "Deploy Ops / features and MSP scenarios",
+    "bookmark": "ninja-launch-kit"
+  },
+  {
+    "page": 27,
+    "title": "StudyForge AI / features and MSP scenarios",
+    "bookmark": "studyforge-ai"
+  },
+  {
+    "page": 28,
+    "title": "TorqueShed / features and MSP scenarios",
+    "bookmark": "torqueshed"
+  },
+  {
+    "page": 29,
+    "title": "Operator Pool Hall / features and MSP scenarios",
+    "bookmark": "ninja-pool-hall"
+  },
+  {
+    "page": 30,
+    "title": "OutCall / features and MSP scenarios",
+    "bookmark": "outcall"
+  },
+  {
+    "page": 31,
+    "title": "What this does and does not establish",
+    "bookmark": "p31"
+  },
+  {
+    "page": 32,
+    "title": "Source register 1",
+    "bookmark": "sources"
+  },
+  {
+    "page": 33,
+    "title": "Source register 2",
+    "bookmark": "sources2"
+  }
+]

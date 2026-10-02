@@ -1,0 +1,2169 @@
+OPERATOROS
+PLATFORM / MODULES / USE CASES
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+01
+OPERATOROS
+One platform.
+Connected work.
+Retained intelligence.
+An engineering overview of the platform, its applications, and
+the workflows that turn operational activity into reusable assets.
+13 APPLICATIONS
+42 ILLUSTRATIVE SCENARIOS
+Prepared for engineering colleagues
+John Travis Williams Jr.  /  Shotgun Ninjas Productions, LLC
+SOURCE SNAPSHOT  ee9ca05e  /  2026-09-29
+
+OPERATOROS
+01 / ORIENTATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+02
+THE ENGINEERING PROPOSITION
+Reduce the cost of context.
+OperatorOS centralizes authority while purpose-built applications retain their own work models. The intended value is less re-entry, clearer ownership, and evidence
+that survives the handoff.
+01
+Shared authority
+Identity, tenants, roles, subscriptions,
+entitlements, launch policy, and audit have one
+parent authority.
+02
+Distinct work models
+Service revenue, IT resolution, and healthcare
+operations remain separate main-module
+workflows.
+03
+Reusable outcomes
+Reviewed proof, scripts, knowledge, training
+cases, and campaign packages become durable
+work products.
+READ THIS AS A TECHNICAL BRIEF
+Architecture and platform: pages 3–7. Module inventories and case studies:
+pages 8–33. Resolution Intelligence: page 34. Evaluation and evidence: pages
+35–38.
+Case-study method: all 42 scenarios are illustrative, not customer testimonials.
+Expected outputs are workflow goals; measurement suggestions are not reported
+results. Feature descriptions are grounded in repository contracts and
+implementation records.
+SOURCE NOTES
+S01
+S02
+S05
+
+OPERATOROS
+02 / ECOSYSTEM
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+03
+ONE PARENT / THREE MAINS / TEN COMPANIONS
+A portfolio with explicit boundaries.
+The map shows product scope and access class. Actual access is a server decision; an application category is not a promise that every tenant receives it.
+MAIN MODULES
+TradeFlowKit
+Service work + commercial records
+TechDeck
+IT context + resolution knowledge
+PulseDesk
+Healthcare operations coordination
+PAID COMPANIONS
+BrandForge OS
+Brand context + campaign production
+SnapProofOS
+Field evidence + approved reports
+StudyForge AI
+Source material + study practice
+Deploy Ops
+Campaign packages + launch readiness
+CallCommand AI
+Receptionist + intake + follow-up
+Script Ops
+Reviewed, versioned script assets
+FREE + GATED COMPANIONS
+TorqueShed
+Vehicle history + diagnostic work
+FaultlineLab
+Diagnostic practice + investigation traces
+Operator Pool Hall
+Browser 8-ball + shared recreation
+OutCall
+Coming soon / production unavailable
+Current commerce separates the selected core product, companion grants, and seats. Legacy plan compatibility is a separate path. No pricing quote or all-modules entitlement is implied by this
+overview.
+SOURCE NOTES
+S01
+S03
+
+OPERATOROS
+03 / ARCHITECTURE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+04
+SHARED RUNTIME / EXPLICIT TRUST BOUNDARIES
+One authority. Multiple exact hosts.
+Next.js web surfaces and a private Fastify API operate as one platform deployment. Module hosts present distinct products; they do not become independent identity
+or billing systems.
+Browser / module host
+Same-origin /api requests
+Host-only application session
+OperatorOS web runtime
+Next.js on public port 5000
+Exact registered host routing
+Private API authority
+Fastify on private port 5001
+Auth + tenant + role + entitlement
+Shared PostgreSQL authority
+Tenant-scoped records, constraints, audit, durable
+jobs, outbox/inbox, and ordered database releases.
+Configured external providers
+Payments, telephony, AI, email, scanning, and storage
+retain independent setup and acceptance gates.
+SSO: a 60-second opaque code is single-use and bound to exact callback, state,
+nonce, PKCE S256, environment, tenant, module, and entitlement. Redemption
+revalidates authority.
+Isolation: host-only Secure/HttpOnly cookies; no ambient parent-domain cookie.
+Server-resolved tenant predicates govern reads, writes, constraints, transactions, and
+audit. A requested tenant ID is never authority.
+SOURCE NOTES
+S03
+S04
+S05
+S13
+
+OPERATOROS
+04 / SHARED SERVICES
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+05
+THE REUSABLE FOUNDATION
+Capabilities every module should not rebuild.
+A common control plane reduces duplicated security and business logic while keeping module records, roles, and outcomes explicit.
+Identity and account security
+Central sign-in, session lifecycle, role checks, account
+status, MFA/revocation controls, and exact-host SSO.
+Tenants and entitlements
+Validated memberships, organization selection, module
+grants, subscription/seat policy, and server-owned launch
+decisions.
+Shared customer directory
+Organization/contact identity reused by supported
+applications; shared contact edits avoid automatic
+rewriting of historical reports.
+Files, jobs, and exports
+Private attachments, configured scanning, durable work
+queues, usage accounting, export artifacts, and explicit
+failure/retry states.
+Billing and service connections
+Platform Stripe authority stays separate from module
+business payments; stored configuration never proves
+external delivery.
+Audit and collaboration
+Platform audit, shared activity/notifications, tenant
+messenger, administrative visibility, and scoped
+record-to-record handoffs.
+Operational intelligence today: deterministic workday briefs rank recorded exceptions and point to the next action. They do not silently invoice, charge, send, assign, or execute.
+SOURCE NOTES
+S04
+S05
+S11
+S12
+
+OPERATOROS
+05 / CONNECTED WORKFLOWS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+06
+FROM ADJACENT APPS TO CONNECTED WORK
+Handoffs preserve the original context.
+Ten registered workflow contracts connect selected records. Each result remains a specific draft, ticket, attachment, or package with a reviewed source version.
+01
+TradeFlowKit job
+→ SnapProofOS proof work
+02
+Approved SnapProofOS PDF
+→ Originating TradeFlowKit job
+03
+CallCommand analyzed real call
+→ TradeFlowKit lead or customer/job
+04
+CallCommand analyzed real call
+→ PulseDesk operations request
+05
+CallCommand analyzed real call
+→ TechDeck support ticket
+06
+Resolved TechDeck / PulseDesk work
+→ Unpublished FaultlineLab draft
+07
+TorqueShed diagnostic
+→ SnapProofOS diagnostic proof
+08
+Verified / resolved TorqueShed work
+→ Unpublished FaultlineLab draft
+09
+BrandForgeOS campaign
+→ Deploy Ops launch package
+10
+Approved Script Ops revision
+→ Non-executing TechDeck runbook
+Delivery contract: recheck both applications and source access at queue and delivery; reject changed sources; deduplicate the business operation; retain signed event context and
+scoped results. Training handoffs require manager review. Live-call handoffs reject simulations.
+SOURCE NOTES
+S07
+
+OPERATOROS
+06 / PLATFORM SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+07
+THREE ILLUSTRATIVE PLATFORM CASE STUDIES
+Where shared authority pays off.
+These are evaluation scenarios using synthetic or approved data. They do not report customer deployments or measured results.
+01
+One engineer, several workspaces
+SITUATION
+An engineer belongs to two organizations and must reach
+the right module without mixing records or permissions.
+WORKFLOW
+Authenticate centrally, select the organization, and launch
+an entitled module. Follow a deep link and then return to
+My Apps; switching organization requires a fresh module
+authorization.
+EXPECTED OUTPUT
+A host-specific session bound to the intended tenant and
+module, with server-side checks on every protected action.
+MEASURE IN A PILOT
+Cross-tenant denial; deep-link continuity; absence of repeat
+credential entry.
+02
+A customer shared across
+workflows
+SITUATION
+A service customer appears in commercial records, a
+campaign brand, and field proof, each with different work
+history.
+WORKFLOW
+Use the supported shared customer selector in
+TradeFlowKit, BrandForge OS, and SnapProofOS. Update
+the shared contact intentionally and verify current
+projections without rewriting approved historical reports.
+EXPECTED OUTPUT
+One reusable customer identity with independent module
+records and preserved historical evidence.
+MEASURE IN A PILOT
+Duplicate identity creation; contact consistency; historical report
+stability.
+03
+A retry without a duplicate result
+SITUATION
+A reviewed cross-module transfer is interrupted after
+submission and another authorized person attempts the
+same outcome.
+WORKFLOW
+Queue the supported handoff with its source version.
+Inspect status and the destination link, then exercise the
+allowed retry path; changed sources and revoked access
+should fail closed.
+EXPECTED OUTPUT
+A traceable, deduplicated destination result for supported
+tenant-owned workflows; actor-scoped campaign
+generation remains distinct.
+MEASURE IN A PILOT
+Duplicate records; stale-source rejection; recoverable retry
+behavior.
+SOURCE NOTES
+S04
+S07
+S11
+
+OPERATOROS
+07 / MAIN MODULE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+08
+MAIN MODULE  /  CORE PRODUCT
+TradeFlowKit
+Keep service work connected to cash.
+A shared operations workspace for service businesses: customer context, execution, commercial documents, and collections
+remain connected throughout the job lifecycle.
+01
+Lead and customer management
+Capture leads; qualify and convert opportunities; use shared
+customer identity, contacts, search, and bounded CSV imports.
+02
+Jobs and recurring work
+Schedule and assign jobs; retain owners, dates, status, recurring
+templates, pause controls, and run history.
+03
+Tasks and workflow stages
+Track job-scoped tasks, dependencies, comments, tags, workflow
+transitions, and personal or shared saved views.
+04
+Quotes and conversion
+Build multi-line quotes; record decisions; convert to jobs or invoices
+with duplicate-safe server operations.
+05
+Invoices and payments
+Maintain invoice items, partial/full payment records, balances,
+numbering, and history; connected settlement needs provider
+acceptance.
+06
+Customer communication
+Use scoped public views, customer portals, and consent-aware
+email/SMS outbox actions with explicit delivery state.
+07
+Reporting and accounting handoff
+Inspect workload and revenue from persisted records; export invoice
+CSV, QuickBooks IIF, and Xero-oriented CSV files.
+08
+Proof and recovery
+Create SnapProofOS work from a job, return the approved PDF, and
+use guarded archive/restore workflows.
+TF
+THE WORKFLOW
+1
+Lead + customer
+2
+Job + quote
+3
+Work + evidence
+4
+Invoice + payment
+RETAINED OUTPUT
+One traceable chain from
+customer request through work,
+proof, invoice, and recorded
+settlement.
+BOUNDARY
+Live payments and outbound delivery require configured, accepted providers. Accounting exports are files, not live QuickBooks/Xero synchronization. Recording a sent state is not email delivery.
+SOURCE NOTES
+S01
+S02
+S07
+M01
+
+OPERATOROS
+TRADEFLOWKIT / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+09
+THREE ILLUSTRATIVE CASE STUDIES
+TradeFlowKit in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+The unbilled service call
+SITUATION
+A field-service team finishes a repair, but the invoice
+handoff is lost between the technician and office.
+WORKFLOW
+Link the customer, job, task completion, and quote. Use
+the workday brief to find completed jobs without an
+invoice, then review and create the commercial record.
+EXPECTED OUTPUT
+A job-linked invoice with an owner and an explicit balance;
+no automatic charge is implied.
+MEASURE IN A PILOT
+Completed jobs without invoices; days from completion to invoice.
+02
+Recurring maintenance without
+duplicate jobs
+SITUATION
+A contractor repeats the same service at several customer
+sites and recreates the work manually each month.
+WORKFLOW
+Define recurring job templates, inspect the next run, and
+let the supported scheduler create the dated job. Pause a
+schedule during an outage and inspect its history before
+resuming.
+EXPECTED OUTPUT
+Repeatable work records whose schedule/run identity
+prevents replay from creating duplicates.
+MEASURE IN A PILOT
+Manual setup time; duplicate jobs per scheduled run.
+03
+A defensible proof-to-payment
+handoff
+SITUATION
+An office needs to show what was done before following
+up on an unpaid installation.
+WORKFLOW
+Create SnapProofOS work from the originating job. Review
+the captured evidence and approved report, return its PDF
+to that exact job, then review invoice and recorded
+payment state.
+EXPECTED OUTPUT
+Commercial context and approved proof remain linked. A
+report attachment does not assert customer receipt.
+MEASURE IN A PILOT
+Jobs with linked approved proof; time spent reconstructing an
+invoice history.
+SOURCE NOTES
+S01
+S02
+S07
+M01
+
+OPERATOROS
+08 / MAIN MODULE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+10
+MAIN MODULE  /  CORE PRODUCT
+TechDeck
+Make resolution knowledge reusable.
+An MSP and IT operations console that binds support work to client, configuration, network, procedure, and evidence context.
+Resolution Intelligence preserves what actually happened, including failed attempts.
+01
+Service operations
+Manage client/site-linked tickets, assignments, comments, time,
+requester updates, and accountable closeout.
+02
+Configuration and lifecycle inventory
+Track typed configurations, asset context, warranty/renewal dates,
+lifecycle changes, and related records.
+03
+Network and IPAM records
+Maintain network, subnet, address, and topology relationships as
+documented operational context.
+04
+Versioned documentation
+Edit knowledge articles and runbooks with revisions, backlinks,
+review, approval, publication, and private attachments.
+05
+Resolution evidence intake
+Import structured closeouts with screened source material,
+immutable revisions, validation, warnings, failures, and side effects.
+06
+Exact and full-text retrieval
+Search identifiers and narrative; inspect evidence, components,
+action chronology, revision history, and native links.
+07
+Evidence-derived knowledge
+Preview deterministic KB/runbook drafts, retain source citations, link
+multiple incidents, and block stale-source approval.
+08
+Reports and controlled connections
+Use persisted dashboards, client reports, portal/status workflows,
+scoped API tokens, and signed outbound webhooks.
+TD
+THE WORKFLOW
+1
+Request + system
+2
+Actions + evidence
+3
+Verify + closeout
+4
+Retrieve + reuse
+RETAINED OUTPUT
+A resolution record that explains
+the fix, failed paths, uncertainty,
+verification, and reusable
+guidance.
+BOUNDARY
+Runbooks do not execute scripts. Inventory is not live discovery or endpoint control. Phase 5 semantic retrieval is source-implemented and provider-disabled; ordinary exact/text search is
+independent.
+SOURCE NOTES
+S01
+S02
+S07
+S09
+S10
+M02
+
+OPERATOROS
+TECHDECK / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+11
+THREE ILLUSTRATIVE CASE STUDIES
+TechDeck in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+A recurring application failure
+SITUATION
+A second engineer inherits a symptom that resembles an
+earlier incident, but a copied final fix omits a harmful
+intermediate step.
+WORKFLOW
+Search the exact error or component. Review the prior
+chronology, failed action, observed side effect, warning,
+and validation before choosing a procedure for the new
+client issue.
+EXPECTED OUTPUT
+An evidence-informed plan with uncertainty retained. The
+previous outcome does not prove the same root cause
+now.
+MEASURE IN A PILOT
+Time to relevant evidence; repeated failed actions avoided during a
+reviewed pilot.
+02
+A client infrastructure handover
+SITUATION
+An MSP technician leaves and the replacement must
+reconstruct dependencies from tickets and isolated notes.
+WORKFLOW
+Connect the client's sites, configurations, IPAM records,
+lifecycle dates, and versioned documentation. Link current
+tickets and supporting evidence, then prepare a
+client-facing operational report.
+EXPECTED OUTPUT
+A navigable service context with named records and a
+reusable procedure trail.
+MEASURE IN A PILOT
+Time to locate the affected system, owner, and current approved
+procedure.
+03
+From one repair to a maintained
+runbook
+SITUATION
+A difficult incident is resolved, but the team needs
+repeatable guidance that will not silently drift from its
+source.
+WORKFLOW
+Preview an evidence-derived runbook, review the cited
+sections, save a draft, and submit it through approval.
+When source evidence changes, inspect the stale warning
+and prepare current guidance.
+EXPECTED OUTPUT
+A reviewed document with source-revision links and
+access inherited from every linked incident.
+MEASURE IN A PILOT
+Time from closeout to reviewed guidance; stale-source publications
+prevented.
+SOURCE NOTES
+S01
+S02
+S07
+S09
+S10
+M02
+
+OPERATOROS
+09 / MAIN MODULE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+12
+MAIN MODULE  /  CORE PRODUCT
+PulseDesk
+Coordinate the work around care.
+Healthcare operations coordination for facilities, equipment, supplies, departments, and vendors. The work model captures
+operational ownership and response history while minimizing patient information.
+01
+Facilities and departments
+Maintain directory-linked organizations, facilities, requesters,
+departments, and operational context.
+02
+Operational request intake
+Create numbered requests with structured classification,
+equipment-issue prefill, tags, and supporting records.
+03
+Queues, teams, and assignment
+Route work to an accountable team or owner; prioritize through
+queues, filters, saved views, and bulk actions.
+04
+Targets and escalation
+Track service targets, time, at-risk work, escalation paths, and
+response history.
+05
+Notes and requester updates
+Keep internal coordination separate from requester-facing replies;
+retain private attachments and work history.
+06
+Equipment and vendor coordination
+Associate operational assets with facility issues, supply requests,
+service vendors, and department needs.
+07
+Knowledge and reporting
+Use operational knowledge, persisted dashboards, configuration,
+preferences, trend reporting, and exports.
+08
+Reviewed handoffs
+Accept operations-only CallCommand requests and prepare
+privacy-reviewed resolved-work drafts for FaultlineLab.
+PD
+THE WORKFLOW
+1
+Operations request
+2
+Department + owner
+3
+Coordinate + escalate
+4
+Resolve + report
+RETAINED OUTPUT
+A resolved operational request
+with accountable ownership,
+response timing, and an
+inspectable work history.
+BOUNDARY
+No patient chart, clinical decision, EHR/PACS integration, or HIPAA certification is claimed. Direct Microsoft 365, Google Workspace, IMAP, and SendGrid mailbox intake is unavailable in this release.
+SOURCE NOTES
+S01
+S02
+S07
+M03
+
+OPERATOROS
+PULSEDESK / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+13
+THREE ILLUSTRATIVE CASE STUDIES
+PulseDesk in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+An equipment issue between
+departments
+SITUATION
+An imaging department reports an unavailable
+workstation or equipment accessory; responsibility spans
+facilities and a vendor.
+WORKFLOW
+Create an operations-only request, associate the facility
+and asset, assign an owner, set the service target, and
+retain vendor coordination and requester updates in the
+work record.
+EXPECTED OUTPUT
+A visible accountable path to restoring operational
+availability without storing a patient chart.
+MEASURE IN A PILOT
+Unassigned age; response time; handoffs without a named owner.
+02
+A supply delay before a busy shift
+SITUATION
+A department has an unresolved supply request with a
+deadline, while the next shift sees only a message thread.
+WORKFLOW
+Classify the supply need, associate the department and
+vendor, record the due target, and use the queue to
+escalate the delay. Close the request with the actual
+resolution and timing.
+EXPECTED OUTPUT
+A shared request history that survives shift changes and
+shows what remains open.
+MEASURE IN A PILOT
+Overdue operational requests; time spent reconstructing shift
+context.
+03
+Learning from repeated facility
+incidents
+SITUATION
+Several resolved facilities requests reveal a recurring
+troubleshooting mistake useful for staff training.
+WORKFLOW
+Review the operational history and select a suitable
+resolved request. Managers with access to both
+applications review privacy and prepare an unpublished
+FaultlineLab draft for trainer revision.
+EXPECTED OUTPUT
+A controlled training starting point; the imported first
+revision cannot publish directly.
+MEASURE IN A PILOT
+Repeat incident patterns identified; reviewed training cases
+produced.
+SOURCE NOTES
+S01
+S02
+S07
+M03
+
+OPERATOROS
+10 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+14
+COMPANION APPLICATION  /  FREE COMPANION; OPTIONAL METERED ASSIST
+TorqueShed
+Preserve the reasoning behind the repair.
+A garage and automotive diagnostics workspace for vehicle history, structured tests, workshop records, and shareable proof.
+Torque Assist adds governed guidance when its provider and credit controls are configured.
+01
+Garage and service history
+Record vehicles, mileage, owner concerns, repairs, maintenance, and
+service chronology.
+02
+Structured diagnostics
+Organize symptoms, codes, observations, likely causes, tests,
+findings, and verification.
+03
+Torque Assist
+Request context-aware diagnostic guidance through
+OperatorOS-owned AI and usage/token accounting.
+04
+Build journals and cost context
+Track build stages, parts, labor, costs, notes, and supporting media.
+05
+Repair reports and collaboration
+Create workshop exports and repair records; use supported live-bay
+and sharing workflows.
+06
+Community
+Maintain profiles, preferences, posts, comments, reactions,
+follows/blocks, private media, and moderation records.
+07
+Marketplace listings
+Search and save listings; contact sellers; retain conversations, expiry,
+reports, and listing history.
+08
+Proof and training handoffs
+Prepare diagnostic proof in SnapProofOS and reviewed automotive
+challenge drafts in FaultlineLab.
+TS
+THE WORKFLOW
+1
+Concern + codes
+2
+Test + observe
+3
+Repair + verify
+4
+History + proof
+RETAINED OUTPUT
+A repair narrative that separates
+symptoms, measured
+observations, work performed, and
+verified outcome.
+BOUNDARY
+Physical tests and repair judgment remain with the technician. Marketplace listings do not imply escrow, shipping, buyer protection, or reputation guarantees. AI and native-device acceptance are
+separate gates.
+SOURCE NOTES
+S01
+S02
+S07
+M04
+
+OPERATOROS
+TORQUESHED / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+15
+THREE ILLUSTRATIVE CASE STUDIES
+TorqueShed in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+Diagnose before replacing parts
+SITUATION
+A shop receives an intermittent vehicle complaint with
+several plausible causes and incomplete prior history.
+WORKFLOW
+Record symptoms, codes, and earlier work, choose the
+next physical test, and capture its findings. Use Assist only
+as reviewed guidance when configured; record the actual
+repair and verification.
+EXPECTED OUTPUT
+A test-driven diagnostic record that explains why a repair
+was selected.
+MEASURE IN A PILOT
+Diagnostic steps with recorded findings; repeat visits for the same
+complaint.
+02
+A build that outlives its original
+owner
+SITUATION
+A custom vehicle changes hands after months of
+modifications spread across receipts and photos.
+WORKFLOW
+Organize stages, parts, labor, costs, media, and service
+entries in the build journal. Produce a workshop export or
+controlled repair record for the receiving party.
+EXPECTED OUTPUT
+A coherent modification and service history with traceable
+supporting material.
+MEASURE IN A PILOT
+Missing part/service records; time required to reconstruct a
+modification.
+03
+A verified diagnosis becomes
+training
+SITUATION
+A mechanic resolves a difficult fault that would make a
+useful diagnostic exercise for apprentices.
+WORKFLOW
+Finish the diagnostic record with recorded tests and
+findings. A manager reviews privacy and transfers a
+training draft to FaultlineLab, then edits the narrative and
+evidence before publication.
+EXPECTED OUTPUT
+An unpublished automotive case that retains diagnostic
+structure without bypassing trainer review.
+MEASURE IN A PILOT
+Reviewed cases created from real work; learner investigation
+quality.
+SOURCE NOTES
+S01
+S02
+S07
+M04
+
+OPERATOROS
+11 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+16
+COMPANION APPLICATION  /  FREE COMPANION
+FaultlineLab
+Evaluate the path to the answer.
+A diagnostic challenge environment for technical practice. Versioned scenarios, persistent investigation traces, and server
+scoring let a reviewer inspect the reasoning path as well as the final answer.
+01
+Challenge catalog
+Discover published challenges through search, filters, sorting,
+authored packs, and daily selection.
+02
+Persistent attempts
+Resume standard, daily, preview, assignment, and Chaos-mode
+attempts across refresh and restart.
+03
+Evidence-driven investigation
+Select diagnostic actions, reveal clues, record findings, use
+progressive hints, and submit a conclusion.
+04
+Server scoring
+Evaluate submitted work against the versioned scenario and retain
+append-only attempt evidence.
+05
+Assignments and progress
+Assign cases, inspect learning progress and badges, and select
+further practice from observed results.
+06
+Authoring lifecycle
+Validate, preview, publish, retire, import, and export controlled
+challenge versions.
+07
+Analytics and exports
+Review attempts and outcome history; export material for coaching
+and team discussion.
+08
+Operational case reuse
+Convert reviewed TechDeck, PulseDesk, and TorqueShed records
+into private first-draft challenges.
+FL
+THE WORKFLOW
+1
+Scenario + clues
+2
+Investigate + test
+3
+Submit + score
+4
+Review + practice
+RETAINED OUTPUT
+A replayable investigation record
+showing which evidence the
+learner inspected and how the
+answer was reached.
+BOUNDARY
+Training scores are scenario performance, not accredited certification or production authorization. Imported incidents require privacy review and a revised trainer-approved version before
+publication.
+SOURCE NOTES
+S01
+S02
+S07
+M05
+
+OPERATOROS
+FAULTLINELAB / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+17
+THREE ILLUSTRATIVE CASE STUDIES
+FaultlineLab in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+A repeatable technician
+onboarding exercise
+SITUATION
+Two new engineers know the terminology, but the lead
+needs to see how they investigate an ambiguous failure.
+WORKFLOW
+Assign the same versioned challenge, compare action
+sequences and missed evidence, and discuss the
+submitted cause and response using the retained attempt
+trace.
+EXPECTED OUTPUT
+A concrete coaching conversation grounded in observed
+diagnostic choices.
+MEASURE IN A PILOT
+Missed critical clues; unnecessary actions; score progression on
+comparable cases.
+02
+Turn a resolved incident into an
+exercise
+SITUATION
+An internal outage contains a useful lesson but also client
+names and sensitive operational details.
+WORKFLOW
+Use the supported resolved-work handoff, review privacy,
+and revise the private draft. Validate and preview the case
+before publishing a controlled version for the intended
+learners.
+EXPECTED OUTPUT
+Reusable practice material with a deliberate editorial and
+privacy boundary.
+MEASURE IN A PILOT
+Time from incident review to approved exercise; privacy findings
+caught before publication.
+03
+Diagnose under changing
+conditions
+SITUATION
+Experienced staff need practice handling incomplete clues
+and disruption without changing a production
+environment.
+WORKFLOW
+Use a suitable Chaos or daily challenge. Retain the
+investigation trace, inspect the result, and repeat a
+targeted exercise where the original reasoning missed a
+signal.
+EXPECTED OUTPUT
+A safe training record that exposes decision habits under
+scenario pressure.
+MEASURE IN A PILOT
+Recovery of investigation after new evidence; repeat occurrence of
+the same reasoning error.
+SOURCE NOTES
+S01
+S02
+S07
+M05
+
+OPERATOROS
+12 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+18
+COMPANION APPLICATION  /  FREE COMPANION
+Operator Pool Hall
+A free shared space for the team.
+A browser-based 8-ball companion with real gameplay, persistent match state, and protected online rooms. Its engineering
+interest lies in deterministic simulation, server validation, and recovery across interruptions.
+01
+Free Shoot practice
+Practice shot selection, aim, power, and cue-ball control in the
+Canvas play surface.
+02
+CPU matches
+Play against seeded CPU behavior with the supported rules and
+deterministic physics.
+03
+Local hot-seat play
+Share a device for turn-based play with visible match and turn state.
+04
+Authenticated online rooms
+Create or join protected rooms through OperatorOS identity and
+access controls.
+05
+Authoritative match checks
+Use durable snapshots/events and independent server re-simulation
+of submitted actions.
+06
+Reconnect and expiry
+Recover supported room state after interruptions and enforce room
+lifecycle limits.
+07
+Touch, English, and audio
+Use touch-friendly controls, spin/English, audio options, and
+performance settings.
+08
+Profiles and local results
+Keep supported profile/result records and use the installable
+web-app experience.
+PH
+THE WORKFLOW
+1
+Practice or room
+2
+Aim + play
+3
+Server check
+4
+Resume + finish
+RETAINED OUTPUT
+A recoverable match with
+consistent turn and shot state
+across the supported play surfaces.
+BOUNDARY
+A community benefit with no wagering, paid competition, prizes, or independently certified rankings. Online two-device and performance acceptance should be demonstrated in the target
+environment.
+SOURCE NOTES
+S01
+S02
+M06
+
+OPERATOROS
+OPERATOR POOL HALL / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+19
+THREE ILLUSTRATIVE CASE STUDIES
+Operator Pool Hall in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+A five-minute practice break
+SITUATION
+An engineer wants a short break between long support
+sessions without setting up another account.
+WORKFLOW
+Launch the free companion through OperatorOS and enter
+Free Shoot. Practice a repeatable shot while adjusting aim,
+power, and English with the supported controls.
+EXPECTED OUTPUT
+Immediate, self-contained practice inside the same
+account ecosystem.
+MEASURE IN A PILOT
+Time from launcher to first playable shot; input responsiveness on
+the chosen device.
+02
+A teammate disconnects
+mid-match
+SITUATION
+Two coworkers play in a protected online room and one
+browser loses connectivity.
+WORKFLOW
+Play through normal server-checked actions, reconnect
+within the supported room lifetime, and inspect the
+restored turn and match state from durable snapshots and
+events.
+EXPECTED OUTPUT
+A recoverable game state rather than an unverified
+client-only continuation.
+MEASURE IN A PILOT
+State agreement after reconnect; abandoned matches caused by
+recoverable disconnects.
+03
+A practical state-consistency demo
+SITUATION
+A team wants a small, understandable example of
+authoritative state and replay validation.
+WORKFLOW
+Use an authorized test session to examine normal shot
+submission, server re-simulation, and refresh recovery.
+Compare visible state across clients without claiming a
+formal security assessment.
+EXPECTED OUTPUT
+An accessible demonstration of client input, authoritative
+checks, and durable state.
+MEASURE IN A PILOT
+Consistent ball/turn state across refreshes and the two test clients.
+SOURCE NOTES
+S01
+S02
+M06
+
+OPERATOROS
+13 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+20
+COMPANION APPLICATION  /  PAID COMPANION
+BrandForge OS
+Give creative work a durable system.
+A brand and campaign workspace for reusable context, reviewed assets, and coordinated delivery packages. The catalog uses
+the compact name BrandForgeOS; both refer to the same application.
+01
+Brand HQ
+Maintain brand kits, positioning, voice, offers, and audience
+personas; associate approved shared customer identity.
+02
+Campaign planning
+Create campaign briefs, objectives, channels, budgets, timelines, and
+related landing content.
+03
+Copy Studio and workflows
+Develop copy variants, calls to action, ad prompts, strategy, and
+creative directions through guided modes.
+04
+Logo concepts
+Preview wordmark, lockup, badge, and monogram compositions;
+export editable SVG and standard/2x PNG.
+05
+Review and collaboration
+Manage draft/review/approval states, comments, assets, activity, and
+recoverable selected logos.
+06
+Calendar and reusable templates
+Organize delivery work and reuse global/custom templates subject
+to the applicable entitlements.
+07
+Recorded performance and reports
+Track entered results, recommendations, and campaign reports;
+create controlled exports.
+08
+Launch-package handoff
+Transfer a campaign into Deploy Ops with copy, visual-production
+briefs, work items, and an approval starting state.
+BF
+THE WORKFLOW
+1
+Brand + audience
+2
+Campaign + variants
+3
+Review + approve
+4
+Export + measure
+RETAINED OUTPUT
+A reusable brand context and
+reviewed campaign package with
+clear ownership and delivery
+decisions.
+BOUNDARY
+Direct advertising, social, email, analytics, and CRM delivery are unavailable in this release. Canva/Figma use manual file import. Generated assets require review; a scheduled item is not publication.
+SOURCE NOTES
+S01
+S02
+S07
+M07
+
+OPERATOROS
+BRANDFORGE OS / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+21
+THREE ILLUSTRATIVE CASE STUDIES
+BrandForge OS in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+One offer, several inconsistent
+messages
+SITUATION
+An MSP launches a service package, but website copy,
+sales emails, and social drafts describe different benefits.
+WORKFLOW
+Define the audience, offer, proof points, and voice once.
+Build campaign variants from that context, review the
+claims together, and export the approved materials for
+each external channel.
+EXPECTED OUTPUT
+A coherent campaign kit whose variants can be traced
+back to agreed positioning.
+MEASURE IN A PILOT
+Review rounds caused by inconsistent claims; time to produce an
+approved variant.
+02
+Agency work without cross-client
+confusion
+SITUATION
+A small team manages several customers and repeatedly
+copies brand details between disconnected documents.
+WORKFLOW
+Associate each brand with the correct shared customer,
+maintain distinct personas and offers, and retain campaign
+assets, comments, and review states under the authorized
+organization.
+EXPECTED OUTPUT
+Customer-linked creative context and an inspectable
+approval history.
+MEASURE IN A PILOT
+Misattributed assets; time required to locate the latest approved
+brand direction.
+03
+From campaign approval to a
+launch package
+SITUATION
+A campaign is approved, but the coordinator still needs
+channel copy, production briefs, and assigned launch
+work.
+WORKFLOW
+Review the current campaign and queue the Deploy Ops
+handoff. Inspect the returned package, complete missing
+production items, and export only after the team checks
+the resulting materials.
+EXPECTED OUTPUT
+A coordinated execution package; no advertising spend or
+external publication occurs automatically.
+MEASURE IN A PILOT
+Time from approval to handoff; missing deliverables discovered
+before launch.
+SOURCE NOTES
+S01
+S02
+S07
+M07
+
+OPERATOROS
+14 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+22
+COMPANION APPLICATION  /  PAID COMPANION
+SnapProofOS
+Turn completed work into reviewable proof.
+A field-work and evidence workflow for customer jobs, dated captures, findings, review, and branded reports. Controlled
+sharing is tied to approved report snapshots rather than unrestricted raw evidence.
+01
+Customers, jobs, and assignments
+Select shared customer identity, create proof work, assign field tasks,
+and retain job context.
+02
+Field evidence capture
+Collect photos, private notes, files, observations, parts, labor, and
+dated work context.
+03
+File integrity and scanning
+Apply type/signature checks, private storage, scan state, and
+SHA-256 verification through shared services.
+04
+Findings and review
+Submit evidence, inspect findings, record comments, and move
+reports through authorized review and approval.
+05
+Branded report output
+Generate approved PDF and DOCX documents from the selected
+report snapshot and template.
+06
+Controlled report shares
+Create expiring and revocable report links; inspect access history
+without exposing the private source library.
+07
+Custody and retention
+Retain hash-linked custody history, immutable report context,
+archive controls, retention, and legal-hold state.
+08
+Connected proof packages
+Receive TradeFlowKit job or TorqueShed diagnostic context; return
+the exact approved PDF to its originating job.
+SP
+THE WORKFLOW
+1
+Assign + capture
+2
+Organize + review
+3
+Approve + generate
+4
+Share + retain
+RETAINED OUTPUT
+A branded, approved proof
+package whose included evidence
+can be traced to the field
+assignment.
+BOUNDARY
+Storage, scanning, and document workers need acceptance. A share link is not proof of delivery or receipt. Hash-linked history supports integrity review; it is not a legal-admissibility guarantee.
+SOURCE NOTES
+S01
+S02
+S07
+M08
+
+OPERATOROS
+SNAPPROOFOS / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+23
+THREE ILLUSTRATIVE CASE STUDIES
+SnapProofOS in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+A field installation with incomplete
+closeout
+SITUATION
+An engineer completes a network cabinet installation, but
+photos and labor notes remain scattered across devices.
+WORKFLOW
+Create the customer job, assign capture work, add dated
+photos and notes, record findings and costs, and assemble
+the customer-facing template for review.
+EXPECTED OUTPUT
+One approved report with supporting job context instead
+of a loose image folder.
+MEASURE IN A PILOT
+Jobs missing required evidence; time from site departure to
+approved report.
+02
+Review a disputed service outcome
+SITUATION
+A customer questions what was included in a repair or
+inspection performed several weeks earlier.
+WORKFLOW
+Open the authorized job and inspect its captured
+evidence, comments, custody history, and approved report
+snapshot. Generate or retrieve the exact document
+relevant to the reviewed work.
+EXPECTED OUTPUT
+An inspectable record of what was captured and approved,
+without assuming the record proves causation.
+MEASURE IN A PILOT
+Time to reconstruct the work package; gaps in the
+evidence-to-report chain.
+03
+Share the report, control the access
+SITUATION
+A project manager needs to give a customer a finished
+report while keeping internal notes and raw captures
+private.
+WORKFLOW
+Approve the snapshot, generate the requested format, and
+deliberately create an expiring report share. Deliver it
+through the team's approved channel and revoke access
+when appropriate.
+EXPECTED OUTPUT
+A bounded customer report link with expiry, revocation,
+and access history.
+MEASURE IN A PILOT
+Unrestricted evidence links created; share expiry/revocation
+behavior in the pilot.
+SOURCE NOTES
+S01
+S02
+S07
+M08
+
+OPERATOROS
+15 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+24
+COMPANION APPLICATION  /  PAID COMPANION
+StudyForge AI
+Make training material easier to use.
+A source-based study workspace that turns supplied notes into complete study packs and persistent practice. Built-in creation
+remains useful without the optional shared AI service.
+01
+Folders and study sets
+Organize source material, course/exam context, titles, descriptions,
+and reusable study sets.
+02
+Complete study packs
+Create summaries, key terms, flashcards, multiple-choice questions,
+short answers, review sheets, and plans.
+03
+Built-in and optional AI paths
+Use deterministic creation or configured shared AI refinement with
+validation, provenance, and fallback behavior.
+04
+Flashcard learning
+Practice with keyboard/touch controls and retain known/learning
+state and session progress.
+05
+Quizzes and review
+Use server-scored attempts, inspect explanations and missed
+answers, and retain retry/history records.
+06
+Plans and progress
+Track date-based study plans, exam countdowns, streaks, usage, and
+learning trends.
+07
+Content lifecycle
+Edit, search, filter, duplicate, regenerate, archive, restore, and remove
+supported study material.
+08
+Portable output
+Export study sets and supported progress/results as JSON or
+entitlement-gated CSV.
+SF
+THE WORKFLOW
+1
+Supply material
+2
+Build + review pack
+3
+Practice + quiz
+4
+Inspect + repeat
+RETAINED OUTPUT
+A reusable study pack plus a
+history of practice and quiz results
+that identifies material needing
+another pass.
+BOUNDARY
+Generated material needs source review. AI requires shared-service setup. No outside citations, accredited qualification, automatic mastery judgment, or invented classroom/group workflow is
+claimed.
+SOURCE NOTES
+S01
+S02
+M09
+
+OPERATOROS
+STUDYFORGE AI / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+25
+THREE ILLUSTRATIVE CASE STUDIES
+StudyForge AI in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+Prepare for a platform handover
+SITUATION
+An engineer must learn an internal service before joining
+the support rotation.
+WORKFLOW
+Supply approved, non-secret operating notes, build a
+study pack, correct the generated material against the
+source, and use flashcards and a quiz to reveal weak areas.
+EXPECTED OUTPUT
+A repeatable learning aid with an inspectable source basis
+and saved practice history.
+MEASURE IN A PILOT
+Questions missed by topic; preparation time using the same
+approved material.
+02
+Turn a long workshop into practice
+SITUATION
+A technical workshop produces useful notes, but
+participants rarely revisit the full document.
+WORKFLOW
+Create a focused set from the approved workshop
+material. Review terms, short answers, and the review
+sheet; schedule study around the intended date and
+inspect the quiz explanations.
+EXPECTED OUTPUT
+Multiple ways to rehearse the same material without
+claiming the generated pack is authoritative.
+MEASURE IN A PILOT
+Study sessions completed; repeated mistakes after source
+corrections.
+03
+Keep learning when AI is
+unavailable
+SITUATION
+A team wants a study workflow before external AI service
+approval is complete.
+WORKFLOW
+Use built-in pack creation, manually refine the material,
+and practice through the existing flashcard and quiz paths.
+Export the set for review and retain usage/history in the
+workspace.
+EXPECTED OUTPUT
+A functioning study process that does not depend on live
+model access.
+MEASURE IN A PILOT
+Completion of the study workflow with AI disabled; content
+corrections found in review.
+SOURCE NOTES
+S01
+S02
+M09
+
+OPERATOROS
+16 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+26
+COMPANION APPLICATION  /  PAID COMPANION
+Deploy Ops
+Make campaign launch work inspectable.
+A campaign-package and readiness workspace. Despite the name, its current product scope is coordinated campaign
+preparation and human-verified delivery records, not software deployment automation.
+01
+Business templates and briefs
+Start from reusable templates; define audience, offer, action, tone,
+channels, and launch date.
+02
+Multi-channel campaign packages
+Prepare landing, ad, email, SMS, social, FAQ, flyer, and call-to-action
+copy.
+03
+Visual-production briefs
+Create up to nine visual briefs, with included plan items made
+explicit.
+04
+Versioned artifacts
+Retain saved packages, revisions, source context, approved inputs,
+and related private assets.
+05
+Launch execution workspace
+Assign phases, milestones, owners, required files, tasks, and
+dependencies.
+06
+Computed readiness
+Calculate readiness from recorded conditions and approvals; inspect
+missing prerequisites before a launch transition.
+07
+Verified exports
+Download supported text, Markdown, JSON, and CSV packages with
+checksum and audit context.
+08
+Reviewed completion
+Receive BrandForgeOS campaign handoffs and record externally
+confirmed completion with a reference.
+DO
+THE WORKFLOW
+1
+Brief + template
+2
+Package + review
+3
+Tasks + readiness
+4
+Export + confirm
+RETAINED OUTPUT
+A reviewed campaign kit, explicit
+launch checklist, and verifiable
+export for the people using
+publishing tools.
+BOUNDARY
+Does not deploy software, change DNS, publish sites/ads, send campaigns, or buy media. A readiness score reflects recorded package conditions; external completion needs a person's verified
+reference.
+SOURCE NOTES
+S01
+S02
+S07
+M10
+
+OPERATOROS
+DEPLOY OPS / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+27
+THREE ILLUSTRATIVE CASE STUDIES
+Deploy Ops in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+Launch an MSP service offer
+SITUATION
+A new managed service needs consistent landing copy,
+FAQs, ads, and a practical launch checklist.
+WORKFLOW
+Define the business brief and channels, generate the
+package, review every claim, assign production tasks, and
+export the approved material to the people operating the
+external tools.
+EXPECTED OUTPUT
+A coordinated campaign package with clear owners and
+outstanding work.
+MEASURE IN A PILOT
+Missing launch assets; time from accepted brief to reviewed export.
+02
+Find the launch blocker before
+launch day
+SITUATION
+Copy is finished, but required artwork and approval are
+missing from a campaign nearing its deadline.
+WORKFLOW
+Use the execution workspace to inspect required files,
+dependencies, owners, and computed readiness. Complete
+and review the missing work before recording the launch
+transition.
+EXPECTED OUTPUT
+An evidence-based readiness decision with the unresolved
+dependency visible.
+MEASURE IN A PILOT
+Late blockers found before the deadline; launch transitions with
+incomplete prerequisites.
+03
+Hand a campaign to another team
+SITUATION
+A campaign coordinator needs a clean package for an
+agency or internal publishing team.
+WORKFLOW
+Review the current package, create a verified export, and
+use the team's normal delivery channel. After publication,
+a person checks the external result and records its
+reference.
+EXPECTED OUTPUT
+A traceable artifact handoff and separately recorded
+external confirmation.
+MEASURE IN A PILOT
+Rework caused by missing copy or context; exports lacking a
+reviewed version.
+SOURCE NOTES
+S01
+S02
+S07
+M10
+
+OPERATOROS
+17 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+28
+COMPANION APPLICATION  /  PAID COMPANION; LIVE PROVIDER GATES
+CallCommand AI
+Make every call end in an owned next action.
+A business receptionist, call-intelligence, and MSP intake workspace with simulations, flow design, follow-up records, and
+explicit provider readiness. Real calls require accepted telephony, AI, and billing configuration.
+01
+Receptionist configuration
+Define business knowledge, hours, greetings, behavior, and
+approved routing destinations.
+02
+Call-flow design and simulation
+Prepare conversation paths, test a no-cost simulated call, and
+correct routing before live enablement.
+03
+Number and launch controls
+Manage number setup, readiness checks, capacity, usage, service
+health, and deliberate go-live controls.
+04
+Call records and intelligence
+Search history; inspect summaries, timelines, transcripts, consent
+state, outcomes, and reviewed analysis.
+05
+Follow-up operations
+Review leads, tasks, alerts, and staff actions with clear ownership and
+retained call context.
+06
+Core-module handoffs
+Convert eligible analyzed provider calls into reviewed TradeFlowKit,
+TechDeck, or operations-only PulseDesk work.
+07
+MSP intake foundation
+Use approved lines, SupportLinks, Directory-backed
+organization/contact association, local cases, and operator
+screen-pop.
+08
+Provider and audit controls
+Use signed callbacks, durable retry/outbox records, kill switches,
+evidence history, and explicit test/live distinctions.
+CC
+THE WORKFLOW
+1
+Configure + simulate
+2
+Accept live setup
+3
+Capture + analyze
+4
+Review + assign
+RETAINED OUTPUT
+A call outcome with retained
+context and a clearly owned next
+action, distinguished from any test
+simulation.
+BOUNDARY
+Live Twilio/OpenAI/Stripe and callback acceptance remain separate. Simulations cannot create production call handoffs. BMS delivery and privileged Datto/Graph/AD actions are not accepted by
+the MSP foundation.
+SOURCE NOTES
+S01
+S02
+S07
+M11
+
+OPERATOROS
+CALLCOMMAND AI / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+29
+THREE ILLUSTRATIVE CASE STUDIES
+CallCommand AI in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+Test after-hours intake before
+activation
+SITUATION
+An MSP wants consistent after-hours intake but needs to
+inspect what the receptionist will ask and where it will
+route work.
+WORKFLOW
+Configure hours, approved knowledge, and escalation
+paths. Run simulations, inspect captured answers and
+routing, and correct the flow before the separate provider
+go-live checks.
+EXPECTED OUTPUT
+A reviewed receptionist configuration and test outcome
+without purchasing or placing a live call.
+MEASURE IN A PILOT
+Required intake fields captured in simulations; incorrect routes
+found before activation.
+02
+A real call becomes a support ticket
+SITUATION
+After provider acceptance, a caller describes an issue that
+should enter the technical queue with usable context.
+WORKFLOW
+Review the completed, analyzed provider call and choose
+the TechDeck handoff. The system reloads the reviewed
+version and checks access before creating the destination
+ticket.
+EXPECTED OUTPUT
+A linked ticket from an eligible real call; simulator records
+are rejected.
+MEASURE IN A PILOT
+Calls without an owner; manual re-entry time; duplicate destination
+tickets.
+03
+Separate caller context from
+privileged action
+SITUATION
+An MSP caller requests urgent account help, but caller
+recognition must not become authorization for a reset.
+WORKFLOW
+Use approved intake channels and organization/contact
+association to capture the issue and open a local case.
+Review screen-pop and evidence, then use the
+independently authorized support process.
+EXPECTED OUTPUT
+Useful intake context without an automatic identity reset
+or endpoint action.
+MEASURE IN A PILOT
+Unassociated cases; quality of issue capture; privileged actions
+requiring explicit separate approval.
+SOURCE NOTES
+S01
+S02
+S07
+M11
+
+OPERATOROS
+18 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+30
+COMPANION APPLICATION  /  PAID COMPANION
+Script Ops
+Approve the exact automation asset.
+A script-authoring and governance workspace for reusable IT automation. Static analysis, immutable versions, explicit review,
+and audited downloads preserve the boundary between preparing source and executing it.
+01
+Searchable script library
+Organize PowerShell, Python, batch, and shell assets with
+source/provenance context.
+02
+Authoring and import
+Create or import source and record the purpose, prerequisites,
+expected behavior, risk, and rollback.
+03
+Immutable versions
+Pin the exact revision, content identity, and change context used by
+subsequent review and download.
+04
+Server static analysis
+Inspect findings and risk indicators before submitting a script
+version for approval.
+05
+Governed review lifecycle
+Submit, approve, reject, or retire scripts under tenant-admin controls
+with recorded decisions.
+06
+Approved download controls
+Allow only the approved current version to be downloaded; retain
+integrity and download audit history.
+07
+Optional AI drafting
+Request drafts through shared AI, idempotency, and usage controls;
+generated source remains unapproved.
+08
+TechDeck documentation handoff
+Create a non-executing draft runbook and protected file-integrity
+record from an approved script revision.
+SO
+THE WORKFLOW
+1
+Draft + requirements
+2
+Analyze + revise
+3
+Review exact version
+4
+Download + document
+RETAINED OUTPUT
+A specific approved source version
+with requirements, review findings,
+rollback context, and an auditable
+download.
+BOUNDARY
+OperatorOS does not execute this source in the browser, API, server, or customer environment. Static analysis is not proof of safety. Execution and endpoint acceptance belong to a separately
+authorized tool.
+SOURCE NOTES
+S01
+S02
+S07
+M12
+
+OPERATOROS
+SCRIPT OPS / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+31
+THREE ILLUSTRATIVE CASE STUDIES
+Script Ops in practice.
+Problem → workflow → expected output. Measurements are suggested pilot checks, not claimed results.
+01
+Retire the copied desktop script
+SITUATION
+Several technicians keep slightly different copies of a
+maintenance script with unclear origin and prerequisites.
+WORKFLOW
+Import the reviewed source, document requirements and
+rollback, run static checks, and submit an exact version for
+approval. Technicians download the approved current
+revision for their authorized environment.
+EXPECTED OUTPUT
+One governed automation asset with a visible version and
+decision history.
+MEASURE IN A PILOT
+Untracked variants; downloads without an approved current
+version.
+02
+Use AI without auto-approving its
+output
+SITUATION
+An engineer wants help drafting a repetitive inventory
+script but must inspect its behavior before distribution.
+WORKFLOW
+Request a draft through the configured shared AI service,
+inspect its source, address static findings, and submit the
+corrected immutable revision to a tenant administrator.
+EXPECTED OUTPUT
+A reviewable draft that cannot become an approved
+download merely because a model generated it.
+MEASURE IN A PILOT
+Findings corrected before approval; generated drafts distributed
+without review.
+03
+Preserve procedure beside the code
+SITUATION
+A useful script exists, but new staff do not know when to
+use it or how to interpret its output.
+WORKFLOW
+Select an approved current revision and create the
+supported TechDeck draft runbook. Review its
+prerequisites and handling instructions in TechDeck before
+publishing the procedure.
+EXPECTED OUTPUT
+Linked source identity and reviewed guidance; the handoff
+performs no execution.
+MEASURE IN A PILOT
+Approved assets with current runbook context; source/runbook
+version mismatches.
+SOURCE NOTES
+S01
+S02
+S07
+M12
+
+OPERATOROS
+19 / COMPANION APPLICATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+32
+COMPANION APPLICATION  /  COMING SOON / UNAVAILABLE
+OutCall
+A private, verified-self call workflow.
+A reconstructed application for a discreet call to a person's own verified phone. Source/local workflow evidence exists, but the
+production catalog remains unavailable and these scenarios describe gated behavior.
+01
+Safety acknowledgement
+Explain the personal-use and non-emergency boundary before
+preparing a call workflow.
+02
+Verified-self phone setup
+Use a controlled phone-ownership verification path; arbitrary
+destinations are excluded.
+03
+Neutral call profiles
+Store private profiles with controlled voice/script and supported
+keypad behavior.
+04
+Private exact triggers
+Bind exact-match trigger phrases to an approved profile and verified
+self-owned destination.
+05
+Immediate and scheduled requests
+Prepare bounded call requests using durable state and supported
+scheduling controls.
+06
+Cancellation and history
+Inspect actual request/provider state, cancel eligible requests, and
+retain private history.
+07
+Signed provider events
+Enforce controlled voice/SMS/DTMF callbacks, replay checks, and
+persistent rate limits.
+08
+Private export and deletion
+Use password-confirmed export and account-slice deletion controls
+for the retained personal records.
+OC
+THE WORKFLOW
+1
+Verify self
+2
+Choose neutral profile
+3
+Request or schedule
+4
+Inspect + cancel
+RETAINED OUTPUT
+A private request directed only to
+the verified owner, with honest
+state and cancellation/history
+controls.
+BOUNDARY
+UNAVAILABLE: no live launch or sale. Requires production activation and controlled real-provider acceptance. No emergency response, monitoring, location tracking, duress detection, or third-party
+dialing.
+SOURCE NOTES
+S01
+S02
+S03
+M13
+
+OPERATOROS
+OUTCALL / ILLUSTRATIVE SCENARIOS
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+33
+THREE ILLUSTRATIVE CASE STUDIES
+OutCall in practice.
+Gated scenarios only. OutCall remains unavailable; these are future acceptance examples, not present live service.
+01
+A planned social exit cue
+SITUATION
+A person wants a neutral call to their own phone at a
+chosen time as a private reason to step away.
+WORKFLOW
+In a future accepted live workflow, acknowledge the limits,
+verify the self-owned number, choose a neutral profile,
+schedule the request, and inspect the actual provider
+outcome.
+EXPECTED OUTPUT
+A self-directed call request. This scenario is illustrative; live
+availability is still blocked.
+MEASURE IN A PILOT
+Correct verified destination; truthful delivery state; no unauthorized
+destination expansion.
+02
+Cancel when the plan changes
+SITUATION
+A previously scheduled personal call is no longer wanted
+and should not proceed if it remains cancellable.
+WORKFLOW
+Open the private history, inspect the request state, and
+cancel the eligible schedule. Verify that the record
+distinguishes cancellation from an already submitted
+provider action.
+EXPECTED OUTPUT
+An explicit lifecycle decision with no fabricated claim that
+an in-flight call was recalled.
+MEASURE IN A PILOT
+Cancellation state consistency; late or duplicate requests in
+controlled acceptance tests.
+03
+Review and remove personal
+history
+SITUATION
+A user wants a private copy of retained records and then
+wants the supported account slice removed.
+WORKFLOW
+After activation acceptance, use the password-confirmed
+export and deletion controls. Review the product's actual
+retained scope and verify the resulting state in a controlled
+test.
+EXPECTED OUTPUT
+A deliberate privacy workflow; no emergency or
+third-party-monitoring capability is implied.
+MEASURE IN A PILOT
+Export access controls; deletion-scope accuracy; resistance to
+cross-account access.
+SOURCE NOTES
+S01
+S02
+S03
+M13
+
+OPERATOROS
+20 / TECHNICAL DEEP DIVE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+34
+KNOWLEDGE WITH PROVENANCE AND LIMITS
+Preserve evidence before adding inference.
+TechDeck distinguishes observed source evidence, deterministic projections, human approval, and optional model-based similarity. Those are different kinds of
+authority.
+1
+Evidence
+Screen structured closeouts. Retain
+immutable source revisions, actions,
+failed attempts, side effects,
+uncertainty, and validation.
+2
+Projection
+Build exact/text retrieval and typed
+relationships. Keep source references
+and incident access attached to the
+result.
+3
+Reviewed knowledge
+Preview cited KB/runbook drafts.
+Review and publish through existing
+controls; changed sources block stale
+approval.
+4
+Optional similarity
+Review excerpts before indexing.
+Explicitly opt into semantic queries;
+explain hybrid ranking and retain
+exact/text fallback.
+DEPLOYED EVIDENCE: v64
+Repository records publication and owner read checks for
+import/prompt/search/linked-knowledge surfaces. Production writes, other-role checks,
+live logout, and restore remain separate acceptance scopes.
+SOURCE CANDIDATE: v65 / PROVIDER OFF
+OpenAI adapter and bounded hybrid retrieval are implemented. Provider activation,
+production vector capability, real-model relevance, and publication are not established.
+Similarity is not repair confidence.
+SOURCE NOTES
+S06
+S08
+S09
+S10
+
+OPERATOROS
+21 / SUGGESTED WALKTHROUGH
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+35
+A PROPOSED 45-MINUTE TECHNICAL WALKTHROUGH
+Prove the transitions, then discuss scale.
+Suggested agenda, not a completed test. Use synthetic records in an approved environment with explicit module grants and a second tenant for denial checks.
+00–07
+Authority and navigation
+Launch TechDeck through OperatorOS, follow a deep link, return to My Apps, and inspect a foreign-tenant denial.
+07–19
+Incident to retained intelligence
+Import a synthetic closeout, search an exact identifier, review a failed attempt, and preview a source-cited runbook draft.
+19–28
+An approved asset handoff
+Inspect an approved Script Ops revision and its non-executing TechDeck draft; show source identity and review status.
+28–37
+Evidence to work context
+Demonstrate a TradeFlowKit-to-SnapProofOS proof workflow only in a separately entitled context; inspect the returned approved PDF.
+37–45
+Failure behavior and discussion
+Review stale-source rejection, retry identity, unavailable-provider states, deployment evidence, and open acceptance gates.
+Discussion prompts: Where does authority reside? Which handoff reduces the most re-entry? Which result is a draft versus an external action? What must a production pilot prove before wider use?
+SOURCE NOTES
+S04
+S07
+S09
+S15
+
+OPERATOROS
+22 / EVIDENCE POSTURE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+36
+IMPLEMENTATION, DEPLOYMENT, AND ACCEPTANCE
+Treat evidence as a ladder.
+This document is a repository-grounded product and architecture review, not a new deployment audit. Historical records are attributed to their recorded scope and
+date.
+SOURCE
+Observed in this review
+Current checkout ee9ca05e contains the catalog, contracts, APIs, UI, and documentation used here.
+LOCAL TESTS
+Reported in repository
+Phase 5 records 14/14 local release stages, 1,593 API, 108 integration, 52 unit, 32 browser, and 4 visual checks; 36 vector-focused checks are separate.
+RECORDED LIVE
+Specific v64 evidence
+The 2026-09-27 record reports v64/64, a published build, 47/47 public checks, and owner read/SSO/deep-link checks. No new live checks were run for this PDF.
+PROVIDER / WRITE
+Acceptance remains scoped
+Live calls, payments, messages, model quality, production writes, other roles, data migration, and restore need their own evidence.
+UNAVAILABLE
+An explicit product state
+OutCall remains coming soon. New semantic retrieval is provider-disabled. A configured key, a green build, or a rendered page cannot substitute for acceptance.
+SOURCE NOTES
+S03
+S06
+S08
+S10
+S12
+
+OPERATOROS
+23 / SOURCE REGISTER
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+37
+REFERENCE REGISTER 1 / 2
+Trace the claims to the repository.
+Clickable references are pinned to source commit ee9ca05e. Repository access may be required. Newer release records and current product/registry contracts
+supersede older status prose.
+S01
+Canonical catalog and product outcomes
+Names, hierarchy, access classes, coming-soon state; paired with product-value.ts and products.ts.
+S02
+Module capability and integration contracts
+Primary workflow, retained deliverables, provider boundaries, and explicit exclusions for all 13 applications.
+S03
+Runtime registry and exact-host policy
+Launch authority and default OutCall denial; test-only launch is explicitly bounded.
+S04
+OperatorOS SSO contract v1
+Opaque codes, 60-second expiry, PKCE S256, host-only sessions, role/tenant binding, revocation.
+S05
+Ecosystem integration contract
+Shared authority, tenant enforcement, billing separation, shared-service boundaries.
+S06
+Current release gate and live evidence
+Recorded v64 publication/read checks and separate v65 candidate/provider boundary.
+S07
+Ten connected outcomes
+Supported handoffs, source freshness, current access, deduplication, and external-action limits.
+S08
+Current implementation evidence
+Dated local checks and limitations; reported historical evidence is not a new test run.
+S09
+Evidence-derived TechDeck documents
+Deterministic assembly, source citations, review, inherited access, and stale-source protection.
+S10
+TechDeck semantic-search guide
+Disabled provider, excerpt review, explicit opt-in, limits, fallback, and no real-model acceptance.
+S11
+Shared customers and account security
+Customer links, shared contact edits, account controls, provider truth, and validation scope.
+S12
+Current parity index
+Recent overlays and per-surface evidence; newest applicable status takes precedence.
+M01
+TradeFlowKit capability matrix
+Jobs, revenue documents, recurring work, exports, and supported recovery.
+M02
+TechDeck capability matrix
+Service records, configuration, network, documentation, reporting; supplement with S09/S10.
+
+OPERATOROS
+23 / SOURCE REGISTER
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+38
+REFERENCE REGISTER 2 / 2
+Trace the claims to the repository.
+Clickable references are pinned to source commit ee9ca05e. Repository access may be required. Newer release records and current product/registry contracts
+supersede older status prose.
+M03
+PulseDesk capability matrix
+Healthcare operations scope, queue ownership, equipment/facility/supply workflows.
+M04
+TorqueShed capability matrix
+Garage, diagnostics, Assist, community, marketplace, and verification boundaries.
+M05
+FaultlineLab capability matrix
+Versioned challenges, attempts, scoring, authoring, assignments, and exports.
+M06
+Operator Pool Hall capability matrix
+Supported play modes, durable state, server simulation, and exclusions.
+M07
+BrandForgeOS capability matrix
+Campaign and brand lifecycle; current direct-provider exclusions are specified in S02.
+M08
+SnapProofOS capability matrix
+Evidence and custody foundation; current reports/shares and connected outcomes use S02/S07.
+M09
+StudyForge AI capability matrix
+Complete study packs, persistent learning, authoritative quiz scoring, export, and exclusions.
+M10
+Deploy Ops capability matrix
+Campaign artifacts, dependencies, readiness, checksum exports, and publication boundary.
+M11
+CallCommand AI and MSP intake
+MSP intake constraints; current receptionist scope and provider setup use S02.
+M12
+Script Ops capability matrix
+Versioned scripts, static checks, review, downloads, and non-execution boundary.
+M13
+OutCall capability matrix
+Authorized reconstruction is source/local evidence; production remains coming soon.
+S13
+Runtime topology and deployment model
+Shared Next.js/Fastify runtime, private API, host routing; registry overrides stale OutCall summary.
+S14
+Module consolidation record
+Historical restoration detail; later product contracts and current release evidence control current claims.
+S15
+Backup and restore contract
+One ordered database authority, backup/apply/verify flow, and separate restore acceptance.
+Editorial precedence: current registry and product contracts resolve stale descriptions (notably OutCall, Deploy Ops, and direct provider connections). Historical module matrices describe implementation provenance;
+they do not grant new live acceptance.

@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "pages": 38,
+  "content_strings_checked": 468,
+  "missing_content": [],
+  "outside_page_characters": [],
+  "substantial_character_collisions": [],
+  "embedded_typefaces": {
+    "/AAAAAA+SegoeUI-Bold": true,
+    "/AAAAAA+Consolas": true,
+    "/AAAAAA+SegoeUI": true,
+    "/AAAAAA+SegoeUI-Light": true
+  },
+  "pinned_external_links": 28,
+  "internal_links": 147,
+  "rendered_pages": 38,
+  "visual_review": "All 38 pages reviewed via contact sheets; selected full-resolution pages inspected.",
+  "sha256": "094b6655d4d2eb9efa62e4d3f5a1e8cfa007b74c1b06aa4e81bbf5cf733becf7"
+}

@@ -1,0 +1,314 @@
+[
+  {
+    "name":"TradeFlowKit", "slug":"tradeflowkit", "kind":"MAIN MODULE", "access":"Core product", "color":"#38D9A9", "symbol":"TF",
+    "headline":"Keep service work connected to cash.",
+    "summary":"A shared operations workspace for service businesses: customer context, execution, commercial documents, and collections remain connected throughout the job lifecycle.",
+    "features":[
+      ["Lead and customer management","Capture leads; qualify and convert opportunities; use shared customer identity, contacts, search, and bounded CSV imports."],
+      ["Jobs and recurring work","Schedule and assign jobs; retain owners, dates, status, recurring templates, pause controls, and run history."],
+      ["Tasks and workflow stages","Track job-scoped tasks, dependencies, comments, tags, workflow transitions, and personal or shared saved views."],
+      ["Quotes and conversion","Build multi-line quotes; record decisions; convert to jobs or invoices with duplicate-safe server operations."],
+      ["Invoices and payments","Maintain invoice items, partial/full payment records, balances, numbering, and history; connected settlement needs provider acceptance."],
+      ["Customer communication","Use scoped public views, customer portals, and consent-aware email/SMS outbox actions with explicit delivery state."],
+      ["Reporting and accounting handoff","Inspect workload and revenue from persisted records; export invoice CSV, QuickBooks IIF, and Xero-oriented CSV files."],
+      ["Proof and recovery","Create SnapProofOS work from a job, return the approved PDF, and use guarded archive/restore workflows."]
+    ],
+    "flow":["Lead + customer","Job + quote","Work + evidence","Invoice + payment"],
+    "artifact":"One traceable chain from customer request through work, proof, invoice, and recorded settlement.",
+    "boundary":"Live payments and outbound delivery require configured, accepted providers. Accounting exports are files, not live QuickBooks/Xero synchronization. Recording a sent state is not email delivery.",
+    "sources":["S01","S02","S07","M01"],
+    "cases":[
+      {"title":"The unbilled service call","context":"A field-service team finishes a repair, but the invoice handoff is lost between the technician and office.","approach":"Link the customer, job, task completion, and quote. Use the workday brief to find completed jobs without an invoice, then review and create the commercial record.","output":"A job-linked invoice with an owner and an explicit balance; no automatic charge is implied.","measure":"Completed jobs without invoices; days from completion to invoice."},
+      {"title":"Recurring maintenance without duplicate jobs","context":"A contractor repeats the same service at several customer sites and recreates the work manually each month.","approach":"Define recurring job templates, inspect the next run, and let the supported scheduler create the dated job. Pause a schedule during an outage and inspect its history before resuming.","output":"Repeatable work records whose schedule/run identity prevents replay from creating duplicates.","measure":"Manual setup time; duplicate jobs per scheduled run."},
+      {"title":"A defensible proof-to-payment handoff","context":"An office needs to show what was done before following up on an unpaid installation.","approach":"Create SnapProofOS work from the originating job. Review the captured evidence and approved report, return its PDF to that exact job, then review invoice and recorded payment state.","output":"Commercial context and approved proof remain linked. A report attachment does not assert customer receipt.","measure":"Jobs with linked approved proof; time spent reconstructing an invoice history."}
+    ]
+  },
+  {
+    "name":"TechDeck", "slug":"techdeck", "kind":"MAIN MODULE", "access":"Core product", "color":"#00C8FF", "symbol":"TD",
+    "headline":"Make resolution knowledge reusable.",
+    "summary":"An MSP and IT operations console that binds support work to client, configuration, network, procedure, and evidence context. Resolution Intelligence preserves what actually happened, including failed attempts.",
+    "features":[
+      ["Service operations","Manage client/site-linked tickets, assignments, comments, time, requester updates, and accountable closeout."],
+      ["Configuration and lifecycle inventory","Track typed configurations, asset context, warranty/renewal dates, lifecycle changes, and related records."],
+      ["Network and IPAM records","Maintain network, subnet, address, and topology relationships as documented operational context."],
+      ["Versioned documentation","Edit knowledge articles and runbooks with revisions, backlinks, review, approval, publication, and private attachments."],
+      ["Resolution evidence intake","Import structured closeouts with screened source material, immutable revisions, validation, warnings, failures, and side effects."],
+      ["Exact and full-text retrieval","Search identifiers and narrative; inspect evidence, components, action chronology, revision history, and native links."],
+      ["Evidence-derived knowledge","Preview deterministic KB/runbook drafts, retain source citations, link multiple incidents, and block stale-source approval."],
+      ["Reports and controlled connections","Use persisted dashboards, client reports, portal/status workflows, scoped API tokens, and signed outbound webhooks."]
+    ],
+    "flow":["Request + system","Actions + evidence","Verify + closeout","Retrieve + reuse"],
+    "artifact":"A resolution record that explains the fix, failed paths, uncertainty, verification, and reusable guidance.",
+    "boundary":"Runbooks do not execute scripts. Inventory is not live discovery or endpoint control. Phase 5 semantic retrieval is source-implemented and provider-disabled; ordinary exact/text search is independent.",
+    "sources":["S01","S02","S07","S09","S10","M02"],
+    "cases":[
+      {"title":"A recurring application failure","context":"A second engineer inherits a symptom that resembles an earlier incident, but a copied final fix omits a harmful intermediate step.","approach":"Search the exact error or component. Review the prior chronology, failed action, observed side effect, warning, and validation before choosing a procedure for the new client issue.","output":"An evidence-informed plan with uncertainty retained. The previous outcome does not prove the same root cause now.","measure":"Time to relevant evidence; repeated failed actions avoided during a reviewed pilot."},
+      {"title":"A client infrastructure handover","context":"An MSP technician leaves and the replacement must reconstruct dependencies from tickets and isolated notes.","approach":"Connect the client's sites, configurations, IPAM records, lifecycle dates, and versioned documentation. Link current tickets and supporting evidence, then prepare a client-facing operational report.","output":"A navigable service context with named records and a reusable procedure trail.","measure":"Time to locate the affected system, owner, and current approved procedure."},
+      {"title":"From one repair to a maintained runbook","context":"A difficult incident is resolved, but the team needs repeatable guidance that will not silently drift from its source.","approach":"Preview an evidence-derived runbook, review the cited sections, save a draft, and submit it through approval. When source evidence changes, inspect the stale warning and prepare current guidance.","output":"A reviewed document with source-revision links and access inherited from every linked incident.","measure":"Time from closeout to reviewed guidance; stale-source publications prevented."}
+    ]
+  },
+  {
+    "name":"PulseDesk", "slug":"pulsedesk", "kind":"MAIN MODULE", "access":"Core product", "color":"#79B8FF", "symbol":"PD",
+    "headline":"Coordinate the work around care.",
+    "summary":"Healthcare operations coordination for facilities, equipment, supplies, departments, and vendors. The work model captures operational ownership and response history while minimizing patient information.",
+    "features":[
+      ["Facilities and departments","Maintain directory-linked organizations, facilities, requesters, departments, and operational context."],
+      ["Operational request intake","Create numbered requests with structured classification, equipment-issue prefill, tags, and supporting records."],
+      ["Queues, teams, and assignment","Route work to an accountable team or owner; prioritize through queues, filters, saved views, and bulk actions."],
+      ["Targets and escalation","Track service targets, time, at-risk work, escalation paths, and response history."],
+      ["Notes and requester updates","Keep internal coordination separate from requester-facing replies; retain private attachments and work history."],
+      ["Equipment and vendor coordination","Associate operational assets with facility issues, supply requests, service vendors, and department needs."],
+      ["Knowledge and reporting","Use operational knowledge, persisted dashboards, configuration, preferences, trend reporting, and exports."],
+      ["Reviewed handoffs","Accept operations-only CallCommand requests and prepare privacy-reviewed resolved-work drafts for FaultlineLab."]
+    ],
+    "flow":["Operations request","Department + owner","Coordinate + escalate","Resolve + report"],
+    "artifact":"A resolved operational request with accountable ownership, response timing, and an inspectable work history.",
+    "boundary":"No patient chart, clinical decision, EHR/PACS integration, or HIPAA certification is claimed. Direct Microsoft 365, Google Workspace, IMAP, and SendGrid mailbox intake is unavailable in this release.",
+    "sources":["S01","S02","S07","M03"],
+    "cases":[
+      {"title":"An equipment issue between departments","context":"An imaging department reports an unavailable workstation or equipment accessory; responsibility spans facilities and a vendor.","approach":"Create an operations-only request, associate the facility and asset, assign an owner, set the service target, and retain vendor coordination and requester updates in the work record.","output":"A visible accountable path to restoring operational availability without storing a patient chart.","measure":"Unassigned age; response time; handoffs without a named owner."},
+      {"title":"A supply delay before a busy shift","context":"A department has an unresolved supply request with a deadline, while the next shift sees only a message thread.","approach":"Classify the supply need, associate the department and vendor, record the due target, and use the queue to escalate the delay. Close the request with the actual resolution and timing.","output":"A shared request history that survives shift changes and shows what remains open.","measure":"Overdue operational requests; time spent reconstructing shift context."},
+      {"title":"Learning from repeated facility incidents","context":"Several resolved facilities requests reveal a recurring troubleshooting mistake useful for staff training.","approach":"Review the operational history and select a suitable resolved request. Managers with access to both applications review privacy and prepare an unpublished FaultlineLab draft for trainer revision.","output":"A controlled training starting point; the imported first revision cannot publish directly.","measure":"Repeat incident patterns identified; reviewed training cases produced."}
+    ]
+  },
+  {
+    "name":"TorqueShed", "slug":"torqueshed", "kind":"COMPANION APPLICATION", "access":"Free companion; optional metered Assist", "color":"#FFAD66", "symbol":"TS",
+    "headline":"Preserve the reasoning behind the repair.",
+    "summary":"A garage and automotive diagnostics workspace for vehicle history, structured tests, workshop records, and shareable proof. Torque Assist adds governed guidance when its provider and credit controls are configured.",
+    "features":[
+      ["Garage and service history","Record vehicles, mileage, owner concerns, repairs, maintenance, and service chronology."],
+      ["Structured diagnostics","Organize symptoms, codes, observations, likely causes, tests, findings, and verification."],
+      ["Torque Assist","Request context-aware diagnostic guidance through OperatorOS-owned AI and usage/token accounting."],
+      ["Build journals and cost context","Track build stages, parts, labor, costs, notes, and supporting media."],
+      ["Repair reports and collaboration","Create workshop exports and repair records; use supported live-bay and sharing workflows."],
+      ["Community","Maintain profiles, preferences, posts, comments, reactions, follows/blocks, private media, and moderation records."],
+      ["Marketplace listings","Search and save listings; contact sellers; retain conversations, expiry, reports, and listing history."],
+      ["Proof and training handoffs","Prepare diagnostic proof in SnapProofOS and reviewed automotive challenge drafts in FaultlineLab."]
+    ],
+    "flow":["Concern + codes","Test + observe","Repair + verify","History + proof"],
+    "artifact":"A repair narrative that separates symptoms, measured observations, work performed, and verified outcome.",
+    "boundary":"Physical tests and repair judgment remain with the technician. Marketplace listings do not imply escrow, shipping, buyer protection, or reputation guarantees. AI and native-device acceptance are separate gates.",
+    "sources":["S01","S02","S07","M04"],
+    "cases":[
+      {"title":"Diagnose before replacing parts","context":"A shop receives an intermittent vehicle complaint with several plausible causes and incomplete prior history.","approach":"Record symptoms, codes, and earlier work, choose the next physical test, and capture its findings. Use Assist only as reviewed guidance when configured; record the actual repair and verification.","output":"A test-driven diagnostic record that explains why a repair was selected.","measure":"Diagnostic steps with recorded findings; repeat visits for the same complaint."},
+      {"title":"A build that outlives its original owner","context":"A custom vehicle changes hands after months of modifications spread across receipts and photos.","approach":"Organize stages, parts, labor, costs, media, and service entries in the build journal. Produce a workshop export or controlled repair record for the receiving party.","output":"A coherent modification and service history with traceable supporting material.","measure":"Missing part/service records; time required to reconstruct a modification."},
+      {"title":"A verified diagnosis becomes training","context":"A mechanic resolves a difficult fault that would make a useful diagnostic exercise for apprentices.","approach":"Finish the diagnostic record with recorded tests and findings. A manager reviews privacy and transfers a training draft to FaultlineLab, then edits the narrative and evidence before publication.","output":"An unpublished automotive case that retains diagnostic structure without bypassing trainer review.","measure":"Reviewed cases created from real work; learner investigation quality."}
+    ]
+  },
+  {
+    "name":"FaultlineLab", "slug":"faultlinelab", "kind":"COMPANION APPLICATION", "access":"Free companion", "color":"#B79CFF", "symbol":"FL",
+    "headline":"Evaluate the path to the answer.",
+    "summary":"A diagnostic challenge environment for technical practice. Versioned scenarios, persistent investigation traces, and server scoring let a reviewer inspect the reasoning path as well as the final answer.",
+    "features":[
+      ["Challenge catalog","Discover published challenges through search, filters, sorting, authored packs, and daily selection."],
+      ["Persistent attempts","Resume standard, daily, preview, assignment, and Chaos-mode attempts across refresh and restart."],
+      ["Evidence-driven investigation","Select diagnostic actions, reveal clues, record findings, use progressive hints, and submit a conclusion."],
+      ["Server scoring","Evaluate submitted work against the versioned scenario and retain append-only attempt evidence."],
+      ["Assignments and progress","Assign cases, inspect learning progress and badges, and select further practice from observed results."],
+      ["Authoring lifecycle","Validate, preview, publish, retire, import, and export controlled challenge versions."],
+      ["Analytics and exports","Review attempts and outcome history; export material for coaching and team discussion."],
+      ["Operational case reuse","Convert reviewed TechDeck, PulseDesk, and TorqueShed records into private first-draft challenges."]
+    ],
+    "flow":["Scenario + clues","Investigate + test","Submit + score","Review + practice"],
+    "artifact":"A replayable investigation record showing which evidence the learner inspected and how the answer was reached.",
+    "boundary":"Training scores are scenario performance, not accredited certification or production authorization. Imported incidents require privacy review and a revised trainer-approved version before publication.",
+    "sources":["S01","S02","S07","M05"],
+    "cases":[
+      {"title":"A repeatable technician onboarding exercise","context":"Two new engineers know the terminology, but the lead needs to see how they investigate an ambiguous failure.","approach":"Assign the same versioned challenge, compare action sequences and missed evidence, and discuss the submitted cause and response using the retained attempt trace.","output":"A concrete coaching conversation grounded in observed diagnostic choices.","measure":"Missed critical clues; unnecessary actions; score progression on comparable cases."},
+      {"title":"Turn a resolved incident into an exercise","context":"An internal outage contains a useful lesson but also client names and sensitive operational details.","approach":"Use the supported resolved-work handoff, review privacy, and revise the private draft. Validate and preview the case before publishing a controlled version for the intended learners.","output":"Reusable practice material with a deliberate editorial and privacy boundary.","measure":"Time from incident review to approved exercise; privacy findings caught before publication."},
+      {"title":"Diagnose under changing conditions","context":"Experienced staff need practice handling incomplete clues and disruption without changing a production environment.","approach":"Use a suitable Chaos or daily challenge. Retain the investigation trace, inspect the result, and repeat a targeted exercise where the original reasoning missed a signal.","output":"A safe training record that exposes decision habits under scenario pressure.","measure":"Recovery of investigation after new evidence; repeat occurrence of the same reasoning error."}
+    ]
+  },
+  {
+    "name":"Operator Pool Hall", "slug":"ninja-pool-hall", "kind":"COMPANION APPLICATION", "access":"Free companion", "color":"#69DDC5", "symbol":"PH",
+    "headline":"A free shared space for the team.",
+    "summary":"A browser-based 8-ball companion with real gameplay, persistent match state, and protected online rooms. Its engineering interest lies in deterministic simulation, server validation, and recovery across interruptions.",
+    "features":[
+      ["Free Shoot practice","Practice shot selection, aim, power, and cue-ball control in the Canvas play surface."],
+      ["CPU matches","Play against seeded CPU behavior with the supported rules and deterministic physics."],
+      ["Local hot-seat play","Share a device for turn-based play with visible match and turn state."],
+      ["Authenticated online rooms","Create or join protected rooms through OperatorOS identity and access controls."],
+      ["Authoritative match checks","Use durable snapshots/events and independent server re-simulation of submitted actions."],
+      ["Reconnect and expiry","Recover supported room state after interruptions and enforce room lifecycle limits."],
+      ["Touch, English, and audio","Use touch-friendly controls, spin/English, audio options, and performance settings."],
+      ["Profiles and local results","Keep supported profile/result records and use the installable web-app experience."]
+    ],
+    "flow":["Practice or room","Aim + play","Server check","Resume + finish"],
+    "artifact":"A recoverable match with consistent turn and shot state across the supported play surfaces.",
+    "boundary":"A community benefit with no wagering, paid competition, prizes, or independently certified rankings. Online two-device and performance acceptance should be demonstrated in the target environment.",
+    "sources":["S01","S02","M06"],
+    "cases":[
+      {"title":"A five-minute practice break","context":"An engineer wants a short break between long support sessions without setting up another account.","approach":"Launch the free companion through OperatorOS and enter Free Shoot. Practice a repeatable shot while adjusting aim, power, and English with the supported controls.","output":"Immediate, self-contained practice inside the same account ecosystem.","measure":"Time from launcher to first playable shot; input responsiveness on the chosen device."},
+      {"title":"A teammate disconnects mid-match","context":"Two coworkers play in a protected online room and one browser loses connectivity.","approach":"Play through normal server-checked actions, reconnect within the supported room lifetime, and inspect the restored turn and match state from durable snapshots and events.","output":"A recoverable game state rather than an unverified client-only continuation.","measure":"State agreement after reconnect; abandoned matches caused by recoverable disconnects."},
+      {"title":"A practical state-consistency demo","context":"A team wants a small, understandable example of authoritative state and replay validation.","approach":"Use an authorized test session to examine normal shot submission, server re-simulation, and refresh recovery. Compare visible state across clients without claiming a formal security assessment.","output":"An accessible demonstration of client input, authoritative checks, and durable state.","measure":"Consistent ball/turn state across refreshes and the two test clients."}
+    ]
+  },
+  {
+    "name":"BrandForge OS", "slug":"brandforgeos", "kind":"COMPANION APPLICATION", "access":"Paid companion", "color":"#F09BCC", "symbol":"BF",
+    "headline":"Give creative work a durable system.",
+    "summary":"A brand and campaign workspace for reusable context, reviewed assets, and coordinated delivery packages. The catalog uses the compact name BrandForgeOS; both refer to the same application.",
+    "features":[
+      ["Brand HQ","Maintain brand kits, positioning, voice, offers, and audience personas; associate approved shared customer identity."],
+      ["Campaign planning","Create campaign briefs, objectives, channels, budgets, timelines, and related landing content."],
+      ["Copy Studio and workflows","Develop copy variants, calls to action, ad prompts, strategy, and creative directions through guided modes."],
+      ["Logo concepts","Preview wordmark, lockup, badge, and monogram compositions; export editable SVG and standard/2x PNG."],
+      ["Review and collaboration","Manage draft/review/approval states, comments, assets, activity, and recoverable selected logos."],
+      ["Calendar and reusable templates","Organize delivery work and reuse global/custom templates subject to the applicable entitlements."],
+      ["Recorded performance and reports","Track entered results, recommendations, and campaign reports; create controlled exports."],
+      ["Launch-package handoff","Transfer a campaign into Deploy Ops with copy, visual-production briefs, work items, and an approval starting state."]
+    ],
+    "flow":["Brand + audience","Campaign + variants","Review + approve","Export + measure"],
+    "artifact":"A reusable brand context and reviewed campaign package with clear ownership and delivery decisions.",
+    "boundary":"Direct advertising, social, email, analytics, and CRM delivery are unavailable in this release. Canva/Figma use manual file import. Generated assets require review; a scheduled item is not publication.",
+    "sources":["S01","S02","S07","M07"],
+    "cases":[
+      {"title":"One offer, several inconsistent messages","context":"An MSP launches a service package, but website copy, sales emails, and social drafts describe different benefits.","approach":"Define the audience, offer, proof points, and voice once. Build campaign variants from that context, review the claims together, and export the approved materials for each external channel.","output":"A coherent campaign kit whose variants can be traced back to agreed positioning.","measure":"Review rounds caused by inconsistent claims; time to produce an approved variant."},
+      {"title":"Agency work without cross-client confusion","context":"A small team manages several customers and repeatedly copies brand details between disconnected documents.","approach":"Associate each brand with the correct shared customer, maintain distinct personas and offers, and retain campaign assets, comments, and review states under the authorized organization.","output":"Customer-linked creative context and an inspectable approval history.","measure":"Misattributed assets; time required to locate the latest approved brand direction."},
+      {"title":"From campaign approval to a launch package","context":"A campaign is approved, but the coordinator still needs channel copy, production briefs, and assigned launch work.","approach":"Review the current campaign and queue the Deploy Ops handoff. Inspect the returned package, complete missing production items, and export only after the team checks the resulting materials.","output":"A coordinated execution package; no advertising spend or external publication occurs automatically.","measure":"Time from approval to handoff; missing deliverables discovered before launch."}
+    ]
+  },
+  {
+    "name":"SnapProofOS", "slug":"snapproofos", "kind":"COMPANION APPLICATION", "access":"Paid companion", "color":"#F6C85F", "symbol":"SP",
+    "headline":"Turn completed work into reviewable proof.",
+    "summary":"A field-work and evidence workflow for customer jobs, dated captures, findings, review, and branded reports. Controlled sharing is tied to approved report snapshots rather than unrestricted raw evidence.",
+    "features":[
+      ["Customers, jobs, and assignments","Select shared customer identity, create proof work, assign field tasks, and retain job context."],
+      ["Field evidence capture","Collect photos, private notes, files, observations, parts, labor, and dated work context."],
+      ["File integrity and scanning","Apply type/signature checks, private storage, scan state, and SHA-256 verification through shared services."],
+      ["Findings and review","Submit evidence, inspect findings, record comments, and move reports through authorized review and approval."],
+      ["Branded report output","Generate approved PDF and DOCX documents from the selected report snapshot and template."],
+      ["Controlled report shares","Create expiring and revocable report links; inspect access history without exposing the private source library."],
+      ["Custody and retention","Retain hash-linked custody history, immutable report context, archive controls, retention, and legal-hold state."],
+      ["Connected proof packages","Receive TradeFlowKit job or TorqueShed diagnostic context; return the exact approved PDF to its originating job."]
+    ],
+    "flow":["Assign + capture","Organize + review","Approve + generate","Share + retain"],
+    "artifact":"A branded, approved proof package whose included evidence can be traced to the field assignment.",
+    "boundary":"Storage, scanning, and document workers need acceptance. A share link is not proof of delivery or receipt. Hash-linked history supports integrity review; it is not a legal-admissibility guarantee.",
+    "sources":["S01","S02","S07","M08"],
+    "cases":[
+      {"title":"A field installation with incomplete closeout","context":"An engineer completes a network cabinet installation, but photos and labor notes remain scattered across devices.","approach":"Create the customer job, assign capture work, add dated photos and notes, record findings and costs, and assemble the customer-facing template for review.","output":"One approved report with supporting job context instead of a loose image folder.","measure":"Jobs missing required evidence; time from site departure to approved report."},
+      {"title":"Review a disputed service outcome","context":"A customer questions what was included in a repair or inspection performed several weeks earlier.","approach":"Open the authorized job and inspect its captured evidence, comments, custody history, and approved report snapshot. Generate or retrieve the exact document relevant to the reviewed work.","output":"An inspectable record of what was captured and approved, without assuming the record proves causation.","measure":"Time to reconstruct the work package; gaps in the evidence-to-report chain."},
+      {"title":"Share the report, control the access","context":"A project manager needs to give a customer a finished report while keeping internal notes and raw captures private.","approach":"Approve the snapshot, generate the requested format, and deliberately create an expiring report share. Deliver it through the team's approved channel and revoke access when appropriate.","output":"A bounded customer report link with expiry, revocation, and access history.","measure":"Unrestricted evidence links created; share expiry/revocation behavior in the pilot."}
+    ]
+  },
+  {
+    "name":"StudyForge AI", "slug":"studyforge-ai", "kind":"COMPANION APPLICATION", "access":"Paid companion", "color":"#A8A4FF", "symbol":"SF",
+    "headline":"Make training material easier to use.",
+    "summary":"A source-based study workspace that turns supplied notes into complete study packs and persistent practice. Built-in creation remains useful without the optional shared AI service.",
+    "features":[
+      ["Folders and study sets","Organize source material, course/exam context, titles, descriptions, and reusable study sets."],
+      ["Complete study packs","Create summaries, key terms, flashcards, multiple-choice questions, short answers, review sheets, and plans."],
+      ["Built-in and optional AI paths","Use deterministic creation or configured shared AI refinement with validation, provenance, and fallback behavior."],
+      ["Flashcard learning","Practice with keyboard/touch controls and retain known/learning state and session progress."],
+      ["Quizzes and review","Use server-scored attempts, inspect explanations and missed answers, and retain retry/history records."],
+      ["Plans and progress","Track date-based study plans, exam countdowns, streaks, usage, and learning trends."],
+      ["Content lifecycle","Edit, search, filter, duplicate, regenerate, archive, restore, and remove supported study material."],
+      ["Portable output","Export study sets and supported progress/results as JSON or entitlement-gated CSV."]
+    ],
+    "flow":["Supply material","Build + review pack","Practice + quiz","Inspect + repeat"],
+    "artifact":"A reusable study pack plus a history of practice and quiz results that identifies material needing another pass.",
+    "boundary":"Generated material needs source review. AI requires shared-service setup. No outside citations, accredited qualification, automatic mastery judgment, or invented classroom/group workflow is claimed.",
+    "sources":["S01","S02","M09"],
+    "cases":[
+      {"title":"Prepare for a platform handover","context":"An engineer must learn an internal service before joining the support rotation.","approach":"Supply approved, non-secret operating notes, build a study pack, correct the generated material against the source, and use flashcards and a quiz to reveal weak areas.","output":"A repeatable learning aid with an inspectable source basis and saved practice history.","measure":"Questions missed by topic; preparation time using the same approved material."},
+      {"title":"Turn a long workshop into practice","context":"A technical workshop produces useful notes, but participants rarely revisit the full document.","approach":"Create a focused set from the approved workshop material. Review terms, short answers, and the review sheet; schedule study around the intended date and inspect the quiz explanations.","output":"Multiple ways to rehearse the same material without claiming the generated pack is authoritative.","measure":"Study sessions completed; repeated mistakes after source corrections."},
+      {"title":"Keep learning when AI is unavailable","context":"A team wants a study workflow before external AI service approval is complete.","approach":"Use built-in pack creation, manually refine the material, and practice through the existing flashcard and quiz paths. Export the set for review and retain usage/history in the workspace.","output":"A functioning study process that does not depend on live model access.","measure":"Completion of the study workflow with AI disabled; content corrections found in review."}
+    ]
+  },
+  {
+    "name":"Deploy Ops", "slug":"ninja-launch-kit", "kind":"COMPANION APPLICATION", "access":"Paid companion", "color":"#FF9B75", "symbol":"DO",
+    "headline":"Make campaign launch work inspectable.",
+    "summary":"A campaign-package and readiness workspace. Despite the name, its current product scope is coordinated campaign preparation and human-verified delivery records, not software deployment automation.",
+    "features":[
+      ["Business templates and briefs","Start from reusable templates; define audience, offer, action, tone, channels, and launch date."],
+      ["Multi-channel campaign packages","Prepare landing, ad, email, SMS, social, FAQ, flyer, and call-to-action copy."],
+      ["Visual-production briefs","Create up to nine visual briefs, with included plan items made explicit."],
+      ["Versioned artifacts","Retain saved packages, revisions, source context, approved inputs, and related private assets."],
+      ["Launch execution workspace","Assign phases, milestones, owners, required files, tasks, and dependencies."],
+      ["Computed readiness","Calculate readiness from recorded conditions and approvals; inspect missing prerequisites before a launch transition."],
+      ["Verified exports","Download supported text, Markdown, JSON, and CSV packages with checksum and audit context."],
+      ["Reviewed completion","Receive BrandForgeOS campaign handoffs and record externally confirmed completion with a reference."]
+    ],
+    "flow":["Brief + template","Package + review","Tasks + readiness","Export + confirm"],
+    "artifact":"A reviewed campaign kit, explicit launch checklist, and verifiable export for the people using publishing tools.",
+    "boundary":"Does not deploy software, change DNS, publish sites/ads, send campaigns, or buy media. A readiness score reflects recorded package conditions; external completion needs a person's verified reference.",
+    "sources":["S01","S02","S07","M10"],
+    "cases":[
+      {"title":"Launch an MSP service offer","context":"A new managed service needs consistent landing copy, FAQs, ads, and a practical launch checklist.","approach":"Define the business brief and channels, generate the package, review every claim, assign production tasks, and export the approved material to the people operating the external tools.","output":"A coordinated campaign package with clear owners and outstanding work.","measure":"Missing launch assets; time from accepted brief to reviewed export."},
+      {"title":"Find the launch blocker before launch day","context":"Copy is finished, but required artwork and approval are missing from a campaign nearing its deadline.","approach":"Use the execution workspace to inspect required files, dependencies, owners, and computed readiness. Complete and review the missing work before recording the launch transition.","output":"An evidence-based readiness decision with the unresolved dependency visible.","measure":"Late blockers found before the deadline; launch transitions with incomplete prerequisites."},
+      {"title":"Hand a campaign to another team","context":"A campaign coordinator needs a clean package for an agency or internal publishing team.","approach":"Review the current package, create a verified export, and use the team's normal delivery channel. After publication, a person checks the external result and records its reference.","output":"A traceable artifact handoff and separately recorded external confirmation.","measure":"Rework caused by missing copy or context; exports lacking a reviewed version."}
+    ]
+  },
+  {
+    "name":"CallCommand AI", "slug":"callcommand-ai", "kind":"COMPANION APPLICATION", "access":"Paid companion; live provider gates", "color":"#65C5F7", "symbol":"CC",
+    "headline":"Make every call end in an owned next action.",
+    "summary":"A business receptionist, call-intelligence, and MSP intake workspace with simulations, flow design, follow-up records, and explicit provider readiness. Real calls require accepted telephony, AI, and billing configuration.",
+    "features":[
+      ["Receptionist configuration","Define business knowledge, hours, greetings, behavior, and approved routing destinations."],
+      ["Call-flow design and simulation","Prepare conversation paths, test a no-cost simulated call, and correct routing before live enablement."],
+      ["Number and launch controls","Manage number setup, readiness checks, capacity, usage, service health, and deliberate go-live controls."],
+      ["Call records and intelligence","Search history; inspect summaries, timelines, transcripts, consent state, outcomes, and reviewed analysis."],
+      ["Follow-up operations","Review leads, tasks, alerts, and staff actions with clear ownership and retained call context."],
+      ["Core-module handoffs","Convert eligible analyzed provider calls into reviewed TradeFlowKit, TechDeck, or operations-only PulseDesk work."],
+      ["MSP intake foundation","Use approved lines, SupportLinks, Directory-backed organization/contact association, local cases, and operator screen-pop."],
+      ["Provider and audit controls","Use signed callbacks, durable retry/outbox records, kill switches, evidence history, and explicit test/live distinctions."]
+    ],
+    "flow":["Configure + simulate","Accept live setup","Capture + analyze","Review + assign"],
+    "artifact":"A call outcome with retained context and a clearly owned next action, distinguished from any test simulation.",
+    "boundary":"Live Twilio/OpenAI/Stripe and callback acceptance remain separate. Simulations cannot create production call handoffs. BMS delivery and privileged Datto/Graph/AD actions are not accepted by the MSP foundation.",
+    "sources":["S01","S02","S07","M11"],
+    "cases":[
+      {"title":"Test after-hours intake before activation","context":"An MSP wants consistent after-hours intake but needs to inspect what the receptionist will ask and where it will route work.","approach":"Configure hours, approved knowledge, and escalation paths. Run simulations, inspect captured answers and routing, and correct the flow before the separate provider go-live checks.","output":"A reviewed receptionist configuration and test outcome without purchasing or placing a live call.","measure":"Required intake fields captured in simulations; incorrect routes found before activation."},
+      {"title":"A real call becomes a support ticket","context":"After provider acceptance, a caller describes an issue that should enter the technical queue with usable context.","approach":"Review the completed, analyzed provider call and choose the TechDeck handoff. The system reloads the reviewed version and checks access before creating the destination ticket.","output":"A linked ticket from an eligible real call; simulator records are rejected.","measure":"Calls without an owner; manual re-entry time; duplicate destination tickets."},
+      {"title":"Separate caller context from privileged action","context":"An MSP caller requests urgent account help, but caller recognition must not become authorization for a reset.","approach":"Use approved intake channels and organization/contact association to capture the issue and open a local case. Review screen-pop and evidence, then use the independently authorized support process.","output":"Useful intake context without an automatic identity reset or endpoint action.","measure":"Unassociated cases; quality of issue capture; privileged actions requiring explicit separate approval."}
+    ]
+  },
+  {
+    "name":"Script Ops", "slug":"ninjamation", "kind":"COMPANION APPLICATION", "access":"Paid companion", "color":"#9EDB8B", "symbol":"SO",
+    "headline":"Approve the exact automation asset.",
+    "summary":"A script-authoring and governance workspace for reusable IT automation. Static analysis, immutable versions, explicit review, and audited downloads preserve the boundary between preparing source and executing it.",
+    "features":[
+      ["Searchable script library","Organize PowerShell, Python, batch, and shell assets with source/provenance context."],
+      ["Authoring and import","Create or import source and record the purpose, prerequisites, expected behavior, risk, and rollback."],
+      ["Immutable versions","Pin the exact revision, content identity, and change context used by subsequent review and download."],
+      ["Server static analysis","Inspect findings and risk indicators before submitting a script version for approval."],
+      ["Governed review lifecycle","Submit, approve, reject, or retire scripts under tenant-admin controls with recorded decisions."],
+      ["Approved download controls","Allow only the approved current version to be downloaded; retain integrity and download audit history."],
+      ["Optional AI drafting","Request drafts through shared AI, idempotency, and usage controls; generated source remains unapproved."],
+      ["TechDeck documentation handoff","Create a non-executing draft runbook and protected file-integrity record from an approved script revision."]
+    ],
+    "flow":["Draft + requirements","Analyze + revise","Review exact version","Download + document"],
+    "artifact":"A specific approved source version with requirements, review findings, rollback context, and an auditable download.",
+    "boundary":"OperatorOS does not execute this source in the browser, API, server, or customer environment. Static analysis is not proof of safety. Execution and endpoint acceptance belong to a separately authorized tool.",
+    "sources":["S01","S02","S07","M12"],
+    "cases":[
+      {"title":"Retire the copied desktop script","context":"Several technicians keep slightly different copies of a maintenance script with unclear origin and prerequisites.","approach":"Import the reviewed source, document requirements and rollback, run static checks, and submit an exact version for approval. Technicians download the approved current revision for their authorized environment.","output":"One governed automation asset with a visible version and decision history.","measure":"Untracked variants; downloads without an approved current version."},
+      {"title":"Use AI without auto-approving its output","context":"An engineer wants help drafting a repetitive inventory script but must inspect its behavior before distribution.","approach":"Request a draft through the configured shared AI service, inspect its source, address static findings, and submit the corrected immutable revision to a tenant administrator.","output":"A reviewable draft that cannot become an approved download merely because a model generated it.","measure":"Findings corrected before approval; generated drafts distributed without review."},
+      {"title":"Preserve procedure beside the code","context":"A useful script exists, but new staff do not know when to use it or how to interpret its output.","approach":"Select an approved current revision and create the supported TechDeck draft runbook. Review its prerequisites and handling instructions in TechDeck before publishing the procedure.","output":"Linked source identity and reviewed guidance; the handoff performs no execution.","measure":"Approved assets with current runbook context; source/runbook version mismatches."}
+    ]
+  },
+  {
+    "name":"OutCall", "slug":"outcall", "kind":"COMPANION APPLICATION", "access":"Coming soon / unavailable", "color":"#AAB5C8", "symbol":"OC",
+    "headline":"A private, verified-self call workflow.",
+    "summary":"A reconstructed application for a discreet call to a person's own verified phone. Source/local workflow evidence exists, but the production catalog remains unavailable and these scenarios describe gated behavior.",
+    "features":[
+      ["Safety acknowledgement","Explain the personal-use and non-emergency boundary before preparing a call workflow."],
+      ["Verified-self phone setup","Use a controlled phone-ownership verification path; arbitrary destinations are excluded."],
+      ["Neutral call profiles","Store private profiles with controlled voice/script and supported keypad behavior."],
+      ["Private exact triggers","Bind exact-match trigger phrases to an approved profile and verified self-owned destination."],
+      ["Immediate and scheduled requests","Prepare bounded call requests using durable state and supported scheduling controls."],
+      ["Cancellation and history","Inspect actual request/provider state, cancel eligible requests, and retain private history."],
+      ["Signed provider events","Enforce controlled voice/SMS/DTMF callbacks, replay checks, and persistent rate limits."],
+      ["Private export and deletion","Use password-confirmed export and account-slice deletion controls for the retained personal records."]
+    ],
+    "flow":["Verify self","Choose neutral profile","Request or schedule","Inspect + cancel"],
+    "artifact":"A private request directed only to the verified owner, with honest state and cancellation/history controls.",
+    "boundary":"UNAVAILABLE: no live launch or sale. Requires production activation and controlled real-provider acceptance. No emergency response, monitoring, location tracking, duress detection, or third-party dialing.",
+    "sources":["S01","S02","S03","M13"],
+    "cases":[
+      {"title":"A planned social exit cue","context":"A person wants a neutral call to their own phone at a chosen time as a private reason to step away.","approach":"In a future accepted live workflow, acknowledge the limits, verify the self-owned number, choose a neutral profile, schedule the request, and inspect the actual provider outcome.","output":"A self-directed call request. This scenario is illustrative; live availability is still blocked.","measure":"Correct verified destination; truthful delivery state; no unauthorized destination expansion."},
+      {"title":"Cancel when the plan changes","context":"A previously scheduled personal call is no longer wanted and should not proceed if it remains cancellable.","approach":"Open the private history, inspect the request state, and cancel the eligible schedule. Verify that the record distinguishes cancellation from an already submitted provider action.","output":"An explicit lifecycle decision with no fabricated claim that an in-flight call was recalled.","measure":"Cancellation state consistency; late or duplicate requests in controlled acceptance tests."},
+      {"title":"Review and remove personal history","context":"A user wants a private copy of retained records and then wants the supported account slice removed.","approach":"After activation acceptance, use the password-confirmed export and deletion controls. Review the product's actual retained scope and verify the resulting state in a controlled test.","output":"A deliberate privacy workflow; no emergency or third-party-monitoring capability is implied.","measure":"Export access controls; deletion-scope accuracy; resistance to cross-account access."}
+    ]
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "pages": 38,
+  "modules": 13,
+  "feature_groups": 104,
+  "module_scenarios": 39,
+  "platform_scenarios": 3,
+  "total_scenarios": 42,
+  "words": 9296,
+  "bookmarks": 38,
+  "hyperlinks": 175,
+  "source_commit": "ee9ca05e8346bdb1770932029ae8a9a8d682ef0f",
+  "pdf_sha256": "094b6655d4d2eb9efa62e4d3f5a1e8cfa007b74c1b06aa4e81bbf5cf733becf7",
+  "bytes": 2039208,
+  "assertions": "All module names, 104 feature titles, 39 module scenario titles, and 38 nonempty pages present; bounded paragraph layout passed."
+}

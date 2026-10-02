@@ -1,0 +1,31 @@
+{
+  "result": "PASS",
+  "pages": 33,
+  "content_validation": {
+    "pages": 33,
+    "applications": 13,
+    "feature_groups": 104,
+    "detailed_msp_cases": 6,
+    "module_scenarios": 39,
+    "total_illustrative_scenarios": 45,
+    "source_commit": "737a9d0fa18267c33fb01732ef5be4626e96c1e5",
+    "content_strings_checked": 427,
+    "missing_content": [],
+    "bookmarks": 33,
+    "links": 144,
+    "bytes": 202278,
+    "sha256": "a8cbaf5407c97687a42a3c3673f009f9932963328e5cc26546d48d760b40b218"
+  },
+  "outside_page_characters": [],
+  "substantial_character_collisions": [],
+  "embedded_typefaces": {
+    "/AAAAAA+SegoeUI-Bold": true,
+    "/AAAAAA+Consolas": true,
+    "/AAAAAA+SegoeUI": true,
+    "/AAAAAA+SegoeUI-Light": true
+  },
+  "external_links": 16,
+  "internal_links": 128,
+  "visual_review": "All 33 pages inspected through contact sheets; cover, case, module and approval pages inspected at full resolution.",
+  "pdf_sha256": "a8cbaf5407c97687a42a3c3673f009f9932963328e5cc26546d48d760b40b218"
+}
