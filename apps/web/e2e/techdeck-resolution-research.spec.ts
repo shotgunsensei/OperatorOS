@@ -26,6 +26,18 @@ test('grounded research reviews synthetic evidence, synthesizes with citations a
   expect(imported.status,JSON.stringify(imported.body)).toBe(201);const incidentId=imported.body.incidentId;
   const research=page.getByRole('region',{ name:'Grounded technician research' });
   await research.getByText('Research availability and organization approval',{ exact:true }).click();
+  await research.getByLabel('Daily research request limit',{ exact:true }).fill('7');
+  await research.getByLabel("I approve this organization's provider use and request limit for research.",{ exact:true }).check();
+  await research.getByRole('button',{ name:'Enable or update AI research',exact:true }).click();
+  await expect(research.getByText('Reviewed evidence can be sent to the configured provider.',{ exact:true })).toBeVisible();
+  await page.reload();await research.getByText('Research availability and organization approval',{ exact:true }).click();
+  await expect(research.getByLabel('Daily research request limit',{ exact:true })).toHaveValue('7');
+  await expect(research.getByLabel("I approve this organization's provider use and request limit for research.",{ exact:true })).not.toBeChecked();
+  await research.getByLabel('Daily research request limit',{ exact:true }).fill('1');
+  await research.getByRole('button',{ name:'Disable AI research',exact:true }).click();
+  await expect(research.getByText('AI research is off for this organization.',{ exact:true })).toBeVisible();
+  if (!await research.getByLabel('Daily research request limit',{ exact:true }).isVisible()) await research.getByText('Research availability and organization approval',{ exact:true }).click();
+  await expect(research.getByLabel('Daily research request limit',{ exact:true })).toHaveValue('7');
   await research.getByLabel("I approve this organization's provider use and request limit for research.",{ exact:true }).check();
   await research.getByRole('button',{ name:'Enable or update AI research',exact:true }).click();
   await expect(research.getByText('Reviewed evidence can be sent to the configured provider.',{ exact:true })).toBeVisible();

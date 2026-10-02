@@ -14,7 +14,8 @@ export default function ResolutionResearch({ tenantId, canWrite, canManage, href
   const [reviewed,setReviewed] = useState(false), [organizationReviewed,setOrganizationReviewed] = useState(false), [limit,setLimit] = useState('20'), [busy,setBusy] = useState(false), [error,setError] = useState('');
   const inFlight = useRef<AbortController|null>(null);
   function reset() { inFlight.current?.abort(); setBusy(false); setPreview(null); setResult(null); setReviewed(false); setError(''); }
-  useEffect(() => { reset(); setQuery(''); setIncidentId(''); return () => inFlight.current?.abort(); }, [tenantId]);
+  useEffect(() => { reset(); setQuery(''); setIncidentId(''); setOrganizationReviewed(false); setLimit('20'); return () => inFlight.current?.abort(); }, [tenantId]);
+  useEffect(() => { if (status.data) { setLimit(String(status.data.dailyRequestLimit)); setOrganizationReviewed(false); } }, [status.data,tenantId]);
   const sourceHref = (source: ResearchSource) => hrefFor(source.kind==='incident' ? `/resolution-intelligence/incidents/${source.recordId}` : `${source.kind==='runbook'?'/runbooks':'/documentation'}/${source.recordId}`);
   async function request(action: 'preview'|'synthesize') {
     if (busy) return;
@@ -29,7 +30,7 @@ export default function ResolutionResearch({ tenantId, canWrite, canManage, href
   }
   async function save(enabled: boolean) {
     reset(); const controller = new AbortController(); inFlight.current = controller; setBusy(true);
-    try { await resolutionRequest(tenantId,'/research',{ method:'PUT',signal:controller.signal,body:JSON.stringify({ enabled,dailyRequestLimit:Number(limit),expectedVersion:status.data?.version,egressReviewed:organizationReviewed }) }); if (!controller.signal.aborted) { status.reload();setOrganizationReviewed(false); } }
+    try { await resolutionRequest(tenantId,'/research',{ method:'PUT',signal:controller.signal,body:JSON.stringify({ enabled,dailyRequestLimit:enabled?Number(limit):status.data?.dailyRequestLimit,expectedVersion:status.data?.version,egressReviewed:organizationReviewed }) }); if (!controller.signal.aborted) { status.reload();setOrganizationReviewed(false); } }
     catch(failure) { if (!controller.signal.aborted) setError((failure as Error).message); }
     finally { if (!controller.signal.aborted) setBusy(false); }
   }

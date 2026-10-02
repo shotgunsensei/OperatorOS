@@ -43,11 +43,15 @@ and did not revert it. Its head `40f8aae8` passed 13/14 stages: 1,596 API,
 failed with multiple advisories. [Exact-head CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/37059828362)
 is distinct from exact-merge approval or deployment evidence.
 
-Read-only [public readiness](https://api.operatoros.net/readyz) observed v65/65,
-commit `ee9ca05e8346bdb1770932029ae8a9a8d682ef0f`, build
-`8eff6d674044c40a533419b4` compiled September 29. A later process start is not
-proof of a new build. That commit's [immutable release CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/36591653046)
-passed. No later source is claimed deployed. Presence of configured OpenAI/Stripe
+Read-only [public readiness](https://api.operatoros.net/readyz) initially observed
+September 29 commit `ee9ca05e8346bdb1770932029ae8a9a8d682ef0f`, whose
+[immutable release CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/36591653046)
+passed. At October 2 21:35 UTC it instead identified the separately published
+PR113 merge `62fb640c64bd5477a8e5752301c17cb108ab6d2e`, build
+`dbca1e6f06bbb7aa9bb2de15`, built `2026-10-02T20:21:26.699Z`, deployed
+`2026-10-02T20:29:16.066Z`, still v65/65. This worker did not publish it.
+Readiness identifies the build; it does not establish gate approval or authenticated
+workflow acceptance. Presence of configured OpenAI/Stripe
 variables is not credential or checkout verification. The previously reported
 Replit editor key issue is distinct from untested published credentials.
 
@@ -72,7 +76,22 @@ below. The source remains on an isolated branch; canonical/unrelated work is pre
   desktop/mobile Axe checks, refresh/back, no-evidence and cancellation. The first
   run's new touch-target defect was fixed in research-scoped CSS. Command:
   `pnpm --dir apps/web exec playwright test --retries=0 e2e/techdeck-resolution-research.spec.ts` against the isolated production artifacts/TLS proxy.
-- Complete `pnpm verify:release` and exact-head CI are pending for the final candidate.
+- First complete `pnpm verify:release` at `3fac2807` finished all 14 stages:
+  12 passed, dependency security failed on the unpatched inherited Forge advisory,
+  and API had 1,610 pass/two fail/zero skips. Both failures were v65 identity test
+  fixtures; they were updated to the branch's v66. Unit 52, integration 108,
+  browser 34 and visual four passed. Research limit persistence/disabling and
+  tenant approval reset were also fixed during local review and added to browser
+  acceptance. All required stages and exact-head CI will be rerun for the follow-up.
+  Follow-up focused checks passed 32/32 (research, database contract and release
+  identity), two browser workflows, zero-warning lint and production build. The
+  browser verifies a seven-request limit survives reload and disabling research,
+  while approval must be explicitly checked again.
+  No tests were skipped or checks weakened. Original exact-head
+  [release CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/37067562453)
+  failed; [vector](https://github.com/shotgunsensei/OperatorOS/actions/runs/37067562442)
+  and [native/device](https://github.com/shotgunsensei/OperatorOS/actions/runs/37067562360)
+  workflows passed. Complete release and exact-head CI are pending for the follow-up.
   The draft PR's verification section will record the terminal all-stage results
   and artifact URLs; this committed ledger records the preflight checkpoint. This is not
   release approval, and no live provider/research/production data writes occurred.
