@@ -83,6 +83,7 @@ PowerShell from the repository root:
 ```powershell
 $env:CI='true'; corepack pnpm install --frozen-lockfile
 corepack pnpm typecheck
+corepack pnpm lint
 
 # Requires an isolated PostgreSQL URL and non-production test secrets.
 $env:APP_ENV='test'; $env:NODE_ENV='test'
@@ -94,9 +95,9 @@ corepack pnpm preflight:production -- --core
 corepack pnpm db:plan
 ```
 
-There is currently no repository-defined lint or formatting script. Do not
-claim either check passed. Add a reviewed command before making it a release
-gate.
+Root `lint` is defined in `package.json` and required by the full release gate
+with zero warnings. There is no repository-defined formatting command; do not
+claim a formatting check passed without a reviewed command and fresh evidence.
 
 Production artifacts must be exercised through the same readiness-gated
 supervisor used by Replit:

@@ -1,5 +1,16 @@
 # TradeFlowKit parity matrix
 
+## First-outcome browser acceptance (2026-10-02 UTC)
+
+Required exact-host desktop/mobile cases now complete customer -> quote -> job
+-> invoice -> recorded offline payment, reload and read-only teammate access/
+server write denial. Review reproduced payment Cancel still writing. With the
+prompt guard and cancellation/approved blank-reference regressions, focused 2/2
+and post-fix full browser 37/37 plus visual 4/4 pass.
+This is isolated local workflow proof with pregranted fixtures; subscription
+settlement, deployed customer acceptance and capability counts are unchanged.
+See [scope and evidence](../TRADEFLOWKIT_FIRST_OUTCOME_ACCEPTANCE_2026-10-02.md).
+
 ## Executable-route closure truth notice (2026-08-17)
 
 The matrix below is historical implementation evidence. Current release truth
@@ -94,9 +105,9 @@ Status values: **complete**, **partial / Phase 16 gap**, **excluded by ADR**,
 | Tags | `GET/POST /tags`, assignment API | `tradeflowkit_tags`, assignments | expanded state-5 workflow + full API suite | complete |
 | Private attachments | shared job attachment routes | shared private attachment/blob/scan/job/usage/activity/outbox tables | Phase 3 24/24 | complete |
 | Quotes CRUD, public view, acceptance, rejection, expiration | revenue flow with multi-line draft editor/archive; public quote page/API; controlled response | numbered/versioned quotes + transactionally reconciled normalized quote items + token hash | document-mutation, public decision, and conversion tests | complete for active document lifecycle; retention restore remains a separate gap |
-| Quote-to-invoice and quote-to-job | both conversion actions are idempotent | unique source quote plus quote row lock/link transaction | duplicate retry and tenant-isolation tests | complete |
+| Quote-to-invoice and quote-to-job | both conversion actions are idempotent | unique source quote plus quote row lock/link transaction | duplicate retry and tenant-isolation tests; required desktop/mobile first-outcome browser workflow | complete |
 | Invoices CRUD/public view/payment link/email/import | revenue flow with direct create, multi-line draft editor, history-safe archive/restore, and bounded browser-parsed CSV import via `POST /invoices/import`; public invoice page; public-link and messaging APIs | numbered/versioned invoices + transactionally reconciled normalized items + exact integer-cents import totals + deterministic reference fingerprints + token hash + shared outbox | record-import/document-mutation/retention workflow + public projection | complete locally for active document lifecycle and bounded import; production business-payment provider activation remains a separate Phase 16 gap |
-| Manual payments/bulk mark paid | partial/full payment API plus admin-only `POST /invoices/bulk-mark-paid`; revenue actions | first-class payments, exact integer-cents remaining balances, bounded stable-lock transaction, optimistic versions, shared idempotency | manual partial + safe-bulk atomic/replay/tenant proof | complete |
+| Manual payments/bulk mark paid | partial/full payment API plus admin-only `POST /invoices/bulk-mark-paid`; revenue actions | first-class payments, exact integer-cents remaining balances, bounded stable-lock transaction, optimistic versions, shared idempotency | manual partial + safe-bulk atomic/replay/tenant proof; required desktop/mobile payment/reload/viewer-denial workflow with independent PostgreSQL proof | complete |
 | Stripe Connect/provider checkout | test-only provider session/complete API | explicit disabled/test adapter and provider references | test adapter workflow | production adapter excluded pending reviewed centralized contract |
 | Customer portal `/portal/:token` | anonymous responsive portal page/API | hashed customer portal token; bounded jobs/quotes/invoices | workflow API proof; browser deployment pending | complete locally |
 | Lead email/SMS, quote/invoice email, reminders | dedicated `POST /leads/:id/send-email` and `/send-sms` plus generic `POST /:entityType/:entityId/message`; responsive Lead Center queue actions | server-owned lead destination, explicit SMS consent and enforced opt-out wording, shared outbox/provider worker, exact replay/body-drift protection, safe activity | focused lead-messaging PostgreSQL/static tests; production-mode exact-host workflow | complete locally for operator-triggered communication; live provider delivery remains gated |

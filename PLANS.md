@@ -2,6 +2,19 @@
 
 Status: current execution plan
 
+## TradeFlowKit payment cancellation and first-outcome acceptance (2026-10-02 UTC)
+
+Implemented in an isolated branch from PR #111: required desktop/mobile browser
+acceptance of customer -> quote -> linked job -> invoice -> recorded offline
+payment, reload and a read-only teammate's deep link/server write denial.
+Workflow review reproduced Cancel still marking an invoice paid; the small prompt
+guard now prevents that write while preserving approved blank references.
+Fresh focused 2/2 and complete required browser 37/37 plus visual 4/4 pass,
+with lint, four typechecks and production build passing. See
+[acceptance evidence](docs/modules/TRADEFLOWKIT_FIRST_OUTCOME_ACCEPTANCE_2026-10-02.md).
+AI/schema/billing and capability counts are unchanged; required
+security and deployed paid-customer acceptance remain open.
+
 ## TradeFlowKit first-customer release continuation (2026-10-02 UTC)
 
 The owner prefers TradeFlowKit and reports no known trials or paying customers.
@@ -15,9 +28,9 @@ audit blocks merge/publication on unpatched Expo CLI node-forge. Supported
 current/next SDK updates retain it, and native tooling is used. See
 [current evidence and supported options](docs/REVENUE_RELEASE_CONTINUATION_2026-10-02.md).
 
-The next coherent customer phase is acceptance of the existing TradeFlowKit
-workflow: saved customer/job, quote, invoice, recorded off-platform payment,
-reload and second-user access, followed by owner-approved subscription
+Local acceptance of the existing saved customer/quote/job/invoice/off-platform
+payment workflow, reload and second-user access is now added above. Required
+security-gate closure and deployment precede owner-approved subscription
 activation/entitlement, role/logout and recovery checks. Public catalog values
 and configured flags are verified, but actual Stripe Price/account mode and
 signed paid settlement remain unverified. Merchant Connect payments are a

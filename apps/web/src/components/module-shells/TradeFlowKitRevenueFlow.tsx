@@ -624,7 +624,11 @@ function InvoiceRow({ invoice, customer, customers, jobs, selected, batchSelecte
         {canManage && invoice.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Mark invoice as sent" onClick={() => {
           if (window.confirm('Mark this invoice as sent? This only updates the shared status. It does not email or deliver the invoice.')) void run(() => moduleShellApi.tradeflowkit.transitionInvoice(invoice.id, invoice.version, 'sent'));
         }} /></>}
-        {canManage && ['sent', 'processing'].includes(invoice.status) && <Action disabled={pending} label="Record payment" tone={c.primary} onClick={() => { const ref = window.prompt('Payment reference (optional)') || undefined; void run(() => moduleShellApi.tradeflowkit.payInvoice(invoice.id, invoice.version, 'other', ref)); }} />}
+        {canManage && ['sent', 'processing'].includes(invoice.status) && <Action disabled={pending} label="Record payment" tone={c.primary} onClick={() => {
+          const ref = window.prompt('Payment reference (optional)');
+          if (ref === null) return;
+          void run(() => moduleShellApi.tradeflowkit.payInvoice(invoice.id, invoice.version, 'other', ref || undefined));
+        }} />}
         {canManage && payable && <Action disabled={pending} label="Stripe payment link" tone={c.blue} onClick={() => void run(async () => {
           const result = await moduleShellApi.tradeflowkit.createPaymentLink(invoice.id, invoice.version, `payment-link:${crypto.randomUUID()}`);
           if (!result.checkoutUrl?.startsWith('https://')) throw new Error(result.replay ? 'This request was already used. Create a new payment link.' : 'Stripe did not return a checkout URL.');
