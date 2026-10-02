@@ -1,0 +1,134 @@
+{
+  "source_commit": "737a9d0fa18267c33fb01732ef5be4626e96c1e5",
+  "review_date": "2026-09-29",
+  "sources": [
+    {
+      "id": "R01",
+      "title": "Current product catalog",
+      "path": "packages/sdk/src/catalog.ts",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/packages/sdk/src/catalog.ts",
+      "sha256": "b9be55831549749c7af0ca1ef3b7d1401df80e5713517ae0b2fff89c752157b4",
+      "note": "Application names, hierarchy, access classification, and OutCall availability."
+    },
+    {
+      "id": "R02",
+      "title": "Product outcomes and service limits",
+      "path": "packages/sdk/src/product-value.ts",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/packages/sdk/src/product-value.ts",
+      "sha256": "f82b3c5f9ace1015b9a543721929b27aec43918bf34a941cfe0f3e41a318c029",
+      "note": "Current module outcomes, integrations, exclusions, and manual/provider boundaries."
+    },
+    {
+      "id": "R03",
+      "title": "MSP Resolution Closeout Prompt",
+      "path": "docs/prompts/MSP_RESOLUTION_CLOSEOUT_PROMPT.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/prompts/MSP_RESOLUTION_CLOSEOUT_PROMPT.md",
+      "sha256": "0185c7b08c170142a63594384b7d444fa220f7eb70872524782b8efa7d266fcd",
+      "note": "Whole-incident chronology, failures, side effects, confidence, validation, and no invented facts."
+    },
+    {
+      "id": "R04",
+      "title": "Resolution Intelligence API",
+      "path": "docs/techdeck/resolution-intelligence-api.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/techdeck/resolution-intelligence-api.md",
+      "sha256": "4b0fd9cbb021f1d697a53f0a5a36225efe2b3b9fbcef14d498ae77ef678dd04e",
+      "note": "Screened import, immutable revisions, explicit mapping, audited raw reads, and exact/text retrieval."
+    },
+    {
+      "id": "R05",
+      "title": "Resolution Intelligence data model",
+      "path": "docs/techdeck/resolution-intelligence-data-model.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/techdeck/resolution-intelligence-data-model.md",
+      "sha256": "d4bba9656045c889d2e908f86b485272351bb9a3b339a47174135e943e58cc8d",
+      "note": "Source hashes, action/validation records, claim kind, confidence, and typed evidence relationships."
+    },
+    {
+      "id": "R06",
+      "title": "Evidence-derived documents",
+      "path": "docs/techdeck/resolution-intelligence-documents.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/techdeck/resolution-intelligence-documents.md",
+      "sha256": "7e980a9d7b979a7b24e263516c32a50b4adc1c4c4be0edbb9fe7c5c1ac8a95bc",
+      "note": "Cited draft assembly, inherited source access, review, and stale-source protections."
+    },
+    {
+      "id": "R07",
+      "title": "Script Ops implementation",
+      "path": "apps/api/src/routes/ninjamation-routes.ts",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/apps/api/src/routes/ninjamation-routes.ts",
+      "sha256": "b395c783c3b56b6069fe7bd7f66f5066bb7d11b43998cc2ea31032c043d88716",
+      "note": "Exact-version approval, critical static findings, current approved downloads, and audit boundaries."
+    },
+    {
+      "id": "R08",
+      "title": "Registered module handoffs",
+      "path": "docs/CROSS_MODULE_READINESS_REPORT.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/CROSS_MODULE_READINESS_REPORT.md",
+      "sha256": "914c6ab7fb5ea9e2699d07e1300920de159cbc80cf2889ad50cee3bf93dac48f",
+      "note": "Supported source/destination pairs, current access, source freshness, and deduplication."
+    },
+    {
+      "id": "R09",
+      "title": "Identity and tenant authority",
+      "path": "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+      "sha256": "8d30a62a7630163b19cef8070158af0d4e76ba74f18bb59ff2fbd463465d8dc8",
+      "note": "Shared authority, exact-host sessions, tenant enforcement, and module role ceilings."
+    },
+    {
+      "id": "R10",
+      "title": "SnapProofOS evidence implementation",
+      "path": "apps/api/src/routes/snapproofos-routes.ts",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/apps/api/src/routes/snapproofos-routes.ts",
+      "sha256": "a09381f0d102eed6a7f73cccfc7113387c100ae3254dcb5e499e474e3ea6b321",
+      "note": "Tenant-scoped cases, evidence, hash-linked custody, report lifecycle, and controls."
+    },
+    {
+      "id": "R11",
+      "title": "Core and companion commerce",
+      "path": "packages/sdk/src/products.ts",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/packages/sdk/src/products.ts",
+      "sha256": "851be4ae343104d269236920aa97389dcbc1318f5306e8b9b7981267d01f6fdd",
+      "note": "Selected core, companion selection, separate grants, and seat model; no pricing quote in this brief."
+    },
+    {
+      "id": "R12",
+      "title": "Current release gate",
+      "path": "docs/CURRENT_RELEASE_GATE.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/CURRENT_RELEASE_GATE.md",
+      "sha256": "d7a17cf5a42715ff46c5e356bfc1e4908cdcf888770e0f813fe5cf9fa81d2cab",
+      "note": "Recorded v65 publication; semantic provider remains disabled and authenticated v65 acceptance is pending."
+    },
+    {
+      "id": "R13",
+      "title": "Semantic-search boundary",
+      "path": "docs/techdeck/resolution-intelligence-semantic-search.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/techdeck/resolution-intelligence-semantic-search.md",
+      "sha256": "f2b6afd2f464d2f0135c9c809852cccef0ed60c8ffd376c719c252e4c3e537da",
+      "note": "Explicit opt-in, disabled activation, excerpt review, limits, and exact/text fallback."
+    },
+    {
+      "id": "R14",
+      "title": "SnapProofOS current capability matrix",
+      "path": "docs/modules/snapproofos/PARITY_MATRIX.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/modules/snapproofos/PARITY_MATRIX.md",
+      "sha256": "a9fa9692a29c3e221d539b14a4458bb58b43b7e2df052491a2e29856ce1116aa",
+      "note": "Field work, approved PDF/DOCX reports, controlled shares, custody, and retention scope."
+    },
+    {
+      "id": "R15",
+      "title": "Current module parity index",
+      "path": "docs/modules/MODULE_PARITY_INDEX.md",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/737a9d0fa18267c33fb01732ef5be4626e96c1e5/docs/modules/MODULE_PARITY_INDEX.md",
+      "sha256": "bde7da338b9a7b1042c6f67193c993069b7666f38d5e19235752dec715b68865",
+      "note": "Current overlays and limitations; historical implementation records do not grant live acceptance."
+    },
+    {
+      "id": "N01",
+      "title": "NIST SP 800-61r3 \u00b7 April 2025",
+      "path": "https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-61r3.pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-61r3.pdf",
+      "sha256": null,
+      "note": "Printed page 29: RS.AN-06 and RS.AN-07 address action records, integrity, provenance, controlled access, and preservation. No product endorsement implied."
+    }
+  ]
+}

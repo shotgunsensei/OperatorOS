@@ -1,0 +1,1542 @@
+OPERATOROS
+MSP / SHOW YOUR WORK
+THE MSP ACCOUNTABILITY PLAYBOOK
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+01
+HOW CAN I USE OPERATOROS TO
+COVER MY ASS?
+SHOW
+YOUR
+WORK.
+When the client asks what happened, answer with a record of
+scope, decisions, actions, evidence, and verification.
+John Travis Williams Jr.
+Built for engineers, service leads, and MSP owners.
+SCOPE
+DECISIONS
+ACTIONS
+VALIDATION
+OPEN RISK
+SOURCES
+RECONSTRUCT
+THE RECORD
+6 DISPUTE SCENARIOS
+13 MODULE PROFILES
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+01 / THE MSP VALUE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+02
+THE ANSWER IN ONE SENTENCE
+Make your work explainable under pressure.
+Use OperatorOS to retain a factual chain from the request and scope to the action, result, remaining risk, and next owner. A reviewer should be able to reconstruct that chain
+without the original technician.
+01
+What we knew
+Client and asset context, symptoms,
+baseline evidence, prior work, and the
+limits of what was known.
+02
+What we were asked to do
+The actual request, authorization
+source, permitted scope, exclusions,
+window, and approved variations.
+03
+What we actually did
+Named actors, procedure/script
+versions, chronology, outputs, failures,
+side effects, and recovery.
+04
+What we verified
+Specific checks, actual results,
+expected outcomes, pending
+validation, and the next responsible
+owner.
+The practical stack: TechDeck for technical history; SnapProofOS for reviewed proof; Script Ops for exact-version script governance; FaultlineLab for lessons
+that become training. Actual module access must be granted.
+BASIS
+R02
+R03
+R11
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+02 / WHEN THE QUESTIONS START
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+03
+START WITH THE DISPUTE
+Know which record you need to retrieve.
+A defensible operational answer separates the source fact from interpretation, internal approval, customer response, and uncompleted work.
+“You broke it.”
+Baseline → exact action → post-change checks
+TechDeck + external execution evidence
+“You never warned us.”
+Recommendation version → actual response → follow-up
+TechDeck + original communication source
+“We did not authorize that.”
+Specific scope/window → authorizing response → actual action
+Client approval process + TechDeck / Script Ops
+“Nobody tested it.”
+Defined test → observed result → untested remainder
+Resolution Intelligence + retained test output
+“Nobody told the next tech.”
+Chronology → failed steps → current state → owner
+TechDeck + handoff acknowledgement
+“What did you do for this invoice?”
+Scope → work capture → report → commercial reference
+SnapProofOS + entitled TradeFlowKit or existing PSA
+The useful outcome is a clear reconstruction, including evidence of an MSP mistake when that is what happened. Selective closeouts weaken the record.
+BASIS
+R03
+R04
+R07
+R14
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+03 / EVIDENCE ARCHITECTURE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+04
+FROM OBSERVED WORK TO A REVIEWED EXPLANATION
+Keep the source behind the summary.
+OperatorOS can organize accepted evidence and its provenance. It cannot manufacture missing authorization, endpoint telemetry, client acknowledgement, or historical facts.
+01
+Original work
+Logs, outputs, photos, request, real
+responses
+Your authorized tools + channels
+02
+Accepted source
+Screened import, immutable
+revision, content hash
+TechDeck Resolution Intelligence
+03
+Structured context
+Actions, failures, identifiers,
+validation, relationships
+Tenant-scoped projection + search
+04
+Reviewed output
+Cited internal guidance or approved
+customer proof
+TechDeck / SnapProofOS review
+Platform guardrails
+Exact-host SSO; server-resolved tenant, role, and
+module access; scoped records; auditable decisions.
+Provenance limits
+A stored hash supports integrity checking of retained
+bytes. It does not establish that the original
+observation was true.
+Evidence handling
+Protect originals and sensitive context. Record
+collection time and event time separately when known;
+retain source timezone.
+BASIS
+R04
+R05
+R06
+R09
+N01
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+04 / HOW TO USE IT
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+05
+A PROPOSED TEAM OPERATING PROCEDURE
+Capture while working. Review before closing.
+This procedure combines built-in capabilities with deliberate technician actions. It is a recommended operating pattern, not a claim that every step is automatically enforced.
+BEFORE
+Establish scope and state
+Open the correct client/ticket/asset context in
+TechDeck.
+Attach or reference the actual authorization; record
+action, window, exclusions, and rollback.
+Capture baseline checks and pre-existing faults.
+If using a script, identify its approved exact version.
+DURING
+Record the actual sequence
+Use the separately authorized execution tool.
+Preserve meaningful outputs, time/timezone, actor,
+and affected system.
+Keep failed attempts, side effects, recovery, and
+deviations.
+Pause and escalate when the work exceeds its
+authority.
+AFTER
+Close only what you can
+substantiate
+Run defined checks; distinguish success, failure, and
+pending work.
+Use the Ticket Completion Prompt with approved
+source context; review its result.
+Validate and import the supported export in
+Resolution Intelligence.
+Assign follow-ups; review customer proof and keep
+actual delivery/response records.
+BASIS
+R03
+R04
+R07
+R14
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+05 / AUTHORITY IS SPECIFIC
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+06
+DO NOT COLLAPSE THESE INTO “APPROVED”
+Five decisions. Five different meanings.
+Attach the actual source of permission when the system stores a record of an external decision. Internal workflow status cannot substitute for that source.
+01
+Product access
+OperatorOS session, tenant, role, entitlement
+Establishes: The user may use the granted product surface.
+Does not establish: Permission to change a client production
+system.
+02
+Script approval
+Script Ops exact-version review
+Establishes: This reusable source revision passed the internal
+process.
+Does not establish: Authorization to execute it for this client now.
+03
+Client work authorization
+Your approved client/change-control process
+Establishes: The retained source describes who authorized what
+and when.
+Does not establish: A scope expansion inferred from admin
+access.
+04
+Report approval
+SnapProofOS report review
+Establishes: The internal reviewer approved the selected report
+snapshot.
+Does not establish: Customer receipt, acceptance, payment, or
+waiver.
+05
+Client acknowledgement
+Actual reply/acceptance source you retain
+Establishes: A person made the statement recorded by that
+source.
+Does not establish: Automatic proof that all risks or obligations
+were resolved.
+BASIS
+R07
+R09
+R14
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+06 / WORKED RECORD EXAMPLE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+07
+SYNTHETIC EXAMPLE / NO REAL CUSTOMER DATA
+Write the facts that let someone reconstruct it.
+Use the canonical closeout structure to preserve failed work, uncertainty, and remaining validation. The entries below are illustrative technician records, not captured production
+events.
+WEAK CLOSEOUT
+“Restarted service.
+Everything is fixed.”
+No affected asset or scope.
+No baseline or exact action.
+No test result or evidence reference.
+No failed attempt or side effect.
+No owner for remaining validation.
+A MORE USEFUL RECORD
+CONTEXT
+LAB-APP-07 / synthetic tenant; approved service restart within the referenced maintenance window.
+OBSERVED
+09:12 EDT: health check failed before work. Preserve the original output and its collection source.
+ACTION + FAILURE
+09:18: restart attempted; process returned, but the transaction check still failed. Retain both results.
+VALIDATION
+09:26: diagnostic endpoint passed. Full user transaction and overnight stability remain unverified.
+CURRENT STATE
+Service available for the tested path. Root-cause hypothesis remains unconfirmed; record the basis
+separately.
+FOLLOW-UP
+Assigned engineer to perform the specified transaction check at the agreed time; escalate if failure
+repeats.
+A good closeout may show that the work is incomplete. That distinction is part of its value.
+BASIS
+R03
+R04
+R05
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+CHANGE ATTRIBUTION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+08
+ILLUSTRATIVE CASE STUDY 01
+“You touched it. Now it is broken.”
+Reconstruct the change before arguing cause.
+A synthetic MSP client reports intermittent authentication failures the morning after an approved maintenance window.
+The engineer needs to establish what changed and what was already failing.
+RETRIEVE THESE RECORDS
+01
+Original authorization reference
+02
+Pre-change evidence + affected asset
+03
+Exact procedure/script revision
+04
+External execution output
+05
+Post-change validation + open
+questions
+PILOT CHECK
+Ask an uninvolved engineer to reconstruct the
+window and identify every unverified claim.
+01
+Before work
+Keep the actual authorization and window reference. Capture the affected asset, pre-change symptoms, baseline checks,
+intended change, and rollback plan.
+02
+During work
+Record the exact script or procedure revision, operator, execution time and timezone, outputs, failed attempts, and any
+unplanned effect. Collect execution evidence from the tool that actually ran the work.
+03
+After work
+Compare equivalent checks before and after. Import the reviewed closeout into TechDeck, retain the source revision, and link
+the ticket, asset, evidence, and remaining checks.
+The answer your record can support: We can show the approved scope, exact change, observed baseline, and tests we
+performed. The later symptom is recorded; causation remains unproven until the evidence supports it.
+Boundary: Script approval is not permission to run it on this client. OperatorOS does not automatically collect endpoint execution logs or prove causation from timing.
+BASIS
+R03
+R04
+R05
+R07
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+WARNINGS + DEFERRED WORK
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+09
+ILLUSTRATIVE CASE STUDY 02
+“You never warned us about that risk.”
+Keep the recommendation and the real response.
+A synthetic client postpones replacing a failing storage device. Weeks later, an outage raises the question of what was
+recommended, who received it, and who owned the follow-up.
+RETRIEVE THESE RECORDS
+01
+Dated condition evidence
+02
+Exact recommendation version
+03
+Original client response/source
+04
+Open risk + owner + next review
+05
+Subsequent changes and follow-up
+PILOT CHECK
+Can a reviewer distinguish the original
+response, technician interpretation, and
+remaining action?
+01
+State the observation
+Link the asset and dated diagnostic evidence. Describe the observed condition, business impact, recommendation, and
+uncertainty in a versioned document or ticket record.
+02
+Preserve the decision
+Retain the actual dated client response from the authorized communication channel, including sender identity and any relevant
+scope. A technician's note that the client declined is a separate, weaker source.
+03
+Keep the risk open
+Record the unresolved condition, follow-up owner, due date, and escalation trigger. If the recommendation changes, append
+current context without rewriting the historical response.
+The answer your record can support: Here is what we observed, the recommendation we sent, the response we retained,
+and the follow-up that remained open. The source shows what the client actually said.
+Boundary: This is a documented operating practice, not a dedicated risk-acceptance or e-signature feature. A recorded refusal does not automatically transfer responsibility or remove an MSP's obligations.
+BASIS
+R03
+R04
+R09
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+SCOPE + AUTHORIZATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+10
+ILLUSTRATIVE CASE STUDY 03
+“We did not authorize that work.”
+Separate access, review, and permission.
+A synthetic engineer has administrator access and an approved cleanup script. A client disputes whether the specific
+production action was authorized during the agreed window.
+RETRIEVE THESE RECORDS
+01
+Client authorization source
+02
+Client/asset/window/scope
+03
+Approved script revision + review
+04
+Execution record from the external tool
+05
+Deviation and escalation decisions
+PILOT CHECK
+For one action, identify all three decisions:
+access, asset approval, and client work
+authorization.
+01
+Bind the scope
+Retain the actual work request and authorizing person's source response. Specify the client, assets, action, window, exclusions,
+and rollback conditions in the work record.
+02
+Pin the asset
+Use Script Ops to review the exact source revision and its prerequisites. Download only the approved current version; keep its
+identity with the change record.
+03
+Record actual execution
+Use the separately authorized execution tool and preserve its output. Record any deviation, pause, escalation, or new permission
+before extending the work.
+The answer your record can support: The record separates who could access the system, who reviewed the script, who
+authorized this action, and what actually ran. Each decision has its own source.
+Boundary: RBAC grants product access. Script approval governs a reusable asset. Neither substitutes for client change authorization or a maintained contract/change-control process.
+BASIS
+R05
+R07
+R09
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+VALIDATION + CLOSEOUT
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+11
+ILLUSTRATIVE CASE STUDY 04
+“The ticket said fixed. It was not tested.”
+Make closure narrower than the evidence.
+A synthetic line-of-business service restarts successfully, but the user's full transaction still fails. The closeout must
+distinguish service recovery from functional acceptance.
+RETRIEVE THESE RECORDS
+01
+Defined expected result
+02
+Observed test output + time
+03
+Performed / failed / pending checks
+04
+Side effects + rollback evidence
+05
+Follow-up owner + completion criterion
+PILOT CHECK
+Can another engineer state exactly what passed,
+what failed, and what was never tested?
+01
+Name the check
+Record the exact functional check, who performed it, the environment/asset, observation time, and expected result. A green
+service status is one check, not the whole acceptance test.
+02
+Keep mixed outcomes
+Retain successful checks, failures, side effects, and pending validation in the structured closeout. Record the current state in
+language the next engineer and client can interpret.
+03
+Assign the remainder
+Give uncompleted validation an owner and next action. Produce a reviewed client summary that preserves those limitations
+instead of flattening everything into 'resolved'.
+The answer your record can support: The service restarted and the recorded health check passed. End-to-end client
+testing remained pending, with a named owner. We did not record full acceptance we had not observed.
+Boundary: A validated JSON import proves format and screening checks, not technical truth. A model-generated closeout must be reviewed against the original work and test results.
+BASIS
+R03
+R04
+R05
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+CONTINUITY + ESCALATION
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+12
+ILLUSTRATIVE CASE STUDY 05
+“Nobody told the next technician.”
+Make the handoff survive the people.
+A synthetic overnight engineer attempts several fixes, recovers from a side effect, and hands the ticket to the day shift. A
+short final note would cause the same failed branch to be tried again.
+RETRIEVE THESE RECORDS
+01
+Full action chronology
+02
+Failed branch + observed side effect
+03
+Recovery + current operating state
+04
+Named owner + next action
+05
+Reviewed document/source links
+PILOT CHECK
+Give the case to a fresh engineer and inspect
+their first proposed action before briefing them.
+01
+Preserve the whole path
+Record the action sequence, failed attempts, qualified causal claims, recovery, present state, and remaining questions. Keep
+exact identifiers and the relevant source evidence.
+02
+Make the next action explicit
+Assign the ticket and follow-up, identify what must not be repeated without review, and link the correct current document.
+Confirm handoff through the team's normal process.
+03
+Reuse with review
+Search the incident by exact identifier. Create a cited KB/runbook draft; prepare a FaultlineLab case only after manager and
+privacy review. Source changes should trigger a new review.
+The answer your record can support: The handoff retained the failed step, the recovery, the unverified assumption, and
+the next owner. A later reader can find the source instead of trusting a copied conclusion.
+Boundary: A saved assignment or published document does not prove that the next technician read it. Training exports require privacy review; masking alone is not complete de-identification.
+BASIS
+R03
+R04
+R06
+R08
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+PROOF OF WORK + BILLING
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+13
+ILLUSTRATIVE CASE STUDY 06
+“Why are we being billed for this?”
+Tie the commercial story to the work record.
+A synthetic client disputes the labor and completion of an installation. Photos, technician notes, approval, and the invoice
+are spread across different systems.
+RETRIEVE THESE RECORDS
+01
+Scope + approved variation source
+02
+Job-linked captures + work notes
+03
+Parts/labor and service history
+04
+Approved report version
+05
+Invoice reference + actual client
+response
+PILOT CHECK
+Reconstruct one billed item from authorized
+scope to work evidence, report, and payment
+state.
+01
+Capture the work
+Associate the correct customer/job and collect dated notes, before/after photos, findings, parts, labor, and relevant acceptance
+evidence. Keep original scope and approved variations as source records.
+02
+Review the package
+Use SnapProofOS to assemble and approve the customer report. Retain its snapshot and source context, generate the
+document, and share only the approved report through a deliberate channel.
+03
+Connect the commercial record
+Where TradeFlowKit is entitled, return the approved PDF to the originating job using its supported handoff. Otherwise attach
+the reviewed document to the existing PSA/invoice workflow manually.
+The answer your record can support: Here is the scope, recorded work, reviewed report, and associated commercial
+record. Client acceptance and payment remain separate facts supported by their own sources.
+Boundary: Report approval is internal; sharing is not receipt; receipt is not acceptance; an invoice is not settlement. TradeFlowKit is a separate core product, not automatically included in a TechDeck tenant.
+BASIS
+R02
+R08
+R10
+R11
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+13 / MAKE RETRIEVAL USEFUL
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+14
+A REVIEW PACKAGE YOU CAN ASSEMBLE
+Build the packet before the difficult meeting.
+Use supported records and exports, then assemble a reviewed package. This is a recommended dossier structure—not a new one-click OperatorOS export or an automatic
+TechDeck-to-SnapProofOS integration.
+01 / Work identity
+Client, site, asset, ticket, scope, request, authorizing source, and relevant window.
+02 / Work chronology
+Before state; exact actions; actor and times; failed attempts; side effects; recovery and
+deviations.
+03 / Source evidence
+Original outputs, captures, notes, file identities, approved procedure revision, and links
+to retained source.
+04 / Validation and open risk
+Checks actually run, results, observations, uncertainty, untested scope, follow-up
+owner, and due date.
+05 / Reviewed explanation
+Internal engineering account plus a customer-appropriate report, with limitations and
+exact report version.
+06 / Communication record
+Actual sending/delivery references and client responses where retained; keep those
+separate from internal approval.
+BASIS
+R03
+R04
+R06
+R14
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+14 / TRUST MODEL
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+15
+THE RECORD NEEDS ITS OWN SAFEGUARDS
+Preserve truth, access, and uncertainty.
+The point is a faithful explanation of the work, including mistakes. A polished summary becomes useful only when the underlying sources and limitations remain inspectable.
+Keep facts distinct
+Separate observed output, client statements, technician interpretation, root-cause
+hypotheses, and pending checks. Import time is not automatically the event time.
+Keep the original context
+Preserve the accepted source and revision. Screen out secrets; retain protected
+evidence through authorized storage and access paths. Do not silently rewrite the
+accepted history.
+Review every AI-derived statement
+Use the closeout prompt with approved context and review the result. Cited
+document drafts are deterministic. Semantic similarity does not establish repair
+confidence or causation.
+Protect the evidence itself
+Enforce tenant and source access. Apply an approved retention/hold policy, verify
+backup/restore, and use external evidence controls where required. Hashes are not
+independent notarization.
+Engineering reference: NIST SP 800-61r3, RS.AN-06/07, emphasizes action records and preservation of integrity and provenance, protected by appropriate access and retention practices. This is a design
+rationale, not a certification or endorsement.
+BASIS
+R03
+R04
+R06
+R09
+R13
+N01
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+15 / PORTFOLIO BY RELEVANCE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+16
+PRIORITIZE THE EVIDENCE WORKFLOW
+Use the parts that support your service model.
+Start with a TechDeck-led workflow and granted companions. Other core products and optional services require their own access; this map is not an all-apps bundle promise.
+DIRECT MSP VALUE
+TechDeck
+PRIMARY MSP RECORD
+SnapProofOS
+PROOF PACKAGE
+Script Ops
+AUTOMATION GOVERNANCE
+FaultlineLab
+PREVENTION + LEARNING
+CONTEXT + ENABLEMENT
+TradeFlowKit
+COMMERCIAL CONTEXT
+PulseDesk
+HEALTHCARE OPERATIONS CONTEXT
+CallCommand AI
+INTAKE CONTEXT / PROVIDER GATED
+BrandForge OS
+CONSISTENT SERVICE MESSAGING
+Deploy Ops
+DELIVERY PREPARATION
+StudyForge AI
+TRAINING SUPPORT
+SPECIALIST / NOT AN MSP CONTROL
+TorqueShed
+SPECIALIST / LIMITED MSP RELEVANCE
+Operator Pool Hall
+TEAM BENEFIT / NO EVIDENCE CONTROL
+OutCall
+UNAVAILABLE / NO MSP CONTROL
+Read pages 18–30 for every application’s features and three short scenarios. Pool Hall and OutCall are explicitly identified as having no current MSP evidence-control role.
+BASIS
+R01
+R02
+R11
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+16 / A PROPOSED TWO-WEEK PILOT
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+17
+MAKE THE VALUE MEASURABLE
+Can a second engineer reconstruct the work?
+Proposed pilot, not performed results. Start in an approved environment with synthetic or explicitly approved data and validate the intended access, storage, and release state.
+01
+SET THE RULE
+Choose a small sample
+Agree on a minimum record: scope source, actor/asset/time, baseline, action, result, failed paths, validation, and
+next owner.
+02
+RUN THE WORK
+Capture in the normal flow
+Use existing PSA/RMM/EDR and communication tools as appropriate. Preserve their outputs; import reviewed
+closeout records rather than duplicating unverified conclusions.
+03
+CHALLENGE THE RECORD
+Review without the original tech
+Give a second engineer the record and one of the six dispute questions. Ask for the supporting source and every
+remaining uncertainty.
+04
+DECIDE WHAT TO EXPAND
+Measure retrieval and completeness
+Track reconstruction time, records missing actual authorization, unowned pending checks, repeated failed steps,
+and report/source mismatches.
+Suggested success condition: a reviewer can identify the scope, exact action, evidence, validation limits, and next owner without guessing. Set numeric targets only after measuring your baseline.
+BASIS
+R03
+R04
+R12
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+18
+PRIMARY MSP RECORD
+TechDeck
+Reconstruct technical work and preserve what remains unknown.
+Use ticket/client/asset context, reviewed closeout imports, exact retrieval, and source-linked documentation as the primary technical record.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Service operations
+Manage client/site-linked tickets, assignments, comments, time, requester updates, and accountable closeout.
+02
+Configuration and lifecycle inventory
+Track typed configurations, asset context, warranty/renewal dates, lifecycle changes, and related records.
+03
+Network and IPAM records
+Maintain network, subnet, address, and topology relationships as documented operational context.
+04
+Versioned documentation
+Edit knowledge articles and runbooks with revisions, backlinks, review, approval, publication, and private attachments.
+05
+Resolution evidence intake
+Import structured closeouts with screened source material, immutable revisions, validation, warnings, failures, and side effects.
+06
+Exact and full-text retrieval
+Search identifiers and narrative; inspect evidence, components, action chronology, revision history, and native links.
+07
+Evidence-derived knowledge
+Preview deterministic KB/runbook drafts, retain source citations, link multiple incidents, and block stale-source approval.
+08
+Protected reports and audit
+Use tenant-scoped report snapshots, private attachments, audited source downloads, and current source-access controls.
+01
+The outage accusation
+Compare the approved action and actual timeline against
+pre-existing symptoms. Retrieve the exact outputs and
+unresolved causal questions.
+02
+The forgotten side effect
+Keep the failed remediation and its observed effect in the source
+closeout. The next engineer sees both recovery and warning.
+03
+The unsupported fix claim
+Record performed, failed, and pending checks separately. A
+client summary can then state the precise limits of validation.
+MAIN MODULE  /  Core product
+BASIS
+R01
+R02
+R03
+R04
+R06
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+19
+PROOF PACKAGE
+SnapProofOS
+Show what was captured, reviewed, and included in the report.
+Use approved snapshots and controlled report access for field proof. Preserve external permission and response records separately.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Customers, jobs, and assignments
+Select shared customer identity, create proof work, assign field tasks, and retain job context.
+02
+Field evidence capture
+Collect photos, private notes, files, observations, parts, labor, and dated work context.
+03
+File integrity and scanning
+Apply type/signature checks, private storage, scan state, and SHA-256 verification through shared services.
+04
+Findings and review
+Submit evidence, inspect findings, record comments, and move reports through authorized review and approval.
+05
+Branded report output
+Generate approved PDF and DOCX documents from the selected report snapshot and template.
+06
+Controlled report shares
+Create expiring and revocable report links; inspect access history without exposing the private source library.
+07
+Custody and retention
+Retain hash-linked custody history, immutable report context, archive controls, retention, and legal-hold state.
+08
+Connected proof packages
+Receive TradeFlowKit job or TorqueShed diagnostic context; return the exact approved PDF to its originating job.
+01
+The missing installation evidence
+Tie dated photos, notes, findings, parts, and labor to the correct
+job. Review them into a specific customer report.
+02
+The changed-report question
+Retrieve the approved snapshot and its source context.
+Hash-linked custody helps examine the recorded history without
+claiming notarization.
+03
+The overshared evidence folder
+Share the approved report with expiry/revocation controls. Keep
+private notes and raw captures outside that customer-facing
+package.
+COMPANION APPLICATION  /  Paid companion
+BASIS
+R01
+R02
+R10
+R14
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+20
+AUTOMATION GOVERNANCE
+Script Ops
+Identify exactly which source version was reviewed and downloaded.
+Approval governs a script asset. Actual execution, client authorization, and endpoint telemetry remain outside Script Ops.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Searchable script library
+Organize PowerShell, Python, batch, and shell assets with source/provenance context.
+02
+Authoring and import
+Create or import source and record the purpose, prerequisites, expected behavior, risk, and rollback.
+03
+Immutable versions
+Pin the exact revision, content identity, and change context used by subsequent review and download.
+04
+Server static analysis
+Inspect findings and risk indicators before submitting a script version for approval.
+05
+Governed review lifecycle
+Submit, approve, reject, or retire scripts under tenant-admin controls with recorded decisions.
+06
+Approved download controls
+Allow only the approved current version to be downloaded; retain integrity and download audit history.
+07
+Optional AI drafting
+Request drafts through shared AI, idempotency, and usage controls; generated source remains unapproved.
+08
+TechDeck documentation handoff
+Create a non-executing draft runbook and protected file-integrity record from an approved script revision.
+01
+Which script did we approve?
+Inspect the immutable revision, static findings, and decision.
+Preserve the external execution output to establish what actually
+ran.
+02
+The AI-generated quick fix
+Keep the draft unapproved until an engineer addresses findings
+and a reviewer accepts that exact revision.
+03
+The procedure-code mismatch
+Create the supported non-executing TechDeck runbook draft
+from an approved revision. Review the resulting guidance before
+reuse.
+COMPANION APPLICATION  /  Paid companion
+BASIS
+R01
+R02
+R07
+R08
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+21
+PREVENTION + LEARNING
+FaultlineLab
+Turn known mistakes into repeatable diagnostic practice.
+Attempt traces support coaching. A score does not prove production competence, permission, or compliance.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Challenge catalog
+Discover published challenges through search, filters, sorting, authored packs, and daily selection.
+02
+Persistent attempts
+Resume standard, daily, preview, assignment, and Chaos-mode attempts across refresh and restart.
+03
+Evidence-driven investigation
+Select diagnostic actions, reveal clues, record findings, use progressive hints, and submit a conclusion.
+04
+Server scoring
+Evaluate submitted work against the versioned scenario and retain append-only attempt evidence.
+05
+Assignments and progress
+Assign cases, inspect learning progress and badges, and select further practice from observed results.
+06
+Authoring lifecycle
+Validate, preview, publish, retire, import, and export controlled challenge versions.
+07
+Analytics and exports
+Review attempts and outcome history; export material for coaching and team discussion.
+08
+Operational case reuse
+Convert reviewed TechDeck, PulseDesk, and TorqueShed records into private first-draft challenges.
+01
+The repeat troubleshooting mistake
+Turn a reviewed resolved incident into an unpublished challenge
+draft. Remove sensitive material and revise before publishing.
+02
+The onboarding blind spot
+Assign a versioned case and inspect actions and missed
+evidence. Coach the actual investigation rather than quiz
+vocabulary alone.
+03
+The lesson nobody retained
+Repeat a suitable exercise and compare investigation behavior.
+Use the result to choose the next practice task.
+COMPANION APPLICATION  /  Free companion
+BASIS
+R01
+R02
+R02
+R08
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+22
+COMMERCIAL CONTEXT
+TradeFlowKit
+Connect scope, jobs, proof, invoices, and recorded payments.
+TradeFlowKit is a separate core product. A TechDeck-led MSP can retain its existing PSA/accounting and use manual reviewed exports.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Lead and customer management
+Capture leads; qualify and convert opportunities; use shared customer identity, contacts, search, and bounded CSV imports.
+02
+Jobs and recurring work
+Schedule and assign jobs; retain owners, dates, status, recurring templates, pause controls, and run history.
+03
+Tasks and workflow stages
+Track job-scoped tasks, dependencies, comments, tags, workflow transitions, and personal or shared saved views.
+04
+Quotes and conversion
+Build multi-line quotes; record decisions; convert to jobs or invoices with duplicate-safe server operations.
+05
+Invoices and payments
+Maintain invoice items, partial/full payment records, balances, numbering, and history; connected settlement needs provider
+acceptance.
+06
+Customer communication
+Use scoped public views, customer portals, and consent-aware email/SMS outbox actions with explicit delivery state.
+07
+Reporting and accounting handoff
+Inspect workload and revenue from persisted records; export invoice CSV, QuickBooks IIF, and Xero-oriented CSV files.
+08
+Proof and recovery
+Create SnapProofOS work from a job, return the approved PDF, and use guarded archive/restore workflows.
+01
+The scope expansion
+Retain the accepted quote and actual variation authorization
+with the job. Distinguish a manually recorded decision from its
+original source.
+02
+The disputed invoice
+Link the job, approved proof report, invoice line context, and
+recorded payments. Retrieve the record behind the balance.
+03
+The unbilled completed job
+Use recorded job/invoice state to find missed handoffs. Review
+the work and scope before creating a commercial document.
+MAIN MODULE  /  Core product
+BASIS
+R01
+R02
+R02
+R08
+R11
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+23
+HEALTHCARE OPERATIONS CONTEXT
+PulseDesk
+Make operational ownership and escalation visible across departments.
+Use for non-clinical facilities, equipment, supply, and vendor work. It is a separate core product, with no EHR or compliance-certification claim.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Facilities and departments
+Maintain directory-linked organizations, facilities, requesters, departments, and operational context.
+02
+Operational request intake
+Create numbered requests with structured classification, equipment-issue prefill, tags, and supporting records.
+03
+Queues, teams, and assignment
+Route work to an accountable team or owner; prioritize through queues, filters, saved views, and bulk actions.
+04
+Targets and escalation
+Track service targets, time, at-risk work, escalation paths, and response history.
+05
+Notes and requester updates
+Keep internal coordination separate from requester-facing replies; retain private attachments and work history.
+06
+Equipment and vendor coordination
+Associate operational assets with facility issues, supply requests, service vendors, and department needs.
+07
+Knowledge and reporting
+Use operational knowledge, persisted dashboards, configuration, preferences, trend reporting, and exports.
+08
+Reviewed handoffs
+Accept operations-only CallCommand requests and prepare privacy-reviewed resolved-work drafts for FaultlineLab.
+01
+The ownerless equipment issue
+Associate the department, asset, service target, and assigned
+team. The record shows where operational responsibility sat.
+02
+The missed shift handoff
+Retain internal notes, requester updates, and outstanding
+actions so the next shift can reconstruct status.
+03
+The privacy-sensitive training case
+Review a resolved operations request before a FaultlineLab draft
+transfer. Exclude patient/clinical data and revise the draft.
+MAIN MODULE  /  Core product
+BASIS
+R01
+R02
+R02
+R08
+R11
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+24
+INTAKE CONTEXT / PROVIDER GATED
+CallCommand AI
+Retain the request and route an owned follow-up when live service is accepted.
+Call capture and caller association do not authorize account resets or prove a person's authority. Simulations remain separate from real calls.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Receptionist configuration
+Define business knowledge, hours, greetings, behavior, and approved routing destinations.
+02
+Call-flow design and simulation
+Prepare conversation paths, test a no-cost simulated call, and correct routing before live enablement.
+03
+Number and launch controls
+Manage number setup, readiness checks, capacity, usage, service health, and deliberate go-live controls.
+04
+Call records and intelligence
+Search history; inspect summaries, timelines, transcripts, consent state, outcomes, and reviewed analysis.
+05
+Follow-up operations
+Review leads, tasks, alerts, and staff actions with clear ownership and retained call context.
+06
+Core-module handoffs
+Convert eligible analyzed provider calls into reviewed TradeFlowKit, TechDeck, or operations-only PulseDesk work.
+07
+MSP intake foundation
+Use approved lines, SupportLinks, Directory-backed organization/contact association, local cases, and operator screen-pop.
+08
+Provider and audit controls
+Use signed callbacks, durable retry/outbox records, kill switches, evidence history, and explicit test/live distinctions.
+01
+What did the caller request?
+Inspect the retained transcript/summary and any uncertainty.
+Confirm consequential instructions through the approved client
+process.
+02
+The missed support handoff
+After live-provider acceptance, review an eligible analyzed call
+and create a linked TechDeck ticket. Simulator calls are rejected.
+03
+The urgent reset request
+Use MSP intake context and screen-pop to support review.
+Privileged reset and endpoint actions need separately accepted
+processes.
+COMPANION APPLICATION  /  Paid companion; live provider gates
+BASIS
+R01
+R02
+R02
+R08
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+25
+CONSISTENT SERVICE MESSAGING
+BrandForge OS
+Keep service claims and approved campaign material consistent.
+This supports communication discipline; it is not contract approval, client consent, or proof that a campaign was delivered.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Brand HQ
+Maintain brand kits, positioning, voice, offers, and audience personas; associate approved shared customer identity.
+02
+Campaign planning
+Create campaign briefs, objectives, channels, budgets, timelines, and related landing content.
+03
+Copy Studio and workflows
+Develop copy variants, calls to action, ad prompts, strategy, and creative directions through guided modes.
+04
+Logo concepts
+Preview wordmark, lockup, badge, and monogram compositions; export editable SVG and standard/2x PNG.
+05
+Review and collaboration
+Manage draft/review/approval states, comments, assets, activity, and recoverable selected logos.
+06
+Calendar and reusable templates
+Organize delivery work and reuse global/custom templates subject to the applicable entitlements.
+07
+Recorded performance and reports
+Track entered results, recommendations, and campaign reports; create controlled exports.
+08
+Launch-package handoff
+Transfer a campaign into Deploy Ops with copy, visual-production briefs, work items, and an approval starting state.
+01
+Marketing promised too much
+Review a shared service-offer and brand brief before exporting
+variants. Remove claims the actual service does not support.
+02
+The obsolete service description
+Find the current reviewed campaign asset and its context.
+Coordinate external replacement manually in the publishing
+tools.
+03
+The confused customer identity
+Associate the correct shared customer with the brand and keep
+the campaign's assets and review states distinct.
+COMPANION APPLICATION  /  Paid companion
+BASIS
+R01
+R02
+R02
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+26
+DELIVERY PREPARATION
+Deploy Ops
+Expose missing campaign deliverables and record reviewed handoffs.
+Deploy Ops prepares campaign launches. It does not deploy software or prove a live external publication from a completed checklist.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Business templates and briefs
+Start from reusable templates; define audience, offer, action, tone, channels, and launch date.
+02
+Multi-channel campaign packages
+Prepare landing, ad, email, SMS, social, FAQ, flyer, and call-to-action copy.
+03
+Visual-production briefs
+Create up to nine visual briefs, with included plan items made explicit.
+04
+Versioned artifacts
+Retain saved packages, revisions, source context, approved inputs, and related private assets.
+05
+Launch execution workspace
+Assign phases, milestones, owners, required files, tasks, and dependencies.
+06
+Computed readiness
+Calculate readiness from recorded conditions and approvals; inspect missing prerequisites before a launch transition.
+07
+Verified exports
+Download supported text, Markdown, JSON, and CSV packages with checksum and audit context.
+08
+Reviewed completion
+Receive BrandForgeOS campaign handoffs and record externally confirmed completion with a reference.
+01
+The missing deliverable
+Inspect task dependencies, required files, and approval state
+before exporting the campaign package.
+02
+The ambiguous handoff
+Generate a verified export from the reviewed version, then retain
+the actual receiving team's acknowledgement through your
+process.
+03
+The false launch-complete claim
+Record external completion only after a person verifies the
+published result and provides a reference.
+COMPANION APPLICATION  /  Paid companion
+BASIS
+R01
+R02
+R02
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+27
+TRAINING SUPPORT
+StudyForge AI
+Make approved operating material easier to study and revisit.
+Study packs and quiz history assist learning. They do not prove policy acknowledgement, certification, or authorization to work independently.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Folders and study sets
+Organize source material, course/exam context, titles, descriptions, and reusable study sets.
+02
+Complete study packs
+Create summaries, key terms, flashcards, multiple-choice questions, short answers, review sheets, and plans.
+03
+Built-in and optional AI paths
+Use deterministic creation or configured shared AI refinement with validation, provenance, and fallback behavior.
+04
+Flashcard learning
+Practice with keyboard/touch controls and retain known/learning state and session progress.
+05
+Quizzes and review
+Use server-scored attempts, inspect explanations and missed answers, and retain retry/history records.
+06
+Plans and progress
+Track date-based study plans, exam countdowns, streaks, usage, and learning trends.
+07
+Content lifecycle
+Edit, search, filter, duplicate, regenerate, archive, restore, and remove supported study material.
+08
+Portable output
+Export study sets and supported progress/results as JSON or entitlement-gated CSV.
+01
+The unread procedure manual
+Build a source-based pack from approved, non-secret material.
+Correct it against the source before staff practice.
+02
+The weak knowledge area
+Use quiz explanations and session history to identify topics for
+another pass; keep live supervision decisions separate.
+03
+The unavailable AI service
+Use built-in creation and manual review to maintain learning
+without depending on an external model.
+COMPANION APPLICATION  /  Paid companion
+BASIS
+R01
+R02
+R02
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+28
+SPECIALIST / LIMITED MSP RELEVANCE
+TorqueShed
+Apply the same diagnostic record discipline to vehicle or fleet work.
+Relevant to an automotive/fleet service boundary, not general endpoint defense. Physical findings and verification need actual technician evidence.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Garage and service history
+Record vehicles, mileage, owner concerns, repairs, maintenance, and service chronology.
+02
+Structured diagnostics
+Organize symptoms, codes, observations, likely causes, tests, findings, and verification.
+03
+Torque Assist
+Request context-aware diagnostic guidance through OperatorOS-owned AI and usage/token accounting.
+04
+Build journals and cost context
+Track build stages, parts, labor, costs, notes, and supporting media.
+05
+Repair reports and collaboration
+Create workshop exports and repair records; use supported live-bay and sharing workflows.
+06
+Community
+Maintain profiles, preferences, posts, comments, reactions, follows/blocks, private media, and moderation records.
+07
+Marketplace listings
+Search and save listings; contact sellers; retain conversations, expiry, reports, and listing history.
+08
+Proof and training handoffs
+Prepare diagnostic proof in SnapProofOS and reviewed automotive challenge drafts in FaultlineLab.
+01
+The repeat vehicle complaint
+Record symptoms, tests, failed steps, repair, and actual
+verification instead of preserving only the final part replacement.
+02
+The disputed workshop history
+Retrieve service entries, parts/labor, and supporting media to
+reconstruct what the workshop recorded.
+03
+The repair-to-proof handoff
+Review an authorized diagnostic and prepare a SnapProofOS
+package. Treat customer acceptance as a separate source fact.
+COMPANION APPLICATION  /  Free companion; optional metered Assist
+BASIS
+R01
+R02
+R02
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+29
+TEAM BENEFIT / NO EVIDENCE CONTROL
+Operator Pool Hall
+A free companion with no direct MSP accountability function.
+Included to preserve the full ecosystem map. Gameplay records should not be represented as service evidence, readiness, or staff performance controls.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Free Shoot practice
+Practice shot selection, aim, power, and cue-ball control in the Canvas play surface.
+02
+CPU matches
+Play against seeded CPU behavior with the supported rules and deterministic physics.
+03
+Local hot-seat play
+Share a device for turn-based play with visible match and turn state.
+04
+Authenticated online rooms
+Create or join protected rooms through OperatorOS identity and access controls.
+05
+Authoritative match checks
+Use durable snapshots/events and independent server re-simulation of submitted actions.
+06
+Reconnect and expiry
+Recover supported room state after interruptions and enforce room lifecycle limits.
+07
+Touch, English, and audio
+Use touch-friendly controls, spin/English, audio options, and performance settings.
+08
+Profiles and local results
+Keep supported profile/result records and use the installable web-app experience.
+01
+A short team break
+Use Free Shoot between support sessions. The benefit is
+recreation, with no claim that it reduces service liability.
+02
+A remote team social
+Play in a protected room and reconnect within the supported
+lifecycle. Keep it separate from client work records.
+03
+A state-recovery demonstration
+Use a test match to discuss durable events and server validation.
+This does not certify the security of another module.
+COMPANION APPLICATION  /  Free companion
+BASIS
+R01
+R02
+R02
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+APPLICATION FIELD GUIDE
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+30
+UNAVAILABLE / NO MSP CONTROL
+OutCall
+No current role in an MSP's defensible service workflow.
+OutCall remains coming soon. Verified-self personal calls are outside MSP escalation, emergency response, and client authorization.
+FEATURE INVENTORY
+THREE ILLUSTRATIVE SCENARIOS
+01
+Safety acknowledgement
+Explain the personal-use and non-emergency boundary before preparing a call workflow.
+02
+Verified-self phone setup
+Use a controlled phone-ownership verification path; arbitrary destinations are excluded.
+03
+Neutral call profiles
+Store private profiles with controlled voice/script and supported keypad behavior.
+04
+Private exact triggers
+Bind exact-match trigger phrases to an approved profile and verified self-owned destination.
+05
+Immediate and scheduled requests
+Prepare bounded call requests using durable state and supported scheduling controls.
+06
+Cancellation and history
+Inspect actual request/provider state, cancel eligible requests, and retain private history.
+07
+Signed provider events
+Enforce controlled voice/SMS/DTMF callbacks, replay checks, and persistent rate limits.
+08
+Private export and deletion
+Use password-confirmed export and account-slice deletion controls for the retained personal records.
+01
+A future personal exit cue
+After separate activation acceptance, an individual could request
+a neutral call to their own verified number; not an MSP on-call
+service.
+02
+A cancelled personal plan
+A future accepted workflow would show cancellation/history
+accurately. It does not provide incident acknowledgement or
+dispatch proof.
+03
+A private history request
+Supported personal export/deletion needs its own accepted
+workflow. Do not use it as a customer evidence-retention
+system.
+COMPANION APPLICATION  /  Coming soon / unavailable
+BASIS
+R01
+R02
+R01
+R02
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+17 / PRACTICAL BOUNDARIES
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+31
+A CREDIBLE ANSWER NEEDS CREDIBLE LIMITS
+Good records reduce ambiguity. They do not erase risk.
+OperatorOS supports operational accountability. It does not guarantee liability protection, legal admissibility, regulatory compliance, insurance coverage, or a particular dispute
+outcome.
+An incomplete record stays incomplete
+No tool proves an authorization never captured, a test never performed, a client
+response never received, or a log that was never collected.
+Internal status is only its own fact
+An approved script, approved report, successful import, saved share, or invoice each
+proves a different bounded workflow event.
+Keep independent systems of record
+Execution telemetry, original communications, contracts, approved change records,
+and required external evidence archives retain their own roles.
+Validate the target environment
+The 29 September release record documents v65 publication and 47/47 public checks.
+Authenticated v65, production write, other-role, live logout, and restore acceptance
+remain separate.
+AI is optional and bounded
+Exact/text retrieval and deterministic evidence-derived drafts are independent of
+semantic activation. The reviewed source keeps the new semantic provider disabled.
+Adopt the workflow before expanding
+Validate grant/role boundaries, evidence access, report generation, controlled
+sharing, and retrieval in the environment the MSP will actually use.
+BASIS
+R04
+R06
+R09
+R12
+R13
+R14
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+SOURCE REGISTER
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+32
+REPOSITORY FACTS + EXPLICIT EDITORIAL GUIDANCE
+Trace the capability claims.
+Module features come from the reviewed source snapshot. Recommended team procedures and synthetic examples are identified as such. Source links may require GitHub
+access.
+R01
+Current product catalog
+Application names, hierarchy, access classification, and OutCall availability.
+R02
+Product outcomes and service limits
+Current module outcomes, integrations, exclusions, and manual/provider boundaries.
+R03
+MSP Resolution Closeout Prompt
+Whole-incident chronology, failures, side effects, confidence, validation, and no invented
+facts.
+R04
+Resolution Intelligence API
+Screened import, immutable revisions, explicit mapping, audited raw reads, and exact/text
+retrieval.
+R05
+Resolution Intelligence data model
+Source hashes, action/validation records, claim kind, confidence, and typed evidence
+relationships.
+R06
+Evidence-derived documents
+Cited draft assembly, inherited source access, review, and stale-source protections.
+R07
+Script Ops implementation
+Exact-version approval, critical static findings, current approved downloads, and audit
+boundaries.
+R08
+Registered module handoffs
+Supported source/destination pairs, current access, source freshness, and deduplication.
+Review: 29 September 2026 · reference revision 737a9d0f · published application ee9ca05e. No customer data was used. Scenarios are illustrative; no quantified benefit is asserted.
+
+OPERATOROS
+MSP / SHOW YOUR WORK
+SOURCE REGISTER
+SHOTGUN NINJAS PRODUCTIONS, LLC
+ENGINEERING BRIEF  /  29 SEP 2026
+33
+REPOSITORY FACTS + EXPLICIT EDITORIAL GUIDANCE
+Trace the capability claims.
+Module features come from the reviewed source snapshot. Recommended team procedures and synthetic examples are identified as such. Source links may require GitHub
+access.
+R09
+Identity and tenant authority
+Shared authority, exact-host sessions, tenant enforcement, and module role ceilings.
+R10
+SnapProofOS evidence implementation
+Tenant-scoped cases, evidence, hash-linked custody, report lifecycle, and controls.
+R11
+Core and companion commerce
+Selected core, companion selection, separate grants, and seat model; no pricing quote in this
+brief.
+R12
+Current release gate
+Recorded v65 publication; semantic provider remains disabled and authenticated v65
+acceptance is pending.
+R13
+Semantic-search boundary
+Explicit opt-in, disabled activation, excerpt review, limits, and exact/text fallback.
+R14
+SnapProofOS current capability matrix
+Field work, approved PDF/DOCX reports, controlled shares, custody, and retention scope.
+R15
+Current module parity index
+Current overlays and limitations; historical implementation records do not grant live
+acceptance.
+N01
+NIST SP 800-61r3 · April 2025
+Printed page 29: RS.AN-06 and RS.AN-07 address action records, integrity, provenance,
+controlled access, and preservation. No product endorsement implied.
+Review: 29 September 2026 · reference revision 737a9d0f · published application ee9ca05e. No customer data was used. Scenarios are illustrative; no quantified benefit is asserted.

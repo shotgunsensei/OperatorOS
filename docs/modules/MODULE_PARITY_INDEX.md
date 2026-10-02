@@ -1,5 +1,22 @@
 # OperatorOS module parity index
 
+## OpenAI provider acceptance continuation (2026-09-30)
+
+**PARITY COUNTS UNCHANGED / LOCAL REAL-PROVIDER VERIFIED / HOSTED KEY RECOVERY OPEN**.
+
+| Surface | New evidence | Remaining gate |
+| --- | --- | --- |
+| BrandForge, StudyForge, Deploy Ops, Script Ops | Real OpenAI generations validated and persisted, including complete sets/kits and older flashcard sessions | Approved source sync, project-secret recovery, publication and authenticated target acceptance |
+| TechDeck | Real IT guidance and 512-dimensional embedding adapter response; portable semantic security regressions pass | Existing semantic disablement, tenant consent/excerpt review and vector provisioning remain authoritative |
+| TorqueShed | Real diagnostic output plus one settled token debit using synthetic disposable credit | Real payment/purchase and deployed acceptance |
+| CallCommand | Real receptionist, analysis, summary and synthetic recording transcription | Realtime SIP authority, Twilio transport/webhooks, actual call and recording callback acceptance |
+| OperatorOS | Six real AI tools; model/key configuration fixed; real agent tool-call boundary | Runner disabled; deployment-advisor route and target browser acceptance remain separate |
+| TradeFlowKit, PulseDesk, FaultlineLab, SnapProofOS, Operator Pool Hall, OutCall | No direct OpenAI dependency found in active module runtime | Existing module/provider gates are unchanged |
+
+Total: 27 live-provider checks and 62 focused deterministic regressions pass;
+fresh lint/typechecks/production build pass. No production mutation/publication.
+See [complete acceptance scope](OPENAI_FEATURE_ACCEPTANCE_2026-09-30.md).
+
 ## Resolution Intelligence semantic continuation (2026-09-29)
 
 **PARITY COUNTS UNCHANGED / PHASE 5 PUBLISHED / PROVIDER DISABLED**.

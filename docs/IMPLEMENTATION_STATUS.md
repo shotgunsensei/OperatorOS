@@ -1,5 +1,30 @@
 # OperatorOS implementation status
 
+## All-module OpenAI enablement candidate (2026-09-30 UTC)
+
+Status: **LOCAL REAL-PROVIDER CHECKS PASSED / HOSTED KEY INVALID / NOT PUBLISHED**.
+Branch `codex/openai-module-enablement` from `737a9d0f` fixes shared model/key
+rotation, local env loading, generation output contracts, complete-set source
+grounding retries and nested complete-kit validation. An encrypted setup saved
+the owner-approved new project key to ignored `.env.local`; no key is committed.
+
+All 13 modules were inspected. **27 real OpenAI checks pass**, using synthetic
+content and an isolated loopback v65/65 PostgreSQL 16 database. The agent check
+uses a synthetic handler; Torque Assist uses synthetic credit. No runner/script,
+call/message, payment or production write occurred. **62 focused regression
+tests pass**, zero failures/skips, across the documented 16- and 46-case commands.
+Fresh root lint and production build, including workspace typechecks, pass.
+
+Replit's editor-runtime key returns `401 invalid_api_key`; its linked-account
+secret overrides a project secret of the same name. Owner credential entry is
+required. Published deployment credentials were not directly tested; source
+synchronization/publication remain unperformed. CallCommand Realtime transport,
+TechDeck semantic activation, actual runner/deployment adviser, payment and
+authenticated target acceptance remain open. The prior live v65 release identity
+and semantic disablement remain authoritative. See the
+[feature acceptance record](modules/OPENAI_FEATURE_ACCEPTANCE_2026-09-30.md) for
+every module, changes, exact test scopes, configuration and rollback.
+
 ## TechDeck v65 authorized publication (2026-09-29 UTC)
 
 Status: **PUBLISHED / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER DISABLED**.

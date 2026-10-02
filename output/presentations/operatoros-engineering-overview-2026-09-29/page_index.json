@@ -1,0 +1,230 @@
+[
+  {
+    "page": 1,
+    "title": "OperatorOS engineering overview",
+    "section": "Platform / modules / use cases",
+    "bookmark": "cover"
+  },
+  {
+    "page": 2,
+    "title": "The platform thesis",
+    "section": "01 / Orientation",
+    "bookmark": "orientation"
+  },
+  {
+    "page": 3,
+    "title": "The application map",
+    "section": "02 / Ecosystem",
+    "bookmark": "map"
+  },
+  {
+    "page": 4,
+    "title": "Runtime and authority",
+    "section": "03 / Architecture",
+    "bookmark": "architecture"
+  },
+  {
+    "page": 5,
+    "title": "Platform capability inventory",
+    "section": "04 / Shared services",
+    "bookmark": "platform"
+  },
+  {
+    "page": 6,
+    "title": "Ten connected outcomes",
+    "section": "05 / Connected workflows",
+    "bookmark": "handoffs"
+  },
+  {
+    "page": 7,
+    "title": "OperatorOS platform case studies",
+    "section": "06 / Platform scenarios",
+    "bookmark": "platform-cases"
+  },
+  {
+    "page": 8,
+    "title": "TradeFlowKit \u2014 capabilities",
+    "section": "07 / main module",
+    "bookmark": "tradeflowkit"
+  },
+  {
+    "page": 9,
+    "title": "TradeFlowKit \u2014 case studies",
+    "section": "TradeFlowKit / Illustrative scenarios",
+    "bookmark": "page9"
+  },
+  {
+    "page": 10,
+    "title": "TechDeck \u2014 capabilities",
+    "section": "08 / main module",
+    "bookmark": "techdeck"
+  },
+  {
+    "page": 11,
+    "title": "TechDeck \u2014 case studies",
+    "section": "TechDeck / Illustrative scenarios",
+    "bookmark": "page11"
+  },
+  {
+    "page": 12,
+    "title": "PulseDesk \u2014 capabilities",
+    "section": "09 / main module",
+    "bookmark": "pulsedesk"
+  },
+  {
+    "page": 13,
+    "title": "PulseDesk \u2014 case studies",
+    "section": "PulseDesk / Illustrative scenarios",
+    "bookmark": "page13"
+  },
+  {
+    "page": 14,
+    "title": "TorqueShed \u2014 capabilities",
+    "section": "10 / companion application",
+    "bookmark": "torqueshed"
+  },
+  {
+    "page": 15,
+    "title": "TorqueShed \u2014 case studies",
+    "section": "TorqueShed / Illustrative scenarios",
+    "bookmark": "page15"
+  },
+  {
+    "page": 16,
+    "title": "FaultlineLab \u2014 capabilities",
+    "section": "11 / companion application",
+    "bookmark": "faultlinelab"
+  },
+  {
+    "page": 17,
+    "title": "FaultlineLab \u2014 case studies",
+    "section": "FaultlineLab / Illustrative scenarios",
+    "bookmark": "page17"
+  },
+  {
+    "page": 18,
+    "title": "Operator Pool Hall \u2014 capabilities",
+    "section": "12 / companion application",
+    "bookmark": "ninja-pool-hall"
+  },
+  {
+    "page": 19,
+    "title": "Operator Pool Hall \u2014 case studies",
+    "section": "Operator Pool Hall / Illustrative scenarios",
+    "bookmark": "page19"
+  },
+  {
+    "page": 20,
+    "title": "BrandForge OS \u2014 capabilities",
+    "section": "13 / companion application",
+    "bookmark": "brandforgeos"
+  },
+  {
+    "page": 21,
+    "title": "BrandForge OS \u2014 case studies",
+    "section": "BrandForge OS / Illustrative scenarios",
+    "bookmark": "page21"
+  },
+  {
+    "page": 22,
+    "title": "SnapProofOS \u2014 capabilities",
+    "section": "14 / companion application",
+    "bookmark": "snapproofos"
+  },
+  {
+    "page": 23,
+    "title": "SnapProofOS \u2014 case studies",
+    "section": "SnapProofOS / Illustrative scenarios",
+    "bookmark": "page23"
+  },
+  {
+    "page": 24,
+    "title": "StudyForge AI \u2014 capabilities",
+    "section": "15 / companion application",
+    "bookmark": "studyforge-ai"
+  },
+  {
+    "page": 25,
+    "title": "StudyForge AI \u2014 case studies",
+    "section": "StudyForge AI / Illustrative scenarios",
+    "bookmark": "page25"
+  },
+  {
+    "page": 26,
+    "title": "Deploy Ops \u2014 capabilities",
+    "section": "16 / companion application",
+    "bookmark": "ninja-launch-kit"
+  },
+  {
+    "page": 27,
+    "title": "Deploy Ops \u2014 case studies",
+    "section": "Deploy Ops / Illustrative scenarios",
+    "bookmark": "page27"
+  },
+  {
+    "page": 28,
+    "title": "CallCommand AI \u2014 capabilities",
+    "section": "17 / companion application",
+    "bookmark": "callcommand-ai"
+  },
+  {
+    "page": 29,
+    "title": "CallCommand AI \u2014 case studies",
+    "section": "CallCommand AI / Illustrative scenarios",
+    "bookmark": "page29"
+  },
+  {
+    "page": 30,
+    "title": "Script Ops \u2014 capabilities",
+    "section": "18 / companion application",
+    "bookmark": "ninjamation"
+  },
+  {
+    "page": 31,
+    "title": "Script Ops \u2014 case studies",
+    "section": "Script Ops / Illustrative scenarios",
+    "bookmark": "page31"
+  },
+  {
+    "page": 32,
+    "title": "OutCall \u2014 capabilities",
+    "section": "19 / companion application",
+    "bookmark": "outcall"
+  },
+  {
+    "page": 33,
+    "title": "OutCall \u2014 case studies",
+    "section": "OutCall / Illustrative scenarios",
+    "bookmark": "page33"
+  },
+  {
+    "page": 34,
+    "title": "Resolution Intelligence in depth",
+    "section": "20 / Technical deep dive",
+    "bookmark": "intelligence"
+  },
+  {
+    "page": 35,
+    "title": "A practical engineering evaluation",
+    "section": "21 / Suggested walkthrough",
+    "bookmark": "evaluation"
+  },
+  {
+    "page": 36,
+    "title": "Evidence and readiness boundaries",
+    "section": "22 / Evidence posture",
+    "bookmark": "evidence"
+  },
+  {
+    "page": 37,
+    "title": "Source register 1",
+    "section": "23 / Source register",
+    "bookmark": "sources"
+  },
+  {
+    "page": 38,
+    "title": "Source register 2",
+    "section": "23 / Source register",
+    "bookmark": "sources-2"
+  }
+]

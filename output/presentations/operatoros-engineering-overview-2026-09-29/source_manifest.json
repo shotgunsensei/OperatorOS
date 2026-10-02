@@ -1,0 +1,230 @@
+{
+  "as_of": "2026-09-29",
+  "source_commit": "ee9ca05e8346bdb1770932029ae8a9a8d682ef0f",
+  "sources": [
+    {
+      "id": "S01",
+      "title": "Canonical catalog and product outcomes",
+      "path": "packages/sdk/src/catalog.ts",
+      "sha256": "b9be55831549749c7af0ca1ef3b7d1401df80e5713517ae0b2fff89c752157b4",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/packages/sdk/src/catalog.ts",
+      "note": "Names, hierarchy, access classes, coming-soon state; paired with product-value.ts and products.ts."
+    },
+    {
+      "id": "S02",
+      "title": "Module capability and integration contracts",
+      "path": "packages/sdk/src/product-value.ts",
+      "sha256": "f82b3c5f9ace1015b9a543721929b27aec43918bf34a941cfe0f3e41a318c029",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/packages/sdk/src/product-value.ts",
+      "note": "Primary workflow, retained deliverables, provider boundaries, and explicit exclusions for all 13 applications."
+    },
+    {
+      "id": "S03",
+      "title": "Runtime registry and exact-host policy",
+      "path": "packages/modules/registry.ts",
+      "sha256": "b2d8ceed44b0e55031a1b106a37bd19bed6a8ef2941ffc4aae4d87532d97e151",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/packages/modules/registry.ts",
+      "note": "Launch authority and default OutCall denial; test-only launch is explicitly bounded."
+    },
+    {
+      "id": "S04",
+      "title": "OperatorOS SSO contract v1",
+      "path": "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+      "sha256": "14c81b7ff4315debf4dc4d00d98c2e16cff27e444acf62e921107d50d5a3b248",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+      "note": "Opaque codes, 60-second expiry, PKCE S256, host-only sessions, role/tenant binding, revocation."
+    },
+    {
+      "id": "S05",
+      "title": "Ecosystem integration contract",
+      "path": "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+      "sha256": "8d30a62a7630163b19cef8070158af0d4e76ba74f18bb59ff2fbd463465d8dc8",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+      "note": "Shared authority, tenant enforcement, billing separation, shared-service boundaries."
+    },
+    {
+      "id": "S06",
+      "title": "Current release gate and live evidence",
+      "path": "docs/CURRENT_RELEASE_GATE.md",
+      "sha256": "434fe94b7223c709fe02210e27c0ec8ff92ff2d35f13926803c29c3c8a0493d2",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/CURRENT_RELEASE_GATE.md",
+      "note": "Recorded v64 publication/read checks and separate v65 candidate/provider boundary."
+    },
+    {
+      "id": "S07",
+      "title": "Ten connected outcomes",
+      "path": "docs/CROSS_MODULE_READINESS_REPORT.md",
+      "sha256": "914c6ab7fb5ea9e2699d07e1300920de159cbc80cf2889ad50cee3bf93dac48f",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/CROSS_MODULE_READINESS_REPORT.md",
+      "note": "Supported handoffs, source freshness, current access, deduplication, and external-action limits."
+    },
+    {
+      "id": "S08",
+      "title": "Current implementation evidence",
+      "path": "docs/IMPLEMENTATION_STATUS.md",
+      "sha256": "90cf8440a4a462a18f8841d030765222fea29c7bd9b8cc1c684e73c7627c1ae4",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/IMPLEMENTATION_STATUS.md",
+      "note": "Dated local checks and limitations; reported historical evidence is not a new test run."
+    },
+    {
+      "id": "S09",
+      "title": "Evidence-derived TechDeck documents",
+      "path": "docs/techdeck/resolution-intelligence-documents.md",
+      "sha256": "7e980a9d7b979a7b24e263516c32a50b4adc1c4c4be0edbb9fe7c5c1ac8a95bc",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/techdeck/resolution-intelligence-documents.md",
+      "note": "Deterministic assembly, source citations, review, inherited access, and stale-source protection."
+    },
+    {
+      "id": "S10",
+      "title": "TechDeck semantic-search guide",
+      "path": "docs/techdeck/resolution-intelligence-semantic-search.md",
+      "sha256": "f2b6afd2f464d2f0135c9c809852cccef0ed60c8ffd376c719c252e4c3e537da",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/techdeck/resolution-intelligence-semantic-search.md",
+      "note": "Disabled provider, excerpt review, explicit opt-in, limits, fallback, and no real-model acceptance."
+    },
+    {
+      "id": "S11",
+      "title": "Shared customers and account security",
+      "path": "docs/modules/SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md",
+      "sha256": "dc08fc6c452d23f43414f29b57724b6ed81c0098b685c3a3098fd7097a37dd23",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md",
+      "note": "Customer links, shared contact edits, account controls, provider truth, and validation scope."
+    },
+    {
+      "id": "S12",
+      "title": "Current parity index",
+      "path": "docs/modules/MODULE_PARITY_INDEX.md",
+      "sha256": "f0be72137b34104d8b3a359132a4e0b0d8bab2eda24e3da03a2167e522db45a0",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/MODULE_PARITY_INDEX.md",
+      "note": "Recent overlays and per-surface evidence; newest applicable status takes precedence."
+    },
+    {
+      "id": "M01",
+      "title": "TradeFlowKit capability matrix",
+      "path": "docs/modules/tradeflowkit/PARITY_MATRIX.md",
+      "sha256": "4f95a87c767bf02ee06638ef023bb826554368ac80e45bc7f4930d86ca755db2",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/tradeflowkit/PARITY_MATRIX.md",
+      "note": "Jobs, revenue documents, recurring work, exports, and supported recovery."
+    },
+    {
+      "id": "M02",
+      "title": "TechDeck capability matrix",
+      "path": "docs/modules/techdeck/PARITY_MATRIX.md",
+      "sha256": "c59807cc8092fc4be4fec0d2161946ab211f64cd5d190553b8ac44c7a87ce4e7",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/techdeck/PARITY_MATRIX.md",
+      "note": "Service records, configuration, network, documentation, reporting; supplement with S09/S10."
+    },
+    {
+      "id": "M03",
+      "title": "PulseDesk capability matrix",
+      "path": "docs/modules/pulsedesk/PARITY_MATRIX.md",
+      "sha256": "7658da02fa1200111db5376f388d6d6bb6c8e4201b12056f6c7a8d0b8cc5c611",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/pulsedesk/PARITY_MATRIX.md",
+      "note": "Healthcare operations scope, queue ownership, equipment/facility/supply workflows."
+    },
+    {
+      "id": "M04",
+      "title": "TorqueShed capability matrix",
+      "path": "docs/modules/torqueshed/PARITY_MATRIX.md",
+      "sha256": "1d5e37db6dfd5d8d39b169db2b5035541b7af813492222040262579a3ca6c549",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/torqueshed/PARITY_MATRIX.md",
+      "note": "Garage, diagnostics, Assist, community, marketplace, and verification boundaries."
+    },
+    {
+      "id": "M05",
+      "title": "FaultlineLab capability matrix",
+      "path": "docs/modules/faultlinelab/PARITY_MATRIX.md",
+      "sha256": "4cdc7187550efbd05e694aa2a8a8f9b860bd341fcceb582a0c498f81a0225d08",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/faultlinelab/PARITY_MATRIX.md",
+      "note": "Versioned challenges, attempts, scoring, authoring, assignments, and exports."
+    },
+    {
+      "id": "M06",
+      "title": "Operator Pool Hall capability matrix",
+      "path": "docs/modules/ninja-pool-hall/PARITY_MATRIX.md",
+      "sha256": "bf7814f3ed19ae5d7e7da411659fec4fe48b61c86e5d32706828444f99bbc23b",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/ninja-pool-hall/PARITY_MATRIX.md",
+      "note": "Supported play modes, durable state, server simulation, and exclusions."
+    },
+    {
+      "id": "M07",
+      "title": "BrandForgeOS capability matrix",
+      "path": "docs/modules/brandforgeos/PARITY_MATRIX.md",
+      "sha256": "797a9b7a70f5785eff0dd4ce72b1ccbec3c182f8b633e0291f25d252fefad897",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/brandforgeos/PARITY_MATRIX.md",
+      "note": "Campaign and brand lifecycle; current direct-provider exclusions are specified in S02."
+    },
+    {
+      "id": "M08",
+      "title": "SnapProofOS capability matrix",
+      "path": "docs/modules/snapproofos/PARITY_MATRIX.md",
+      "sha256": "a9fa9692a29c3e221d539b14a4458bb58b43b7e2df052491a2e29856ce1116aa",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/snapproofos/PARITY_MATRIX.md",
+      "note": "Evidence and custody foundation; current reports/shares and connected outcomes use S02/S07."
+    },
+    {
+      "id": "M09",
+      "title": "StudyForge AI capability matrix",
+      "path": "docs/modules/studyforge-ai/PARITY_MATRIX.md",
+      "sha256": "cb4a4b7008da7d333242902cf1f53fc2b6efcfbef01af48ffb6492de23e4d59f",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/studyforge-ai/PARITY_MATRIX.md",
+      "note": "Complete study packs, persistent learning, authoritative quiz scoring, export, and exclusions."
+    },
+    {
+      "id": "M10",
+      "title": "Deploy Ops capability matrix",
+      "path": "docs/modules/ninja-launch-kit/PARITY_MATRIX.md",
+      "sha256": "21350ea6ead23fd6496b5f5e88667269135498afb58017a98f860652501ee9c7",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/ninja-launch-kit/PARITY_MATRIX.md",
+      "note": "Campaign artifacts, dependencies, readiness, checksum exports, and publication boundary."
+    },
+    {
+      "id": "M11",
+      "title": "CallCommand AI and MSP intake",
+      "path": "docs/modules/callcommand-ai/MSP_INTAKE_PARITY_MATRIX.md",
+      "sha256": "71d2f847c747e8b7d723a5d4fe16d65bf6c711c480c1de4a9128b2a16134b8f2",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/callcommand-ai/MSP_INTAKE_PARITY_MATRIX.md",
+      "note": "MSP intake constraints; current receptionist scope and provider setup use S02."
+    },
+    {
+      "id": "M12",
+      "title": "Script Ops capability matrix",
+      "path": "docs/modules/ninjamation/PARITY_MATRIX.md",
+      "sha256": "7d67c78d383ad726a47c5b4bfd13020cd884f432e856e68c6c6a8cbd49390432",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/ninjamation/PARITY_MATRIX.md",
+      "note": "Versioned scripts, static checks, review, downloads, and non-execution boundary."
+    },
+    {
+      "id": "M13",
+      "title": "OutCall capability matrix",
+      "path": "docs/modules/outcall/PARITY_MATRIX.md",
+      "sha256": "1537c35fc6713ac0c1444431292f2c1cd17907c777c104bdc361ea183f1411d7",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/modules/outcall/PARITY_MATRIX.md",
+      "note": "Authorized reconstruction is source/local evidence; production remains coming soon."
+    },
+    {
+      "id": "S13",
+      "title": "Runtime topology and deployment model",
+      "path": "README.md",
+      "sha256": "54b92c26898ba51f1b7213d3e42215ab2f499908334edd36f24b6ca45eeb47d5",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/README.md",
+      "note": "Shared Next.js/Fastify runtime, private API, host routing; registry overrides stale OutCall summary."
+    },
+    {
+      "id": "S14",
+      "title": "Module consolidation record",
+      "path": "docs/MODULE_CONSOLIDATION_STATUS.md",
+      "sha256": "151fc24b2b499f599ad777284bee27f969bccf08d95f00219d104bf5f2ca5a5c",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/MODULE_CONSOLIDATION_STATUS.md",
+      "note": "Historical restoration detail; later product contracts and current release evidence control current claims."
+    },
+    {
+      "id": "S15",
+      "title": "Backup and restore contract",
+      "path": "docs/DATABASE_BACKUP_RESTORE.md",
+      "sha256": "7ef68e8a5aa290b464162d375ee8b4092ba519f2550676bcb6a3555eccfbf8d5",
+      "url": "https://github.com/shotgunsensei/OperatorOS/blob/ee9ca05e8346bdb1770932029ae8a9a8d682ef0f/docs/DATABASE_BACKUP_RESTORE.md",
+      "note": "One ordered database authority, backup/apply/verify flow, and separate restore acceptance."
+    }
+  ]
+}

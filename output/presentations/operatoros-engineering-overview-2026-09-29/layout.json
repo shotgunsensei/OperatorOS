@@ -1,0 +1,3594 @@
+[
+  {
+    "page": 1,
+    "x": 52,
+    "y": 371,
+    "w": 510,
+    "h": 49.67999999999999,
+    "text": "An engineering overview of the platform, its applications, and the workflows that turn operational activity into reusable assets."
+  },
+  {
+    "page": 2,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 38.64,
+    "text": "OperatorOS centralizes authority while purpose-built applications retain their own work models. The intended value is less re-entry, clearer ownership, and evidence that survives the handoff."
+  },
+  {
+    "page": 2,
+    "x": 52,
+    "y": 329,
+    "w": 310,
+    "h": 57.96,
+    "text": "Identity, tenants, roles, subscriptions, entitlements, launch policy, and audit have one parent authority."
+  },
+  {
+    "page": 2,
+    "x": 398,
+    "y": 329,
+    "w": 310,
+    "h": 57.96,
+    "text": "Service revenue, IT resolution, and healthcare operations remain separate main-module workflows."
+  },
+  {
+    "page": 2,
+    "x": 744,
+    "y": 329,
+    "w": 310,
+    "h": 57.96,
+    "text": "Reviewed proof, scripts, knowledge, training cases, and campaign packages become durable work products."
+  },
+  {
+    "page": 2,
+    "x": 52,
+    "y": 492,
+    "w": 480,
+    "h": 53.81999999999999,
+    "text": "Architecture and platform: pages 3\u20137. Module inventories and case studies: pages 8\u201333. Resolution Intelligence: page 34. Evaluation and evidence: pages 35\u201338."
+  },
+  {
+    "page": 2,
+    "x": 587,
+    "y": 466,
+    "w": 481,
+    "h": 71.75999999999999,
+    "text": "Case-study method: all 42 scenarios are illustrative, not customer testimonials. Expected outputs are workflow goals; measurement suggestions are not reported results. Feature descriptions are grounded in repository contracts and implementation records."
+  },
+  {
+    "page": 3,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "The map shows product scope and access class. Actual access is a server decision; an application category is not a promise that every tenant receives it."
+  },
+  {
+    "page": 3,
+    "x": 52,
+    "y": 596,
+    "w": 1016,
+    "h": 33.12,
+    "text": "Current commerce separates the selected core product, companion grants, and seats. Legacy plan compatibility is a separate path. No pricing quote or all-modules entitlement is implied by this overview."
+  },
+  {
+    "page": 4,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 38.64,
+    "text": "Next.js web surfaces and a private Fastify API operate as one platform deployment. Module hosts present distinct products; they do not become independent identity or billing systems."
+  },
+  {
+    "page": 4,
+    "x": 68,
+    "y": 284,
+    "w": 214,
+    "h": 33.12,
+    "text": "Same-origin /api requestsHost-only application session"
+  },
+  {
+    "page": 4,
+    "x": 372,
+    "y": 284,
+    "w": 278,
+    "h": 33.12,
+    "text": "Next.js on public port 5000Exact registered host routing"
+  },
+  {
+    "page": 4,
+    "x": 740,
+    "y": 284,
+    "w": 312,
+    "h": 33.12,
+    "text": "Fastify on private port 5001Auth + tenant + role + entitlement"
+  },
+  {
+    "page": 4,
+    "x": 373,
+    "y": 424,
+    "w": 276,
+    "h": 33.12,
+    "text": "Tenant-scoped records, constraints, audit, durable jobs, outbox/inbox, and ordered database releases."
+  },
+  {
+    "page": 4,
+    "x": 741,
+    "y": 424,
+    "w": 310,
+    "h": 33.12,
+    "text": "Payments, telephony, AI, email, scanning, and storage retain independent setup and acceptance gates."
+  },
+  {
+    "page": 4,
+    "x": 52,
+    "y": 512,
+    "w": 487,
+    "h": 53.81999999999999,
+    "text": "SSO: a 60-second opaque code is single-use and bound to exact callback, state, nonce, PKCE S256, environment, tenant, module, and entitlement. Redemption revalidates authority."
+  },
+  {
+    "page": 4,
+    "x": 581,
+    "y": 512,
+    "w": 487,
+    "h": 53.81999999999999,
+    "text": "Isolation: host-only Secure/HttpOnly cookies; no ambient parent-domain cookie. Server-resolved tenant predicates govern reads, writes, constraints, transactions, and audit. A requested tenant ID is never authority."
+  },
+  {
+    "page": 5,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "A common control plane reduces duplicated security and business logic while keeping module records, roles, and outcomes explicit."
+  },
+  {
+    "page": 5,
+    "x": 52,
+    "y": 275,
+    "w": 316,
+    "h": 34.5,
+    "text": "Central sign-in, session lifecycle, role checks, account status, MFA/revocation controls, and exact-host SSO."
+  },
+  {
+    "page": 5,
+    "x": 398,
+    "y": 275,
+    "w": 316,
+    "h": 51.75,
+    "text": "Validated memberships, organization selection, module grants, subscription/seat policy, and server-owned launch decisions."
+  },
+  {
+    "page": 5,
+    "x": 744,
+    "y": 275,
+    "w": 316,
+    "h": 51.75,
+    "text": "Organization/contact identity reused by supported applications; shared contact edits avoid automatic rewriting of historical reports."
+  },
+  {
+    "page": 5,
+    "x": 52,
+    "y": 437,
+    "w": 316,
+    "h": 51.75,
+    "text": "Private attachments, configured scanning, durable work queues, usage accounting, export artifacts, and explicit failure/retry states."
+  },
+  {
+    "page": 5,
+    "x": 398,
+    "y": 437,
+    "w": 316,
+    "h": 51.75,
+    "text": "Platform Stripe authority stays separate from module business payments; stored configuration never proves external delivery."
+  },
+  {
+    "page": 5,
+    "x": 744,
+    "y": 437,
+    "w": 316,
+    "h": 51.75,
+    "text": "Platform audit, shared activity/notifications, tenant messenger, administrative visibility, and scoped record-to-record handoffs."
+  },
+  {
+    "page": 5,
+    "x": 68,
+    "y": 591,
+    "w": 984,
+    "h": 15.87,
+    "text": "Operational intelligence today: deterministic workday briefs rank recorded exceptions and point to the next action. They do not silently invoice, charge, send, assign, or execute."
+  },
+  {
+    "page": 6,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Ten registered workflow contracts connect selected records. Each result remains a specific draft, ticket, attachment, or package with a reviewed source version."
+  },
+  {
+    "page": 6,
+    "x": 52,
+    "y": 574,
+    "w": 1016,
+    "h": 34.5,
+    "text": "Delivery contract: recheck both applications and source access at queue and delivery; reject changed sources; deduplicate the business operation; retain signed event context and scoped results. Training handoffs require manager review. Live-call handoffs reject simulations."
+  },
+  {
+    "page": 7,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "These are evaluation scenarios using synthetic or approved data. They do not report customer deployments or measured results."
+  },
+  {
+    "page": 7,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "One engineer, several workspaces"
+  },
+  {
+    "page": 7,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "An engineer belongs to two organizations and must reach the right module without mixing records or permissions."
+  },
+  {
+    "page": 7,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Authenticate centrally, select the organization, and launch an entitled module. Follow a deep link and then return to My Apps; switching organization requires a fresh module authorization."
+  },
+  {
+    "page": 7,
+    "x": 52,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A host-specific session bound to the intended tenant and module, with server-side checks on every protected action."
+  },
+  {
+    "page": 7,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Cross-tenant denial; deep-link continuity; absence of repeat credential entry."
+  },
+  {
+    "page": 7,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "A customer shared across workflows"
+  },
+  {
+    "page": 7,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 48,
+    "text": "A service customer appears in commercial records, a campaign brand, and field proof, each with different work history."
+  },
+  {
+    "page": 7,
+    "x": 398,
+    "y": 424.44,
+    "w": 316,
+    "h": 64,
+    "text": "Use the supported shared customer selector in TradeFlowKit, BrandForge OS, and SnapProofOS. Update the shared contact intentionally and verify current projections without rewriting approved historical reports."
+  },
+  {
+    "page": 7,
+    "x": 398,
+    "y": 516.44,
+    "w": 316,
+    "h": 32,
+    "text": "One reusable customer identity with independent module records and preserved historical evidence."
+  },
+  {
+    "page": 7,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Duplicate identity creation; contact consistency; historical report stability."
+  },
+  {
+    "page": 7,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A retry without a duplicate result"
+  },
+  {
+    "page": 7,
+    "x": 744,
+    "y": 341,
+    "w": 316,
+    "h": 48,
+    "text": "A reviewed cross-module transfer is interrupted after submission and another authorized person attempts the same outcome."
+  },
+  {
+    "page": 7,
+    "x": 744,
+    "y": 417,
+    "w": 316,
+    "h": 64,
+    "text": "Queue the supported handoff with its source version. Inspect status and the destination link, then exercise the allowed retry path; changed sources and revoked access should fail closed."
+  },
+  {
+    "page": 7,
+    "x": 744,
+    "y": 509,
+    "w": 316,
+    "h": 48,
+    "text": "A traceable, deduplicated destination result for supported tenant-owned workflows; actor-scoped campaign generation remains distinct."
+  },
+  {
+    "page": 7,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Duplicate records; stale-source rejection; recoverable retry behavior."
+  },
+  {
+    "page": 8,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A shared operations workspace for service businesses: customer context, execution, commercial documents, and collections remain connected throughout the job lifecycle."
+  },
+  {
+    "page": 8,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Capture leads; qualify and convert opportunities; use shared customer identity, contacts, search, and bounded CSV imports."
+  },
+  {
+    "page": 8,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Schedule and assign jobs; retain owners, dates, status, recurring templates, pause controls, and run history."
+  },
+  {
+    "page": 8,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Track job-scoped tasks, dependencies, comments, tags, workflow transitions, and personal or shared saved views."
+  },
+  {
+    "page": 8,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Build multi-line quotes; record decisions; convert to jobs or invoices with duplicate-safe server operations."
+  },
+  {
+    "page": 8,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 42,
+    "text": "Maintain invoice items, partial/full payment records, balances, numbering, and history; connected settlement needs provider acceptance."
+  },
+  {
+    "page": 8,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Use scoped public views, customer portals, and consent-aware email/SMS outbox actions with explicit delivery state."
+  },
+  {
+    "page": 8,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Inspect workload and revenue from persisted records; export invoice CSV, QuickBooks IIF, and Xero-oriented CSV files."
+  },
+  {
+    "page": 8,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Create SnapProofOS work from a job, return the approved PDF, and use guarded archive/restore workflows."
+  },
+  {
+    "page": 8,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "One traceable chain from customer request through work, proof, invoice, and recorded settlement."
+  },
+  {
+    "page": 8,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 13.8,
+    "text": "Live payments and outbound delivery require configured, accepted providers. Accounting exports are files, not live QuickBooks/Xero synchronization. Recording a sent state is not email delivery."
+  },
+  {
+    "page": 9,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 9,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "The unbilled service call"
+  },
+  {
+    "page": 9,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A field-service team finishes a repair, but the invoice handoff is lost between the technician and office."
+  },
+  {
+    "page": 9,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 48,
+    "text": "Link the customer, job, task completion, and quote. Use the workday brief to find completed jobs without an invoice, then review and create the commercial record."
+  },
+  {
+    "page": 9,
+    "x": 52,
+    "y": 477,
+    "w": 316,
+    "h": 32,
+    "text": "A job-linked invoice with an owner and an explicit balance; no automatic charge is implied."
+  },
+  {
+    "page": 9,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 12.5,
+    "text": "Completed jobs without invoices; days from completion to invoice."
+  },
+  {
+    "page": 9,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Recurring maintenance without duplicate jobs"
+  },
+  {
+    "page": 9,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "A contractor repeats the same service at several customer sites and recreates the work manually each month."
+  },
+  {
+    "page": 9,
+    "x": 398,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Define recurring job templates, inspect the next run, and let the supported scheduler create the dated job. Pause a schedule during an outage and inspect its history before resuming."
+  },
+  {
+    "page": 9,
+    "x": 398,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "Repeatable work records whose schedule/run identity prevents replay from creating duplicates."
+  },
+  {
+    "page": 9,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 12.5,
+    "text": "Manual setup time; duplicate jobs per scheduled run."
+  },
+  {
+    "page": 9,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "A defensible proof-to-payment handoff"
+  },
+  {
+    "page": 9,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "An office needs to show what was done before following up on an unpaid installation."
+  },
+  {
+    "page": 9,
+    "x": 744,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Create SnapProofOS work from the originating job. Review the captured evidence and approved report, return its PDF to that exact job, then review invoice and recorded payment state."
+  },
+  {
+    "page": 9,
+    "x": 744,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "Commercial context and approved proof remain linked. A report attachment does not assert customer receipt."
+  },
+  {
+    "page": 9,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Jobs with linked approved proof; time spent reconstructing an invoice history."
+  },
+  {
+    "page": 10,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "An MSP and IT operations console that binds support work to client, configuration, network, procedure, and evidence context. Resolution Intelligence preserves what actually happened, including failed attempts."
+  },
+  {
+    "page": 10,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Manage client/site-linked tickets, assignments, comments, time, requester updates, and accountable closeout."
+  },
+  {
+    "page": 10,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Track typed configurations, asset context, warranty/renewal dates, lifecycle changes, and related records."
+  },
+  {
+    "page": 10,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Maintain network, subnet, address, and topology relationships as documented operational context."
+  },
+  {
+    "page": 10,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Edit knowledge articles and runbooks with revisions, backlinks, review, approval, publication, and private attachments."
+  },
+  {
+    "page": 10,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Import structured closeouts with screened source material, immutable revisions, validation, warnings, failures, and side effects."
+  },
+  {
+    "page": 10,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Search identifiers and narrative; inspect evidence, components, action chronology, revision history, and native links."
+  },
+  {
+    "page": 10,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Preview deterministic KB/runbook drafts, retain source citations, link multiple incidents, and block stale-source approval."
+  },
+  {
+    "page": 10,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Use persisted dashboards, client reports, portal/status workflows, scoped API tokens, and signed outbound webhooks."
+  },
+  {
+    "page": 10,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A resolution record that explains the fix, failed paths, uncertainty, verification, and reusable guidance."
+  },
+  {
+    "page": 10,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "Runbooks do not execute scripts. Inventory is not live discovery or endpoint control. Phase 5 semantic retrieval is source-implemented and provider-disabled; ordinary exact/text search is independent."
+  },
+  {
+    "page": 11,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 11,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A recurring application failure"
+  },
+  {
+    "page": 11,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 48,
+    "text": "A second engineer inherits a symptom that resembles an earlier incident, but a copied final fix omits a harmful intermediate step."
+  },
+  {
+    "page": 11,
+    "x": 52,
+    "y": 417,
+    "w": 316,
+    "h": 64,
+    "text": "Search the exact error or component. Review the prior chronology, failed action, observed side effect, warning, and validation before choosing a procedure for the new client issue."
+  },
+  {
+    "page": 11,
+    "x": 52,
+    "y": 509,
+    "w": 316,
+    "h": 48,
+    "text": "An evidence-informed plan with uncertainty retained. The previous outcome does not prove the same root cause now."
+  },
+  {
+    "page": 11,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Time to relevant evidence; repeated failed actions avoided during a reviewed pilot."
+  },
+  {
+    "page": 11,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A client infrastructure handover"
+  },
+  {
+    "page": 11,
+    "x": 398,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "An MSP technician leaves and the replacement must reconstruct dependencies from tickets and isolated notes."
+  },
+  {
+    "page": 11,
+    "x": 398,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Connect the client&#x27;s sites, configurations, IPAM records, lifecycle dates, and versioned documentation. Link current tickets and supporting evidence, then prepare a client-facing operational report."
+  },
+  {
+    "page": 11,
+    "x": 398,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A navigable service context with named records and a reusable procedure trail."
+  },
+  {
+    "page": 11,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Time to locate the affected system, owner, and current approved procedure."
+  },
+  {
+    "page": 11,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "From one repair to a maintained runbook"
+  },
+  {
+    "page": 11,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 48,
+    "text": "A difficult incident is resolved, but the team needs repeatable guidance that will not silently drift from its source."
+  },
+  {
+    "page": 11,
+    "x": 744,
+    "y": 424.44,
+    "w": 316,
+    "h": 64,
+    "text": "Preview an evidence-derived runbook, review the cited sections, save a draft, and submit it through approval. When source evidence changes, inspect the stale warning and prepare current guidance."
+  },
+  {
+    "page": 11,
+    "x": 744,
+    "y": 516.44,
+    "w": 316,
+    "h": 32,
+    "text": "A reviewed document with source-revision links and access inherited from every linked incident."
+  },
+  {
+    "page": 11,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Time from closeout to reviewed guidance; stale-source publications prevented."
+  },
+  {
+    "page": 12,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "Healthcare operations coordination for facilities, equipment, supplies, departments, and vendors. The work model captures operational ownership and response history while minimizing patient information."
+  },
+  {
+    "page": 12,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Maintain directory-linked organizations, facilities, requesters, departments, and operational context."
+  },
+  {
+    "page": 12,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Create numbered requests with structured classification, equipment-issue prefill, tags, and supporting records."
+  },
+  {
+    "page": 12,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Route work to an accountable team or owner; prioritize through queues, filters, saved views, and bulk actions."
+  },
+  {
+    "page": 12,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Track service targets, time, at-risk work, escalation paths, and response history."
+  },
+  {
+    "page": 12,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Keep internal coordination separate from requester-facing replies; retain private attachments and work history."
+  },
+  {
+    "page": 12,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Associate operational assets with facility issues, supply requests, service vendors, and department needs."
+  },
+  {
+    "page": 12,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Use operational knowledge, persisted dashboards, configuration, preferences, trend reporting, and exports."
+  },
+  {
+    "page": 12,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Accept operations-only CallCommand requests and prepare privacy-reviewed resolved-work drafts for FaultlineLab."
+  },
+  {
+    "page": 12,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A resolved operational request with accountable ownership, response timing, and an inspectable work history."
+  },
+  {
+    "page": 12,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 13.8,
+    "text": "No patient chart, clinical decision, EHR/PACS integration, or HIPAA certification is claimed. Direct Microsoft 365, Google Workspace, IMAP, and SendGrid mailbox intake is unavailable in this release."
+  },
+  {
+    "page": 13,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 13,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "An equipment issue between departments"
+  },
+  {
+    "page": 13,
+    "x": 52,
+    "y": 348.44,
+    "w": 316,
+    "h": 48,
+    "text": "An imaging department reports an unavailable workstation or equipment accessory; responsibility spans facilities and a vendor."
+  },
+  {
+    "page": 13,
+    "x": 52,
+    "y": 424.44,
+    "w": 316,
+    "h": 64,
+    "text": "Create an operations-only request, associate the facility and asset, assign an owner, set the service target, and retain vendor coordination and requester updates in the work record."
+  },
+  {
+    "page": 13,
+    "x": 52,
+    "y": 516.44,
+    "w": 316,
+    "h": 32,
+    "text": "A visible accountable path to restoring operational availability without storing a patient chart."
+  },
+  {
+    "page": 13,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 12.5,
+    "text": "Unassigned age; response time; handoffs without a named owner."
+  },
+  {
+    "page": 13,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A supply delay before a busy shift"
+  },
+  {
+    "page": 13,
+    "x": 398,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A department has an unresolved supply request with a deadline, while the next shift sees only a message thread."
+  },
+  {
+    "page": 13,
+    "x": 398,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Classify the supply need, associate the department and vendor, record the due target, and use the queue to escalate the delay. Close the request with the actual resolution and timing."
+  },
+  {
+    "page": 13,
+    "x": 398,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A shared request history that survives shift changes and shows what remains open."
+  },
+  {
+    "page": 13,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Overdue operational requests; time spent reconstructing shift context."
+  },
+  {
+    "page": 13,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Learning from repeated facility incidents"
+  },
+  {
+    "page": 13,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "Several resolved facilities requests reveal a recurring troubleshooting mistake useful for staff training."
+  },
+  {
+    "page": 13,
+    "x": 744,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Review the operational history and select a suitable resolved request. Managers with access to both applications review privacy and prepare an unpublished FaultlineLab draft for trainer revision."
+  },
+  {
+    "page": 13,
+    "x": 744,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "A controlled training starting point; the imported first revision cannot publish directly."
+  },
+  {
+    "page": 13,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Repeat incident patterns identified; reviewed training cases produced."
+  },
+  {
+    "page": 14,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A garage and automotive diagnostics workspace for vehicle history, structured tests, workshop records, and shareable proof. Torque Assist adds governed guidance when its provider and credit controls are configured."
+  },
+  {
+    "page": 14,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Record vehicles, mileage, owner concerns, repairs, maintenance, and service chronology."
+  },
+  {
+    "page": 14,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Organize symptoms, codes, observations, likely causes, tests, findings, and verification."
+  },
+  {
+    "page": 14,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Request context-aware diagnostic guidance through OperatorOS-owned AI and usage/token accounting."
+  },
+  {
+    "page": 14,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 14,
+    "text": "Track build stages, parts, labor, costs, notes, and supporting media."
+  },
+  {
+    "page": 14,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Create workshop exports and repair records; use supported live-bay and sharing workflows."
+  },
+  {
+    "page": 14,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Maintain profiles, preferences, posts, comments, reactions, follows/blocks, private media, and moderation records."
+  },
+  {
+    "page": 14,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Search and save listings; contact sellers; retain conversations, expiry, reports, and listing history."
+  },
+  {
+    "page": 14,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Prepare diagnostic proof in SnapProofOS and reviewed automotive challenge drafts in FaultlineLab."
+  },
+  {
+    "page": 14,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A repair narrative that separates symptoms, measured observations, work performed, and verified outcome."
+  },
+  {
+    "page": 14,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "Physical tests and repair judgment remain with the technician. Marketplace listings do not imply escrow, shipping, buyer protection, or reputation guarantees. AI and native-device acceptance are separate gates."
+  },
+  {
+    "page": 15,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 15,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Diagnose before replacing parts"
+  },
+  {
+    "page": 15,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A shop receives an intermittent vehicle complaint with several plausible causes and incomplete prior history."
+  },
+  {
+    "page": 15,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Record symptoms, codes, and earlier work, choose the next physical test, and capture its findings. Use Assist only as reviewed guidance when configured; record the actual repair and verification."
+  },
+  {
+    "page": 15,
+    "x": 52,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A test-driven diagnostic record that explains why a repair was selected."
+  },
+  {
+    "page": 15,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Diagnostic steps with recorded findings; repeat visits for the same complaint."
+  },
+  {
+    "page": 15,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "A build that outlives its original owner"
+  },
+  {
+    "page": 15,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "A custom vehicle changes hands after months of modifications spread across receipts and photos."
+  },
+  {
+    "page": 15,
+    "x": 398,
+    "y": 408.44,
+    "w": 316,
+    "h": 48,
+    "text": "Organize stages, parts, labor, costs, media, and service entries in the build journal. Produce a workshop export or controlled repair record for the receiving party."
+  },
+  {
+    "page": 15,
+    "x": 398,
+    "y": 484.44,
+    "w": 316,
+    "h": 32,
+    "text": "A coherent modification and service history with traceable supporting material."
+  },
+  {
+    "page": 15,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Missing part/service records; time required to reconstruct a modification."
+  },
+  {
+    "page": 15,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "A verified diagnosis becomes training"
+  },
+  {
+    "page": 15,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "A mechanic resolves a difficult fault that would make a useful diagnostic exercise for apprentices."
+  },
+  {
+    "page": 15,
+    "x": 744,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Finish the diagnostic record with recorded tests and findings. A manager reviews privacy and transfers a training draft to FaultlineLab, then edits the narrative and evidence before publication."
+  },
+  {
+    "page": 15,
+    "x": 744,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "An unpublished automotive case that retains diagnostic structure without bypassing trainer review."
+  },
+  {
+    "page": 15,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Reviewed cases created from real work; learner investigation quality."
+  },
+  {
+    "page": 16,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A diagnostic challenge environment for technical practice. Versioned scenarios, persistent investigation traces, and server scoring let a reviewer inspect the reasoning path as well as the final answer."
+  },
+  {
+    "page": 16,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Discover published challenges through search, filters, sorting, authored packs, and daily selection."
+  },
+  {
+    "page": 16,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Resume standard, daily, preview, assignment, and Chaos-mode attempts across refresh and restart."
+  },
+  {
+    "page": 16,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Select diagnostic actions, reveal clues, record findings, use progressive hints, and submit a conclusion."
+  },
+  {
+    "page": 16,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Evaluate submitted work against the versioned scenario and retain append-only attempt evidence."
+  },
+  {
+    "page": 16,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Assign cases, inspect learning progress and badges, and select further practice from observed results."
+  },
+  {
+    "page": 16,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Validate, preview, publish, retire, import, and export controlled challenge versions."
+  },
+  {
+    "page": 16,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Review attempts and outcome history; export material for coaching and team discussion."
+  },
+  {
+    "page": 16,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Convert reviewed TechDeck, PulseDesk, and TorqueShed records into private first-draft challenges."
+  },
+  {
+    "page": 16,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A replayable investigation record showing which evidence the learner inspected and how the answer was reached."
+  },
+  {
+    "page": 16,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "Training scores are scenario performance, not accredited certification or production authorization. Imported incidents require privacy review and a revised trainer-approved version before publication."
+  },
+  {
+    "page": 17,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 17,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "A repeatable technician onboarding exercise"
+  },
+  {
+    "page": 17,
+    "x": 52,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "Two new engineers know the terminology, but the lead needs to see how they investigate an ambiguous failure."
+  },
+  {
+    "page": 17,
+    "x": 52,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Assign the same versioned challenge, compare action sequences and missed evidence, and discuss the submitted cause and response using the retained attempt trace."
+  },
+  {
+    "page": 17,
+    "x": 52,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "A concrete coaching conversation grounded in observed diagnostic choices."
+  },
+  {
+    "page": 17,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Missed critical clues; unnecessary actions; score progression on comparable cases."
+  },
+  {
+    "page": 17,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Turn a resolved incident into an exercise"
+  },
+  {
+    "page": 17,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "An internal outage contains a useful lesson but also client names and sensitive operational details."
+  },
+  {
+    "page": 17,
+    "x": 398,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Use the supported resolved-work handoff, review privacy, and revise the private draft. Validate and preview the case before publishing a controlled version for the intended learners."
+  },
+  {
+    "page": 17,
+    "x": 398,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "Reusable practice material with a deliberate editorial and privacy boundary."
+  },
+  {
+    "page": 17,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Time from incident review to approved exercise; privacy findings caught before publication."
+  },
+  {
+    "page": 17,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Diagnose under changing conditions"
+  },
+  {
+    "page": 17,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 48,
+    "text": "Experienced staff need practice handling incomplete clues and disruption without changing a production environment."
+  },
+  {
+    "page": 17,
+    "x": 744,
+    "y": 424.44,
+    "w": 316,
+    "h": 64,
+    "text": "Use a suitable Chaos or daily challenge. Retain the investigation trace, inspect the result, and repeat a targeted exercise where the original reasoning missed a signal."
+  },
+  {
+    "page": 17,
+    "x": 744,
+    "y": 516.44,
+    "w": 316,
+    "h": 32,
+    "text": "A safe training record that exposes decision habits under scenario pressure."
+  },
+  {
+    "page": 17,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Recovery of investigation after new evidence; repeat occurrence of the same reasoning error."
+  },
+  {
+    "page": 18,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A browser-based 8-ball companion with real gameplay, persistent match state, and protected online rooms. Its engineering interest lies in deterministic simulation, server validation, and recovery across interruptions."
+  },
+  {
+    "page": 18,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Practice shot selection, aim, power, and cue-ball control in the Canvas play surface."
+  },
+  {
+    "page": 18,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Play against seeded CPU behavior with the supported rules and deterministic physics."
+  },
+  {
+    "page": 18,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 14,
+    "text": "Share a device for turn-based play with visible match and turn state."
+  },
+  {
+    "page": 18,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Create or join protected rooms through OperatorOS identity and access controls."
+  },
+  {
+    "page": 18,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Use durable snapshots/events and independent server re-simulation of submitted actions."
+  },
+  {
+    "page": 18,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Recover supported room state after interruptions and enforce room lifecycle limits."
+  },
+  {
+    "page": 18,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Use touch-friendly controls, spin/English, audio options, and performance settings."
+  },
+  {
+    "page": 18,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Keep supported profile/result records and use the installable web-app experience."
+  },
+  {
+    "page": 18,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 50.507999999999996,
+    "text": "A recoverable match with consistent turn and shot state across the supported play surfaces."
+  },
+  {
+    "page": 18,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "A community benefit with no wagering, paid competition, prizes, or independently certified rankings. Online two-device and performance acceptance should be demonstrated in the target environment."
+  },
+  {
+    "page": 19,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 19,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A five-minute practice break"
+  },
+  {
+    "page": 19,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "An engineer wants a short break between long support sessions without setting up another account."
+  },
+  {
+    "page": 19,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 48,
+    "text": "Launch the free companion through OperatorOS and enter Free Shoot. Practice a repeatable shot while adjusting aim, power, and English with the supported controls."
+  },
+  {
+    "page": 19,
+    "x": 52,
+    "y": 477,
+    "w": 316,
+    "h": 32,
+    "text": "Immediate, self-contained practice inside the same account ecosystem."
+  },
+  {
+    "page": 19,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Time from launcher to first playable shot; input responsiveness on the chosen device."
+  },
+  {
+    "page": 19,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "A teammate disconnects mid-match"
+  },
+  {
+    "page": 19,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "Two coworkers play in a protected online room and one browser loses connectivity."
+  },
+  {
+    "page": 19,
+    "x": 398,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Play through normal server-checked actions, reconnect within the supported room lifetime, and inspect the restored turn and match state from durable snapshots and events."
+  },
+  {
+    "page": 19,
+    "x": 398,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "A recoverable game state rather than an unverified client-only continuation."
+  },
+  {
+    "page": 19,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "State agreement after reconnect; abandoned matches caused by recoverable disconnects."
+  },
+  {
+    "page": 19,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A practical state-consistency demo"
+  },
+  {
+    "page": 19,
+    "x": 744,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A team wants a small, understandable example of authoritative state and replay validation."
+  },
+  {
+    "page": 19,
+    "x": 744,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Use an authorized test session to examine normal shot submission, server re-simulation, and refresh recovery. Compare visible state across clients without claiming a formal security assessment."
+  },
+  {
+    "page": 19,
+    "x": 744,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "An accessible demonstration of client input, authoritative checks, and durable state."
+  },
+  {
+    "page": 19,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 12.5,
+    "text": "Consistent ball/turn state across refreshes and the two test clients."
+  },
+  {
+    "page": 20,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A brand and campaign workspace for reusable context, reviewed assets, and coordinated delivery packages. The catalog uses the compact name BrandForgeOS; both refer to the same application."
+  },
+  {
+    "page": 20,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Maintain brand kits, positioning, voice, offers, and audience personas; associate approved shared customer identity."
+  },
+  {
+    "page": 20,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Create campaign briefs, objectives, channels, budgets, timelines, and related landing content."
+  },
+  {
+    "page": 20,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Develop copy variants, calls to action, ad prompts, strategy, and creative directions through guided modes."
+  },
+  {
+    "page": 20,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Preview wordmark, lockup, badge, and monogram compositions; export editable SVG and standard/2x PNG."
+  },
+  {
+    "page": 20,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Manage draft/review/approval states, comments, assets, activity, and recoverable selected logos."
+  },
+  {
+    "page": 20,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Organize delivery work and reuse global/custom templates subject to the applicable entitlements."
+  },
+  {
+    "page": 20,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Track entered results, recommendations, and campaign reports; create controlled exports."
+  },
+  {
+    "page": 20,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Transfer a campaign into Deploy Ops with copy, visual-production briefs, work items, and an approval starting state."
+  },
+  {
+    "page": 20,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A reusable brand context and reviewed campaign package with clear ownership and delivery decisions."
+  },
+  {
+    "page": 20,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 13.8,
+    "text": "Direct advertising, social, email, analytics, and CRM delivery are unavailable in this release. Canva/Figma use manual file import. Generated assets require review; a scheduled item is not publication."
+  },
+  {
+    "page": 21,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 21,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "One offer, several inconsistent messages"
+  },
+  {
+    "page": 21,
+    "x": 52,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "An MSP launches a service package, but website copy, sales emails, and social drafts describe different benefits."
+  },
+  {
+    "page": 21,
+    "x": 52,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Define the audience, offer, proof points, and voice once. Build campaign variants from that context, review the claims together, and export the approved materials for each external channel."
+  },
+  {
+    "page": 21,
+    "x": 52,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "A coherent campaign kit whose variants can be traced back to agreed positioning."
+  },
+  {
+    "page": 21,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Review rounds caused by inconsistent claims; time to produce an approved variant."
+  },
+  {
+    "page": 21,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Agency work without cross-client confusion"
+  },
+  {
+    "page": 21,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "A small team manages several customers and repeatedly copies brand details between disconnected documents."
+  },
+  {
+    "page": 21,
+    "x": 398,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Associate each brand with the correct shared customer, maintain distinct personas and offers, and retain campaign assets, comments, and review states under the authorized organization."
+  },
+  {
+    "page": 21,
+    "x": 398,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "Customer-linked creative context and an inspectable approval history."
+  },
+  {
+    "page": 21,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Misattributed assets; time required to locate the latest approved brand direction."
+  },
+  {
+    "page": 21,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "From campaign approval to a launch package"
+  },
+  {
+    "page": 21,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 48,
+    "text": "A campaign is approved, but the coordinator still needs channel copy, production briefs, and assigned launch work."
+  },
+  {
+    "page": 21,
+    "x": 744,
+    "y": 424.44,
+    "w": 316,
+    "h": 64,
+    "text": "Review the current campaign and queue the Deploy Ops handoff. Inspect the returned package, complete missing production items, and export only after the team checks the resulting materials."
+  },
+  {
+    "page": 21,
+    "x": 744,
+    "y": 516.44,
+    "w": 316,
+    "h": 32,
+    "text": "A coordinated execution package; no advertising spend or external publication occurs automatically."
+  },
+  {
+    "page": 21,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Time from approval to handoff; missing deliverables discovered before launch."
+  },
+  {
+    "page": 22,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A field-work and evidence workflow for customer jobs, dated captures, findings, review, and branded reports. Controlled sharing is tied to approved report snapshots rather than unrestricted raw evidence."
+  },
+  {
+    "page": 22,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Select shared customer identity, create proof work, assign field tasks, and retain job context."
+  },
+  {
+    "page": 22,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Collect photos, private notes, files, observations, parts, labor, and dated work context."
+  },
+  {
+    "page": 22,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Apply type/signature checks, private storage, scan state, and SHA-256 verification through shared services."
+  },
+  {
+    "page": 22,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Submit evidence, inspect findings, record comments, and move reports through authorized review and approval."
+  },
+  {
+    "page": 22,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Generate approved PDF and DOCX documents from the selected report snapshot and template."
+  },
+  {
+    "page": 22,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Create expiring and revocable report links; inspect access history without exposing the private source library."
+  },
+  {
+    "page": 22,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Retain hash-linked custody history, immutable report context, archive controls, retention, and legal-hold state."
+  },
+  {
+    "page": 22,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Receive TradeFlowKit job or TorqueShed diagnostic context; return the exact approved PDF to its originating job."
+  },
+  {
+    "page": 22,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A branded, approved proof package whose included evidence can be traced to the field assignment."
+  },
+  {
+    "page": 22,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 13.8,
+    "text": "Storage, scanning, and document workers need acceptance. A share link is not proof of delivery or receipt. Hash-linked history supports integrity review; it is not a legal-admissibility guarantee."
+  },
+  {
+    "page": 23,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 23,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "A field installation with incomplete closeout"
+  },
+  {
+    "page": 23,
+    "x": 52,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "An engineer completes a network cabinet installation, but photos and labor notes remain scattered across devices."
+  },
+  {
+    "page": 23,
+    "x": 52,
+    "y": 408.44,
+    "w": 316,
+    "h": 48,
+    "text": "Create the customer job, assign capture work, add dated photos and notes, record findings and costs, and assemble the customer-facing template for review."
+  },
+  {
+    "page": 23,
+    "x": 52,
+    "y": 484.44,
+    "w": 316,
+    "h": 32,
+    "text": "One approved report with supporting job context instead of a loose image folder."
+  },
+  {
+    "page": 23,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Jobs missing required evidence; time from site departure to approved report."
+  },
+  {
+    "page": 23,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Review a disputed service outcome"
+  },
+  {
+    "page": 23,
+    "x": 398,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A customer questions what was included in a repair or inspection performed several weeks earlier."
+  },
+  {
+    "page": 23,
+    "x": 398,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Open the authorized job and inspect its captured evidence, comments, custody history, and approved report snapshot. Generate or retrieve the exact document relevant to the reviewed work."
+  },
+  {
+    "page": 23,
+    "x": 398,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "An inspectable record of what was captured and approved, without assuming the record proves causation."
+  },
+  {
+    "page": 23,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Time to reconstruct the work package; gaps in the evidence-to-report chain."
+  },
+  {
+    "page": 23,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Share the report, control the access"
+  },
+  {
+    "page": 23,
+    "x": 744,
+    "y": 341,
+    "w": 316,
+    "h": 48,
+    "text": "A project manager needs to give a customer a finished report while keeping internal notes and raw captures private."
+  },
+  {
+    "page": 23,
+    "x": 744,
+    "y": 417,
+    "w": 316,
+    "h": 64,
+    "text": "Approve the snapshot, generate the requested format, and deliberately create an expiring report share. Deliver it through the team&#x27;s approved channel and revoke access when appropriate."
+  },
+  {
+    "page": 23,
+    "x": 744,
+    "y": 509,
+    "w": 316,
+    "h": 32,
+    "text": "A bounded customer report link with expiry, revocation, and access history."
+  },
+  {
+    "page": 23,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Unrestricted evidence links created; share expiry/revocation behavior in the pilot."
+  },
+  {
+    "page": 24,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A source-based study workspace that turns supplied notes into complete study packs and persistent practice. Built-in creation remains useful without the optional shared AI service."
+  },
+  {
+    "page": 24,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Organize source material, course/exam context, titles, descriptions, and reusable study sets."
+  },
+  {
+    "page": 24,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Create summaries, key terms, flashcards, multiple-choice questions, short answers, review sheets, and plans."
+  },
+  {
+    "page": 24,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Use deterministic creation or configured shared AI refinement with validation, provenance, and fallback behavior."
+  },
+  {
+    "page": 24,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Practice with keyboard/touch controls and retain known/learning state and session progress."
+  },
+  {
+    "page": 24,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Use server-scored attempts, inspect explanations and missed answers, and retain retry/history records."
+  },
+  {
+    "page": 24,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Track date-based study plans, exam countdowns, streaks, usage, and learning trends."
+  },
+  {
+    "page": 24,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Edit, search, filter, duplicate, regenerate, archive, restore, and remove supported study material."
+  },
+  {
+    "page": 24,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Export study sets and supported progress/results as JSON or entitlement-gated CSV."
+  },
+  {
+    "page": 24,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A reusable study pack plus a history of practice and quiz results that identifies material needing another pass."
+  },
+  {
+    "page": 24,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "Generated material needs source review. AI requires shared-service setup. No outside citations, accredited qualification, automatic mastery judgment, or invented classroom/group workflow is claimed."
+  },
+  {
+    "page": 25,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 25,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Prepare for a platform handover"
+  },
+  {
+    "page": 25,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "An engineer must learn an internal service before joining the support rotation."
+  },
+  {
+    "page": 25,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 48,
+    "text": "Supply approved, non-secret operating notes, build a study pack, correct the generated material against the source, and use flashcards and a quiz to reveal weak areas."
+  },
+  {
+    "page": 25,
+    "x": 52,
+    "y": 477,
+    "w": 316,
+    "h": 32,
+    "text": "A repeatable learning aid with an inspectable source basis and saved practice history."
+  },
+  {
+    "page": 25,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Questions missed by topic; preparation time using the same approved material."
+  },
+  {
+    "page": 25,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Turn a long workshop into practice"
+  },
+  {
+    "page": 25,
+    "x": 398,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A technical workshop produces useful notes, but participants rarely revisit the full document."
+  },
+  {
+    "page": 25,
+    "x": 398,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Create a focused set from the approved workshop material. Review terms, short answers, and the review sheet; schedule study around the intended date and inspect the quiz explanations."
+  },
+  {
+    "page": 25,
+    "x": 398,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "Multiple ways to rehearse the same material without claiming the generated pack is authoritative."
+  },
+  {
+    "page": 25,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Study sessions completed; repeated mistakes after source corrections."
+  },
+  {
+    "page": 25,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Keep learning when AI is unavailable"
+  },
+  {
+    "page": 25,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "A team wants a study workflow before external AI service approval is complete."
+  },
+  {
+    "page": 25,
+    "x": 744,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Use built-in pack creation, manually refine the material, and practice through the existing flashcard and quiz paths. Export the set for review and retain usage/history in the workspace."
+  },
+  {
+    "page": 25,
+    "x": 744,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "A functioning study process that does not depend on live model access."
+  },
+  {
+    "page": 25,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Completion of the study workflow with AI disabled; content corrections found in review."
+  },
+  {
+    "page": 26,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A campaign-package and readiness workspace. Despite the name, its current product scope is coordinated campaign preparation and human-verified delivery records, not software deployment automation."
+  },
+  {
+    "page": 26,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Start from reusable templates; define audience, offer, action, tone, channels, and launch date."
+  },
+  {
+    "page": 26,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Prepare landing, ad, email, SMS, social, FAQ, flyer, and call-to-action copy."
+  },
+  {
+    "page": 26,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Create up to nine visual briefs, with included plan items made explicit."
+  },
+  {
+    "page": 26,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Retain saved packages, revisions, source context, approved inputs, and related private assets."
+  },
+  {
+    "page": 26,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Assign phases, milestones, owners, required files, tasks, and dependencies."
+  },
+  {
+    "page": 26,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Calculate readiness from recorded conditions and approvals; inspect missing prerequisites before a launch transition."
+  },
+  {
+    "page": 26,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Download supported text, Markdown, JSON, and CSV packages with checksum and audit context."
+  },
+  {
+    "page": 26,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Receive BrandForgeOS campaign handoffs and record externally confirmed completion with a reference."
+  },
+  {
+    "page": 26,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A reviewed campaign kit, explicit launch checklist, and verifiable export for the people using publishing tools."
+  },
+  {
+    "page": 26,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "Does not deploy software, change DNS, publish sites/ads, send campaigns, or buy media. A readiness score reflects recorded package conditions; external completion needs a person&#x27;s verified reference."
+  },
+  {
+    "page": 27,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 27,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Launch an MSP service offer"
+  },
+  {
+    "page": 27,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A new managed service needs consistent landing copy, FAQs, ads, and a practical launch checklist."
+  },
+  {
+    "page": 27,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Define the business brief and channels, generate the package, review every claim, assign production tasks, and export the approved material to the people operating the external tools."
+  },
+  {
+    "page": 27,
+    "x": 52,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A coordinated campaign package with clear owners and outstanding work."
+  },
+  {
+    "page": 27,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 12.5,
+    "text": "Missing launch assets; time from accepted brief to reviewed export."
+  },
+  {
+    "page": 27,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Find the launch blocker before launch day"
+  },
+  {
+    "page": 27,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "Copy is finished, but required artwork and approval are missing from a campaign nearing its deadline."
+  },
+  {
+    "page": 27,
+    "x": 398,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Use the execution workspace to inspect required files, dependencies, owners, and computed readiness. Complete and review the missing work before recording the launch transition."
+  },
+  {
+    "page": 27,
+    "x": 398,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "An evidence-based readiness decision with the unresolved dependency visible."
+  },
+  {
+    "page": 27,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Late blockers found before the deadline; launch transitions with incomplete prerequisites."
+  },
+  {
+    "page": 27,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Hand a campaign to another team"
+  },
+  {
+    "page": 27,
+    "x": 744,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A campaign coordinator needs a clean package for an agency or internal publishing team."
+  },
+  {
+    "page": 27,
+    "x": 744,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Review the current package, create a verified export, and use the team&#x27;s normal delivery channel. After publication, a person checks the external result and records its reference."
+  },
+  {
+    "page": 27,
+    "x": 744,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A traceable artifact handoff and separately recorded external confirmation."
+  },
+  {
+    "page": 27,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Rework caused by missing copy or context; exports lacking a reviewed version."
+  },
+  {
+    "page": 28,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A business receptionist, call-intelligence, and MSP intake workspace with simulations, flow design, follow-up records, and explicit provider readiness. Real calls require accepted telephony, AI, and billing configuration."
+  },
+  {
+    "page": 28,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Define business knowledge, hours, greetings, behavior, and approved routing destinations."
+  },
+  {
+    "page": 28,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Prepare conversation paths, test a no-cost simulated call, and correct routing before live enablement."
+  },
+  {
+    "page": 28,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Manage number setup, readiness checks, capacity, usage, service health, and deliberate go-live controls."
+  },
+  {
+    "page": 28,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Search history; inspect summaries, timelines, transcripts, consent state, outcomes, and reviewed analysis."
+  },
+  {
+    "page": 28,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Review leads, tasks, alerts, and staff actions with clear ownership and retained call context."
+  },
+  {
+    "page": 28,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Convert eligible analyzed provider calls into reviewed TradeFlowKit, TechDeck, or operations-only PulseDesk work."
+  },
+  {
+    "page": 28,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 42,
+    "text": "Use approved lines, SupportLinks, Directory-backed organization/contact association, local cases, and operator screen-pop."
+  },
+  {
+    "page": 28,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Use signed callbacks, durable retry/outbox records, kill switches, evidence history, and explicit test/live distinctions."
+  },
+  {
+    "page": 28,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A call outcome with retained context and a clearly owned next action, distinguished from any test simulation."
+  },
+  {
+    "page": 28,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "Live Twilio/OpenAI/Stripe and callback acceptance remain separate. Simulations cannot create production call handoffs. BMS delivery and privileged Datto/Graph/AD actions are not accepted by the MSP foundation."
+  },
+  {
+    "page": 29,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 29,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Test after-hours intake before activation"
+  },
+  {
+    "page": 29,
+    "x": 52,
+    "y": 348.44,
+    "w": 316,
+    "h": 48,
+    "text": "An MSP wants consistent after-hours intake but needs to inspect what the receptionist will ask and where it will route work."
+  },
+  {
+    "page": 29,
+    "x": 52,
+    "y": 424.44,
+    "w": 316,
+    "h": 64,
+    "text": "Configure hours, approved knowledge, and escalation paths. Run simulations, inspect captured answers and routing, and correct the flow before the separate provider go-live checks."
+  },
+  {
+    "page": 29,
+    "x": 52,
+    "y": 516.44,
+    "w": 316,
+    "h": 32,
+    "text": "A reviewed receptionist configuration and test outcome without purchasing or placing a live call."
+  },
+  {
+    "page": 29,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Required intake fields captured in simulations; incorrect routes found before activation."
+  },
+  {
+    "page": 29,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A real call becomes a support ticket"
+  },
+  {
+    "page": 29,
+    "x": 398,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "After provider acceptance, a caller describes an issue that should enter the technical queue with usable context."
+  },
+  {
+    "page": 29,
+    "x": 398,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Review the completed, analyzed provider call and choose the TechDeck handoff. The system reloads the reviewed version and checks access before creating the destination ticket."
+  },
+  {
+    "page": 29,
+    "x": 398,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A linked ticket from an eligible real call; simulator records are rejected."
+  },
+  {
+    "page": 29,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Calls without an owner; manual re-entry time; duplicate destination tickets."
+  },
+  {
+    "page": 29,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Separate caller context from privileged action"
+  },
+  {
+    "page": 29,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "An MSP caller requests urgent account help, but caller recognition must not become authorization for a reset."
+  },
+  {
+    "page": 29,
+    "x": 744,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "Use approved intake channels and organization/contact association to capture the issue and open a local case. Review screen-pop and evidence, then use the independently authorized support process."
+  },
+  {
+    "page": 29,
+    "x": 744,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "Useful intake context without an automatic identity reset or endpoint action."
+  },
+  {
+    "page": 29,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Unassociated cases; quality of issue capture; privileged actions requiring explicit separate approval."
+  },
+  {
+    "page": 30,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A script-authoring and governance workspace for reusable IT automation. Static analysis, immutable versions, explicit review, and audited downloads preserve the boundary between preparing source and executing it."
+  },
+  {
+    "page": 30,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Organize PowerShell, Python, batch, and shell assets with source/provenance context."
+  },
+  {
+    "page": 30,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Create or import source and record the purpose, prerequisites, expected behavior, risk, and rollback."
+  },
+  {
+    "page": 30,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Pin the exact revision, content identity, and change context used by subsequent review and download."
+  },
+  {
+    "page": 30,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Inspect findings and risk indicators before submitting a script version for approval."
+  },
+  {
+    "page": 30,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Submit, approve, reject, or retire scripts under tenant-admin controls with recorded decisions."
+  },
+  {
+    "page": 30,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Allow only the approved current version to be downloaded; retain integrity and download audit history."
+  },
+  {
+    "page": 30,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Request drafts through shared AI, idempotency, and usage controls; generated source remains unapproved."
+  },
+  {
+    "page": 30,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Create a non-executing draft runbook and protected file-integrity record from an approved script revision."
+  },
+  {
+    "page": 30,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A specific approved source version with requirements, review findings, rollback context, and an auditable download."
+  },
+  {
+    "page": 30,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "OperatorOS does not execute this source in the browser, API, server, or customer environment. Static analysis is not proof of safety. Execution and endpoint acceptance belong to a separately authorized tool."
+  },
+  {
+    "page": 31,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Problem \u2192 workflow \u2192 expected output. Measurements are suggested pilot checks, not claimed results."
+  },
+  {
+    "page": 31,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Retire the copied desktop script"
+  },
+  {
+    "page": 31,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "Several technicians keep slightly different copies of a maintenance script with unclear origin and prerequisites."
+  },
+  {
+    "page": 31,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Import the reviewed source, document requirements and rollback, run static checks, and submit an exact version for approval. Technicians download the approved current revision for their authorized environment."
+  },
+  {
+    "page": 31,
+    "x": 52,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "One governed automation asset with a visible version and decision history."
+  },
+  {
+    "page": 31,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Untracked variants; downloads without an approved current version."
+  },
+  {
+    "page": 31,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Use AI without auto-approving its output"
+  },
+  {
+    "page": 31,
+    "x": 398,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "An engineer wants help drafting a repetitive inventory script but must inspect its behavior before distribution."
+  },
+  {
+    "page": 31,
+    "x": 398,
+    "y": 408.44,
+    "w": 316,
+    "h": 48,
+    "text": "Request a draft through the configured shared AI service, inspect its source, address static findings, and submit the corrected immutable revision to a tenant administrator."
+  },
+  {
+    "page": 31,
+    "x": 398,
+    "y": 484.44,
+    "w": 316,
+    "h": 32,
+    "text": "A reviewable draft that cannot become an approved download merely because a model generated it."
+  },
+  {
+    "page": 31,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Findings corrected before approval; generated drafts distributed without review."
+  },
+  {
+    "page": 31,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Preserve procedure beside the code"
+  },
+  {
+    "page": 31,
+    "x": 744,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A useful script exists, but new staff do not know when to use it or how to interpret its output."
+  },
+  {
+    "page": 31,
+    "x": 744,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Select an approved current revision and create the supported TechDeck draft runbook. Review its prerequisites and handling instructions in TechDeck before publishing the procedure."
+  },
+  {
+    "page": 31,
+    "x": 744,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "Linked source identity and reviewed guidance; the handoff performs no execution."
+  },
+  {
+    "page": 31,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Approved assets with current runbook context; source/runbook version mismatches."
+  },
+  {
+    "page": 32,
+    "x": 52,
+    "y": 194,
+    "w": 744,
+    "h": 36.708,
+    "text": "A reconstructed application for a discreet call to a person&#x27;s own verified phone. Source/local workflow evidence exists, but the production catalog remains unavailable and these scenarios describe gated behavior."
+  },
+  {
+    "page": 32,
+    "x": 79,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Explain the personal-use and non-emergency boundary before preparing a call workflow."
+  },
+  {
+    "page": 32,
+    "x": 459,
+    "y": 297,
+    "w": 326,
+    "h": 28,
+    "text": "Use a controlled phone-ownership verification path; arbitrary destinations are excluded."
+  },
+  {
+    "page": 32,
+    "x": 79,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Store private profiles with controlled voice/script and supported keypad behavior."
+  },
+  {
+    "page": 32,
+    "x": 459,
+    "y": 374,
+    "w": 326,
+    "h": 28,
+    "text": "Bind exact-match trigger phrases to an approved profile and verified self-owned destination."
+  },
+  {
+    "page": 32,
+    "x": 79,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Prepare bounded call requests using durable state and supported scheduling controls."
+  },
+  {
+    "page": 32,
+    "x": 459,
+    "y": 451,
+    "w": 326,
+    "h": 28,
+    "text": "Inspect actual request/provider state, cancel eligible requests, and retain private history."
+  },
+  {
+    "page": 32,
+    "x": 79,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Enforce controlled voice/SMS/DTMF callbacks, replay checks, and persistent rate limits."
+  },
+  {
+    "page": 32,
+    "x": 459,
+    "y": 528,
+    "w": 326,
+    "h": 28,
+    "text": "Use password-confirmed export and account-slice deletion controls for the retained personal records."
+  },
+  {
+    "page": 32,
+    "x": 855,
+    "y": 432,
+    "w": 188,
+    "h": 67.344,
+    "text": "A private request directed only to the verified owner, with honest state and cancellation/history controls."
+  },
+  {
+    "page": 32,
+    "x": 143,
+    "y": 596,
+    "w": 909,
+    "h": 27.6,
+    "text": "UNAVAILABLE: no live launch or sale. Requires production activation and controlled real-provider acceptance. No emergency response, monitoring, location tracking, duress detection, or third-party dialing."
+  },
+  {
+    "page": 33,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Gated scenarios only. OutCall remains unavailable; these are future acceptance examples, not present live service."
+  },
+  {
+    "page": 33,
+    "x": 52,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "A planned social exit cue"
+  },
+  {
+    "page": 33,
+    "x": 52,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A person wants a neutral call to their own phone at a chosen time as a private reason to step away."
+  },
+  {
+    "page": 33,
+    "x": 52,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "In a future accepted live workflow, acknowledge the limits, verify the self-owned number, choose a neutral profile, schedule the request, and inspect the actual provider outcome."
+  },
+  {
+    "page": 33,
+    "x": 52,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "A self-directed call request. This scenario is illustrative; live availability is still blocked."
+  },
+  {
+    "page": 33,
+    "x": 64,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Correct verified destination; truthful delivery state; no unauthorized destination expansion."
+  },
+  {
+    "page": 33,
+    "x": 398,
+    "y": 267,
+    "w": 319,
+    "h": 26.22,
+    "text": "Cancel when the plan changes"
+  },
+  {
+    "page": 33,
+    "x": 398,
+    "y": 341,
+    "w": 316,
+    "h": 32,
+    "text": "A previously scheduled personal call is no longer wanted and should not proceed if it remains cancellable."
+  },
+  {
+    "page": 33,
+    "x": 398,
+    "y": 401,
+    "w": 316,
+    "h": 64,
+    "text": "Open the private history, inspect the request state, and cancel the eligible schedule. Verify that the record distinguishes cancellation from an already submitted provider action."
+  },
+  {
+    "page": 33,
+    "x": 398,
+    "y": 493,
+    "w": 316,
+    "h": 32,
+    "text": "An explicit lifecycle decision with no fabricated claim that an in-flight call was recalled."
+  },
+  {
+    "page": 33,
+    "x": 410,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Cancellation state consistency; late or duplicate requests in controlled acceptance tests."
+  },
+  {
+    "page": 33,
+    "x": 744,
+    "y": 267,
+    "w": 319,
+    "h": 52.44,
+    "text": "Review and remove personal history"
+  },
+  {
+    "page": 33,
+    "x": 744,
+    "y": 348.44,
+    "w": 316,
+    "h": 32,
+    "text": "A user wants a private copy of retained records and then wants the supported account slice removed."
+  },
+  {
+    "page": 33,
+    "x": 744,
+    "y": 408.44,
+    "w": 316,
+    "h": 64,
+    "text": "After activation acceptance, use the password-confirmed export and deletion controls. Review the product&#x27;s actual retained scope and verify the resulting state in a controlled test."
+  },
+  {
+    "page": 33,
+    "x": 744,
+    "y": 500.44,
+    "w": 316,
+    "h": 32,
+    "text": "A deliberate privacy workflow; no emergency or third-party-monitoring capability is implied."
+  },
+  {
+    "page": 33,
+    "x": 756,
+    "y": 600,
+    "w": 300,
+    "h": 25.0,
+    "text": "Export access controls; deletion-scope accuracy; resistance to cross-account access."
+  },
+  {
+    "page": 34,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 38.64,
+    "text": "TechDeck distinguishes observed source evidence, deterministic projections, human approval, and optional model-based similarity. Those are different kinds of authority."
+  },
+  {
+    "page": 34,
+    "x": 52,
+    "y": 287,
+    "w": 225,
+    "h": 26.22,
+    "text": "Evidence"
+  },
+  {
+    "page": 34,
+    "x": 52,
+    "y": 350,
+    "w": 225,
+    "h": 71.75999999999999,
+    "text": "Screen structured closeouts. Retain immutable source revisions, actions, failed attempts, side effects, uncertainty, and validation."
+  },
+  {
+    "page": 34,
+    "x": 315,
+    "y": 287,
+    "w": 225,
+    "h": 26.22,
+    "text": "Projection"
+  },
+  {
+    "page": 34,
+    "x": 315,
+    "y": 350,
+    "w": 225,
+    "h": 71.75999999999999,
+    "text": "Build exact/text retrieval and typed relationships. Keep source references and incident access attached to the result."
+  },
+  {
+    "page": 34,
+    "x": 578,
+    "y": 287,
+    "w": 225,
+    "h": 26.22,
+    "text": "Reviewed knowledge"
+  },
+  {
+    "page": 34,
+    "x": 578,
+    "y": 350,
+    "w": 225,
+    "h": 71.75999999999999,
+    "text": "Preview cited KB/runbook drafts. Review and publish through existing controls; changed sources block stale approval."
+  },
+  {
+    "page": 34,
+    "x": 841,
+    "y": 287,
+    "w": 225,
+    "h": 26.22,
+    "text": "Optional similarity"
+  },
+  {
+    "page": 34,
+    "x": 841,
+    "y": 350,
+    "w": 225,
+    "h": 71.75999999999999,
+    "text": "Review excerpts before indexing. Explicitly opt into semantic queries; explain hybrid ranking and retain exact/text fallback."
+  },
+  {
+    "page": 34,
+    "x": 68,
+    "y": 566,
+    "w": 458,
+    "h": 47.61,
+    "text": "Repository records publication and owner read checks for import/prompt/search/linked-knowledge surfaces. Production writes, other-role checks, live logout, and restore remain separate acceptance scopes."
+  },
+  {
+    "page": 34,
+    "x": 579,
+    "y": 566,
+    "w": 473,
+    "h": 47.61,
+    "text": "OpenAI adapter and bounded hybrid retrieval are implemented. Provider activation, production vector capability, real-model relevance, and publication are not established. Similarity is not repair confidence."
+  },
+  {
+    "page": 35,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 19.32,
+    "text": "Suggested agenda, not a completed test. Use synthetic records in an approved environment with explicit module grants and a second tenant for denial checks."
+  },
+  {
+    "page": 35,
+    "x": 161,
+    "y": 237,
+    "w": 887,
+    "h": 16.56,
+    "text": "Launch TechDeck through OperatorOS, follow a deep link, return to My Apps, and inspect a foreign-tenant denial."
+  },
+  {
+    "page": 35,
+    "x": 161,
+    "y": 313,
+    "w": 887,
+    "h": 16.56,
+    "text": "Import a synthetic closeout, search an exact identifier, review a failed attempt, and preview a source-cited runbook draft."
+  },
+  {
+    "page": 35,
+    "x": 161,
+    "y": 389,
+    "w": 887,
+    "h": 16.56,
+    "text": "Inspect an approved Script Ops revision and its non-executing TechDeck draft; show source identity and review status."
+  },
+  {
+    "page": 35,
+    "x": 161,
+    "y": 465,
+    "w": 887,
+    "h": 16.56,
+    "text": "Demonstrate a TradeFlowKit-to-SnapProofOS proof workflow only in a separately entitled context; inspect the returned approved PDF."
+  },
+  {
+    "page": 35,
+    "x": 161,
+    "y": 541,
+    "w": 887,
+    "h": 16.56,
+    "text": "Review stale-source rejection, retry identity, unavailable-provider states, deployment evidence, and open acceptance gates."
+  },
+  {
+    "page": 35,
+    "x": 52,
+    "y": 607,
+    "w": 1016,
+    "h": 15.87,
+    "text": "Discussion prompts: Where does authority reside? Which handoff reduces the most re-entry? Which result is a draft versus an external action? What must a production pilot prove before wider use?"
+  },
+  {
+    "page": 36,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 38.64,
+    "text": "This document is a repository-grounded product and architecture review, not a new deployment audit. Historical records are attributed to their recorded scope and date."
+  },
+  {
+    "page": 36,
+    "x": 226,
+    "y": 240,
+    "w": 824,
+    "h": 16.008,
+    "text": "Current checkout ee9ca05e contains the catalog, contracts, APIs, UI, and documentation used here."
+  },
+  {
+    "page": 36,
+    "x": 226,
+    "y": 319,
+    "w": 824,
+    "h": 16.008,
+    "text": "Phase 5 records 14/14 local release stages, 1,593 API, 108 integration, 52 unit, 32 browser, and 4 visual checks; 36 vector-focused checks are separate."
+  },
+  {
+    "page": 36,
+    "x": 226,
+    "y": 398,
+    "w": 824,
+    "h": 16.008,
+    "text": "The 2026-09-27 record reports v64/64, a published build, 47/47 public checks, and owner read/SSO/deep-link checks. No new live checks were run for this PDF."
+  },
+  {
+    "page": 36,
+    "x": 226,
+    "y": 477,
+    "w": 824,
+    "h": 16.008,
+    "text": "Live calls, payments, messages, model quality, production writes, other roles, data migration, and restore need their own evidence."
+  },
+  {
+    "page": 36,
+    "x": 226,
+    "y": 556,
+    "w": 824,
+    "h": 16.008,
+    "text": "OutCall remains coming soon. New semantic retrieval is provider-disabled. A configured key, a green build, or a rendered page cannot substitute for acceptance."
+  },
+  {
+    "page": 37,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 38.64,
+    "text": "Clickable references are pinned to source commit ee9ca05e. Repository access may be required. Newer release records and current product/registry contracts supersede older status prose."
+  },
+  {
+    "page": 37,
+    "x": 93,
+    "y": 233,
+    "w": 449,
+    "h": 12.2,
+    "text": "Names, hierarchy, access classes, coming-soon state; paired with product-value.ts and products.ts."
+  },
+  {
+    "page": 37,
+    "x": 93,
+    "y": 289,
+    "w": 449,
+    "h": 12.2,
+    "text": "Primary workflow, retained deliverables, provider boundaries, and explicit exclusions for all 13 applications."
+  },
+  {
+    "page": 37,
+    "x": 93,
+    "y": 345,
+    "w": 449,
+    "h": 12.2,
+    "text": "Launch authority and default OutCall denial; test-only launch is explicitly bounded."
+  },
+  {
+    "page": 37,
+    "x": 93,
+    "y": 401,
+    "w": 449,
+    "h": 12.2,
+    "text": "Opaque codes, 60-second expiry, PKCE S256, host-only sessions, role/tenant binding, revocation."
+  },
+  {
+    "page": 37,
+    "x": 93,
+    "y": 457,
+    "w": 449,
+    "h": 12.2,
+    "text": "Shared authority, tenant enforcement, billing separation, shared-service boundaries."
+  },
+  {
+    "page": 37,
+    "x": 93,
+    "y": 513,
+    "w": 449,
+    "h": 12.2,
+    "text": "Recorded v64 publication/read checks and separate v65 candidate/provider boundary."
+  },
+  {
+    "page": 37,
+    "x": 93,
+    "y": 569,
+    "w": 449,
+    "h": 12.2,
+    "text": "Supported handoffs, source freshness, current access, deduplication, and external-action limits."
+  },
+  {
+    "page": 37,
+    "x": 619,
+    "y": 233,
+    "w": 449,
+    "h": 12.2,
+    "text": "Dated local checks and limitations; reported historical evidence is not a new test run."
+  },
+  {
+    "page": 37,
+    "x": 619,
+    "y": 289,
+    "w": 449,
+    "h": 12.2,
+    "text": "Deterministic assembly, source citations, review, inherited access, and stale-source protection."
+  },
+  {
+    "page": 37,
+    "x": 619,
+    "y": 345,
+    "w": 449,
+    "h": 12.2,
+    "text": "Disabled provider, excerpt review, explicit opt-in, limits, fallback, and no real-model acceptance."
+  },
+  {
+    "page": 37,
+    "x": 619,
+    "y": 401,
+    "w": 449,
+    "h": 12.2,
+    "text": "Customer links, shared contact edits, account controls, provider truth, and validation scope."
+  },
+  {
+    "page": 37,
+    "x": 619,
+    "y": 457,
+    "w": 449,
+    "h": 12.2,
+    "text": "Recent overlays and per-surface evidence; newest applicable status takes precedence."
+  },
+  {
+    "page": 37,
+    "x": 619,
+    "y": 513,
+    "w": 449,
+    "h": 12.2,
+    "text": "Jobs, revenue documents, recurring work, exports, and supported recovery."
+  },
+  {
+    "page": 37,
+    "x": 619,
+    "y": 569,
+    "w": 449,
+    "h": 12.2,
+    "text": "Service records, configuration, network, documentation, reporting; supplement with S09/S10."
+  },
+  {
+    "page": 38,
+    "x": 52,
+    "y": 151,
+    "w": 1016,
+    "h": 38.64,
+    "text": "Clickable references are pinned to source commit ee9ca05e. Repository access may be required. Newer release records and current product/registry contracts supersede older status prose."
+  },
+  {
+    "page": 38,
+    "x": 93,
+    "y": 233,
+    "w": 449,
+    "h": 12.2,
+    "text": "Healthcare operations scope, queue ownership, equipment/facility/supply workflows."
+  },
+  {
+    "page": 38,
+    "x": 93,
+    "y": 289,
+    "w": 449,
+    "h": 12.2,
+    "text": "Garage, diagnostics, Assist, community, marketplace, and verification boundaries."
+  },
+  {
+    "page": 38,
+    "x": 93,
+    "y": 345,
+    "w": 449,
+    "h": 12.2,
+    "text": "Versioned challenges, attempts, scoring, authoring, assignments, and exports."
+  },
+  {
+    "page": 38,
+    "x": 93,
+    "y": 401,
+    "w": 449,
+    "h": 12.2,
+    "text": "Supported play modes, durable state, server simulation, and exclusions."
+  },
+  {
+    "page": 38,
+    "x": 93,
+    "y": 457,
+    "w": 449,
+    "h": 12.2,
+    "text": "Campaign and brand lifecycle; current direct-provider exclusions are specified in S02."
+  },
+  {
+    "page": 38,
+    "x": 93,
+    "y": 513,
+    "w": 449,
+    "h": 12.2,
+    "text": "Evidence and custody foundation; current reports/shares and connected outcomes use S02/S07."
+  },
+  {
+    "page": 38,
+    "x": 93,
+    "y": 569,
+    "w": 449,
+    "h": 12.2,
+    "text": "Complete study packs, persistent learning, authoritative quiz scoring, export, and exclusions."
+  },
+  {
+    "page": 38,
+    "x": 619,
+    "y": 233,
+    "w": 449,
+    "h": 12.2,
+    "text": "Campaign artifacts, dependencies, readiness, checksum exports, and publication boundary."
+  },
+  {
+    "page": 38,
+    "x": 619,
+    "y": 289,
+    "w": 449,
+    "h": 12.2,
+    "text": "MSP intake constraints; current receptionist scope and provider setup use S02."
+  },
+  {
+    "page": 38,
+    "x": 619,
+    "y": 345,
+    "w": 449,
+    "h": 12.2,
+    "text": "Versioned scripts, static checks, review, downloads, and non-execution boundary."
+  },
+  {
+    "page": 38,
+    "x": 619,
+    "y": 401,
+    "w": 449,
+    "h": 12.2,
+    "text": "Authorized reconstruction is source/local evidence; production remains coming soon."
+  },
+  {
+    "page": 38,
+    "x": 619,
+    "y": 457,
+    "w": 449,
+    "h": 12.2,
+    "text": "Shared Next.js/Fastify runtime, private API, host routing; registry overrides stale OutCall summary."
+  },
+  {
+    "page": 38,
+    "x": 619,
+    "y": 513,
+    "w": 449,
+    "h": 12.2,
+    "text": "Historical restoration detail; later product contracts and current release evidence control current claims."
+  },
+  {
+    "page": 38,
+    "x": 619,
+    "y": 569,
+    "w": 449,
+    "h": 12.2,
+    "text": "One ordered database authority, backup/apply/verify flow, and separate restore acceptance."
+  },
+  {
+    "page": 38,
+    "x": 52,
+    "y": 613,
+    "w": 1016,
+    "h": 28,
+    "text": "Editorial precedence: current registry and product contracts resolve stale descriptions (notably OutCall, Deploy Ops, and direct provider connections). Historical module matrices describe implementation provenance; they do not grant new live acceptance."
+  }
+]

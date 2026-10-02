@@ -872,7 +872,7 @@ function UsagePanel({ usage, tools }: { usage: UsageStats | null; tools: AiTool[
       }}>
         <span style={{ fontSize: 16 }}>🔌</span>
         <span style={{ color: colors.textMuted }}>Provider:</span>
-        <span style={{ color: '#fff', fontWeight: 600 }}>{usage.provider.name === 'openai' ? 'OpenAI GPT-4o Mini' : 'Mock (Demo Mode)'}</span>
+        <span style={{ color: '#fff', fontWeight: 600 }}>{usage.provider.name === 'openai' ? 'OpenAI' : usage.provider.name === 'test' ? 'Test provider' : 'Unavailable'}</span>
         {!usage.provider.configured && (
           <span style={{ color: colors.accentYellow, fontSize: 11 }}> — AI setup is incomplete; contact your administrator</span>
         )}
