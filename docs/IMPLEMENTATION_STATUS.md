@@ -1,5 +1,24 @@
 # OperatorOS implementation status
 
+## PR #111 release continuation (2026-10-02 UTC)
+
+**SCOPED LOCAL FIXES / AUDIT BLOCKED / NO NEW DEPLOYMENT**. Both earlier full
+gates completed: local 13/14, PR CI 12/14. Initial and retry Playwright traces
+show the crawler replacing OutCall's document 7-9 ms after an app chunk starts.
+The crawler now waits for requests to finish before advancing; all existing
+error assertions remain. Narrow dependency updates select Axios 1.20.0,
+brace-expansion 5.0.12 and Fastify 5.12.2, with no new audit exceptions.
+The fresh audit remains blocked by inherited native-tooling node-forge 1.4.0,
+GHSA-86w9-cpqp-85rv, for which the current registry/advisory has no fixed release.
+Fresh 5 pricing, 15 hardening unit and 18 disposable revenue/billing checks pass;
+lint and corrected production build pass (four typechecks; Next 38/38).
+Four scoped exact-host browser checks pass in 27 seconds with no skips/retries,
+after correcting local invocation/port configuration. Full-gate evidence remains pending.
+Canonical unpublished AI work and live v65 are preserved. See
+[continuation evidence](REVENUE_RELEASE_CONTINUATION_2026-10-02.md).
+Earlier sections below describe their dated checkpoints and are superseded by
+this continuation for current authorization and gate status.
+
 ## TradeFlowKit pricing candidate full local gate (2026-09-30 20:49 UTC)
 
 Exact code candidate `f610a7eaa753547664fc94cc10701b5f5d10e25e` completed the

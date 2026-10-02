@@ -67,6 +67,11 @@ test('every module critical route has live controls and no page, console, networ
     expect(visibleControls.length, `${contract.moduleSlug} must expose a visible control`).toBeGreaterThan(0);
     expect(visibleControls.filter(control => !control.name), `${contract.moduleSlug} controls need accessible names`).toEqual([]);
     expect(visibleControls.filter(control => control.tag === 'A' && (!control.href || /#$|javascript:/i.test(control.href))), `${contract.moduleSlug} anchors need valid targets`).toEqual([]);
+    // The control markup can render before Next finishes loading route chunks
+    // and link prefetches. Finish those requests before this crawler replaces
+    // the document; otherwise its own navigation aborts a valid app chunk.
+    // Keep every asset failure in failedRequests rather than excluding chunks.
+    await page.waitForLoadState('networkidle');
   }
   expect(consoleErrors, 'browser console errors').toEqual([]);
   expect(pageErrors, 'browser page errors').toEqual([]);
