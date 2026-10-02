@@ -5,8 +5,10 @@
 **CAPABILITY COUNTS UNCHANGED / LOCAL WORKFLOW PROOF / PAID ACCEPTANCE OPEN**.
 Two new required exact-host desktop/mobile cases persist customer/quote/job/
 invoice/offline-payment records, survive reload and verify a read-only teammate
-can view the same invoice but cannot write. Independent database checks prove
-exact cents, linked paid job and one payment record with no provider. Full
+can view the same invoice but cannot write. Review reproduced payment Cancel
+still writing; the prompt guard and cancellation/approved blank-reference checks
+now pass. Independent database checks prove exact cents, linked paid job and
+one payment record with no provider. Full
 browser 37/37 and visual 4/4 pass, plus focused 2/2, lint, four typechecks and
 production build. No source-parity promotion or live payment/provider/recovery
 acceptance is inferred. Security auditing remains blocking. See

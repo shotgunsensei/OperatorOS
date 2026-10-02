@@ -23,19 +23,20 @@ async function save<T extends RecordId>(page: Page, path: string, action: () => 
   return response.json() as Promise<T>;
 }
 
-async function recordedAction(page: Page, button: Locator, message: string, reference?: string) {
+async function recordedAction(page: Page, button: Locator, message: string, reference?: string, accept = true) {
   const dialogPending = page.waitForEvent('dialog');
   const clickPending = button.click();
   const dialog = await dialogPending;
   try {
-    expect(dialog.type()).toBe(reference ? 'prompt' : 'confirm');
+    expect(dialog.type()).toBe(reference !== undefined ? 'prompt' : 'confirm');
     expect(dialog.message()).toContain(message);
   } catch (error) {
     await dialog.dismiss();
     await clickPending;
     throw error;
   }
-  await dialog.accept(reference);
+  if (accept) await dialog.accept(reference);
+  else await dialog.dismiss();
   await clickPending;
 }
 
@@ -67,6 +68,8 @@ for (const [index, width] of [1440, 390].entries()) {
     });
     try {
       await page.setViewportSize({ width, height: 1000 });
+      const paymentReference = index === 0 ? REFERENCE : '';
+      const storedReference = paymentReference || null;
       await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': `10.91.0.${10 + index}` });
       // Existing isolated fixtures pregrant access. This scenario proves module
       // workflow/authorization, not Stripe purchase or subscription settlement.
@@ -121,12 +124,21 @@ for (const [index, width] of [1440, 390].entries()) {
       const invoiceRow = page.getByTestId(`tradeflowkit-invoice-${invoice.id}`);
       await save(page, `/invoices/${invoice.id}/transition`, () => recordedAction(page,
         invoiceRow.getByRole('button', { name: 'Mark invoice as sent', exact: true }), 'It does not email or deliver the invoice.'), 200);
+      const paymentRequests: string[] = [];
+      page.on('request', request => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname === `${API}/invoices/${invoice.id}/pay`) paymentRequests.push(request.url());
+      });
+      await recordedAction(page, invoiceRow.getByRole('button', { name: 'Record payment', exact: true }), 'Payment reference (optional)', REFERENCE, false);
+      await page.waitForLoadState('networkidle');
+      expect(paymentRequests, 'canceling the payment prompt must not issue a write').toEqual([]);
+      const canceled = await pg.query(`select status, paid_cents, balance_cents from tradeflowkit_invoices where id = $1 and tenant_id = $2`, [invoice.id, owner.tenantId]);
+      expect(canceled.rows).toEqual([{ status: 'sent', paid_cents: 0, balance_cents: 25000 }]);
       const paid = await save<Invoice>(page, `/invoices/${invoice.id}/pay`, () => recordedAction(page,
-        invoiceRow.getByRole('button', { name: 'Record payment', exact: true }), 'Payment reference (optional)', REFERENCE), 200);
-      expect(paid).toMatchObject({ status: 'paid', paidCents: 25000, balanceCents: 0, paymentReference: REFERENCE });
+        invoiceRow.getByRole('button', { name: 'Record payment', exact: true }), 'Payment reference (optional)', paymentReference), 200);
+      expect(paid).toMatchObject({ status: 'paid', paidCents: 25000, balanceCents: 0, paymentReference: storedReference });
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(invoiceRow).toContainText('balance $0.00');
-      await expect(invoiceRow).toContainText(REFERENCE);
+      if (paymentReference) await expect(invoiceRow).toContainText(paymentReference);
       await expect(invoiceRow.getByText('Paid', { exact: true })).toBeVisible();
       await expect(invoiceRow.getByRole('button', { name: 'Record payment', exact: true })).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
@@ -139,7 +151,7 @@ for (const [index, width] of [1440, 390].entries()) {
       viewerPage.on('console', message => { if (message.type() === 'error') viewerConsoleErrors.push(message.text()); });
       const sharedInvoice = viewerPage.getByTestId(`tradeflowkit-invoice-${invoice.id}`);
       await expect(sharedInvoice).toContainText('Synthetic Pilot Customer');
-      await expect(sharedInvoice).toContainText(REFERENCE);
+      if (paymentReference) await expect(sharedInvoice).toContainText(paymentReference);
       await expect(viewerPage.getByTestId('tradeflowkit-revenue-readonly')).toBeVisible();
       await expect(sharedInvoice.getByRole('button')).toHaveCount(0);
       await viewerPage.reload({ waitUntil: 'domcontentloaded' });
@@ -160,12 +172,12 @@ for (const [index, width] of [1440, 390].entries()) {
          from tradeflowkit_invoices where id = $1 and tenant_id = $2`, [invoice.id, owner.tenantId],
       );
       expect(storedInvoice.rows).toEqual([{ customer_id: customer.id, job_id: job.id, source_quote_id: quote.id,
-        status: 'paid', total_cents: 25000, paid_cents: 25000, balance_cents: 0, payment_reference: REFERENCE }]);
+        status: 'paid', total_cents: 25000, paid_cents: 25000, balance_cents: 0, payment_reference: storedReference }]);
       const payments = await pg.query(
         `select amount_cents, method, reference, provider from tradeflowkit_payments where invoice_id = $1 and tenant_id = $2`,
         [invoice.id, owner.tenantId],
       );
-      expect(payments.rows).toEqual([{ amount_cents: 25000, method: 'other', reference: REFERENCE, provider: null }]);
+      expect(payments.rows).toEqual([{ amount_cents: 25000, method: 'other', reference: storedReference, provider: null }]);
       const storedJob = await pg.query(`select status from tradeflowkit_jobs where id = $1 and tenant_id = $2`, [job.id, owner.tenantId]);
       expect(storedJob.rows).toEqual([{ status: 'paid' }]);
       expect(pageErrors, 'owner and teammate page errors').toEqual([]);

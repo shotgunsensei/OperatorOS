@@ -4,7 +4,9 @@
 
 Required exact-host desktop/mobile cases now complete customer -> quote -> job
 -> invoice -> recorded offline payment, reload and read-only teammate access/
-server write denial. Focused 2/2 and full browser 37/37 plus visual 4/4 pass.
+server write denial. Review reproduced payment Cancel still writing. With the
+prompt guard and cancellation/approved blank-reference regressions, focused 2/2
+and post-fix full browser 37/37 plus visual 4/4 pass.
 This is isolated local workflow proof with pregranted fixtures; subscription
 settlement, deployed customer acceptance and capability counts are unchanged.
 See [scope and evidence](../TRADEFLOWKIT_FIRST_OUTCOME_ACCEPTANCE_2026-10-02.md).

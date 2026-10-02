@@ -1,15 +1,17 @@
 # OperatorOS implementation status
 
-## TradeFlowKit first-outcome browser acceptance (2026-10-02 UTC)
+## TradeFlowKit payment cancellation and first-outcome browser acceptance (2026-10-02 UTC)
 
 **LOCAL ACCEPTANCE PASSED / AUDIT BLOCKED / NO NEW DEPLOYMENT**. The independent
 acceptance branch adds two desktop/mobile exact-host scenarios to the required
 runner: saved customer/quote/job/invoice, recorded off-platform payment, reload,
 read-only teammate access and server write denial, with independent PostgreSQL
-proof. Focused 2/2 (30.1s), full browser 37/37 and visual 4/4 pass without
+proof. Focused 2/2 (26.4s), post-fix full browser 37/37 and visual 4/4 pass without
 failures/skips/retries/snapshot changes. Fresh lint, four typechecks and production
-build pass. AGENTS now accurately lists the existing lint command. No application,
-schema, AI, billing, dependency or parity-count change is included. PR #111's
+build pass. Review reproduced Cancel marking an invoice paid at both widths;
+the prompt guard and cancellation/approved blank-reference regressions now pass.
+AGENTS now accurately lists the existing lint command. No schema, AI, billing,
+dependency or parity-count change is included. PR #111's
 documentation-head CI is terminal 13/14 with only advisory 1240912 failing;
 vector and all native jobs pass. Release and live paid acceptance remain open.
 See [current scope and evidence](modules/TRADEFLOWKIT_FIRST_OUTCOME_ACCEPTANCE_2026-10-02.md).
