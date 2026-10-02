@@ -1,5 +1,92 @@
 # OperatorOS implementation status
 
+## PR #111 release continuation (2026-10-02 UTC)
+
+**FULL LOCAL AND EXACT-HEAD CI: 13/14 / AUDIT BLOCKED / NO NEW DEPLOYMENT**.
+Candidate `fddee0bf378a2bd6c8f3ac7c271c98eb14a717f2` completed all 14 local
+stages October 2 at 15:16 UTC: 1,598 API, 108 integration, 52 unit, 35 browser
+and four visual checks pass, with no failures/skips/retries in those suites.
+Typecheck, lint, production build, parity, static contracts and core preflight
+pass. [Exact-head CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/37021706094)
+also completes 13/14; semantic-vector CI and all three native jobs pass.
+Both earlier full gates completed: local 13/14, PR CI 12/14.
+Initial and retry Playwright traces
+show the crawler replacing OutCall's document 7-9 ms after an app chunk starts.
+The crawler now waits for requests to finish before advancing; all existing
+error assertions remain. Narrow dependency updates select Axios 1.20.0,
+brace-expansion 5.0.12 and Fastify 5.12.2, with no new audit exceptions.
+The fresh audit remains blocked by inherited native-tooling node-forge 1.4.0,
+GHSA-86w9-cpqp-85rv, for which the current registry/advisory has no fixed release.
+Fresh 5 pricing, 15 hardening unit and 18 disposable revenue/billing checks pass;
+lint and corrected production build pass (four typechecks; Next 38/38).
+Four scoped exact-host browser checks pass in 27 seconds with no skips/retries,
+after correcting local invocation/port configuration. The first October 2 full
+attempt lost executor transport; the complete rerun used a fresh disposable DB.
+Supported SDK 57 and next SDK 58 CLIs still require node-forge. Native tooling
+is used, so removal would break supported development/build features. No
+waiver, ad hoc crypto patch, SDK migration or weakened check was applied.
+Canonical unpublished AI work and live v65 are preserved. See
+[continuation evidence](REVENUE_RELEASE_CONTINUATION_2026-10-02.md).
+Earlier sections below describe their dated checkpoints and are superseded by
+this continuation for current authorization and gate status.
+
+## TradeFlowKit pricing candidate full local gate (2026-09-30 20:49 UTC)
+
+Exact code candidate `f610a7eaa753547664fc94cc10701b5f5d10e25e` completed the
+full local release gate: **13/14 stages passed; merge/deployment blocked**.
+Windows/Node 24.16.0, pinned pnpm 10.34.5, fresh loopback PostgreSQL 16 and
+stripped external-provider credentials. All 1,598 API, 108 integration, 52 unit,
+35 browser and four visual checks passed without failures/skips/todos/retries;
+typecheck, lint, production build, parity, route/visual contracts and core
+preflight passed. The only failed stage is Phase 39 dependency auditing:
+nine unresolved advisory IDs on unchanged `axios@1.19.0` (Twilio) and
+`brace-expansion@5.0.9` (Capacitor tooling); 11 raw high disclosures, zero critical,
+zero source-security findings. No dependency or scanner-exception change was
+made. The 15 hardening unit checks short-circuited by the audit pass when run
+separately. This is inherited dependency debt, not an identified pricing regression.
+
+Source publication is authorized; the isolated candidate can be reviewed in a
+draft PR. Required clean exact-head CI and dependency remediation remain gates
+before merge/publication. No production-readiness certification, live purchase,
+production write, secret/security change or unrelated AI publication occurred.
+See [complete stage evidence](TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md#full-local-release-gate-for-the-exact-code-candidate).
+
+## TradeFlowKit first-customer revenue path (2026-09-30 UTC)
+
+Status: **ISOLATED LOCAL CANDIDATE / DEPLOYED PAID-CUSTOMER ACCEPTANCE OPEN**.
+From exact main `737a9d0f`, `codex/tradeflowkit-revenue-readiness` preserves
+flagship, included companion, additional companions and seats through public
+pricing signup/sign-in and return. Anonymous live browser evidence confirms
+the previous $208 Stack lost companion/seat preferences and signup links
+omitted the pricing return; hydrated desktop/mobile pricing and public catalog
+are healthy. No price, billing, tenant, role, SSO, entitlement or database
+authority changes; no migration, publication or production write occurred.
+
+Fresh pinned install, four-workspace typecheck, zero-warning root lint,
+production build (38/38 pages), 29 focused pricing/commerce checks and 18
+disposable-PostgreSQL revenue/billing/provider checks pass with zero failures
+or skips. New desktop/mobile handoff browser acceptance passes 2/2 with no
+retries through the compiled local supervisor; the auth return is simulated,
+without submitting credentials or creating a purchase. Existing
+main release CI remains green; no new full release gate is claimed. Deployed
+owner signup, actual subscription Checkout/signed settlement/access, first
+invoice workflow/second role/logout, provider delivery and restore acceptance
+remain open. See [first-customer evidence and owner handoff](TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md).
+
+Follow-up self-review repaired Back/Refresh preference loss, bounded query seat
+values to existing integer capacity and added the browser spec to the explicit
+release runner. Fresh 53 focused checks, lint, production build/typecheck and
+three local exact-host browser checks pass without failures/skips/retries.
+Redirect/SSO authority is unchanged; campaign parameters survive preference
+updates. Full exact-candidate release CI and authenticated read-only Stripe
+account/Price verification remain open; no available Stripe read tool was found.
+The full 14-stage gate is feasible with isolated DB and exclusive loopback ports;
+it was not run during this bounded review. Source push approval remains pending.
+
+Recommend the existing $149/month five-seat TradeFlowKit pilot around a saved
+customer/job/quote/invoice and recorded off-platform payment. Stripe Connect
+merchant payments remain separate from OperatorOS subscription billing.
+
 ## TechDeck v65 authorized publication (2026-09-29 UTC)
 
 Status: **PUBLISHED / EXACT SOURCE AND DATABASE VERIFIED / PROVIDER DISABLED**.

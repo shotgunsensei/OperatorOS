@@ -1,5 +1,57 @@
 # OperatorOS module parity index
 
+## PR #111 release continuation (2026-10-02 UTC)
+
+**PARITY COUNTS UNCHANGED / LOCAL AND EXACT-HEAD CI 13/14 / AUDIT BLOCKED**.
+Exact code/dependency candidate `fddee0bf` completes the October 2 local and
+[GitHub release gate](https://github.com/shotgunsensei/OperatorOS/actions/runs/37021706094),
+with only the inherited node-forge audit finding failing. All 1,598 API,
+108 integration, 52 unit, 35 browser and four visual checks pass, without
+failures/skips/retries in those suites; all other required stages pass.
+Semantic-vector CI and all three native CI jobs pass. The earlier local and
+PR gates completed, rather than hanging. The crawler waits for route
+requests before its next document navigation while retaining every asset/error
+assertion. Narrow Axios, brace-expansion and Fastify patch updates remove the
+recoverable dependency findings; inherited Expo CLI node-forge has no current
+patched release and remains blocking. Fresh focused checks and lint pass;
+corrected production build (four typechecks; Next 38/38) and four scoped exact-host
+browser checks pass with no skips/retries. Supported SDK upgrades still require
+forge; removing used native tooling is a separate scope decision. No audit
+waiver, ad hoc crypto patch or weakened check was made. No AI, price, trial,
+production write or deployment change occurred. Paid-customer acceptance remains
+open. See [current evidence](../REVENUE_RELEASE_CONTINUATION_2026-10-02.md).
+
+## TradeFlowKit full local gate continuation (2026-09-30 20:49 UTC)
+
+**PARITY COUNTS UNCHANGED / NO PRICING REGRESSION IDENTIFIED / RELEASE GATE RED**.
+Exact code candidate `f610a7ea`: 13/14 local release stages pass, including
+1,598 API, 108 integration, 52 unit, 35 browser and four visual checks with no
+failures/skips/retries in those suites. Phase 39 auditing fails on unchanged
+Twilio Axios and Capacitor brace-expansion dependencies; it remains blocking.
+The source scan has zero findings and 15 supplemental hardening unit checks pass.
+Source publication is authorized; merge/deployment require clean exact-head CI.
+No live paid activation, provider judgment or production recovery is certified.
+See [full local gate evidence](../TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md#full-local-release-gate-for-the-exact-code-candidate).
+
+## TradeFlowKit acquisition continuation (2026-09-30 UTC)
+
+**PARITY COUNTS UNCHANGED / ISOLATED LOCAL HANDOFF FIX / PAID ACCEPTANCE OPEN**.
+
+| Surface | Current evidence | Remaining gate |
+| --- | --- | --- |
+| TradeFlowKit public plan → account → plan return | Live hydrated $149 pricing/catalog verified; full Stack preferences preserved locally through signup and sign-in; 29 pricing/commerce and 18 disposable revenue/provider checks, four typechecks, lint, production build and desktop/mobile browser 2/2 pass; auth return simulated without submitting credentials | Separately approved publication; deployed signup/subscription settlement/access, persistent invoice workflow, second-role/logout and recovery acceptance |
+
+This does not change module feature counts or certify live billing. Merchant
+Stripe Connect payments remain separate from the platform subscription. See
+[first-customer evidence](../TRADEFLOWKIT_FIRST_CUSTOMER_READINESS_2026-09-30.md).
+
+Follow-up: Back/Forward/Refresh and campaign retention, query seat integer
+boundary, and canonical auth handoffs pass three scoped exact-host browser
+checks through a loopback TLS proxy. Fresh 53 focused checks, lint and production
+build/typecheck pass. The release runner now includes this spec. Full candidate
+CI, actual auth/purchase settlement and live Stripe object inspection remain open;
+feature/parity counts and production readiness are unchanged.
+
 ## Resolution Intelligence semantic continuation (2026-09-29)
 
 **PARITY COUNTS UNCHANGED / PHASE 5 PUBLISHED / PROVIDER DISABLED**.

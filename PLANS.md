@@ -2,6 +2,36 @@
 
 Status: current execution plan
 
+## TradeFlowKit first-customer release continuation (2026-10-02 UTC)
+
+The owner prefers TradeFlowKit and reports no known trials or paying customers.
+The first offering remains the existing $149/month guided pilot, five seats and
+one eligible companion. PR #111 preserves the complete Stack through signup
+and sign-in, fixes the release crawler's interrupted route requests and narrowly
+updates three vulnerable dependency resolutions. Exact candidate `fddee0bf`
+completes both the local and GitHub release gates at 13/14. All functional,
+browser, visual, build and parity stages pass; the unchanged whole-workspace
+audit blocks merge/publication on unpatched Expo CLI node-forge. Supported
+current/next SDK updates retain it, and native tooling is used. See
+[current evidence and supported options](docs/REVENUE_RELEASE_CONTINUATION_2026-10-02.md).
+
+The next coherent customer phase is acceptance of the existing TradeFlowKit
+workflow: saved customer/job, quote, invoice, recorded off-platform payment,
+reload and second-user access, followed by owner-approved subscription
+activation/entitlement, role/logout and recovery checks. Public catalog values
+and configured flags are verified, but actual Stripe Price/account mode and
+signed paid settlement remain unverified. Merchant Connect payments are a
+separate service from OperatorOS subscriptions. No purchase, production
+customer write, price/trial change or new module is part of this continuation.
+
+The September 30 all-module OpenAI candidate remains on its isolated canonical
+branch; its documented focused/provider checks do not replace full release CI
+or live acceptance. Preserve that work and establish its compatibility before
+combining it with this acquisition slice. TechDeck Phase 5 is already published
+on v65 with provider activation disabled; its real-model and authenticated
+acceptance gates below remain current, rather than starting speculative Phase 6
+while the first-customer and security gates are unresolved.
+
 ## TechDeck semantic retrieval continuation (2026-09-29)
 
 Phase 5 implements the remaining Prompt 5 semantic portion on

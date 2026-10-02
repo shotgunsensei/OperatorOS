@@ -12,6 +12,7 @@ import {
 } from '@operatoros/sdk';
 import { brand } from '@/lib/brand';
 import { billingApi, meApi } from '@/lib/auth';
+import { MAX_PRICING_ADDITIONAL_SEATS, pricingAccountPath, pricingSelectionPath, type PricingSelection } from '@/lib/pricing-selection';
 import { useAuth } from '../../AuthProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
@@ -32,13 +33,37 @@ const money = (cents: number | null | undefined) => cents == null
   ? 'Price unavailable'
   : `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
-export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: { initialCoreProduct?: CoreProductKey }) {
+export default function PricingSection({ initialSelection }: { initialSelection: PricingSelection }) {
   const { user, loading: authLoading } = useAuth();
-  const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>(initialCoreProduct);
-  React.useEffect(() => setCoreProduct(initialCoreProduct), [initialCoreProduct]);
-  const [freeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>('snapproofos');
-  const [additionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>([]);
-  const [additionalSeats, setAdditionalSeats] = React.useState(0);
+  const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>(initialSelection.coreProduct);
+  const [freeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>(initialSelection.freeCompanionModule);
+  const [additionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>(initialSelection.additionalModules);
+  const [additionalSeats, setAdditionalSeats] = React.useState(initialSelection.additionalSeats);
+  React.useEffect(() => {
+    setCoreProduct(initialSelection.coreProduct);
+    setFreeCompanion(initialSelection.freeCompanionModule);
+    setAdditionalModules(initialSelection.additionalModules);
+    setAdditionalSeats(initialSelection.additionalSeats);
+  }, [initialSelection]);
+  const selection = { coreProduct, freeCompanionModule: freeCompanion, additionalModules, additionalSeats };
+  const updateSelection = (next: PricingSelection) => {
+    setCoreProduct(next.coreProduct);
+    setFreeCompanion(next.freeCompanionModule);
+    setAdditionalModules(next.additionalModules);
+    setAdditionalSeats(next.additionalSeats);
+    // Replace this history entry so Back and Refresh restore the chosen Stack
+    // without adding a history step per click or discarding campaign parameters.
+    const currentUrl = new URL(window.location.href);
+    const preferences = new URL(pricingSelectionPath(next), currentUrl.origin).searchParams;
+    for (const key of ['product', 'companion', 'additional', 'seats']) {
+      currentUrl.searchParams.delete(key);
+      const value = preferences.get(key);
+      if (value !== null) currentUrl.searchParams.set(key, value);
+    }
+    window.history.replaceState(window.history.state, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+  };
+  const signInPath = pricingAccountPath(selection);
+  const registerPath = pricingAccountPath(selection, 'register');
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [catalog, setCatalog] = React.useState<BillingCatalog | null>(null);
@@ -153,21 +178,18 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
             : null;
 
   const toggleAdditionalModule = (moduleKey: CompanionModuleKey) => {
-    setAdditionalModules(current =>
-      current.includes(moduleKey)
-        ? current.filter(key => key !== moduleKey)
-        : [...current, moduleKey],
-    );
+    updateSelection({ ...selection, additionalModules: additionalModules.includes(moduleKey)
+      ? additionalModules.filter(key => key !== moduleKey)
+      : [...additionalModules, moduleKey] });
   };
 
   const chooseFreeCompanion = (moduleKey: CompanionModuleKey) => {
-    setFreeCompanion(moduleKey);
-    setAdditionalModules(current => current.filter(key => key !== moduleKey));
+    updateSelection({ ...selection, freeCompanionModule: moduleKey, additionalModules: additionalModules.filter(key => key !== moduleKey) });
   };
 
   const continueToCheckout = async () => {
     if (!user) {
-      window.location.href = `/login?next=${encodeURIComponent(`/pricing?product=${coreProduct}#build-stack`)}`;
+      window.location.href = signInPath;
       return;
     }
     if (viewerRole !== 'owner') {
@@ -259,12 +281,12 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
             </p>
             <div className="pricing-hero-actions" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
               {!user && (
-                <Link href="/login?mode=register" data-testid="pricing-create-account" style={primaryButtonStyle}>
+                <Link href={registerPath} data-testid="pricing-create-account" style={primaryButtonStyle}>
                   Create free account <ArrowRight size={16} />
                 </Link>
               )}
               <a href="#build-stack" style={user ? primaryButtonStyle : secondaryButtonStyle}>Build Your Stack <ArrowRight size={16} /></a>
-              {!user && <Link href="/login" style={secondaryButtonStyle}>Sign In</Link>}
+              {!user && <Link href={signInPath} style={secondaryButtonStyle}>Sign In</Link>}
             </div>
             {!user && (
               <p data-testid="pricing-no-card" style={{ color: brand.textMuted, fontSize: 13, margin: '14px 0 0' }}>
@@ -345,7 +367,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
                   </li>
                 ))}
               </ul>
-              <a href="#build-stack" onClick={() => setCoreProduct(product.key)} style={{ ...secondaryButtonStyle, width: '100%', boxSizing: 'border-box' }}>
+              <a href="#build-stack" onClick={() => updateSelection({ ...selection, coreProduct: product.key })} style={{ ...secondaryButtonStyle, width: '100%', boxSizing: 'border-box' }}>
                 Build Your Stack
               </a>
             </article>
@@ -364,7 +386,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               <ConfiguratorStep number="1" title="Flagship Application">
                 <div className="stack-options">
                   {CORE_PRODUCTS.map(product => (
-                    <ChoiceButton key={product.key} selected={coreProduct === product.key} onClick={() => setCoreProduct(product.key)}>
+                    <ChoiceButton key={product.key} selected={coreProduct === product.key} onClick={() => updateSelection({ ...selection, coreProduct: product.key })}>
                       <strong>{product.name}</strong><span>{catalogCorePrice(product.key) == null ? 'Price unavailable' : `${money(catalogCorePrice(product.key))}/month`}</span>
                     </ChoiceButton>
                   ))}
@@ -393,11 +415,11 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               </ConfiguratorStep>
               <ConfiguratorStep number="4" title="Additional Seats">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <button className="pricing-control" type="button" aria-label="Remove additional seat" onClick={() => setAdditionalSeats(value => Math.max(0, value - 1))} style={counterButtonStyle}>
+                  <button className="pricing-control" type="button" aria-label="Remove additional seat" onClick={() => updateSelection({ ...selection, additionalSeats: Math.max(0, additionalSeats - 1) })} style={counterButtonStyle}>
                     <Minus size={16} />
                   </button>
                   <output data-testid="additional-seat-count" style={{ color: brand.textPrimary, fontSize: 22, fontWeight: 800, minWidth: 34, textAlign: 'center' }}>{additionalSeats}</output>
-                  <button className="pricing-control" type="button" aria-label="Add additional seat" onClick={() => setAdditionalSeats(value => value + 1)} style={counterButtonStyle}>
+                  <button className="pricing-control" type="button" aria-label="Add additional seat" disabled={additionalSeats >= MAX_PRICING_ADDITIONAL_SEATS} onClick={() => updateSelection({ ...selection, additionalSeats: Math.min(MAX_PRICING_ADDITIONAL_SEATS, additionalSeats + 1) })} style={counterButtonStyle}>
                     <Plus size={16} />
                   </button>
                   <span style={{ color: brand.textSecondary, fontSize: 13 }}>{seatPriceCents == null ? 'Price unavailable' : `+${money(seatPriceCents)}/month per seat`}</span>
@@ -425,7 +447,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               <button data-testid="stack-checkout-cta" type="button" onClick={continueToCheckout} disabled={busy || (Boolean(user) && !ownerCanCheckout)} className="pricing-control" style={{ ...primaryButtonStyle, border: 0, width: '100%', cursor: busy ? 'wait' : user && !ownerCanCheckout ? 'not-allowed' : 'pointer', opacity: user && !ownerCanCheckout ? .55 : 1 }}>
                 {busy ? 'Preparing Secure Checkout…' : !user ? 'Sign In to Continue' : accountLoading || authLoading ? 'Verifying Owner Access…' : hasExistingFlagship ? 'One Flagship Already Active' : viewerRole !== 'owner' ? 'Owner Action Required' : 'Continue to Secure Checkout'}
               </button>
-              {user ? <Link href={hasExistingFlagship || viewerRole !== 'owner' ? '/app?page=tenant-billing' : DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>{hasExistingFlagship || viewerRole !== 'owner' ? 'View organization billing state' : 'Return to OperatorOS'}</Link> : <Link href="/login" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Sign In Instead</Link>}
+              {user ? <Link href={hasExistingFlagship || viewerRole !== 'owner' ? '/app?page=tenant-billing' : DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>{hasExistingFlagship || viewerRole !== 'owner' ? 'View organization billing state' : 'Return to OperatorOS'}</Link> : <Link href={registerPath} data-testid="stack-create-account-cta" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Create free account and continue</Link>}
               <p style={{ color: brand.textMuted, fontSize: 11, textAlign: 'center', margin: 0 }}>Final price confirmed in secure Stripe Checkout before any charge.</p>
             </aside>
           </div>
@@ -439,7 +461,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
             <p style={sectionCopyStyle}>These three applications come with every OperatorOS account at no cost—no paid subscription required.</p>
           </div>
           {!user && (
-            <Link href="/login?mode=register" data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>
+            <Link href={registerPath} data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>
               Create free account <ArrowRight size={16} />
             </Link>
           )}

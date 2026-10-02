@@ -7,7 +7,7 @@ import TrustSection from '@/components/marketing/sections/TrustSection';
 import FinalCta from '@/components/marketing/sections/FinalCta';
 import { marketingPricingFaqs } from '@/lib/marketing-pricing';
 import { buildPublicMetadata, serializeJsonLd } from '@/lib/seo';
-import { selectedCoreProduct } from '@/lib/audience-lanes';
+import { readPricingSelection, type PricingSelectionQuery } from '@/lib/pricing-selection';
 
 export const metadata: Metadata = buildPublicMetadata({
   title: 'OperatorOS Application Stack Pricing',
@@ -32,8 +32,8 @@ const pricingFaqJsonLd = {
 /**
  * Public pricing and stack configurator.
  */
-export default async function MarketingPricingPage({ searchParams }: { searchParams: Promise<{ product?: string | string[] }> }) {
-  const product = selectedCoreProduct((await searchParams).product);
+export default async function MarketingPricingPage({ searchParams }: { searchParams: Promise<PricingSelectionQuery> }) {
+  const selection = readPricingSelection(await searchParams);
   return (
     <MarketingLayout testId="page-marketing-pricing">
       <script
@@ -43,7 +43,7 @@ export default async function MarketingPricingPage({ searchParams }: { searchPar
       />
       <style>{`.pricing-page-root, .pricing-page-root * { box-sizing: border-box; }`}</style>
       <div className="pricing-page-root">
-        <PricingSection initialCoreProduct={product} />
+        <PricingSection initialSelection={selection} />
         <PricingFaq />
         <TrustSection
           heading="Operators trust OperatorOS with the work that has to stay running."
