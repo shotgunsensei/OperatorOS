@@ -69,6 +69,7 @@ const runtimeEnv = {
   NODE_ENV: 'production',
   INTERNAL_API_URL: 'http://localhost:5001',
   OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
+  TECHDECK_RESEARCH_ENABLED: 'true',
   // This harness runs behind its own exact-host reverse proxy. Trusting that
   // bounded proxy keeps production IP-based abuse controls active while each
   // disposable browser identity retains its explicit test client address.
@@ -105,6 +106,7 @@ try {
       'e2e/techdeck-resolution-ingestion.spec.ts',
       'e2e/techdeck-resolution-workspace.spec.ts',
       'e2e/techdeck-resolution-documents.spec.ts',
+      'e2e/techdeck-resolution-research.spec.ts',
       'e2e/parity-route-control.spec.ts',
       'e2e/twilio-compliance.spec.ts',
       'e2e/callcommand-guided-setup.spec.ts',

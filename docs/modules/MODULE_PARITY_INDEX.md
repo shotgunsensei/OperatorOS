@@ -1,5 +1,15 @@
 # OperatorOS module parity index
 
+## TechDeck grounded research continuation (2026-10-02)
+
+Prompt 6's tenant-scoped research API and native/embedded workflow are implemented
+on `codex/techdeck-grounded-research`, using existing hybrid retrieval, reviewed
+normalized evidence, strict citations/quotes, mandatory failures/uncertainty and
+separate disabled-by-default provider consent/limits. Additive v66 settings and
+synthetic tests are included. [Acceptance and remaining gates](../techdeck/resolution-intelligence-prompt-ledger.md).
+Historical parity counts/state 4 are unchanged: full release security, live model
+evaluation and target deployment/owner acceptance remain open. No state 5 claim.
+
 ## OpenAI provider acceptance continuation (2026-09-30)
 
 **PARITY COUNTS UNCHANGED / LOCAL REAL-PROVIDER VERIFIED / HOSTED KEY RECOVERY OPEN**.

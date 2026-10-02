@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:92255710-685d-49b5-a3bc-10589966f906",
+  "serialNumber": "urn:uuid:0bc72ce3-611a-4e35-ac94-6325d03a3091",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-27T17:01:57.994Z",
+    "timestamp": "2026-10-02T21:31:14.859Z",
     "component": {
       "type": "application",
       "name": "OperatorOS",
@@ -13,7 +13,7 @@
     "properties": [
       {
         "name": "operatoros:pnpm-lock-sha256",
-        "value": "92255710685de9b563bc10589966f906140b7b05fbc6f4c444b3915faf17fb0d"
+        "value": "0bc72ce3611a9e35dc946325d03a3091b11312f8c65c35862cd58dc0222bba10"
       }
     ]
   },
@@ -3422,10 +3422,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/axios@1.19.0",
+      "bom-ref": "pkg:npm/axios@1.20.0",
       "name": "axios",
-      "version": "1.19.0",
-      "purl": "pkg:npm/axios@1.19.0"
+      "version": "1.20.0",
+      "purl": "pkg:npm/axios@1.20.0"
     },
     {
       "type": "library",
@@ -3562,10 +3562,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/brace-expansion@5.0.9",
+      "bom-ref": "pkg:npm/brace-expansion@5.0.12",
       "name": "brace-expansion",
-      "version": "5.0.9",
-      "purl": "pkg:npm/brace-expansion@5.0.9"
+      "version": "5.0.12",
+      "purl": "pkg:npm/brace-expansion@5.0.12"
     },
     {
       "type": "library",
@@ -4801,10 +4801,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/fast-uri@4.1.4",
+      "bom-ref": "pkg:npm/fast-uri@4.1.5",
       "name": "fast-uri",
-      "version": "4.1.4",
-      "purl": "pkg:npm/fast-uri@4.1.4"
+      "version": "4.1.5",
+      "purl": "pkg:npm/fast-uri@4.1.5"
     },
     {
       "type": "library",
@@ -4822,10 +4822,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/fastify@5.12.1",
+      "bom-ref": "pkg:npm/fastify@5.12.5",
       "name": "fastify",
-      "version": "5.12.1",
-      "purl": "pkg:npm/fastify@5.12.1"
+      "version": "5.12.5",
+      "purl": "pkg:npm/fastify@5.12.5"
     },
     {
       "type": "library",

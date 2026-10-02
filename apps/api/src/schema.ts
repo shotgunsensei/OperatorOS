@@ -2,6 +2,7 @@ import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index, uniq
 import { sql } from 'drizzle-orm';
 export * from './techdeck-resolution-schema.js';
 export * from './techdeck-resolution-semantic-schema.js';
+export * from './techdeck-resolution-research-schema.js';
 
 export const workspaces = pgTable('workspaces', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),

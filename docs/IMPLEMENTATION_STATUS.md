@@ -1,5 +1,27 @@
 # OperatorOS implementation status
 
+## TechDeck Prompt 6 grounded research candidate (2026-10-02 UTC)
+
+Status: **IMPLEMENTED / FOCUSED SYNTHETIC ACCEPTANCE PASSED / RELEASE BLOCKED / NOT DEPLOYED**.
+`codex/techdeck-grounded-research` starts from current main `62fb640c` without
+altering canonical or other workers' changes. Native/embedded research retrieves
+authorized hybrid incident/linked-KB evidence, previews normalized egress,
+validates exact source quotes/citations and preserves failures, side effects,
+pending/conflicting observations with all ten sections/four original labels.
+Shared provider use is off by default; separate tenant consent, atomic daily
+attempt caps, delayed authority/source and exact-session rechecks are required.
+Additive disabled v66 settings apply cleanly; 20/20 focused API/migration and 2/2
+desktop/mobile/native/embedded browser checks pass, zero skips. Root lint,
+typechecks and production build pass. Full local/exact-head CI are pending;
+dependency audit leaves one unpatched node-forge advisory. No real provider or production write
+was made. [Prompt ledger, provenance, tests and release blockers](techdeck/resolution-intelligence-prompt-ledger.md).
+
+PR113's merge by the owner account is an external source-history event, not this
+worker's merge/publication. Its old editor invalid-key report below does not prove
+published credentials are invalid. Current dependency security remains red; no
+merge/publish is approved by test evidence yet. TradeFlowKit paid pilot remains
+the first-revenue priority; this research feature does not replace that acceptance.
+
 ## All-module OpenAI enablement candidate (2026-09-30 UTC)
 
 Status: **LOCAL REAL-PROVIDER CHECKS PASSED / HOSTED KEY INVALID / NOT PUBLISHED**.

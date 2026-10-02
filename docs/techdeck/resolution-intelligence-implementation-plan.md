@@ -2,6 +2,14 @@
 
 Status: **PHASES 0–4 IMPLEMENTED AND DEPLOYED; LOCAL/CI GATES AND LIVE OWNER READ CHECKS PASSED**
 
+Phase 6 source overlay (2026-10-02): the original grounded research interface,
+native API, reviewed evidence projection, citation/quote validation, mandatory
+negative and uncertain evidence, authority rechecks and separate consent/limits
+are implemented on `codex/techdeck-grounded-research`. See the
+[research guide](resolution-intelligence-research.md) and [prompt ledger](resolution-intelligence-prompt-ledger.md).
+Synthetic verification is distinct from deployment/live model acceptance. Later
+AI document generation, mining, dashboards and real-incident seed remain open.
+
 Phase 5 source overlay (2026-09-29): semantic retrieval is now implemented with
 OpenAI selected as the first adapter and activation explicitly disabled. See the
 [semantic guide](resolution-intelligence-semantic-search.md) for reviewed chunk
