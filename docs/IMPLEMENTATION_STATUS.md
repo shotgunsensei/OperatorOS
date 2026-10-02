@@ -2,8 +2,15 @@
 
 ## PR #111 release continuation (2026-10-02 UTC)
 
-**SCOPED LOCAL FIXES / AUDIT BLOCKED / NO NEW DEPLOYMENT**. Both earlier full
-gates completed: local 13/14, PR CI 12/14. Initial and retry Playwright traces
+**FULL LOCAL AND EXACT-HEAD CI: 13/14 / AUDIT BLOCKED / NO NEW DEPLOYMENT**.
+Candidate `fddee0bf378a2bd6c8f3ac7c271c98eb14a717f2` completed all 14 local
+stages October 2 at 15:16 UTC: 1,598 API, 108 integration, 52 unit, 35 browser
+and four visual checks pass, with no failures/skips/retries in those suites.
+Typecheck, lint, production build, parity, static contracts and core preflight
+pass. [Exact-head CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/37021706094)
+also completes 13/14; semantic-vector CI and all three native jobs pass.
+Both earlier full gates completed: local 13/14, PR CI 12/14.
+Initial and retry Playwright traces
 show the crawler replacing OutCall's document 7-9 ms after an app chunk starts.
 The crawler now waits for requests to finish before advancing; all existing
 error assertions remain. Narrow dependency updates select Axios 1.20.0,
@@ -13,7 +20,11 @@ GHSA-86w9-cpqp-85rv, for which the current registry/advisory has no fixed releas
 Fresh 5 pricing, 15 hardening unit and 18 disposable revenue/billing checks pass;
 lint and corrected production build pass (four typechecks; Next 38/38).
 Four scoped exact-host browser checks pass in 27 seconds with no skips/retries,
-after correcting local invocation/port configuration. Full-gate evidence remains pending.
+after correcting local invocation/port configuration. The first October 2 full
+attempt lost executor transport; the complete rerun used a fresh disposable DB.
+Supported SDK 57 and next SDK 58 CLIs still require node-forge. Native tooling
+is used, so removal would break supported development/build features. No
+waiver, ad hoc crypto patch, SDK migration or weakened check was applied.
 Canonical unpublished AI work and live v65 are preserved. See
 [continuation evidence](REVENUE_RELEASE_CONTINUATION_2026-10-02.md).
 Earlier sections below describe their dated checkpoints and are superseded by

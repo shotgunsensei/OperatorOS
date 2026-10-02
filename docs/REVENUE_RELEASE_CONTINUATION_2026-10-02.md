@@ -1,11 +1,12 @@
 # PR #111 release continuation - 2026-10-02 UTC
 
-Status: **SCOPED VALIDATION PASSED; FULL GATE PENDING; AUDIT BLOCKS PUBLICATION**.
+Status: **LOCAL AND EXACT-HEAD CI COMPLETE: 13/14; AUDIT BLOCKS MERGE/PUBLICATION**.
 
 ## Source and deployed identity
 
-- [PR #111](https://github.com/shotgunsensei/OperatorOS/pull/111) remains a draft
-  at `2b8d0ddbe6b68aedb5928561e2476ccb051610e7`; main remains
+- [PR #111](https://github.com/shotgunsensei/OperatorOS/pull/111) remains a draft.
+  The code/dependency candidate tested locally and in GitHub CI is
+  `fddee0bf378a2bd6c8f3ac7c271c98eb14a717f2`; main remains
   `737a9d0fa18267c33fb01732ef5be4626e96c1e5`. No other PR is open.
 - The isolated checkout is on `codex/tradeflowkit-revenue-readiness`; its
   starting working tree was clean. Canonical `C:\Dev\OperatorOS` remains on
@@ -72,10 +73,30 @@ no patched version. The report has three raw high and three raw moderate
 disclosures, zero critical; existing mitigated image-size exceptions remain
 integrity-bound. Counts are not a deployed exploitability assessment.
 
-This inherited native-tooling finding remains blocking under the unchanged
-whole-workspace audit. No waiver, new exception, native SDK replacement,
-dependency removal or production security change was made. An upstream fixed
-release or a separate reviewed mitigation is needed before the audit can pass.
+Registry inspection also found that current SDK 57 Expo 57.0.26 uses CLI
+57.0.27, and next SDK 58 Expo 58.0.2 uses CLI 58.1.1. Both CLI releases still
+require node-forge `^1.3.3`, code-signing-certificates `^0.0.6` and devcert
+`^1.2.1`; a supported SDK update does not remove this finding. The installed
+CLI and certificate helper use forge certificate parsing and signature
+verification. The native package uses Expo for development, prebuild, device
+run and Android/iOS export. It is not a genuinely unused dependency that can
+be removed without breaking supported tooling.
+
+No imports of this native toolchain were found in production API, web or
+runner source. The root production build targets those three packages; the
+native app has no configured Expo update-signing certificate. These facts do
+not override the whole-workspace audit or prove that deployed filesystem
+exposure is harmless. Exploitability in production was not demonstrated.
+
+This inherited finding remains blocking under the unchanged whole-workspace
+audit. No waiver, new exception, ad hoc cryptography patch, native SDK
+replacement, dependency removal or production security change was made.
+The supported immediate path is to wait for an upstream fixed release and
+narrowly update it, then rerun required gates. Alternatively, the owner can
+commission a separate native-toolchain removal, replacement or deployment
+isolation project, preserving the required native features and proving the
+new dependency boundary. That is an additional scope decision, not a passing
+result for this candidate.
 
 ## Fresh verification
 
@@ -98,11 +119,67 @@ navigation and manipulated-query pricing tests. It uses isolated Chromium with
 canonical hosts mapped to loopback, not the owner's signed-in browser. No real
 auth submission, terms acceptance, purchase or production write occurred.
 The checked-in SBOM was regenerated for the three changed dependency versions.
-The complete fresh local gate is pending; no successful result is inferred
-from earlier source or main CI.
 
-The complete fresh local gate and exact-head GitHub CI remain required. No
-merge or publication is permitted while auditing remains red. Authenticated
+### Complete local gate and exact-head CI
+
+The first October 2 full attempt was interrupted by executor transport loss
+during API tests. Its partial reports and log were archived; it is not counted
+as a completed gate or a test failure. The rerun used a fresh disposable
+PostgreSQL 16 database, exclusive loopback ports 443/5000/5001/5002 and stripped
+external-provider credentials. It completed on the exact candidate above on
+Windows/Node 24.16.0 with pinned pnpm 10.34.5, from **14:44:35 to 15:16:25 UTC**
+(31 minutes 50 seconds), returning exit code 1 with **13/14 stages passing**.
+No filters, snapshot updates, test skips or new audit exceptions were enabled.
+
+| Required stage | Local result | Exact-head GitHub CI |
+| --- | --- | --- |
+| FaultlineLab source catalog | PASS | PASS |
+| Phase 39 production hardening | FAIL: advisory 1240912 | FAIL: advisory 1240912 |
+| Parity report | PASS | PASS |
+| Parity assertions | PASS | PASS |
+| Workspace typechecks | PASS | PASS |
+| Lint | PASS, zero warnings | PASS |
+| Unit | PASS, 52/52 | PASS, 52/52 |
+| API | PASS, 1,598/1,598 | PASS, 1,598/1,598 |
+| Integration apply/reapply | PASS, 108/108 | PASS, 108/108 |
+| Production build | PASS, Next 38/38 | PASS |
+| Route/control static contract | PASS | PASS |
+| Visual static contract | PASS | PASS |
+| Exact-host browser/accessibility/visual | PASS, 35 browser + 4 visual | PASS, 35 browser + 4 visual |
+| Production core preflight | PASS | PASS |
+
+The counted unit/API/integration suites have zero failures, cancellations,
+skips or todos. Browser/visual logs show all tests passing without retries,
+flaky results or skipped tests. The hardening command stops at its audit
+failure before its trailing test commands; the 15 hardening unit checks were
+run separately and passed. The scan reports zero source findings, passing
+deployment scope and intact existing exception integrity. This does not make
+the failed hardening stage release eligible.
+
+The [exact-head release CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/37021706094)
+completed **13/14**, confirming the previously failing route crawler passes.
+The [semantic-vector CI](https://github.com/shotgunsensei/OperatorOS/actions/runs/37021706134)
+passes. All three [native CI jobs](https://github.com/shotgunsensei/OperatorOS/actions/runs/37021706131)
+pass: contracts/typecheck/unit/config/Android+iOS export, Android device and
+iOS device. No unrelated native or unpublished AI changes were included.
+
+Local evidence is retained under ignored
+`test-results/revenue-readiness/oct2-full-gate/`, including the full invocation,
+release result, security report, test summaries, log and generated browser
+artifacts. GitHub logs and uploaded release artifacts independently record
+the exact tested SHA. A subsequent evidence-only documentation commit does
+not represent a new successful gate; its CI status must be checked separately.
+
+### Public catalog and remaining first-customer acceptance
+
+October 2 read-only `/api/billing/catalog` returns TradeFlowKit at **14,900
+cents/month**, five included seats and one included companion; additional
+companions are 2,900 cents and extra seats 1,500 cents. All five configured
+Stripe flags are true. This is public catalog/configuration evidence, not an
+authenticated Stripe account, active Price, live checkout or signed settlement
+verification. No connected read-only Stripe tool is available in this session.
+
+No merge or publication is permitted while auditing remains red. Authenticated
 Stripe account/Price inspection, actual paid activation/signed settlement,
 deployed first invoice/second-role/logout and recovery acceptance remain open.
 The first sellable offer remains the existing $149/month TradeFlowKit guided
