@@ -114,6 +114,7 @@ try {
       'e2e/phase39-accessibility-performance.spec.ts',
       'e2e/audience-lanes.spec.ts',
       'e2e/pricing-selection.spec.ts',
+      'e2e/tradeflowkit-first-outcome.spec.ts',
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);
