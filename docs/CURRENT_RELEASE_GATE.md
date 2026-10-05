@@ -1,5 +1,32 @@
 # OperatorOS current release gate
 
+## Observed publication and commercial launch candidate (2026-10-05)
+
+Current public readiness supersedes the historical publication identities below:
+serving commit `62fb640c64bd5477a8e5752301c17cb108ab6d2e`, application build
+`dbca1e6f06bbb7aa9bb2de15`, built `2026-10-02T20:21:26.699Z`, deployed
+`2026-10-04T17:43:38.847Z`, ready with database v65/65. Fresh read-only
+exact-commit public runtime verification passes 47/47.
+
+This is public identity/routing evidence. The exact deployed commit's release
+CI failed dependency hardening. The `codex/ecosystem-commercial-launch`
+candidate repairs that failure and adds complete Stripe price/portal/webhook
+inspection plus purchase-contract hardening. Its first full local release run
+passed 13/14 stages, including production build/start, 32 browser/four visual
+cases and core preflight. The only failed API static assertion was corrected
+and rechecked 8/8; the fresh complete API retest passes 1,605/1,605 with zero
+failures/skips. All fourteen local scopes have passing evidence across those
+executions, while fresh exact-commit CI remains required. It has not been
+pushed or published. Provider configuration
+flags do not prove credentials, successful payment, tenant acceptance or real
+module workflows. OutCall launch/sales stay disabled. Current hosted OpenAI
+validity and semantic activation have not been directly inspected.
+
+See [the dated commercial launch record](ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md)
+for the eleven prices, candidate verification, outstanding access/acceptance,
+release gates and rollback. No database release beyond v65 is introduced.
+
+
 ## Resolution Intelligence Phase 5 / v65 - LIVE / PROVIDER DISABLED (2026-09-29)
 
 PR #109 merge `ee9ca05e8346bdb1770932029ae8a9a8d682ef0f` is published as

@@ -102,10 +102,14 @@ export async function provisionTorqueShedStripeCatalog(input: {
   client: TorqueShedCatalogStripeClient;
   mode: TorqueShedStripeMode;
   operation: 'dry-run' | 'apply' | 'validate';
+  expectedAccountId?: string;
   persist?: (mapping: TorqueShedCatalogMapping) => Promise<void>;
 }): Promise<TorqueShedCatalogProvisioningReport> {
   const account = await input.client.accounts.retrieve();
   if (!account?.id) throw Object.assign(new Error('Stripe account identity is unavailable'), { code: 'STRIPE_ACCOUNT_UNAVAILABLE' });
+  if (input.expectedAccountId && account.id !== input.expectedAccountId) {
+    throw Object.assign(new Error('Resolved Stripe account does not match STRIPE_EXPECTED_ACCOUNT_ID'), { code: 'STRIPE_ACCOUNT_MISMATCH' });
+  }
   const persist = input.persist ?? persistTorqueShedCatalogMapping;
   const created = { products: 0, prices: 0 };
   const items: TorqueShedCatalogReportItem[] = [];

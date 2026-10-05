@@ -164,6 +164,8 @@ export interface VerificationCheck {
   severity: 'error' | 'warning' | 'info';
 }
 
+export * from './commercial-prices.js';
+
 export interface TaskResult {
   success: boolean;
   summary: string;

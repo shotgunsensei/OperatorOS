@@ -1,1 +1,4 @@
 *.pdf binary
+# Generated unified diffs need their blank context-line markers and LF bytes.
+patches/braces@3.0.3.patch text eol=lf whitespace=-blank-at-eol
+patches/node-forge@1.4.0.patch text eol=lf whitespace=-blank-at-eol

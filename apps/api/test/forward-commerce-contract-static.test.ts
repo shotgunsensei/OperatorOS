@@ -65,6 +65,7 @@ test('legacy sales close explicitly while terminal legacy contracts cannot react
 
 test('stack billing is crash-recoverable, provider-backed, and strictly webhook-bound', () => {
   const billing = read('apps/api/src/lib/billing-service.ts');
+  const priceContract = read('apps/api/src/lib/stripe-price-contract.ts');
   const routes = read('apps/api/src/routes/billing-routes.ts');
   assert.match(billing, /checkout_attempt_id:\s*crypto\.randomUUID\(\)/);
   assert.match(billing, /operatoros-stack-checkout-\$\{checkoutAttemptId\}/);
@@ -89,9 +90,10 @@ test('stack billing is crash-recoverable, provider-backed, and strictly webhook-
   assert.match(billing, /additionalSeats !== stackSub\.additionalSeats/);
   assert.match(billing, /subscriptions\.retrieve\(subscriptionId/);
   assert.match(billing, /prices\.retrieve\(expectation\.priceId\)/);
-  assert.match(billing, /price\.type !== 'recurring'/);
-  assert.match(billing, /price\.recurring\?\.interval !== 'month'/);
-  assert.match(billing, /price\.unit_amount !== expectedUnitAmountCents/);
+  assert.match(billing, /return recurringStripePriceError\(price,/);
+  assert.match(priceContract, /price\.type !== 'recurring'/);
+  assert.match(priceContract, /price\.recurring\?\.interval !== 'month'/);
+  assert.match(priceContract, /price\.unit_amount !== expected\.unitAmountCents/);
   assert.match(billing, /SUBSCRIPTION_ITEM_COUNT_MISMATCH/);
   assert.match(billing, /SUBSCRIPTION_ITEM_PRICE_OR_QUANTITY_MISMATCH/);
   assert.match(routes, /WEBHOOK_PROCESSING_RETRY_REQUIRED/);

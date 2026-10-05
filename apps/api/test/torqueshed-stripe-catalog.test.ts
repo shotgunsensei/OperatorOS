@@ -84,11 +84,24 @@ test('amount, metadata, mode, duplicate lookup, and inactive Price drift fail cl
   }
 });
 
+test('catalog rejects a wrong account before product, price or database writes', async () => {
+  const stripe = fakeStripe('test');
+  let persisted = 0;
+  await assert.rejects(provisionTorqueShedStripeCatalog({
+    client: stripe, mode: 'test', operation: 'apply', expectedAccountId: 'acct_other',
+    persist: async () => { persisted += 1; },
+  }), /does not match/);
+  assert.equal(stripe.productsData.length, 0);
+  assert.equal(stripe.pricesData.length, 0);
+  assert.equal(persisted, 0);
+});
+
 test('CLI rejects mismatched mode and requires a second live-apply confirmation', () => {
   assert.throws(() => parseTorqueShedCatalogArgs(['--mode', 'live', '--dry-run'], { STRIPE_MODE: 'test', STRIPE_SECRET_KEY: 'redacted' }), /does not match/);
-  assert.throws(() => parseTorqueShedCatalogArgs(['--mode', 'live', '--apply'], { STRIPE_MODE: 'live', STRIPE_SECRET_KEY: 'redacted', DATABASE_URL: 'redacted' }), /Live apply requires/);
+  assert.throws(() => parseTorqueShedCatalogArgs(['--mode', 'live', '--apply'], { STRIPE_MODE: 'live', STRIPE_EXPECTED_ACCOUNT_ID: 'acct_livecatalog', STRIPE_SECRET_KEY: 'redacted', DATABASE_URL: 'redacted' }), /Live apply requires/);
   assert.deepEqual(parseTorqueShedCatalogArgs(['--mode', 'live', '--apply', '--confirm-live'], {
     STRIPE_MODE: 'live', STRIPE_SECRET_KEY: 'redacted', DATABASE_URL: 'redacted',
+    STRIPE_EXPECTED_ACCOUNT_ID: 'acct_livecatalog',
     TORQUESHED_STRIPE_LIVE_APPLY_CONFIRM: 'CREATE_LIVE_TORQUESHED_CATALOG',
   }), { mode: 'live', operation: 'apply' });
 });

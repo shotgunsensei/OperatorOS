@@ -1,5 +1,29 @@
 # OperatorOS module parity index
 
+## Commercial launch verification overlay (2026-10-05)
+
+**PARITY COUNTS UNCHANGED / PRICE CONTRACT HARDENED / LIVE ACCEPTANCE OPEN**.
+
+| Surface | Candidate evidence | Remaining gate |
+| --- | --- | --- |
+| TradeFlowKit, PulseDesk, TechDeck; all six eligible paid companions; additional seats | Shared full forward-sales manifest; live-mode/amount/quantity checks on new and resumed checkout; focused tenant/settlement regressions pass | Actual Stripe configuration, hosted payment, signed settlement and target tenant acceptance |
+| CallCommand AI | Lane and managed-number prices use the same contract; malformed lane Price causes no provider mutation and rolls back the operation claim | Live capacity payments, Twilio number/real call/recording/transfer and realtime acceptance |
+| TorqueShed / Torque Assist | Three existing credit SKUs preserved; expected Stripe account checked before catalog creation/persistence | Durable live mapping, exact-release activation, real paid credits and provider workflow |
+| OutCall | Owner-authorized reconstruction remains current source/local truth; README now matches global coming-soon launch/sales state | Explicit commercial/activation policy and real Twilio/target acceptance |
+| Free companions | Public routing evidence unchanged | New tenant persistent workflows and target SSO/isolation/logout |
+
+Focused billing/catalog checks: 48 passed, zero failed/skipped. Public runtime:
+47 passed for the currently published build. The first full local release run
+passed 13/14 stages, including 108 integration, production build, 32 browser
+and four visual cases. Its sole static API assertion failure was corrected and
+rechecked 8/8; the complete fresh API rerun passes 1,605/1,605 with zero
+failures/skips. All fourteen local scopes have current passing evidence across
+those runs; fresh exact-commit CI remains required. No production
+promotion, Stripe mutation or parity reclassification
+is inferred. See [the commercial launch record](../ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md)
+and [implementation status](../IMPLEMENTATION_STATUS.md).
+
+
 ## OpenAI provider acceptance continuation (2026-09-30)
 
 **PARITY COUNTS UNCHANGED / LOCAL REAL-PROVIDER VERIFIED / HOSTED KEY RECOVERY OPEN**.

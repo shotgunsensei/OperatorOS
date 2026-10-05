@@ -1,5 +1,44 @@
 # OperatorOS implementation status
 
+## Ecosystem commercial launch candidate (2026-10-05)
+
+Status: **SOURCE CANDIDATE / LOCAL SCOPES PASSED / LIVE ACCEPTANCE OPEN**.
+
+Branch `codex/ecosystem-commercial-launch` starts from deployed commit
+`62fb640c64bd5477a8e5752301c17cb108ab6d2e`. The candidate centralizes the eleven
+forward-sales prices, strengthens every recurring purchase/resume Price
+contract, adds an account-bound read-only Stripe catalog/portal/webhook audit,
+moves TorqueShed's account check before provider writes, and repairs the
+dependency hardening failure in the deployed commit's CI. It does not change
+the v65 database release, module roles, SSO, settlement authority or price policy.
+
+Fresh isolated PostgreSQL 16 focused checks pass **48/48**, zero failures/skips;
+installed dependency exploit regressions pass **2/2**. Frozen install and the
+security scan pass; four high advisories remain disclosed under tested local
+patch exceptions, with zero unresolved/critical advisories. Full
+`corepack pnpm verify:release` completed 13/14 stages: 52 unit, 108 integration,
+production build/typechecks, fresh root lint, static route/visual contracts,
+32 compiled exact-host browser journeys, four visual cases and core preflight
+pass with zero skips/browser retries. The sole failure was an existing static
+test referencing the price validator's previous location. Corrected assertions
+pass 8/8; fresh complete `corepack pnpm test:api` passes **1,605/1,605**, zero
+failures/cancellations/skips/todo, 857,190.41 ms. The initial API
+run's 1,604 pass/1 fail/0 skip evidence is retained, not rewritten. All fourteen
+local scopes have passing evidence across those executions; a fresh one-shot
+exact-commit CI release run remains a publication gate.
+Public exact-commit runtime verification passes **47/47** for the existing live
+build `dbca1e6f06bbb7aa9bb2de15`, deployed October 4, v65/65. Those checks do not
+establish completed payments, authenticated tenant workflows or provider access.
+
+No push, deployment, production database change, real payment or communication
+has occurred. Authenticated application/Stripe access is unavailable. OutCall
+remains coming soon under its provider/activation gate. The prior September 30
+hosted OpenAI-key failure is historical evidence; current published provider
+validity has not been directly tested. Exact price paths, commands, evidence,
+remaining acceptance and rollback are in
+[the commercial launch record](ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md).
+
+
 ## All-module OpenAI enablement candidate (2026-09-30 UTC)
 
 Status: **LOCAL REAL-PROVIDER CHECKS PASSED / HOSTED KEY INVALID / NOT PUBLISHED**.

@@ -16,6 +16,9 @@ export function parseTorqueShedCatalogArgs(args: string[], env: NodeJS.ProcessEn
   if (operations.length !== 1) throw new Error('Choose exactly one of --dry-run, --apply, or --validate');
   if (env.STRIPE_MODE !== mode) throw new Error(`Requested mode ${mode} does not match STRIPE_MODE`);
   if (!env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is required');
+  if (mode === 'live' && !/^acct_[A-Za-z0-9]+$/.test(env.STRIPE_EXPECTED_ACCOUNT_ID ?? '')) {
+    throw new Error('STRIPE_EXPECTED_ACCOUNT_ID is required before live catalog operations');
+  }
   if (operations[0] === 'apply' && !env.DATABASE_URL) throw new Error('DATABASE_URL is required for catalog apply');
   if (mode === 'live' && operations[0] === 'apply') {
     if (!args.includes('--confirm-live') || env.TORQUESHED_STRIPE_LIVE_APPLY_CONFIRM !== 'CREATE_LIVE_TORQUESHED_CATALOG') {
@@ -36,6 +39,7 @@ export async function runTorqueShedCatalogCli(
     client: getStripeCatalogClient(),
     mode: parsed.mode,
     operation: parsed.operation,
+    expectedAccountId: env.STRIPE_EXPECTED_ACCOUNT_ID,
   });
   if (env.STRIPE_EXPECTED_ACCOUNT_ID && report.accountId !== env.STRIPE_EXPECTED_ACCOUNT_ID) {
     throw Object.assign(new Error('Resolved Stripe account does not match STRIPE_EXPECTED_ACCOUNT_ID'), {
