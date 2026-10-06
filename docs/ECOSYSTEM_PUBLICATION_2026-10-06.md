@@ -1,6 +1,110 @@
 # OperatorOS publication continuation - 2026-10-06
 
-## Current scope and authorization
+## Published runtime and hosted checkout acceptance
+
+**PUBLISHED / EXACT SERVING IDENTITY VERIFIED / LIVE CHECKOUT OPENING VERIFIED**.
+Replit reports Live after promotion. Public health and readiness agree on
+commit `0ea0f792db70936c95f60be41fbf457da3fdbf91`, build
+`95081fd3a9949aeebb784f40`, built `2026-10-06T17:55:02.15Z`, runtime start
+`2026-10-06T18:06:07.562Z`. The serving lock fingerprint is
+`52a1d54aeaff9a42b1e832d369b53e3cd9cbee629d184e982c19ce1ea8364981`, matching
+the reviewed Git lock bytes. Database remains v65/65, last step
+`techdeck_resolution_semantic_tables`. No production schema apply, migration,
+restore or development database copy occurred.
+
+PowerShell, local Node v24.16.0 / pnpm 10.34.5, public deployed read-only checks:
+
+| Command | Result |
+| --- | --- |
+| `OPERATOROS_EXPECTED_RELEASE_COMMIT=0ea0f792db70936c95f60be41fbf457da3fdbf91 corepack pnpm verify:production` (set/unset with PowerShell env syntax) | PASS **47/47**, including serving identity, v65, every host's diagnostics, exact-host authorization/PKCE/cookie protections and registered callbacks; preserves OutCall's activation lock |
+| `corepack pnpm audit:revenue:torqueshed -- --source-commit 0ea0f792db70936c95f60be41fbf457da3fdbf91` | PASS `TORQUE_RELEASE_IDENTITY_MATCH`, health/readiness agree |
+| Public `GET https://api.operatoros.net/readyz` | PASS identified commit/build/lock and v65/65 readback |
+
+The authenticated platform Health page reports live Stripe, configured signed
+webhook, all three core prices plus companion/seat prices provider-validated,
+restricted billing portal configured/provider-validated, and zero Application
+Stack validation errors. It reports 12 live modules / 13 registered and one
+coming soon. `lastSuccessfulWebhookAt` remains null: configuration is not a
+successful settlement claim.
+
+In the existing owner's actual organization, TorqueShed credit purchases are
+enabled on the published candidate. Available/reserved/total credits remain
+zero. Roadside 25,000 credits / $5 opens hosted Stripe Checkout for **Torque
+Assist Roadside credits, $5.00, Live mode**. Workshop 100,000 / $15 opens
+hosted Checkout for **Torque Assist Workshop credits, $15.00, Live mode**.
+Roadside's persisted purchase status is `checkout open`; no credits or ledger
+activity are granted merely by opening Checkout. Fleet's $50/500,000 button
+is enabled and its live Price/catalog contract was provider-validated; its
+hosted browser checkout has not yet been exercised.
+
+Application Stack Checkout opens for **TechDeck $99 + one companion $29 +
+one extra seat $15 = $143.00/month**. Stripe renders those exact three monthly
+line items and Live mode. The current owner has no paid flagship; no
+subscription/payment/refund was completed. Selecting an included companion
+adds no separate charge. Individual TradeFlowKit/PulseDesk hosted checkouts
+and paid CallCommand capacity eligibility are not established by that one
+combined cart; their exact live Price objects and server contracts were
+validated separately.
+
+Chrome then blocked automation because another extension UI was open on the
+subscription checkout. The owner was asked to dismiss that popup; remaining
+Fleet/flagship checkout and cancel-return browser checks are paused at this
+concrete browser-control boundary. The $5 checkout is preserved as a payment
+handoff. OpenAI provider setup separately waits at its passkey/security-key
+authentication challenge. Neither obstacle is a missing publication approval.
+
+Evidence: `build/launch/production-runtime-0ea0f792.log`,
+`revenue-runtime-0ea0f792.log`, `production-readyz-0ea0f792.json`,
+`production-platform-health-0ea0f792.json`,
+`replit-published-0ea0f792.png`, `torque-live-credits-ready-0ea0f792.png` and
+`torque-roadside-live-checkout-0ea0f792.png`. These are ignored local release
+artifacts; no private checkout URL, secret or customer dump is committed.
+The earlier checkpoints below are historical and do not supersede this serving
+release evidence. New-tenant/non-admin acceptance, actual signed paid
+settlement, refund/cancellation reconciliation, recipient email delivery,
+CallCommand live voice and OutCall verified-self call acceptance remain open.
+
+## Latest exact-commit release evidence
+
+The final candidate is `0ea0f792db70936c95f60be41fbf457da3fdbf91`.
+Both [standalone release run 37504134052](https://github.com/shotgunsensei/OperatorOS/actions/runs/37504134052)
+and [PR release run 37504133807](https://github.com/shotgunsensei/OperatorOS/actions/runs/37504133807)
+pass **14/14 scopes**, zero failed scopes. Each passes **1,605/1,605 API**,
+**108/108 integration**, **52/52 unit**, **32/32 compiled exact-host browser**
+and **4/4 visual** checks. API/integration/unit report zero failures, canceled,
+skipped or todos; both final browser runs finish without retries. Security,
+parity, lint, typecheck, production build and core preflight all pass.
+The separate semantic vector run `37504169636` and native contract, Android
+and iOS CI jobs in `37504134035` also pass on that same head. These native
+jobs do not establish physical-device or app-store acceptance.
+
+PR #115 merged at `2026-10-06T17:53:21Z` as
+`2cf783c9e7da5f7171ad7097900440d9679a593a`. The candidate and merged main
+have identical Git tree `c9354c37c91d1bb4e364206668a71018959bec6b`.
+Replit publication was initiated at `2026-10-06T17:54:33Z` on the exact tested
+candidate. Its production build passed; image upload/promotion remains in
+progress at this evidence checkpoint. No production migration or database
+copy is required or enabled. Current older serving identity below remains
+superseded only after actual runtime readback.
+
+The three non-secret runtime settings are saved and read back:
+`TORQUESHED_CREDIT_PURCHASES_ENABLED=1`,
+`TORQUESHED_CREDIT_PURCHASES_MODE=live`, and
+`TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT=0ea0f792db70936c95f60be41fbf457da3fdbf91`.
+The feature still fails closed if the deployed identity or any other purchase
+prerequisite disagrees. The Replit production overwrite checkbox is confirmed
+off. Existing Public sharing and 2 vCPU / 4 GiB capacity are unchanged.
+
+A read-only Resend domain request from the Replit editor using the existing
+server-side key returns HTTP 200 and confirms `shotgunninjas.com` is verified.
+An earlier Python-client request returned HTTP 403; that result is retained
+and does not imply an invalid key after the successful Node-client response.
+No email was sent, so delivery/recipient acceptance remains open.
+Logs, provider readback, Git identity and green CI artifacts are retained under
+ignored `build/launch/ci-0ea0f792-*`, `release-merge-evidence-20261006.json`
+and `email-sender-domain-20261006.json`.
+
+## Earlier scope and authorization checkpoint
 
 The owner explicitly authorized finalization through publication. The release
 branch is pushed and [PR #115](https://github.com/shotgunsensei/OperatorOS/pull/115)

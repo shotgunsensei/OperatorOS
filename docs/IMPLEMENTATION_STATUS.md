@@ -1,5 +1,35 @@
 # OperatorOS implementation status
 
+## Final exact-commit commercial release gate (2026-10-06)
+
+**PUBLISHED / CI GREEN / EXACT SERVING IDENTITY VERIFIED / CHECKOUT OPENING VERIFIED**.
+Candidate `0ea0f792db70936c95f60be41fbf457da3fdbf91` passes both standalone
+`37504134052` and PR `37504133807` release runs: **14/14 scopes**,
+API **1,605/1,605**, integration **108/108**, unit **52/52**, exact-host
+browser **32/32** and visual **4/4**. Both final browser runs pass without
+retries; API/integration/unit report zero fail/cancel/skip/todo. Semantic
+vector and native contract/Android/iOS CI also pass on the same head.
+PR #115 merged as `2cf783c9e7da5f7171ad7097900440d9679a593a`; its Git tree
+matches the candidate exactly. Replit reports Live. The deployed commit is
+the exact candidate, build `95081fd3a9949aeebb784f40`; reviewed lock fingerprint
+matches and database remains v65/65. `corepack pnpm verify:production` with
+the exact expected commit passes **47/47**; revenue identity audit passes.
+Authenticated Health validates all five Stack prices and the restricted portal
+with zero errors. Roadside $5 and Workshop $15 open live Stripe Checkout;
+TechDeck + companion + extra seat renders $143/month with exact monthly line
+items. No payment, credit grant, subscription or refund is claimed. Browser
+automation then stops at a Chrome extension popup, requested for owner
+dismissal; Fleet/other flagship checkout and cancel-return checks remain open.
+Three live credit-purchase settings are read back, including the exact pin.
+No production migration/copy occurred. Resend confirms the sender domain is
+verified; recipient delivery, real settlement, new-tenant/non-admin acceptance,
+OpenAI passkey/provider voice setup and OutCall activation remain open.
+Detailed commands, artifacts, original failures and acceptance limits are in
+[the publication continuation](ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
+The earlier checkpoints below retain their original evidence and are
+superseded for current CI status by this section.
+
 ## Authorized publication and dependency remediation (2026-10-06)
 
 **PUSHED / PUBLICATION AUTHORIZED / RELEASE-FIXTURE CI REQUIRED**.

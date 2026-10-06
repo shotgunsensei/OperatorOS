@@ -1,5 +1,27 @@
 # OperatorOS current release gate
 
+## Final exact-commit commercial release gate (2026-10-06)
+
+**PUBLISHED / CI GREEN / EXACT SERVING IDENTITY VERIFIED / CHECKOUT OPENING VERIFIED**.
+Exact candidate `0ea0f792db70936c95f60be41fbf457da3fdbf91` passes standalone
+and PR release gates **14/14**, API **1,605/1,605**, integration **108/108**,
+unit **52/52**, browser **32/32** and visual **4/4**, with no final browser
+retries. Semantic vector and native contract/Android/iOS CI pass. Main merge
+`2cf783c9e7da5f7171ad7097900440d9679a593a` has the identical candidate tree.
+Replit reports Live. Serving commit matches the exact candidate, build
+`95081fd3a9949aeebb784f40`, reviewed lock hash matches, and DB remains v65/65.
+Production read-only verification passes **47/47** and revenue identity agrees.
+Authenticated Health validates all five Stack prices and restricted portal.
+Live hosted checkout renders Roadside $5, Workshop $15 and the combined
+TechDeck/companion/seat $143/month cart. Purchases are active with fail-closed
+exact-commit readiness; pending Checkout grants no credit or entitlement.
+No database copy/apply occurred. A Chrome extension popup pauses remaining
+Fleet/other flagship checkout and cancel-return browser checks.
+Real paid settlement, non-admin new-tenant acceptance, live voice acceptance
+and OutCall activation remain open. This section supersedes current-status
+claims in the earlier checkpoints below; historical failures are retained in
+[the complete publication evidence](ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
 ## Authorized publication continuation (2026-10-06)
 
 **PUSHED / PUBLISHING AUTHORIZED / RELEASE-FIXTURE CI PENDING**. PR #115 is
