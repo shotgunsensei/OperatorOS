@@ -1,5 +1,19 @@
 # OperatorOS module parity index
 
+## Flagship public-page current-main integration (2026-10-06 UTC)
+
+**PARITY COUNTS UNCHANGED / LOCAL INTEGRATION VERIFIED / NOT DEPLOYED**.
+The preserved three-page/catalog-pricing candidate is integrated on isolated
+`codex/flagship-landings-current-main` from `e62c8935`; current publication history
+and PR #115 dependency policy remain intact. No module functionality, API
+authority, catalog price, provider setting or deployment changes. 53 affected,
+15 commerce and 18 security-policy tests plus 18 local browser cases pass;
+lint, four-app typechecks and production build pass. The inherited security gate
+passes with zero unresolved IDs and four disclosed high patched exceptions.
+Current-main hosted acceptance does not cover this candidate. Fresh evidence
+and remaining cost/exact-candidate release gates are recorded in
+[the integration report](../FLAGSHIP_LANDINGS_MAIN_INTEGRATION_2026-10-06.md).
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PARITY COUNTS UNCHANGED / CI GREEN / PUBLISHED / RUNTIME VERIFIED**.

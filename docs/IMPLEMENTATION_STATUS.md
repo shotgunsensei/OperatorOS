@@ -1,5 +1,25 @@
 # OperatorOS implementation status
 
+## Flagship landing/pricing current-main integration (2026-10-06 UTC)
+
+Status: **LOCAL INTEGRATION VERIFIED / NOT PUSHED OR DEPLOYED**.
+Branch `codex/flagship-landings-current-main` starts from verified documentation
+main `e62c89356f11d50940134790c8dad7e3eee268ab` and integrates preserved original
+landing/pricing commit `5e4c8c435405436eeef6fe33e27b13692c718a04`. Source applies
+without conflict; the two documentation overlays retain current-main publication
+history. The three audience pages, server-loaded catalog, failure/retry states
+and selection-preserving auth handoff do not change API authority or prices.
+The PR #115 dependency fixes and four existing advisory exceptions are retained
+unchanged. Fresh checks pass: 53 affected regressions, 15 mocked-provider/static
+commerce tests, 18 installed-package/security-policy tests and 18 compiled local
+Chromium cases, zero failures/skips/browser retries. Root lint, four-app typechecks
+and production build pass. The unchanged security gate now passes with zero
+unresolved IDs and four disclosed high advisories under the tested inherited
+exceptions; this is not a zero-vulnerability claim.
+No hosted CI, push or publication is authorized for this continuation; included
+Actions minutes are exhausted and additional cost protection is unverified.
+Fresh evidence is recorded in [the integration report](FLAGSHIP_LANDINGS_MAIN_INTEGRATION_2026-10-06.md).
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PUBLISHED / CI GREEN / EXACT SERVING IDENTITY VERIFIED / CHECKOUT OPENING VERIFIED**.

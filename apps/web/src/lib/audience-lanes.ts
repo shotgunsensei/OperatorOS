@@ -18,18 +18,19 @@ export interface AudienceLane {
   steps: readonly { title: string; copy: string }[];
   companions: readonly { slug: string; name: string; copy: string }[];
   connectionNote: string;
+  example: { title: string; problem: string; actions: readonly string[]; result: string };
   faq: readonly { question: string; answer: string }[];
 }
 
 export const AUDIENCE_LANES: readonly AudienceLane[] = [
   {
     slug: 'trades', audience: 'Trade Companies', product: 'TradeFlowKit', productKey: 'tradeflowkit',
-    accent: '#ffc17a', image: '/media/audiences/trades.webp',
-    imageAlt: 'A trade business owner reviewing work beside a service van.',
+    accent: '#89e5b6', image: '/media/audiences/trades.webp',
+    imageAlt: 'A trades professional reviewing a tablet in a service workshop.',
     cardTitle: 'From first call to paid invoice.',
     cardCopy: 'Keep customers, quotes, jobs, and follow-ups together.',
     examples: 'HVAC · Electrical · Plumbing · Field services',
-    headline: 'Less chasing.\nMore paid work.',
+    headline: 'From the first inquiry.\nTo the final invoice.',
     intro: 'Know what needs a quote, who owns the next job, and which invoices need attention. TradeFlowKit keeps the whole job connected.',
     benefits: [
       { title: 'Keep every opportunity in sight', copy: 'Give each inquiry a next step so a busy day does not turn into a forgotten customer.' },
@@ -47,6 +48,12 @@ export const AUDIENCE_LANES: readonly AudienceLane[] = [
       { slug: 'brandforgeos', name: 'BrandForge OS', copy: 'Prepare consistent brand and campaign material for the customers you want to reach.' },
     ],
     connectionNote: 'Online payments and outgoing messages need a connected, tested service. Accounting exports are available; a direct QuickBooks Online connection is still planned.',
+    example: {
+      title: 'A service job with a clear next step',
+      problem: 'An HVAC inquiry arrives while the team is on another job. The quote, visit, and payment follow-up each need an owner.',
+      actions: ['Save the customer and job; set the next task and visit date.', 'Prepare a quote and record the customer decision before work starts.', 'Keep completion notes and evidence with the job; invoice and follow up on the recorded balance.'],
+      result: 'The team can open one job to see the customer, work, decision, and cash follow-up. Recurring service can use the same customer history.',
+    },
     faq: [
       { question: 'Will I have to enter the same customer again?', answer: 'Save the customer in your organization’s shared directory, then select that record in TradeFlowKit, BrandForge OS, or SnapProofOS when you have access. Linked customer details stay current. Existing separate records need review before linking, and historical reports keep their approved details.' },
       { question: 'Can I start with the tools for my trade?', answer: 'Yes. Start with TradeFlowKit and choose the eligible companion that helps your team most. You can review current pricing and additional tools before purchasing.' },
@@ -60,12 +67,12 @@ export const AUDIENCE_LANES: readonly AudienceLane[] = [
     cardTitle: 'Better service. Clearer handoffs.',
     cardCopy: 'Bring client requests, assets, and team knowledge together.',
     examples: 'Managed IT · Internal IT · Technical support',
-    headline: 'Clear tickets.\nConfident handoffs.',
-    intro: 'Give the next technician the full picture. TechDeck connects client support, equipment records, procedures, and service history so work can keep moving.',
+    headline: 'Keep the evidence.\nMake the next fix easier.',
+    intro: 'Give the next technician the client, affected system, attempted fixes, and verified result. TechDeck keeps tickets, time, evidence, and reviewed knowledge together.',
     benefits: [
       { title: 'Know who owns the next step', copy: 'Keep client requests, assignments, time, and updates in one support workflow.' },
       { title: 'Put client context within reach', copy: 'Connect support work to equipment, network records, renewals, and useful history.' },
-      { title: 'Make good fixes repeatable', copy: 'Keep procedures and evidence with the work so the next technician can pick it up.' },
+      { title: 'Make good fixes repeatable', copy: 'Record a structured closeout, search exact identifiers, and prepare knowledge drafts with cited evidence for review.' },
     ],
     steps: [
       { title: 'Choose the client', copy: 'Start with the right organization and the issue that needs attention.' },
@@ -77,7 +84,13 @@ export const AUDIENCE_LANES: readonly AudienceLane[] = [
       { slug: 'ninjamation', name: 'Script Ops', copy: 'Review, version, and download reusable scripts. Approved work can become a TechDeck procedure; it does not run on endpoints automatically.' },
       { slug: 'faultlinelab', name: 'FaultlineLab', copy: 'Practice troubleshooting and prepare reviewed training drafts from resolved work. Included with every OperatorOS account.' },
     ],
-    connectionNote: 'TechDeck organizes service work and recorded system information. It does not replace a connected endpoint management service. Direct Microsoft 365 and Google mailbox or calendar sync is still planned.',
+    connectionNote: 'TechDeck records service work and system information. It does not execute scripts, discover networks, or monitor endpoints. Semantic search is disabled in the reviewed release. Direct Microsoft 365 and Google mailbox or calendar sync is still planned.',
+    example: {
+      title: 'A ticket the next technician can finish',
+      problem: 'A recurring connection issue changes hands. The next technician needs to know which system was affected and what has already been tried.',
+      actions: ['Link the client and system; assign the ticket and record service time.', 'Attach approved observations and test results; record attempted fixes and their outcomes.', 'Save a structured closeout and prepare a cited knowledge draft for review.'],
+      result: 'The service history keeps the resolution and supporting evidence together. Exact-identifier search helps the team find the relevant record again.',
+    },
     faq: [
       { question: 'Is TechDeck for MSPs or internal IT?', answer: 'Both. MSPs can organize client service work, while internal teams can use the same ticket, equipment, and documentation workflows for their organization.' },
       { question: 'Does Script Ops run commands on client devices?', answer: 'No. The current workflow prepares, reviews, versions, and downloads scripts. The handoff to TechDeck creates a draft procedure, not an unattended endpoint action.' },
@@ -91,7 +104,7 @@ export const AUDIENCE_LANES: readonly AudienceLane[] = [
     cardTitle: 'Keep the office moving.',
     cardCopy: 'Give internal requests, equipment, and follow-ups a clear owner.',
     examples: 'Healthcare operations · Legal-office operations',
-    headline: 'Less office friction.\nMore work moving.',
+    headline: 'Every request owned.\nEvery handoff visible.',
     intro: 'Give every internal request a place, a priority, and an owner. PulseDesk helps teams coordinate facilities, equipment, supplies, and vendors.',
     benefits: [
       { title: 'Replace scattered requests', copy: 'Bring operations requests into a shared queue with clear responsibility and updates.' },
@@ -109,6 +122,12 @@ export const AUDIENCE_LANES: readonly AudienceLane[] = [
       { slug: 'studyforge-ai', name: 'StudyForge AI', copy: 'Turn approved, non-sensitive training notes into reusable study material for your team.' },
     ],
     connectionNote: 'Requests can be entered or reviewed through the available intake workflows. Direct Microsoft 365, Google Workspace, SendGrid, and IMAP mailbox connections are not available in this release.',
+    example: {
+      title: 'An equipment request with a visible owner',
+      problem: 'An office reports a broken piece of equipment. Operations needs the location, urgency, responsible team, and a record of the fix.',
+      actions: ['Capture an operations-only request with its location and category.', 'Assign an owner and service target; keep notes and requester updates with the work.', 'Record the closeout and review the equipment or facility history when the issue repeats.'],
+      result: 'Departments can see the owner and next action without placing patient records or confidential legal matters in the operations queue.',
+    },
     faq: [
       { question: 'How does PulseDesk fit a legal office?', answer: 'Use it for internal office requests: equipment issues, facilities, supplies, and vendor follow-up. PulseDesk is purpose-built for healthcare operations and can support these general office workflows. It does not provide legal case management, court deadlines, trust accounting, or client-matter records.' },
       { question: 'Can we store patient charts or sensitive case files?', answer: 'No. Keep patient charts, clinical decisions, and confidential legal case information in your approved specialist systems. This page makes no HIPAA or legal-compliance certification claim.' },
