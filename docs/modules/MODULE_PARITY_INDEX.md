@@ -1,5 +1,23 @@
 # OperatorOS module parity index
 
+## Final exact-commit commercial release gate (2026-10-06)
+
+**PARITY COUNTS UNCHANGED / CI GREEN / PUBLISHED / RUNTIME VERIFIED**.
+The exact `0ea0f792db70936c95f60be41fbf457da3fdbf91` candidate passes both
+release gates **14/14**, API **1,605/1,605**, integration **108/108**, browser
+**32/32** and visual **4/4**, without final browser retries. Semantic vector
+and native contract/Android/iOS CI pass. Replit is Live on the exact candidate;
+read-only production verification passes **47/47**, reviewed lock matches and
+database remains v65/65. Authenticated Health validates five Stack prices and
+portal; Roadside $5, Workshop $15 and TechDeck/companion/seat $143/month open
+live hosted Checkout. Credit purchase activation is confirmed with an exact
+serving-commit prerequisite; it grants neither credit nor entitlement before
+signed settlement. Fleet/other flagship/cancel-return browser checks pause
+at a Chrome extension overlay, requested for owner dismissal. OutCall remains
+coming soon and no module/provider parity row is promoted by green CI alone.
+This supersedes earlier CI status below. See
+[the current publication evidence](../ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
 ## Authorized publication continuation (2026-10-06)
 
 **PARITY COUNTS UNCHANGED / RELEASE-FIXTURE CI PENDING**. PR #115 is pushed
