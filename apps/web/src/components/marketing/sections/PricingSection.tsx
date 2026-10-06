@@ -12,6 +12,7 @@ import {
 } from '@operatoros/sdk';
 import { brand } from '@/lib/brand';
 import { billingApi, meApi } from '@/lib/auth';
+import { pendingStackSelection } from '@/lib/application-stack-checkout';
 import { useAuth } from '../../AuthProvider';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
@@ -34,11 +35,11 @@ const money = (cents: number | null | undefined) => cents == null
 
 export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: { initialCoreProduct?: CoreProductKey }) {
   const { user, loading: authLoading } = useAuth();
-  const [coreProduct, setCoreProduct] = React.useState<CoreProductKey>(initialCoreProduct);
+  const [chosenCoreProduct, setCoreProduct] = React.useState<CoreProductKey>(initialCoreProduct);
   React.useEffect(() => setCoreProduct(initialCoreProduct), [initialCoreProduct]);
-  const [freeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>('snapproofos');
-  const [additionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>([]);
-  const [additionalSeats, setAdditionalSeats] = React.useState(0);
+  const [chosenFreeCompanion, setFreeCompanion] = React.useState<CompanionModuleKey>('snapproofos');
+  const [chosenAdditionalModules, setAdditionalModules] = React.useState<CompanionModuleKey[]>([]);
+  const [chosenAdditionalSeats, setAdditionalSeats] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [catalog, setCatalog] = React.useState<BillingCatalog | null>(null);
@@ -46,6 +47,12 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
   const [viewerRole, setViewerRole] = React.useState<string | null>(null);
   const [viewerStack, setViewerStack] = React.useState<any | null>(null);
   const [accountLoading, setAccountLoading] = React.useState(true);
+  const viewerApplicationSubscription = viewerStack?.applicationSubscription ?? viewerStack?.billingAccount ?? null;
+  const pendingSelection = pendingStackSelection(viewerApplicationSubscription);
+  const coreProduct = pendingSelection?.coreProduct ?? chosenCoreProduct;
+  const freeCompanion = pendingSelection?.freeCompanionModule ?? chosenFreeCompanion;
+  const additionalModules = pendingSelection?.additionalModules ?? chosenAdditionalModules;
+  const additionalSeats = pendingSelection?.additionalSeats ?? chosenAdditionalSeats;
 
   React.useEffect(() => {
     let alive = true;
@@ -114,10 +121,9 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
         additionalSeatsCents: additionalSeats * seatPriceCents,
         totalMonthlyCents: baseProductCents + additionalModules.length * companionPriceCents + additionalSeats * seatPriceCents,
       };
-  const viewerApplicationSubscription = viewerStack?.applicationSubscription ?? viewerStack?.billingAccount ?? null;
   const blockingStackStatuses = new Set(['active', 'trialing', 'past_due', 'incomplete', 'canceling']);
   const hasExistingFlagship = viewerApplicationSubscription
-    ? Boolean(viewerApplicationSubscription.coreProduct && blockingStackStatuses.has(viewerApplicationSubscription.status))
+    ? Boolean(!pendingSelection && viewerApplicationSubscription.coreProduct && blockingStackStatuses.has(viewerApplicationSubscription.status))
     : Boolean((viewerStack?.entitlements ?? []).some((row: any) => row.active !== false && row.entitlementType === 'core_product'));
   const pricingContractReady = Boolean(
     catalog
@@ -150,7 +156,9 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
           ? 'Current monthly pricing is unavailable. Checkout is disabled and nothing can be charged.'
           : !providerReady
             ? 'Secure provider checkout is not configured for this selection. Checkout is disabled and nothing can be charged.'
-            : null;
+            : pendingSelection
+              ? 'Payment is pending. Resume the saved selection in secure checkout. Paid access begins only after payment is confirmed.'
+              : null;
 
   const toggleAdditionalModule = (moduleKey: CompanionModuleKey) => {
     setAdditionalModules(current =>
@@ -188,7 +196,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
       const result = await billingApi.createStackCheckout({
         coreProduct,
         freeCompanionModule: freeCompanion,
-        additionalModules,
+        additionalModules: [...additionalModules],
         additionalSeats,
         interval: 'month',
       });
@@ -364,7 +372,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               <ConfiguratorStep number="1" title="Flagship Application">
                 <div className="stack-options">
                   {CORE_PRODUCTS.map(product => (
-                    <ChoiceButton key={product.key} selected={coreProduct === product.key} onClick={() => setCoreProduct(product.key)}>
+                    <ChoiceButton key={product.key} disabled={Boolean(pendingSelection)} selected={coreProduct === product.key} onClick={() => setCoreProduct(product.key)}>
                       <strong>{product.name}</strong><span>{catalogCorePrice(product.key) == null ? 'Price unavailable' : `${money(catalogCorePrice(product.key))}/month`}</span>
                     </ChoiceButton>
                   ))}
@@ -373,7 +381,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               <ConfiguratorStep number="2" title="Included Organization-wide Companion">
                 <div className="stack-options">
                   {COMPANION_MODULES.map(module => (
-                    <ChoiceButton key={module.key} selected={freeCompanion === module.key} onClick={() => chooseFreeCompanion(module.key as CompanionModuleKey)}>
+                    <ChoiceButton key={module.key} disabled={Boolean(pendingSelection)} selected={freeCompanion === module.key} onClick={() => chooseFreeCompanion(module.key as CompanionModuleKey)}>
                       <strong>{module.name}</strong><span>{freeCompanion === module.key ? '$0 included' : 'Select'}</span>
                     </ChoiceButton>
                   ))}
@@ -384,7 +392,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
                   {COMPANION_MODULES.filter(module => module.key !== freeCompanion).map(module => {
                     const moduleKey = module.key as CompanionModuleKey;
                     return (
-                      <ChoiceButton key={module.key} selected={additionalModules.includes(moduleKey)} onClick={() => toggleAdditionalModule(moduleKey)}>
+                      <ChoiceButton key={module.key} disabled={Boolean(pendingSelection)} selected={additionalModules.includes(moduleKey)} onClick={() => toggleAdditionalModule(moduleKey)}>
                         <strong>{module.name}</strong><span>{companionPriceCents == null ? 'Price unavailable' : `+${money(companionPriceCents)}/month`}</span>
                       </ChoiceButton>
                     );
@@ -393,11 +401,11 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               </ConfiguratorStep>
               <ConfiguratorStep number="4" title="Additional Seats">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <button className="pricing-control" type="button" aria-label="Remove additional seat" onClick={() => setAdditionalSeats(value => Math.max(0, value - 1))} style={counterButtonStyle}>
+                  <button className="pricing-control" type="button" disabled={Boolean(pendingSelection)} aria-label="Remove additional seat" onClick={() => setAdditionalSeats(value => Math.max(0, value - 1))} style={counterButtonStyle}>
                     <Minus size={16} />
                   </button>
                   <output data-testid="additional-seat-count" style={{ color: brand.textPrimary, fontSize: 22, fontWeight: 800, minWidth: 34, textAlign: 'center' }}>{additionalSeats}</output>
-                  <button className="pricing-control" type="button" aria-label="Add additional seat" onClick={() => setAdditionalSeats(value => value + 1)} style={counterButtonStyle}>
+                  <button className="pricing-control" type="button" disabled={Boolean(pendingSelection)} aria-label="Add additional seat" onClick={() => setAdditionalSeats(value => value + 1)} style={counterButtonStyle}>
                     <Plus size={16} />
                   </button>
                   <span style={{ color: brand.textSecondary, fontSize: 13 }}>{seatPriceCents == null ? 'Price unavailable' : `+${money(seatPriceCents)}/month per seat`}</span>
@@ -423,7 +431,7 @@ export default function PricingSection({ initialCoreProduct = 'tradeflowkit' }: 
               {error && <p role="alert" style={{ color: '#ff7b72', fontSize: 13, margin: 0 }}>{error}</p>}
               {checkoutStatus && <p role="status" style={{ color: brand.textSecondary, fontSize: 12, lineHeight: 1.5, margin: 0 }}>{checkoutStatus}</p>}
               <button data-testid="stack-checkout-cta" type="button" onClick={continueToCheckout} disabled={busy || (Boolean(user) && !ownerCanCheckout)} className="pricing-control" style={{ ...primaryButtonStyle, border: 0, width: '100%', cursor: busy ? 'wait' : user && !ownerCanCheckout ? 'not-allowed' : 'pointer', opacity: user && !ownerCanCheckout ? .55 : 1 }}>
-                {busy ? 'Preparing Secure Checkout…' : !user ? 'Sign In to Continue' : accountLoading || authLoading ? 'Verifying Owner Access…' : hasExistingFlagship ? 'One Flagship Already Active' : viewerRole !== 'owner' ? 'Owner Action Required' : 'Continue to Secure Checkout'}
+                {busy ? 'Preparing Secure Checkout…' : !user ? 'Sign In to Continue' : accountLoading || authLoading ? 'Verifying Owner Access…' : hasExistingFlagship ? 'One Flagship Already Active' : viewerRole !== 'owner' ? 'Owner Action Required' : pendingSelection ? 'Resume Secure Checkout' : 'Continue to Secure Checkout'}
               </button>
               {user ? <Link href={hasExistingFlagship || viewerRole !== 'owner' ? '/app?page=tenant-billing' : DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>{hasExistingFlagship || viewerRole !== 'owner' ? 'View organization billing state' : 'Return to OperatorOS'}</Link> : <Link href="/login" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Sign In Instead</Link>}
               <p style={{ color: brand.textMuted, fontSize: 11, textAlign: 'center', margin: 0 }}>Final price confirmed in secure Stripe Checkout before any charge.</p>
@@ -477,9 +485,9 @@ function ConfiguratorStep({ number, title, children }: { number: string; title: 
   );
 }
 
-function ChoiceButton({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+function ChoiceButton({ selected, disabled = false, onClick, children }: { selected: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" className="pricing-control" aria-pressed={selected} onClick={onClick} style={{
+    <button type="button" className="pricing-control" disabled={disabled} aria-pressed={selected} onClick={onClick} style={{
       display: 'flex',
       justifyContent: 'space-between',
       gap: 12,
@@ -489,7 +497,7 @@ function ChoiceButton({ selected, onClick, children }: { selected: boolean; onCl
       border: `1px solid ${selected ? brand.accentCyan : brand.borderSoft}`,
       background: selected ? 'rgba(57, 210, 255, .08)' : brand.bgPrimary,
       color: brand.textPrimary,
-      cursor: 'pointer',
+      cursor: disabled ? 'not-allowed' : 'pointer',
       textAlign: 'left',
       fontSize: 13,
     }}>

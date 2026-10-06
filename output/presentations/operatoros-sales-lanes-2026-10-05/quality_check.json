@@ -1,0 +1,65 @@
+[
+  {
+    "product": "TradeFlowKit",
+    "pages": 20,
+    "slides": 20,
+    "notes": 20,
+    "editable_text_blocks": 312,
+    "rendered_pages": 20,
+    "problems": [],
+    "text_overlap_candidates": [],
+    "pdf_embedded_fonts": {
+      "/AAAAAA+SegoeUI-Bold": true,
+      "/AAAAAA+SegoeUI-Light": true,
+      "/AAAAAA+SegoeUI": true,
+      "/AAAAAA+Consolas": true
+    },
+    "pdf_links": 6,
+    "pptx_bytes": 2647597,
+    "pdf_bytes": 4362026,
+    "pdf_sha256": "3b9727a5a32496112fc581dce440037a54f10720a9abeead5849ed938a642797",
+    "pptx_sha256": "04ca871fce1aa8a9092f69ee5dc8c027728e23e2d33b2e928172db90d67a9b43"
+  },
+  {
+    "product": "TechDeck",
+    "pages": 20,
+    "slides": 20,
+    "notes": 20,
+    "editable_text_blocks": 312,
+    "rendered_pages": 20,
+    "problems": [],
+    "text_overlap_candidates": [],
+    "pdf_embedded_fonts": {
+      "/AAAAAA+SegoeUI-Bold": true,
+      "/AAAAAA+SegoeUI-Light": true,
+      "/AAAAAA+SegoeUI": true,
+      "/AAAAAA+Consolas": true
+    },
+    "pdf_links": 6,
+    "pptx_bytes": 2565381,
+    "pdf_bytes": 4230453,
+    "pdf_sha256": "a8b87739c053c48e58baa23b00a46a134dd62f59258810747da269a176cd2e9e",
+    "pptx_sha256": "98fa32498c8358365dce524f9c6d93bcaab9d93a3423042c0ac0bae7335e1513"
+  },
+  {
+    "product": "PulseDesk",
+    "pages": 20,
+    "slides": 20,
+    "notes": 20,
+    "editable_text_blocks": 312,
+    "rendered_pages": 20,
+    "problems": [],
+    "text_overlap_candidates": [],
+    "pdf_embedded_fonts": {
+      "/AAAAAA+SegoeUI-Bold": true,
+      "/AAAAAA+SegoeUI-Light": true,
+      "/AAAAAA+SegoeUI": true,
+      "/AAAAAA+Consolas": true
+    },
+    "pdf_links": 6,
+    "pptx_bytes": 2437550,
+    "pdf_bytes": 4145545,
+    "pdf_sha256": "0f742bbd71b150d00b9832f727ce3984924affc046be9733f95c965a29b4446c",
+    "pptx_sha256": "e6c0cc25ea43566b373ac3761cb4b2429934ab77aec5d9e5264c8c11c804600a"
+  }
+]

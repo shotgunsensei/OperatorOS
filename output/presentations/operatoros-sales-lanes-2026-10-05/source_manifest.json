@@ -1,0 +1,99 @@
+{
+  "prepared": "2026-10-05",
+  "source_commit": "62fb640c",
+  "scope": "Three sales lane decks; source-supported features, illustrative scenarios, no universal deployment acceptance claim.",
+  "pricing_observation": "Public page and rendered browser showed dynamic Price unavailable fields on 2026-10-05. Base prices are not printed on buyer slides.",
+  "web_sources": [
+    "https://operatoros.net/pricing",
+    "https://operatoros.net/for/trades",
+    "https://operatoros.net/for/msps",
+    "https://operatoros.net/for/healthcare-legal"
+  ],
+  "sources": [
+    {
+      "path": "apps/web/src/lib/audience-lanes.ts",
+      "sha256": "dbe923df88c2cece688be73f13745b20e8a881408a103036c0a591e43096e79f"
+    },
+    {
+      "path": "apps/web/src/lib/help/primary-module-guides.ts",
+      "sha256": "adf34834ca6e1c183c2103f4cd833c11202451651a60b8c07eb433a3ea9cbf52"
+    },
+    {
+      "path": "docs/CURRENT_RELEASE_GATE.md",
+      "sha256": "d7a17cf5a42715ff46c5e356bfc1e4908cdcf888770e0f813fe5cf9fa81d2cab"
+    },
+    {
+      "path": "docs/IMPLEMENTATION_STATUS.md",
+      "sha256": "1327e28bb6e3c6e44cc5dfd0c878a1ac456cd7e7df487cfad6d4fb4ad4f01837"
+    },
+    {
+      "path": "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+      "sha256": "8d30a62a7630163b19cef8070158af0d4e76ba74f18bb59ff2fbd463465d8dc8"
+    },
+    {
+      "path": "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+      "sha256": "ad1ac8ffcb9f165e29d2e77ba9da45226b103477aa3de4cfe276ef765ca7a8e6"
+    },
+    {
+      "path": "docs/modules/SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md",
+      "sha256": "dc08fc6c452d23f43414f29b57724b6ed81c0098b685c3a3098fd7097a37dd23"
+    },
+    {
+      "path": "docs/modules/pulsedesk/PARITY_MATRIX.md",
+      "sha256": "7658da02fa1200111db5376f388d6d6bb6c8e4201b12056f6c7a8d0b8cc5c611"
+    },
+    {
+      "path": "docs/modules/pulsedesk/THREAT_MODEL.md",
+      "sha256": "4994d985dcabd8f7e3b1c564319c8741514bed80e2163de911f3946963dae233"
+    },
+    {
+      "path": "docs/modules/tradeflowkit/PARITY_MATRIX.md",
+      "sha256": "4f95a87c767bf02ee06638ef023bb826554368ac80e45bc7f4930d86ca755db2"
+    },
+    {
+      "path": "docs/techdeck/resolution-intelligence-documents.md",
+      "sha256": "7e980a9d7b979a7b24e263516c32a50b4adc1c4c4be0edbb9fe7c5c1ac8a95bc"
+    },
+    {
+      "path": "docs/techdeck/resolution-intelligence-phase3-review.md",
+      "sha256": "ce6288a76804160a3522dce923940bc3eee3c5ea948a22d134f82d9eaa520606"
+    },
+    {
+      "path": "docs/techdeck/resolution-intelligence-semantic-search.md",
+      "sha256": "f2b6afd2f464d2f0135c9c809852cccef0ed60c8ffd376c719c252e4c3e537da"
+    },
+    {
+      "path": "packages/sdk/src/product-value.ts",
+      "sha256": "f82b3c5f9ace1015b9a543721929b27aec43918bf34a941cfe0f3e41a318c029"
+    },
+    {
+      "path": "packages/sdk/src/products.ts",
+      "sha256": "851be4ae343104d269236920aa97389dcbc1318f5306e8b9b7981267d01f6fdd"
+    }
+  ],
+  "images": [
+    {
+      "path": "assets\\healthcare-legal.png",
+      "sha256": "f7df2edcc7379baf47d748a464a4e1007296ecdbea9675f1c1b986787713f990"
+    },
+    {
+      "path": "assets\\msps.png",
+      "sha256": "3ee140de087ea9733ff692294bb0873d0e33fdcdd6a3a0f41a69a7cf61e99c0b"
+    },
+    {
+      "path": "assets\\operatoros-mark.png",
+      "sha256": "9e5892bcb85b06f3f610289d582b7575564ad932324b6c8a84ee36a584bdb790"
+    },
+    {
+      "path": "assets\\trades.png",
+      "sha256": "1a688d0f3f1c80685758eb126d1c2a4300006705bcbefa7c229b04b67626f58a"
+    }
+  ],
+  "visual_acceptance": {
+    "all_pdf_pages_rendered": 60,
+    "all_contact_sheets_reviewed": true,
+    "representative_full_size_pages_reviewed": true,
+    "native_powerpoint_rendered": false,
+    "native_powerpoint_limitation": "PowerPoint/LibreOffice rendering engine not installed. Editable structures, XML, geometry and notes validated; matching PDF is visual reference."
+  }
+}

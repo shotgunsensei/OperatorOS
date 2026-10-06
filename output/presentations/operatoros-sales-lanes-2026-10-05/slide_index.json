@@ -1,0 +1,855 @@
+[
+  {
+    "product": "TradeFlowKit",
+    "slides": 20,
+    "pdf": "OperatorOS_TradeFlowKit_Sales_Deck.pdf",
+    "pptx": "OperatorOS_TradeFlowKit_Sales_Deck.pptx",
+    "index": [
+      {
+        "slide": 1,
+        "title": "Finish the job. Keep the revenue moving.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 2,
+        "title": "Busy crews can hide a broken handoff.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 3,
+        "title": "One job. A connected path from inquiry to payment.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 4,
+        "title": "Your core workflow. One OperatorOS home base.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 5,
+        "title": "The operating essentials, connected to the work.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 6,
+        "title": "Start the day where revenue gets stuck.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 7,
+        "title": "The estimate that never gets lost.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 8,
+        "title": "The customer asks: \u201cWhat did you finish?\u201d",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 9,
+        "title": "The repeat visit gets a real owner.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 10,
+        "title": "One job tells the whole story.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 11,
+        "title": "Extend the workflow where it matters.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 12,
+        "title": "Fit the workflow to your real environment.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 13,
+        "title": "A clearer record when the questions come.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 14,
+        "title": "Measure the change in your own operation.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 15,
+        "title": "Start focused. Give the team room to work.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "https://operatoros.net/pricing"
+        ]
+      },
+      {
+        "slide": 16,
+        "title": "Prove the fit with a focused 30-day pilot.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 17,
+        "title": "Bring one job that should have moved faster.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 18,
+        "title": "The questions that make the fit clearer.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 19,
+        "title": "Capabilities at a glance.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 20,
+        "title": "Agree the scope. Verify the workflow.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md",
+          "docs/modules/tradeflowkit/PARITY_MATRIX.md",
+          "docs/modules/SHARED_CUSTOMERS_AND_ACCOUNT_SECURITY_2026-09-21.md"
+        ]
+      }
+    ]
+  },
+  {
+    "product": "TechDeck",
+    "slides": 20,
+    "pdf": "OperatorOS_TechDeck_Sales_Deck.pdf",
+    "pptx": "OperatorOS_TechDeck_Sales_Deck.pptx",
+    "index": [
+      {
+        "slide": 1,
+        "title": "Resolve it. Explain it. Prove the work.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 2,
+        "title": "The fix is only half of the service.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 3,
+        "title": "From client risk to a defensible closeout.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 4,
+        "title": "Your core workflow. One OperatorOS home base.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 5,
+        "title": "Built around the engineer\u2019s actual work.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 6,
+        "title": "Put service risk and its context together.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 7,
+        "title": "\u201cYou touched it. Now it is broken.\u201d",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 8,
+        "title": "The next shift skips the archaeology.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 9,
+        "title": "A good fix becomes a reviewed procedure.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 10,
+        "title": "Open the ticket. Follow the evidence.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 11,
+        "title": "Extend the workflow where it matters.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 12,
+        "title": "Fit the workflow to your real environment.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 13,
+        "title": "Build the record before you need to defend it.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 14,
+        "title": "Measure the change in your own operation.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 15,
+        "title": "Start focused. Give the team room to work.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "https://operatoros.net/pricing"
+        ]
+      },
+      {
+        "slide": 16,
+        "title": "Prove the fit with a focused 30-day pilot.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 17,
+        "title": "Bring one ticket you never want to explain twice.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 18,
+        "title": "The questions that make the fit clearer.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 19,
+        "title": "Capabilities at a glance.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 20,
+        "title": "Agree the scope. Verify the workflow.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md",
+          "docs/techdeck/resolution-intelligence-documents.md",
+          "docs/techdeck/resolution-intelligence-phase3-review.md",
+          "docs/techdeck/resolution-intelligence-semantic-search.md"
+        ]
+      }
+    ]
+  },
+  {
+    "product": "PulseDesk",
+    "slides": 20,
+    "pdf": "OperatorOS_PulseDesk_Sales_Deck.pdf",
+    "pptx": "OperatorOS_PulseDesk_Sales_Deck.pptx",
+    "index": [
+      {
+        "slide": 1,
+        "title": "Keep operations moving. Keep ownership clear.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 2,
+        "title": "Small operational delays create a long chain of chasing.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 3,
+        "title": "Every request gets a route to resolution.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 4,
+        "title": "Your core workflow. One OperatorOS home base.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 5,
+        "title": "The work behind a functioning department.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 6,
+        "title": "See where operations need attention next.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 7,
+        "title": "One equipment issue. One visible owner.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 8,
+        "title": "The room issue stops bouncing around.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 9,
+        "title": "The restock request has a next step.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 10,
+        "title": "Follow one request across the handoff.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 11,
+        "title": "Extend the workflow where it matters.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 12,
+        "title": "Fit the workflow to your real environment.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 13,
+        "title": "Useful visibility. A clear information boundary.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 14,
+        "title": "Measure the change in your own operation.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 15,
+        "title": "Start focused. Give the team room to work.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "https://operatoros.net/pricing"
+        ]
+      },
+      {
+        "slide": 16,
+        "title": "Prove the fit with a focused 30-day pilot.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 17,
+        "title": "Bring one request that keeps getting handed off.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 18,
+        "title": "The questions that make the fit clearer.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 19,
+        "title": "Capabilities at a glance.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md"
+        ]
+      },
+      {
+        "slide": 20,
+        "title": "Agree the scope. Verify the workflow.",
+        "sources": [
+          "packages/sdk/src/products.ts",
+          "packages/sdk/src/product-value.ts",
+          "apps/web/src/lib/audience-lanes.ts",
+          "apps/web/src/lib/help/primary-module-guides.ts",
+          "docs/modules/CORE_SUITE_WORKFLOW_AUTOMATION_REVIEW.md",
+          "docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md",
+          "docs/CURRENT_RELEASE_GATE.md",
+          "docs/IMPLEMENTATION_STATUS.md",
+          "docs/modules/pulsedesk/PARITY_MATRIX.md",
+          "docs/modules/pulsedesk/THREAT_MODEL.md"
+        ]
+      }
+    ]
+  }
+]

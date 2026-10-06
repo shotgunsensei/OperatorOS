@@ -1,0 +1,42 @@
+[
+  {
+    "file": "OperatorOS_PulseDesk_Sales_Deck.pdf",
+    "bytes": 4145545,
+    "sha256": "0f742bbd71b150d00b9832f727ce3984924affc046be9733f95c965a29b4446c"
+  },
+  {
+    "file": "OperatorOS_PulseDesk_Sales_Deck.pptx",
+    "bytes": 2437550,
+    "sha256": "e6c0cc25ea43566b373ac3761cb4b2429934ab77aec5d9e5264c8c11c804600a"
+  },
+  {
+    "file": "OperatorOS_Sales_Decks_Editable_Source.zip",
+    "bytes": 4227760,
+    "sha256": "e34336c6b61ca6b5f68956a05290cbbe26d03aa1460ac7910c772faec2151fd0"
+  },
+  {
+    "file": "OperatorOS_TechDeck_Sales_Deck.pdf",
+    "bytes": 4230453,
+    "sha256": "a8b87739c053c48e58baa23b00a46a134dd62f59258810747da269a176cd2e9e"
+  },
+  {
+    "file": "OperatorOS_TechDeck_Sales_Deck.pptx",
+    "bytes": 2565381,
+    "sha256": "98fa32498c8358365dce524f9c6d93bcaab9d93a3423042c0ac0bae7335e1513"
+  },
+  {
+    "file": "OperatorOS_Three_Lane_Sales_Kit.zip",
+    "bytes": 18124747,
+    "sha256": "5297d9a31ab8a9b1b54aa4fef0312bbc2f7f8140038ff17ae479fc7294043370"
+  },
+  {
+    "file": "OperatorOS_TradeFlowKit_Sales_Deck.pdf",
+    "bytes": 4362026,
+    "sha256": "3b9727a5a32496112fc581dce440037a54f10720a9abeead5849ed938a642797"
+  },
+  {
+    "file": "OperatorOS_TradeFlowKit_Sales_Deck.pptx",
+    "bytes": 2647597,
+    "sha256": "04ca871fce1aa8a9092f69ee5dc8c027728e23e2d33b2e928172db90d67a9b43"
+  }
+]

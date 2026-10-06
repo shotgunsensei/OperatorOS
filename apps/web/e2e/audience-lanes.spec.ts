@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { registerAndLogin } from './session-auth';
 
 const WEB = process.env.E2E_WEB_BASE_URL ?? 'http://127.0.0.1:5000';
 const lanes = [
@@ -35,6 +36,63 @@ test('plan selection fails safely for unknown or repeated query values', async (
     await page.goto(`${WEB}/pricing?${query}#build-stack`);
     await expect(page.locator('#build-stack').getByRole('button', { name: /^TradeFlowKit/ })).toHaveAttribute('aria-pressed', 'true');
   }
+});
+
+test('an unpaid Stack resumes its saved cart after return while paid and non-owner gates remain closed', async ({ page }) => {
+  await registerAndLogin(page.context().request, {
+    email: `checkout-recovery-${Date.now()}@example.com`,
+    password: 'CorrectHorseBattery9!', name: 'Checkout Recovery Owner',
+  });
+  // Simulate provider availability and a server-owned pending projection only
+  // in the isolated local browser harness. No Stripe call or charge is made.
+  let status = 'incomplete';
+  let role = 'owner';
+  let submitted: unknown = null;
+  await page.route('**/api/billing/catalog', async route => {
+    const response = await route.fetch();
+    const catalog = await response.json();
+    await route.fulfill({ json: { ...catalog, stripeConfigured: {
+      tradeflowkit: true, pulsedesk: true, techdeck: true,
+      companionModule: true, additionalSeat: true,
+    } } });
+  });
+  await page.route('**/api/me/tenants', async route => {
+    const response = await route.fetch();
+    const tenants = await response.json();
+    await route.fulfill({ json: { ...tenants, tenants: tenants.tenants.map((row: Record<string, unknown>) => ({ ...row, role })) } });
+  });
+  await page.route('**/api/billing/stack', async route => {
+    const response = await route.fetch();
+    const stack = await response.json();
+    await route.fulfill({ json: { ...stack, applicationSubscription: {
+      status, coreProduct: 'techdeck', includedCompanionKey: 'snapproofos',
+      additionalModuleKeys: ['brandforgeos'], additionalSeats: 1,
+    } } });
+  });
+  await page.route('**/api/billing/stack/checkout', async route => {
+    submitted = route.request().postDataJSON();
+    await route.fulfill({ status: 409, json: { error: 'Recovery request captured; nothing was charged.' } });
+  });
+  await page.goto(`${WEB}/pricing?product=pulsedesk&billing=canceled#build-stack`);
+  await expect(page.getByRole('button', { name: 'Resume Secure Checkout', exact: true })).toBeEnabled();
+  await expect(page.getByTestId('stack-monthly-total')).toHaveText('$143/month');
+  await expect(page.locator('#build-stack').getByRole('button', { name: /^TechDeck/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#build-stack').getByRole('button', { name: /^PulseDesk/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Add additional seat', exact: true })).toBeDisabled();
+  await expect(page.getByRole('complementary')).toContainText('Paid access begins only after payment is confirmed');
+  await page.getByTestId('stack-checkout-cta').click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Recovery request captured' })).toBeVisible();
+  expect(submitted).toEqual({ coreProduct: 'techdeck', freeCompanionModule: 'snapproofos', additionalModules: ['brandforgeos'], additionalSeats: 1, interval: 'month' });
+
+  submitted = null;
+  status = 'active';
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'One Flagship Already Active', exact: true })).toBeDisabled();
+  status = 'incomplete';
+  role = 'admin';
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Owner Action Required', exact: true })).toBeDisabled();
+  expect(submitted).toBeNull();
 });
 
 test('office scope and planned connections are explained before a purchase', async ({ page }) => {

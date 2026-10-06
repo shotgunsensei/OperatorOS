@@ -136,6 +136,7 @@ export default function BillingPage() {
     ? applicationSubscriptionRecord
     : null;
   const legacyContract = stackData?.legacyContract?.grandfathered ? stackData.legacyContract : null;
+  const hasPendingCheckout = applicationSubscription?.status === 'incomplete';
   const legacyAddonContracts = Array.isArray(stackData?.legacyAddonContracts) ? stackData.legacyAddonContracts : [];
   const hasManagedBilling = Boolean(applicationSubscriptionRecord || legacyContract || legacyAddonContracts.length > 0);
   const activeEntitlements = (stackData?.entitlements ?? []).filter((row: any) => row.active !== false);
@@ -170,11 +171,13 @@ export default function BillingPage() {
       <section className="billing-stack-hero" data-testid="billing-ecosystem-stack" style={{ marginBottom: 28, borderRadius: 18, border: `1px solid ${brand.borderStrong}`, background: 'linear-gradient(135deg, rgba(0,229,255,.09), rgba(124,58,237,.08) 54%, rgba(13,17,23,.98))', overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,.24)' }}>
         <div style={{ padding: 'clamp(22px, 4vw, 34px)' }}>
           <div style={{ color: brand.accentCyan, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>
-            {applicationSubscription ? 'Active Application Stack' : applicationSubscriptionRecord ? 'Previous Application Stack' : legacyContract || legacyAddonContracts.length > 0 ? 'Grandfathered paid access' : 'Free account access'}
+            {hasPendingCheckout ? 'Application Stack payment pending' : applicationSubscription ? 'Active Application Stack' : applicationSubscriptionRecord ? 'Previous Application Stack' : legacyContract || legacyAddonContracts.length > 0 ? 'Grandfathered paid access' : 'Free account access'}
           </div>
           <h2 style={{ margin: '9px 0 8px', color: '#fff', fontSize: 28, fontWeight: 800, letterSpacing: '-.03em' }}>{displayName}</h2>
           <p style={{ margin: 0, color: brand.textSecondary, fontSize: 14, lineHeight: 1.6, maxWidth: 620 }}>
-            {applicationSubscription
+            {hasPendingCheckout
+              ? 'Resume the saved selection in secure checkout. Paid application access and team capacity begin only after payment is confirmed.'
+              : applicationSubscription
               ? 'One flagship application, five included seats, and one eligible companion cover the whole organization. Paid capacity stays on one monthly subscription.'
               : applicationSubscriptionRecord
                 ? 'This prior Application Stack is not in an active billing state. Its history remains visible, and the owner can start a new monthly Stack when eligible.'
@@ -187,18 +190,18 @@ export default function BillingPage() {
             <StackMetric icon={<CheckCircle2 size={14} />} label={`${FREE_WITH_ANY_ACCOUNT.length} free applications`} />
             {applicationSubscription && <StackMetric icon={<Users size={14} />} label={`${seatLimit ?? 5} seats`} />}
             {applicationSubscription && <StackMetric icon={<Layers3 size={14} />} label={includedCompanionKey ? '1 included companion' : 'Included companion not selected'} />}
-            {applicationSubscription && <StackMetric icon={<Layers3 size={14} />} label={`${paidCompanionKeys.length} paid companion${paidCompanionKeys.length === 1 ? '' : 's'}`} />}
+            {applicationSubscription && <StackMetric icon={<Layers3 size={14} />} label={`${paidCompanionKeys.length} ${hasPendingCheckout ? 'selected' : 'paid'} companion${paidCompanionKeys.length === 1 ? '' : 's'}`} />}
             {extraSeats > 0 && <StackMetric icon={<Users size={14} />} label={`${extraSeats} extra seat${extraSeats === 1 ? '' : 's'}`} />}
           </div>
 
           <button
             data-testid="button-build-ecosystem-stack"
-            onClick={() => { window.location.href = applicationSubscription ? '/app?page=tenant-billing' : '/pricing#build-stack'; }}
-            disabled={!isOwner && !applicationSubscription}
-            title={!isOwner && !applicationSubscription ? 'Only the organization owner can start Application Stack checkout' : undefined}
+            onClick={() => { window.location.href = applicationSubscription && !hasPendingCheckout ? '/app?page=tenant-billing' : '/pricing#build-stack'; }}
+            disabled={!isOwner && (!applicationSubscription || hasPendingCheckout)}
+            title={!isOwner && (!applicationSubscription || hasPendingCheckout) ? 'Only the organization owner can start Application Stack checkout' : undefined}
             style={{ marginTop: 22, minHeight: 42, padding: '10px 16px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`, color: brand.accentInk, fontSize: 13, fontWeight: 800, cursor: !isOwner && !applicationSubscription ? 'not-allowed' : 'pointer', opacity: !isOwner && !applicationSubscription ? .55 : 1, display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: brand.ctaGlowSoft }}
           >
-            {applicationSubscription ? 'View Application Stack details' : isOwner ? 'Build Application Stack' : 'Owner action required'} <ArrowRight size={14} />
+            {!isOwner && hasPendingCheckout ? 'Owner action required' : hasPendingCheckout ? 'Resume Secure Checkout' : applicationSubscription ? 'View Application Stack details' : isOwner ? 'Build Application Stack' : 'Owner action required'} <ArrowRight size={14} />
           </button>
         </div>
         <div style={{ position: 'relative', minHeight: 260, background: brand.bgPrimary }}>
@@ -243,8 +246,8 @@ export default function BillingPage() {
       <section style={{ marginBottom: 32, padding: 24, borderRadius: 14, border: `1px solid ${colors.border}`, background: colors.bgSecondary }}>
         <h3 style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Application Stack is the forward offer</h3>
         <p style={{ color: colors.textMuted, fontSize: 13, lineHeight: 1.6, margin: 0, maxWidth: 820 }}>One flagship application per organization for this release. Monthly billing includes five seats and one eligible organization-wide companion; extra companions are $29/month each and extra seats are $15/month each. Starter, Pro, Elite, and per-application checkout paths are closed to new purchases.</p>
-        <button type="button" onClick={() => { window.location.href = '/pricing#build-stack'; }} disabled={!isOwner || Boolean(applicationSubscription)} title={!isOwner ? 'Only the organization owner can start checkout' : applicationSubscription ? 'This organization already has its one flagship application' : undefined} style={{ marginTop: 16, padding: '9px 14px', borderRadius: 8, border: `1px solid ${colors.accent}`, background: 'transparent', color: colors.accent, fontWeight: 700, cursor: isOwner && !applicationSubscription ? 'pointer' : 'not-allowed', opacity: isOwner && !applicationSubscription ? 1 : .55 }}>
-          {applicationSubscription ? 'One flagship already active' : isOwner ? 'Build Application Stack' : 'Owner action required'}
+        <button type="button" onClick={() => { window.location.href = '/pricing#build-stack'; }} disabled={!isOwner || Boolean(applicationSubscription && !hasPendingCheckout)} title={!isOwner ? 'Only the organization owner can start checkout' : applicationSubscription && !hasPendingCheckout ? 'This organization already has its one flagship application' : undefined} style={{ marginTop: 16, padding: '9px 14px', borderRadius: 8, border: `1px solid ${colors.accent}`, background: 'transparent', color: colors.accent, fontWeight: 700, cursor: isOwner && (!applicationSubscription || hasPendingCheckout) ? 'pointer' : 'not-allowed', opacity: isOwner && (!applicationSubscription || hasPendingCheckout) ? 1 : .55 }}>
+          {!isOwner && hasPendingCheckout ? 'Owner action required' : hasPendingCheckout ? 'Resume Secure Checkout' : applicationSubscription ? 'One flagship already active' : isOwner ? 'Build Application Stack' : 'Owner action required'}
         </button>
       </section>
 

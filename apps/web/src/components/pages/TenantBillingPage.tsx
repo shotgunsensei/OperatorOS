@@ -95,6 +95,7 @@ export default function TenantBillingPage() {
     && currentStackStatuses.has(applicationSubscriptionRecord.status ?? '')
     ? applicationSubscriptionRecord
     : null;
+  const hasPendingCheckout = applicationSubscription?.status === 'incomplete';
   const canChangeIncludedCompanion = Boolean(
     applicationSubscriptionRecord
     && companionChangeStatuses.has(applicationSubscriptionRecord.status ?? ''),
@@ -290,8 +291,9 @@ export default function TenantBillingPage() {
             <p style={{ color: semantic.textMuted, fontSize: fontSize.sm, lineHeight: 1.55, margin: '7px 0 0' }}>
               Choose one flagship application per organization for this release. Monthly billing includes five seats, the {FREE_WITH_ANY_ACCOUNT.length} free account applications, and one eligible organization-wide companion. Additional companions are $29/month each; additional seats are $15/month each.
             </p>
-            {!applicationSubscription && isOwner && (
-              <a href="/pricing#build-stack" style={{ color: semantic.accent, display: 'inline-block', marginTop: 10, fontSize: fontSize.sm, fontWeight: 700 }}>Build Application Stack</a>
+            {hasPendingCheckout && <p role="status" style={{ color: semantic.textMuted, fontSize: fontSize.sm, lineHeight: 1.55 }}>Payment is pending. This selection has not activated paid application access or team capacity.</p>}
+            {(!applicationSubscription || hasPendingCheckout) && isOwner && (
+              <a href="/pricing#build-stack" style={{ color: semantic.accent, display: 'inline-block', marginTop: 10, fontSize: fontSize.sm, fontWeight: 700 }}>{hasPendingCheckout ? 'Resume Secure Checkout' : 'Build Application Stack'}</a>
             )}
           </section>
 
@@ -324,7 +326,7 @@ export default function TenantBillingPage() {
                 {isOwner && !canChangeIncludedCompanion && <div style={{ color: semantic.textMuted, fontSize: fontSize.xs, marginTop: 6 }}>Read-only until the Application Stack reaches an active or otherwise manageable billing state.</div>}
               </div>
               {additionalCompanions.map((module) => (
-                <BillingLine key={module.key} name={module.name} detail="$29/month organization-wide" badge="Paid" />
+                <BillingLine key={module.key} name={module.name} detail="$29/month organization-wide" badge={hasPendingCheckout ? 'Payment pending' : 'Paid'} />
               ))}
               {additionalCompanions.length === 0 && (
                 <div style={{ padding: '0 16px 14px', color: semantic.textMuted, fontSize: fontSize.sm }}>No additional paid companions are active.</div>
