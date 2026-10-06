@@ -2,7 +2,7 @@
 
 ## Authorized publication continuation (2026-10-06)
 
-**PARITY COUNTS UNCHANGED / CORRECTED RELEASE CI PENDING**. PR #115 is pushed
+**PARITY COUNTS UNCHANGED / RELEASE-FIXTURE CI PENDING**. PR #115 is pushed
 and publication is authorized. The first exact branch/PR runs pass 32 compiled
 browser tests and four visual tests, but retain a 13/14 aggregate failure from
 new dependency advisories. Upstream fixes now pass local security, four
@@ -11,6 +11,14 @@ skips. Torque Assist copy now covers live credits; its live mode/release pin
 are staged, with purchases still closed pending the corrected CI/runtime gate.
 These changes grant no entitlement and do not promote OutCall or voice/module
 provider acceptance. See [the publication evidence](../ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
+The `854ded68` PR browser matrix passes 32/32 and visual 4/4. Its aggregate
+remains 13/14 because an outdated sharp override assertion fails one of 1,605
+API tests. The fixture now requires the reviewed `0.35.5` pin; focused
+release/security/preflight checks pass 22/22. Dispatch also retains a first-
+attempt PulseDesk mobile CLS failure followed by its configured passing retry;
+an isolated local first attempt passes all 26 samples. Replit build exits 0.
+These observations do not promote module parity or provider acceptance.
 
 ## Authenticated Stripe and catalog evidence (2026-10-06)
 

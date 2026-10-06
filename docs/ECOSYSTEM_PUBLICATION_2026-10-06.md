@@ -80,6 +80,39 @@ target runtime verification must be added below when they actually finish.
 Local logs are retained under ignored `build/launch/`; the first CI gate
 artifact is `build/launch/ci-b03b5538/parity/release-gate-results.json`.
 
+## Second CI result and release-fixture correction
+
+Exact head `854ded68bb4ebb6b1afcbe5fc6b98f0d2232542c` runs
+`37501183415` (dispatch) and `37501185090` (PR) both complete **13/14**.
+Dependency hardening now passes. The only failed scope is API: **1,604/1,605**,
+with zero canceled/skipped/todo. The Replit npm-versus-pnpm override contract
+still expected the former floating sharp range `>=0.35.4`; the reviewed
+security change correctly pins sharp to `0.35.5`. Its assertion is updated to
+that exact reviewed pin, preserving every other package-manager assertion.
+No runtime code, dependency resolution, budget, waiver or skip changes in this
+correction. Fresh exact-commit CI is required for the corrected fixture.
+
+The PR browser run passes **32/32** cleanly and visual **4/4**. Dispatch passes
+31 browser cases cleanly plus one accessibility/performance case on the
+configured retry, and visual **4/4**. Its first PulseDesk mobile CLS is
+`0.3369334782375819`; this failed measurement remains recorded, not erased or
+counted as a clean first pass. A separate local compiled-runtime reproduction
+on a newly created disposable PostgreSQL 16 database passes **1/1** on its
+first attempt (57.9 s), covering all **26** desktop/mobile samples with zero
+reported failures. PulseDesk CLS is `0.028668402777777775` desktop and
+`0.09219296684537806` mobile. Budgets remain unchanged. This intermittent
+measurement is a remaining performance risk, not paid-tenant/provider proof.
+The local runtime and disposable container have been stopped.
+
+The same pinned frozen install/production build completes on Replit with exit
+0. Replit remains on the exact tested source, with only the two reviewed live
+mode/release-pin configuration lines beyond the checked-in file. Nothing has
+been published. The corrected release-identity, production-env and Phase 39
+static/mocked API contracts pass **22/22**, zero fail/cancel/skip/todo,
+1,952.5878 ms, against a non-routable DB URL. Logs and both failed CI gate
+artifacts remain under `build/launch/ci-854ded68-*`; local reproduction is
+`build/launch/cls-isolated-accessibility-performance-854ded68.json`.
+
 ## Live activation and acceptance boundaries
 
 Replit now stages live Torque Assist purchase mode and an exact release pin.

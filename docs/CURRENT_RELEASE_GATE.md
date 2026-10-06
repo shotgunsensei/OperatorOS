@@ -2,7 +2,7 @@
 
 ## Authorized publication continuation (2026-10-06)
 
-**PUSHED / PUBLISHING AUTHORIZED / FRESH CORRECTED CI PENDING**. PR #115 is
+**PUSHED / PUBLISHING AUTHORIZED / RELEASE-FIXTURE CI PENDING**. PR #115 is
 open. Earlier exact branch and PR CI pass 13/14 scopes and fail only dependency
 hardening; the newly reported advisories have upstream fixes applied, with
 zero unresolved advisories and zero critical after local verification. Four
@@ -13,6 +13,15 @@ is staged with recovery copies; sales switch remains closed and the final
 Torque Assist release pin must follow the corrected verified commit. OutCall,
 live Realtime/call acceptance and non-admin paid-tenant acceptance remain open.
 See [the exact continuation evidence](ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
+The corrected-dependency runs on `854ded68` pass hardening but remain 13/14:
+API 1,604/1,605 fails only the old sharp override assertion, now corrected to
+the reviewed pin. Fresh 22/22 static/mocked release/security/preflight checks
+pass. PR browser 32/32 and visual 4/4 pass; dispatch retains one CLS first-
+attempt failure that passed on its configured retry. An isolated local first
+attempt passes all 26 accessibility/performance samples. No budget, skip or
+provider boundary was changed. Replit's frozen install/build exits 0; the
+corrected fixture still requires fresh exact-commit CI before publication.
 
 ## Live Stripe configuration and production credit catalog (2026-10-06)
 

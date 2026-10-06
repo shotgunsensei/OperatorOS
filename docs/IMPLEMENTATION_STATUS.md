@@ -2,7 +2,7 @@
 
 ## Authorized publication and dependency remediation (2026-10-06)
 
-**PUSHED / PUBLICATION AUTHORIZED / CORRECTED EXACT-COMMIT CI REQUIRED**.
+**PUSHED / PUBLICATION AUTHORIZED / RELEASE-FIXTURE CI REQUIRED**.
 PR #115 is open. The first branch/PR release runs pass 13/14 scopes, including
 32 browser and four visual checks, but retain a failed security scope caused
 by six newly reported high/critical advisories. Eight upstream dependency fixes
@@ -12,6 +12,17 @@ exception was added. Frozen install, four typechecks, production build, 21
 Phase 39 tests and 16 static/mocked API preflight checks pass locally, zero
 fail/cancel/skip/todo. The six installed-package regressions are included in
 the 21 count. SBOM contains 1,238 unique components.
+
+The subsequent `854ded68` dispatch/PR runs clear dependency hardening and pass
+13/14 scopes. API passes 1,604/1,605; the sole failure is an outdated sharp
+override assertion. It now expects the reviewed `0.35.5` pin. All 22 focused
+release/security/preflight contracts pass, zero fail/cancel/skip/todo. PR
+browser passes 32/32 and visual 4/4; dispatch records 31 clean browser passes
+plus one configured retry after PulseDesk mobile CLS exceeded its budget.
+An isolated local first-attempt reproduction passes all 26 samples, with no
+budget change. Replit's pinned frozen install/build also exits 0. The failed
+API result and intermittent performance measurement remain in the evidence;
+the next exact-commit gate must pass before publication.
 
 Replit's seven Stripe bindings are preserved and live credit mode/release pin
 are staged; sales remain closed pending corrected CI and runtime verification.
