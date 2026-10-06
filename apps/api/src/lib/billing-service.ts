@@ -32,6 +32,7 @@ import {
 } from './product-entitlements.js';
 import { writeAudit } from './audit.js';
 import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
+import { recurringStripePriceError } from './stripe-price-contract.js';
 
 // Task #66: `apps/api/package.json` is `"type":"module"`, so the previous
 // `require('stripe')` inside `getStripe()` was undefined and every checkout
@@ -84,13 +85,12 @@ let __stripeSingleton: StripeClient | null = null;
 //   1. Set STRIPE_SECRET_KEY in your environment secrets
 //      (sk_test_… for the sandbox, sk_live_… for production)
 //   2. Set STRIPE_WEBHOOK_SECRET in your environment secrets
-//   3. Set stripePriceId on each subscription_plans row (or STRIPE_PRICE_MAP below)
+//   3. Set the forward application-stack and capacity Price IDs documented in
+//      .env.example; stripe:verify:ecosystem checks all eleven commercial SKUs
 //   4. Set STRIPE_MODE=test (sandbox) or STRIPE_MODE=live (production)
 //
-// Price ID mapping — fill these in when you create Stripe products:
-//   STRIPE_PRICE_STARTER = price_xxx (free tier — no checkout needed)
-//   STRIPE_PRICE_PRO     = price_xxx
-//   STRIPE_PRICE_ELITE   = price_xxx
+// Legacy Starter/Pro/Elite subscriptions are grandfathered management only.
+// New purchases use the tenant application stack and signed central settlement.
 // ---------------------------------------------------------------------------
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
@@ -275,17 +275,9 @@ function validateRecurringUsdPrice(
   expectedId: string,
   expectedUnitAmountCents: number,
 ): string | null {
-  if (!price || price.id !== expectedId) return 'PRICE_ID_MISMATCH';
-  if (price.active !== true) return 'PRICE_INACTIVE';
-  if (String(price.currency ?? '').toLowerCase() !== 'usd') return 'PRICE_CURRENCY_MISMATCH';
-  if (price.billing_scheme !== 'per_unit' || price.transform_quantity != null) {
-    return 'PRICE_QUANTITY_MODEL_MISMATCH';
-  }
-  if (price.type !== 'recurring' || price.recurring?.interval !== 'month'
-      || price.recurring?.interval_count !== 1
-      || price.recurring?.usage_type !== 'licensed') return 'PRICE_RECURRENCE_MISMATCH';
-  if (price.unit_amount !== expectedUnitAmountCents) return 'PRICE_AMOUNT_MISMATCH';
-  return null;
+  return recurringStripePriceError(price, {
+    priceId: expectedId, unitAmountCents: expectedUnitAmountCents, mode: getStripeRuntimeMode(),
+  });
 }
 
 async function validatePriceExpectations(expectations: readonly StackPriceExpectation[]): Promise<void> {
@@ -828,6 +820,15 @@ export async function createStackCheckoutSession(
       try {
         const prior = await stripe.checkout.sessions.retrieve(existingStack.stripeCheckoutSessionId);
         if (prior.status === 'open' && prior.url) {
+          if (!isCoreProductKey(existingStack.coreProduct)
+              || !isEligibleCompanionModuleKey(existingStack.includedCompanionKey)
+              || existingStack.additionalModuleKeys.some(key => !isEligibleCompanionModuleKey(key))) {
+            throw new CommercePolicyError('STACK_CHECKOUT_INTENT_INVALID', 'The pending application stack requires billing support.', 409);
+          }
+          await validatePriceExpectations(selectionPriceExpectations(
+            existingStack.coreProduct, existingStack.additionalModuleKeys.length,
+            existingStack.additionalSeats, existingStack,
+          ));
           return { url: prior.url, sessionId: prior.id };
         }
         if (prior.status === 'open') {

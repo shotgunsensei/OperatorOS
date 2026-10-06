@@ -1,5 +1,67 @@
 # OperatorOS module parity index
 
+## Authorized publication continuation (2026-10-06)
+
+**PARITY COUNTS UNCHANGED / RELEASE-FIXTURE CI PENDING**. PR #115 is pushed
+and publication is authorized. The first exact branch/PR runs pass 32 compiled
+browser tests and four visual tests, but retain a 13/14 aggregate failure from
+new dependency advisories. Upstream fixes now pass local security, four
+typechecks, production build and 37 focused security/preflight checks with no
+skips. Torque Assist copy now covers live credits; its live mode/release pin
+are staged, with purchases still closed pending the corrected CI/runtime gate.
+These changes grant no entitlement and do not promote OutCall or voice/module
+provider acceptance. See [the publication evidence](../ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
+The `854ded68` PR browser matrix passes 32/32 and visual 4/4. Its aggregate
+remains 13/14 because an outdated sharp override assertion fails one of 1,605
+API tests. The fixture now requires the reviewed `0.35.5` pin; focused
+release/security/preflight checks pass 22/22. Dispatch also retains a first-
+attempt PulseDesk mobile CLS failure followed by its configured passing retry;
+an isolated local first attempt passes all 26 samples. Replit build exits 0.
+These observations do not promote module parity or provider acceptance.
+
+## Authenticated Stripe and catalog evidence (2026-10-06)
+
+**PARITY COUNTS UNCHANGED / LIVE STRIPE CONFIGURATION PASSED /
+TARGET TENANT AND MODULE ACCEPTANCE OPEN**.
+
+| Surface | New evidence | Remaining gate |
+| --- | --- | --- |
+| Flagships, six paid companions, additional seats | Exact live core/companion/seat Prices and restricted portal validate; canonical webhook has all required events | Approved candidate publication, effective production configuration, hosted payment/signed settlement and non-admin tenant acceptance |
+| CallCommand AI | Three missing monthly capacity Product/Price pairs created and validated; Replit bindings saved; authenticated production SSO/usage page reached | Tenant voice setup, Realtime SIP configuration and controlled live calls, numbers, recording/transfer and capacity payment acceptance |
+| TorqueShed / Torque Assist | Three live credit Product/Price pairs created; canonical mapping service writes/readback pass 3/3 against production; published Credit Catalog independently shows validated rows | Exact-release purchase activation, signed paid credits and target workflow acceptance |
+| OutCall | Published module registry still coming soon; sales closed | Commercial/activation and controlled verified-self real-provider acceptance |
+
+Compiled provider audit passes 11/11 Prices, portal/webhook, zero issues.
+Fresh configuration/release static checks pass 22/22, zero skips, and all four
+workspace typechecks pass. No real charge, entitlement grant or publication
+occurred. These are provider/configuration facts, not full module acceptance.
+See [the October 6 evidence and remaining gates](../ECOSYSTEM_STRIPE_CONFIGURATION_2026-10-06.md).
+
+## Commercial launch verification overlay (2026-10-05)
+
+**PARITY COUNTS UNCHANGED / PRICE CONTRACT HARDENED / LIVE ACCEPTANCE OPEN**.
+
+| Surface | Candidate evidence | Remaining gate |
+| --- | --- | --- |
+| TradeFlowKit, PulseDesk, TechDeck; all six eligible paid companions; additional seats | Shared full forward-sales manifest; live-mode/amount/quantity checks on new and resumed checkout; focused tenant/settlement regressions pass | Actual Stripe configuration, hosted payment, signed settlement and target tenant acceptance |
+| CallCommand AI | Lane and managed-number prices use the same contract; malformed lane Price causes no provider mutation and rolls back the operation claim | Live capacity payments, Twilio number/real call/recording/transfer and realtime acceptance |
+| TorqueShed / Torque Assist | Three existing credit SKUs preserved; expected Stripe account checked before catalog creation/persistence | Durable live mapping, exact-release activation, real paid credits and provider workflow |
+| OutCall | Owner-authorized reconstruction remains current source/local truth; README now matches global coming-soon launch/sales state | Explicit commercial/activation policy and real Twilio/target acceptance |
+| Free companions | Public routing evidence unchanged | New tenant persistent workflows and target SSO/isolation/logout |
+
+Focused billing/catalog checks: 48 passed, zero failed/skipped. Public runtime:
+47 passed for the currently published build. The first full local release run
+passed 13/14 stages, including 108 integration, production build, 32 browser
+and four visual cases. Its sole static API assertion failure was corrected and
+rechecked 8/8; the complete fresh API rerun passes 1,605/1,605 with zero
+failures/skips. All fourteen local scopes have current passing evidence across
+those runs; fresh exact-commit CI remains required. No production
+promotion, Stripe mutation or parity reclassification
+is inferred. See [the commercial launch record](../ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md)
+and [implementation status](../IMPLEMENTATION_STATUS.md).
+
+
 ## OpenAI provider acceptance continuation (2026-09-30)
 
 **PARITY COUNTS UNCHANGED / LOCAL REAL-PROVIDER VERIFIED / HOSTED KEY RECOVERY OPEN**.

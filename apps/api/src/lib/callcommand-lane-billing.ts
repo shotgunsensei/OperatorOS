@@ -4,9 +4,13 @@ import { db } from '../db.js';
 import { modules, subscriptions, tenantUsers, users } from '../schema.js';
 import {
   getStripeFeatureBillingClient,
+  getStripeCatalogClient,
+  getStripeRuntimeMode,
   isStripeEnabled,
 } from './billing-service.js';
 import { resolveAppBaseUrl } from './public-url.js';
+import { recurringStripePriceError } from './stripe-price-contract.js';
+import { CALLCOMMAND_CAPACITY_PRICES } from '@operatoros/sdk';
 import {
   beginIdempotentOperation,
   completeIdempotentOperation,
@@ -15,7 +19,7 @@ import {
 export const CALLCOMMAND_LANE_ENTITLEMENT_KEY = 'callcommand.concurrent_calls';
 export const CALLCOMMAND_LANE_FEATURE_KEY = 'concurrent_call_lane';
 export const CALLCOMMAND_LANE_PRICE_LOOKUP_KEY = 'operatoros_callcommand_concurrent_lane_monthly_v1';
-export const CALLCOMMAND_LANE_DEFAULT_PRICE_CENTS = 4_900;
+export const CALLCOMMAND_LANE_DEFAULT_PRICE_CENTS = CALLCOMMAND_CAPACITY_PRICES.concurrentLane.cents;
 export const CALLCOMMAND_LANE_MAX_ADDITIONAL = 100;
 
 type Row = Record<string, any>;
@@ -247,6 +251,22 @@ export async function createOrUpdateCallCommandLaneCheckout(
     ).where(eq(users.id, input.userId)).limit(1);
     if (!user || user.status !== 'active') {
       throw new CallCommandLaneBillingError('User was not found', 'USER_NOT_FOUND', 404);
+    }
+    // Replays and cancellation remain available without opening another sale.
+    // Validate before creating a customer, charging, or changing paid capacity.
+    if (quantity > 0) {
+      let price: unknown;
+      try {
+        price = await getStripeCatalogClient().prices.retrieve(priceId);
+      } catch {
+        throw new CallCommandLaneBillingError('The monthly call capacity price could not be verified. Retry or contact support.', 'CALLCOMMAND_LANE_PRICE_UNAVAILABLE', 503);
+      }
+      const error = recurringStripePriceError(price, {
+        priceId, unitAmountCents: getCallCommandLanePriceCents(), mode: getStripeRuntimeMode(),
+      });
+      if (error) {
+        throw new CallCommandLaneBillingError('The billing price does not match the displayed monthly call capacity price. Contact support.', 'CALLCOMMAND_LANE_PRICE_MISMATCH', 409);
+      }
     }
 
     const existing = await tx.execute(sql`

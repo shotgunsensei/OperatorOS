@@ -32,7 +32,7 @@ Commercial access remains independent from that product hierarchy.
 | Companion Application | Add-on | Deploy Ops | `deployops.operatoros.net` | Enabled |
 | Companion Application | Add-on | CallCommand AI | `callcommand-ai.operatoros.net` | Enabled |
 | Companion Application | Add-on | Script Ops | `scriptops.operatoros.net` | Enabled |
-| Companion Application | Add-on | OutCall | `outcall.operatoros.net` | Enabled; live provider gated |
+| Companion Application | Add-on | OutCall | `outcall.operatoros.net` | Coming soon; public launch and sales disabled |
 
 The attached Replit domains are the canonical application paths. Compatibility
 aliases may redirect to a clean canonical entry path, but are not accepted as
@@ -78,6 +78,15 @@ Local defaults:
 Database tables and idempotent seed/backfill operations run during API startup.
 
 ## Verification
+
+The complete current commercial price matrix and separate live acceptance
+gates are in [`the ecosystem commercial launch record`](docs/ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md).
+`corepack pnpm stripe:plan:ecosystem` lists all eleven forward-sales SKUs without
+credentials. In a trusted server environment with the existing Stripe settings,
+`corepack pnpm stripe:verify:ecosystem` validates the expected account, actual
+Prices/Products, restrictive portal and canonical webhook without creating or
+changing provider resources. A green configuration report still requires hosted
+payment and authenticated tenant/module acceptance.
 
 ```bash
 corepack pnpm typecheck

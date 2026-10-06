@@ -1,5 +1,99 @@
 # OperatorOS implementation status
 
+## Authorized publication and dependency remediation (2026-10-06)
+
+**PUSHED / PUBLICATION AUTHORIZED / RELEASE-FIXTURE CI REQUIRED**.
+PR #115 is open. The first branch/PR release runs pass 13/14 scopes, including
+32 browser and four visual checks, but retain a failed security scope caused
+by six newly reported high/critical advisories. Eight upstream dependency fixes
+(including the two new moderate findings) now clear all unresolved advisories;
+four prior patched high exceptions remain disclosed, zero critical. No new
+exception was added. Frozen install, four typechecks, production build, 21
+Phase 39 tests and 16 static/mocked API preflight checks pass locally, zero
+fail/cancel/skip/todo. The six installed-package regressions are included in
+the 21 count. SBOM contains 1,238 unique components.
+
+The subsequent `854ded68` dispatch/PR runs clear dependency hardening and pass
+13/14 scopes. API passes 1,604/1,605; the sole failure is an outdated sharp
+override assertion. It now expects the reviewed `0.35.5` pin. All 22 focused
+release/security/preflight contracts pass, zero fail/cancel/skip/todo. PR
+browser passes 32/32 and visual 4/4; dispatch records 31 clean browser passes
+plus one configured retry after PulseDesk mobile CLS exceeded its budget.
+An isolated local first-attempt reproduction passes all 26 samples, with no
+budget change. Replit's pinned frozen install/build also exits 0. The failed
+API result and intermittent performance measurement remain in the evidence;
+the next exact-commit gate must pass before publication.
+
+Replit's seven Stripe bindings are preserved and live credit mode/release pin
+are staged; sales remain closed pending corrected CI and runtime verification.
+No publication, real payment or voice action has occurred. Exact commands,
+environment, original CI failures, remediation and remaining gates are in
+[the publication continuation](ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
+## Live Stripe configuration continuation (2026-10-06)
+
+Status: **LIVE STRIPE CONFIGURATION VALIDATED / PRODUCTION CATALOG BOUND /
+RELEASE AND TRANSACTION ACCEPTANCE OPEN**.
+
+Owner-authorized provider setup now validates the exact OpOS live account,
+charges/payout capability, all **11/11** forward-sales Prices, active restricted
+portal and canonical webhook with all fourteen required events, zero issues.
+Six missing Product/Price pairs were created; seven non-secret Replit settings
+were saved/read back and mirrored in `.replit`. The three Torque Assist live
+catalog rows were added through the canonical service to the explicitly
+selected production database and independently verified in the published
+Credit Catalog UI. No customer charge, subscription, entitlement grant, schema
+migration or publication occurred. The database remains v65/65.
+
+Fresh `corepack pnpm typecheck` passes all four projects. Static/mocked
+production-preflight, release-identity and database-contract checks pass
+**22/22**, zero fail/cancel/skip/todo, 5,904.5401 ms, with `APP_ENV=test`,
+`NODE_ENV=test` and a non-routable DB URL. No tests used production or persistent
+developer data. Exact compiled-audit, catalog dry-run/apply, browser evidence,
+commands, environment and remaining release/transaction/module gates are in
+[the October 6 configuration record](ECOSYSTEM_STRIPE_CONFIGURATION_2026-10-06.md).
+This supersedes the October 5 unavailable authenticated-access statement below;
+prior local test evidence and unpublished source status remain accurate.
+
+## Ecosystem commercial launch candidate (2026-10-05)
+
+Status: **SOURCE CANDIDATE / LOCAL SCOPES PASSED / LIVE ACCEPTANCE OPEN**.
+
+Branch `codex/ecosystem-commercial-launch` starts from deployed commit
+`62fb640c64bd5477a8e5752301c17cb108ab6d2e`. The candidate centralizes the eleven
+forward-sales prices, strengthens every recurring purchase/resume Price
+contract, adds an account-bound read-only Stripe catalog/portal/webhook audit,
+moves TorqueShed's account check before provider writes, and repairs the
+dependency hardening failure in the deployed commit's CI. It does not change
+the v65 database release, module roles, SSO, settlement authority or price policy.
+
+Fresh isolated PostgreSQL 16 focused checks pass **48/48**, zero failures/skips;
+installed dependency exploit regressions pass **2/2**. Frozen install and the
+security scan pass; four high advisories remain disclosed under tested local
+patch exceptions, with zero unresolved/critical advisories. Full
+`corepack pnpm verify:release` completed 13/14 stages: 52 unit, 108 integration,
+production build/typechecks, fresh root lint, static route/visual contracts,
+32 compiled exact-host browser journeys, four visual cases and core preflight
+pass with zero skips/browser retries. The sole failure was an existing static
+test referencing the price validator's previous location. Corrected assertions
+pass 8/8; fresh complete `corepack pnpm test:api` passes **1,605/1,605**, zero
+failures/cancellations/skips/todo, 857,190.41 ms. The initial API
+run's 1,604 pass/1 fail/0 skip evidence is retained, not rewritten. All fourteen
+local scopes have passing evidence across those executions; a fresh one-shot
+exact-commit CI release run remains a publication gate.
+Public exact-commit runtime verification passes **47/47** for the existing live
+build `dbca1e6f06bbb7aa9bb2de15`, deployed October 4, v65/65. Those checks do not
+establish completed payments, authenticated tenant workflows or provider access.
+
+No push, deployment, production database change, real payment or communication
+has occurred. Authenticated application/Stripe access is unavailable. OutCall
+remains coming soon under its provider/activation gate. The prior September 30
+hosted OpenAI-key failure is historical evidence; current published provider
+validity has not been directly tested. Exact price paths, commands, evidence,
+remaining acceptance and rollback are in
+[the commercial launch record](ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md).
+
+
 ## All-module OpenAI enablement candidate (2026-09-30 UTC)
 
 Status: **LOCAL REAL-PROVIDER CHECKS PASSED / HOSTED KEY INVALID / NOT PUBLISHED**.

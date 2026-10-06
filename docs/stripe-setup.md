@@ -1,18 +1,26 @@
 # Stripe Setup
 
 OperatorOS uses Stripe Checkout Sessions in subscription mode for one
-tenant-owned flagship stack. Billing is monthly-only. Create exactly five
-recurring monthly Prices in Stripe and set these deployment secrets:
+tenant-owned flagship stack. Billing is monthly-only. The stack uses five
+recurring monthly Prices; CallCommand capacity adds three recurring Prices and
+Torque Assist adds three one-time credit-pack Prices. The complete eleven-SKU
+matrix and acceptance gates are in
+[the commercial launch record](ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md).
+Set these existing deployment secrets in the correct Stripe account/mode:
 
 ```text
 STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
 STRIPE_MODE=test        # "test" for the sandbox, "live" for production
+STRIPE_EXPECTED_ACCOUNT_ID
 STRIPE_PRICE_TRADEFLOWKIT_MONTHLY
 STRIPE_PRICE_PULSEDESK_MONTHLY
 STRIPE_PRICE_TECHDECK_MONTHLY
 STRIPE_PRICE_COMPANION_MODULE_MONTHLY
 STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY
+STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY
+STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY
+STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY
 STRIPE_BILLING_PORTAL_CONFIGURATION_ID
 ```
 
@@ -30,6 +38,23 @@ Suggested Stripe catalog:
 - TechDeck: $99/month
 - Companion Module: $29/month
 - Additional Operator Seat: $15/month
+- CallCommand additional concurrent lane: $49/month
+- CallCommand additional local number: $5/month
+- CallCommand toll-free number: $8/month
+- Torque Assist Roadside: 25,000 credits for $5 once
+- Torque Assist Workshop: 100,000 credits for $15 once
+- Torque Assist Fleet: 500,000 credits for $50 once
+
+CallCommand retains its documented bounded amount overrides and separate
+licensed quantities. Torque Assist uses its existing lookup-key catalog,
+durable database mapping and exact-release purchase activation gate. Neither
+an opened Checkout Session nor a configured Price grants paid capacity/credit.
+
+From a trusted server environment, `corepack pnpm stripe:plan:ecosystem` lists
+the full manifest and `corepack pnpm stripe:verify:ecosystem` performs a read-only
+account/Price/Product/portal/webhook validation. Neither command creates or
+changes provider resources. Validation never prints secret values and does not
+replace completed hosted payment and signed settlement acceptance.
 
 The selected flagship contributes one line item with quantity 1. The companion
 Price is reused with quantity equal to the number of paid additional modules;
@@ -77,17 +102,23 @@ Configure the webhook endpoint as:
 POST /v1/billing/webhook
 ```
 
-Subscribe it to:
+The full ecosystem audit requires the canonical event set below, covering
+subscriptions, feature quantities and credit purchases/refunds/disputes:
 
 - `checkout.session.completed`
 - `checkout.session.async_payment_succeeded`
+- `checkout.session.async_payment_failed`
+- `checkout.session.expired`
 - `customer.subscription.created`
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
-- `invoice.paid` **or** `invoice.payment_succeeded` (the API routes both to the
-  same handler, so pick whichever you prefer — subscribing to both just delivers
-  duplicate events that are idempotently ignored)
+- `invoice.paid`
+- `invoice.payment_succeeded` (both are supported and replay-safe)
 - `invoice.payment_failed`
+- `payment_intent.payment_failed`
+- `charge.refunded`
+- `charge.dispute.created`
+- `charge.dispute.closed`
 
 For local testing, forward events with the Stripe CLI:
 

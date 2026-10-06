@@ -94,7 +94,7 @@ const copy: Record<TorqueShedRouteKind, Pick<TorqueShedRouteState, 'title' | 'su
   'marketplace-detail': { eyebrow: 'Review the part', title: 'Marketplace listing', subtitle: 'Check the listing details and send or answer an inquiry.' },
   community: { eyebrow: 'Learn from other mechanics', title: 'Community', subtitle: 'Share repairs, diagnostic results, and project updates with privacy and moderation controls.' },
   profile: { eyebrow: 'Your workshop identity', title: 'Profile', subtitle: 'Review the profile and organization TorqueShed uses for your work.' },
-  credits: { eyebrow: 'Torque Assist usage', title: 'Credits and usage', subtitle: 'Review available test credits, reservations, completed uses, and any amounts still being settled.' },
+  credits: { eyebrow: 'Torque Assist usage', title: 'Credits and usage', subtitle: 'Review available credits, reservations, completed uses, and any amounts still being settled.' },
   activity: { eyebrow: 'Workshop history', title: 'Activity', subtitle: 'See recent changes, completed actions, and notifications for your workshop.' },
   search: { eyebrow: 'Workshop discovery', title: 'Search', subtitle: 'Find vehicles, builds, diagnostics, service work, and shared records.' },
   exports: { eyebrow: 'Take workshop records with you', title: 'Exports', subtitle: 'Create and download the workshop records you are allowed to use.' },

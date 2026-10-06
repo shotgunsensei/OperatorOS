@@ -219,6 +219,7 @@ test('lane checkout is exactly-once and persists pending quantity without granti
   __setStripeTestOverrides({
     enabled: true,
     client: {
+      prices: { retrieve: async (id: string) => ({ id, active: true, livemode: false, currency: 'usd', unit_amount: 4900, type: 'recurring', billing_scheme: 'per_unit', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } }) },
       customers: {
         create: async (params: Record<string, unknown>, options: { idempotencyKey: string }) => {
           customers.push({ params, options });
@@ -295,6 +296,7 @@ test('zero schedules cancellation exactly once and a settled cancellation permit
   __setStripeTestOverrides({
     enabled: true,
     client: {
+      prices: { retrieve: async (id: string) => ({ id, active: true, livemode: false, currency: 'usd', unit_amount: 4900, type: 'recurring', billing_scheme: 'per_unit', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } }) },
       customers: { create: async () => { throw new Error('unexpected customer'); } },
       checkout: { sessions: { create: async () => { throw new Error('unexpected checkout'); } } },
       subscriptions: {
@@ -371,6 +373,7 @@ test('zero schedules cancellation exactly once and a settled cancellation permit
   __setStripeTestOverrides({
     enabled: true,
     client: {
+      prices: { retrieve: async (id: string) => ({ id, active: true, livemode: false, currency: 'usd', unit_amount: 4900, type: 'recurring', billing_scheme: 'per_unit', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } }) },
       customers: { create: async () => { throw new Error('existing customer should be retained'); } },
       checkout: {
         sessions: {
@@ -418,6 +421,7 @@ test('lane checkout never reuses a base subscription customer from another tenan
   __setStripeTestOverrides({
     enabled: true,
     client: {
+      prices: { retrieve: async (id: string) => ({ id, active: true, livemode: false, currency: 'usd', unit_amount: 4900, type: 'recurring', billing_scheme: 'per_unit', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } }) },
       customers: {
         create: async () => {
           createdCustomers.push(createdCustomerId);
@@ -454,11 +458,29 @@ test('lane checkout never reuses a base subscription customer from another tenan
   }
 });
 
+test('lane billing rejects price drift before creating a customer, checkout or paid-capacity change', async () => {
+  let mutations = 0;
+  __setStripeTestOverrides({ enabled: true, client: {
+    prices: { retrieve: async (id: string) => ({ id, active: true, livemode: false, currency: 'usd', unit_amount: 1, type: 'recurring', billing_scheme: 'per_unit', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } }) },
+    customers: { create: async () => { mutations += 1; throw new Error('unexpected customer'); } },
+    checkout: { sessions: { create: async () => { mutations += 1; throw new Error('unexpected checkout'); } } },
+    subscriptions: { update: async () => { mutations += 1; throw new Error('unexpected update'); } },
+  } });
+  await assert.rejects(createOrUpdateCallCommandLaneCheckout({
+    tenantId: owner.currentTenantId, userId: owner.id, additionalLanes: 2,
+    idempotencyKey: 'callcommand-price-drift-0001',
+  }), (error: any) => error.code === 'CALLCOMMAND_LANE_PRICE_MISMATCH');
+  assert.equal(mutations, 0);
+  const pending = await db.execute(sql`SELECT id FROM shared_idempotency_keys WHERE tenant_id=${owner.currentTenantId} AND idempotency_key='callcommand-price-drift-0001'`);
+  assert.equal(pending.rows.length, 0, 'rejected price must roll back its operation claim');
+});
+
 test('lane billing validates zero-to-one-hundred quantity and a bounded idempotency key before provider access', async () => {
   let providerCalls = 0;
   __setStripeTestOverrides({
     enabled: true,
     client: {
+      prices: { retrieve: async (id: string) => ({ id, active: true, livemode: false, currency: 'usd', unit_amount: 4900, type: 'recurring', billing_scheme: 'per_unit', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } }) },
       customers: { create: async () => { providerCalls += 1; return { id: 'cus_unexpected' }; } },
       checkout: { sessions: { create: async () => { providerCalls += 1; return { id: 'cs_unexpected', url: 'https://checkout.stripe.test/unexpected' }; } } },
       subscriptions: { update: async () => { providerCalls += 1; } },

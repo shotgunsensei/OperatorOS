@@ -1,5 +1,76 @@
 # OperatorOS current release gate
 
+## Authorized publication continuation (2026-10-06)
+
+**PUSHED / PUBLISHING AUTHORIZED / RELEASE-FIXTURE CI PENDING**. PR #115 is
+open. Earlier exact branch and PR CI pass 13/14 scopes and fail only dependency
+hardening; the newly reported advisories have upstream fixes applied, with
+zero unresolved advisories and zero critical after local verification. Four
+prior patched high exceptions remain disclosed. Fresh local production build,
+four typechecks and 37 focused security/preflight checks pass with zero skips.
+Serving source is still `62fb640c`, database v65/65. Replit source/configuration
+is staged with recovery copies; sales switch remains closed and the final
+Torque Assist release pin must follow the corrected verified commit. OutCall,
+live Realtime/call acceptance and non-admin paid-tenant acceptance remain open.
+See [the exact continuation evidence](ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
+The corrected-dependency runs on `854ded68` pass hardening but remain 13/14:
+API 1,604/1,605 fails only the old sharp override assertion, now corrected to
+the reviewed pin. Fresh 22/22 static/mocked release/security/preflight checks
+pass. PR browser 32/32 and visual 4/4 pass; dispatch retains one CLS first-
+attempt failure that passed on its configured retry. An isolated local first
+attempt passes all 26 accessibility/performance samples. No budget, skip or
+provider boundary was changed. Replit's frozen install/build exits 0; the
+corrected fixture still requires fresh exact-commit CI before publication.
+
+## Live Stripe configuration and production credit catalog (2026-10-06)
+
+**STRIPE PROVIDER CONFIGURATION PASSED / CANDIDATE UNPUBLISHED / PAID TENANT
+AND MODULE ACCEPTANCE OPEN**. Explicitly authorized setup created six missing
+live Product/Price pairs and saved the restricted portal/canonical webhook.
+The compiled source audit validates all eleven Prices, portal and webhook with
+zero issues against `acct_1TU5WeLb6JkgBESX`; charges and payouts are enabled.
+Three Torque Assist mappings were added through the canonical service to
+production and are visible as validated in the published Credit Catalog.
+Seven non-secret Replit bindings are saved; effective new published runtime
+configuration, purchase activation and signed settlement still require proof.
+
+Serving source remains `62fb640c`, build `dbca1e6f06bbb7aa9bb2de15`, v65/65;
+October 6 readiness reports deployment start `2026-10-06T08:31:11.606Z`.
+No source push/publication or real charge occurred. Fresh typecheck passes four
+projects and configuration/release static checks pass 22/22 with zero skips.
+The tested `6d3f60ae` candidate plus saved configuration needs exact-commit CI
+and approved production publication. OutCall remains coming soon; controlled
+voice/realtime and non-admin paid-tenant acceptance remain open. See
+[the complete October 6 record](ECOSYSTEM_STRIPE_CONFIGURATION_2026-10-06.md).
+
+## Observed publication and commercial launch candidate (2026-10-05)
+
+Current public readiness supersedes the historical publication identities below:
+serving commit `62fb640c64bd5477a8e5752301c17cb108ab6d2e`, application build
+`dbca1e6f06bbb7aa9bb2de15`, built `2026-10-02T20:21:26.699Z`, deployed
+`2026-10-04T17:43:38.847Z`, ready with database v65/65. Fresh read-only
+exact-commit public runtime verification passes 47/47.
+
+This is public identity/routing evidence. The exact deployed commit's release
+CI failed dependency hardening. The `codex/ecosystem-commercial-launch`
+candidate repairs that failure and adds complete Stripe price/portal/webhook
+inspection plus purchase-contract hardening. Its first full local release run
+passed 13/14 stages, including production build/start, 32 browser/four visual
+cases and core preflight. The only failed API static assertion was corrected
+and rechecked 8/8; the fresh complete API retest passes 1,605/1,605 with zero
+failures/skips. All fourteen local scopes have passing evidence across those
+executions, while fresh exact-commit CI remains required. It has not been
+pushed or published. Provider configuration
+flags do not prove credentials, successful payment, tenant acceptance or real
+module workflows. OutCall launch/sales stay disabled. Current hosted OpenAI
+validity and semantic activation have not been directly inspected.
+
+See [the dated commercial launch record](ECOSYSTEM_COMMERCIAL_LAUNCH_2026-10-05.md)
+for the eleven prices, candidate verification, outstanding access/acceptance,
+release gates and rollback. No database release beyond v65 is introduced.
+
+
 ## Resolution Intelligence Phase 5 / v65 - LIVE / PROVIDER DISABLED (2026-09-29)
 
 PR #109 merge `ee9ca05e8346bdb1770932029ae8a9a8d682ef0f` is published as

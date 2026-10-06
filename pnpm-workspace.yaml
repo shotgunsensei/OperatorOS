@@ -1,6 +1,19 @@
 packages:
   - "apps/*"
   - "packages/*"
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+auditConfig:
+  # The advisories below are mitigated by reviewed local patches. Keep the
+  # ignore list tied to regression fixtures so a future unpatched resolution
+  # cannot silently inherit the exception.
+  ignoreGhsas:
+    - GHSA-5p2g-fcmc-qvqq
+    - GHSA-w3rx-r6r6-pgpr
+    # Locally patched, with installed-package exploit regressions in phase39.
+    - GHSA-86w9-cpqp-85rv
+    - GHSA-vfj7-8cjw-p6xm
 # Replit's provider-owned publish scan invokes its bundled pnpm before the
 # checked-in deployment build. Let that process use the provider binary instead
 # of recursively self-installing the packageManager version until the container
@@ -8,16 +21,6 @@ packages:
 # enforced by preinstall, and .replit still performs the authoritative frozen
 # install with pnpm@10.34.5 before building.
 managePackageManagerVersions: false
-allowBuilds:
-  bufferutil: true
-  esbuild: true
-auditConfig:
-  # Both advisories are mitigated by the reviewed local patch below. Keep the
-  # ignore list tied to regression fixtures so a future unpatched resolution
-  # cannot silently inherit the exception.
-  ignoreGhsas:
-    - GHSA-5p2g-fcmc-qvqq
-    - GHSA-w3rx-r6r6-pgpr
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.14'
   - '@expo/fingerprint@0.20.7'
@@ -35,32 +38,41 @@ minimumReleaseAgeExclude:
   - expo-splash-screen@57.0.6
   - expo@57.0.12
 overrides:
-  rollup: ">=4.62.2"
-  tar: ">=7.5.21"
-  flatted: ">=3.4.2"
-  picomatch: "4.0.5"
-  "@xmldom/xmldom": ">=0.9.12"
-  ws: ">=8.21.1"
-  vite: "7.3.6"
-  "express>router": ">=2.2.0"
-  "router>path-to-regexp": ">=8.4.0"
-  "recharts>lodash": ">=4.18.0"
-  "@fastify/ajv-compiler>fast-uri": ">=3.1.4"
-  "ajv>fast-uri": ">=3.1.4"
-  "fast-json-stringify>fast-uri": ">=3.1.4"
-  "fastify>find-my-way": ">=9.7.0"
-  "minimatch>brace-expansion": ">=5.0.8"
-  "sharp": ">=0.35.4"
-  "next>postcss": ">=8.5.18"
-  "@vitejs/plugin-react>@babel/core": "7.29.6"
-  "express>body-parser": ">=2.3.0"
-  "qs": ">=6.16.0"
-  "js-yaml@^4": ">=4.3.2 <5"
-  "decode-uri-component": ">=0.5.0"
-  "uuid@<11.1.1": "11.1.1"
-  "tsx>esbuild": ">=0.28.1"
-  "vite>esbuild": ">=0.28.1"
   "@esbuild-kit/core-utils>esbuild": ">=0.25.0"
+  "@fastify/ajv-compiler>fast-uri": "4.2.1"
+  "@vitejs/plugin-react>@babel/core": "7.29.6"
+  "@xmldom/xmldom": ">=0.9.12"
+  "ajv>fast-uri": "4.2.1"
+  "axios@^1": "1.20.0"
+  compression: "1.8.2"
+  "decode-uri-component": ">=0.5.0"
+  "express>body-parser": ">=2.3.0"
+  "express>proxy-addr": "2.0.8"
+  "express>router": ">=2.2.0"
+  "fast-json-stringify>fast-uri": "4.2.1"
+  "fast-copy@^4": "4.1.0"
+  "fastify>find-my-way": ">=9.7.0"
+  flatted: ">=3.4.2"
+  "js-yaml@^4": ">=4.3.2 <5"
+  "minimatch>brace-expansion": "5.0.12"
+  "next>postcss": ">=8.5.18"
+  picomatch: "4.0.5"
+  postcss-selector-parser: "7.1.6"
+  "qs": ">=6.16.0"
+  "recharts>lodash": ">=4.18.0"
+  rollup: ">=4.62.2"
+  "router>path-to-regexp": ">=8.4.0"
+  "sharp": "0.35.5"
+  shell-quote: "1.11.0"
+  source-map-js: "1.2.2"
+  tar: ">=7.5.21"
+  "tsx>esbuild": ">=0.28.1"
+  "uuid@<11.1.1": "11.1.1"
+  vite: "7.3.6"
+  "vite>esbuild": ">=0.28.1"
+  ws: ">=8.21.1"
 patchedDependencies:
   '@expo/plist@0.8.1': patches/@expo__plist@0.8.1.patch
+  braces@3.0.3: patches/braces@3.0.3.patch
   'image-size@1.2.1': patches/image-size@1.2.1.patch
+  node-forge@1.4.0: patches/node-forge@1.4.0.patch

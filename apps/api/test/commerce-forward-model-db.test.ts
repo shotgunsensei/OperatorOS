@@ -142,6 +142,7 @@ function stackCheckoutEvent(input: {
   };
 }
 
+let providerPriceAmountOverride: number | undefined;
 function providerPrice(id: string) {
   const amounts = new Map<string, number>([
     [process.env.STRIPE_PRICE_TRADEFLOWKIT_MONTHLY!, 14900],
@@ -152,9 +153,10 @@ function providerPrice(id: string) {
   ]);
   return {
     id,
-    unit_amount: amounts.get(id),
+    unit_amount: providerPriceAmountOverride ?? amounts.get(id),
     currency: 'usd',
     active: true,
+    livemode: false,
     billing_scheme: 'per_unit',
     transform_quantity: null,
     type: 'recurring',
@@ -626,6 +628,17 @@ test('application-stack checkout is monthly-only, resumes an open checkout, and 
   assert.equal(rows[0].stripeCustomerId, 'cus_tenant_contract_1');
   assert.equal(rows[0].stripeCheckoutSessionId, 'cs_stack_contract_1');
 
+  providerPriceAmountOverride = 1;
+  const driftedResume = await app.inject({
+    method: 'POST', url: '/v1/billing/stack/checkout', headers: bearer(owner),
+    payload: { coreProduct: 'tradeflowkit', freeCompanionModule: 'snapproofos', interval: 'month' },
+  });
+  providerPriceAmountOverride = undefined;
+  assert.equal(driftedResume.statusCode, 409, driftedResume.body);
+  assert.equal(driftedResume.json().code, 'STACK_PRICE_PROVIDER_MISMATCH');
+  assert.equal(customerCreateCalls, 1);
+  assert.equal(checkoutCreateCalls, 1);
+
   const resumed = await app.inject({
     method: 'POST',
     url: '/v1/billing/stack/checkout',
@@ -643,7 +656,7 @@ test('application-stack checkout is monthly-only, resumes an open checkout, and 
   assert.equal(resumed.json().url, 'https://checkout.stripe.test/stack/1');
   assert.equal(customerCreateCalls, 1);
   assert.equal(checkoutCreateCalls, 1);
-  assert.equal(checkoutRetrieveCalls, 1);
+  assert.equal(checkoutRetrieveCalls, 2);
 
   const [resumedRow] = await db.select()
     .from(tenantApplicationSubscriptions)

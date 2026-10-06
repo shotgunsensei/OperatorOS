@@ -1,25 +1,9 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
+import { TORQUESHED_CREDIT_CATALOG } from '@operatoros/sdk';
+export { TORQUESHED_CREDIT_CATALOG } from '@operatoros/sdk';
 
 export const TORQUESHED_CREDIT_CATALOG_VERSION = 'torqueshed-credit-v1';
-
-export const TORQUESHED_CREDIT_CATALOG = Object.freeze([
-  {
-    key: 'roadside-25000', sku: 'TORQUESHED-ROADSIDE-25000-V1',
-    lookupKey: 'operatoros_torqueshed_roadside_25000_v1',
-    name: 'Roadside', units: 25_000, amountMinor: 500, currency: 'USD',
-  },
-  {
-    key: 'workshop-100000', sku: 'TORQUESHED-WORKSHOP-100000-V1',
-    lookupKey: 'operatoros_torqueshed_workshop_100000_v1',
-    name: 'Workshop', units: 100_000, amountMinor: 1_500, currency: 'USD',
-  },
-  {
-    key: 'fleet-500000', sku: 'TORQUESHED-FLEET-500000-V1',
-    lookupKey: 'operatoros_torqueshed_fleet_500000_v1',
-    name: 'Fleet', units: 500_000, amountMinor: 5_000, currency: 'USD',
-  },
-] as const);
 
 export type TorqueShedCreditPackage = (typeof TORQUESHED_CREDIT_CATALOG)[number];
 export type TorqueShedStripeMode = 'test' | 'live';

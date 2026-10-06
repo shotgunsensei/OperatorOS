@@ -3,7 +3,9 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { modules, subscriptions, tenantUsers, users } from '../schema.js';
 import { beginIdempotentOperation, completeIdempotentOperation } from './shared-usage-activity.js';
-import { getStripeCatalogClient, getStripeFeatureBillingClient, isStripeEnabled } from './billing-service.js';
+import { getStripeCatalogClient, getStripeFeatureBillingClient, getStripeRuntimeMode, isStripeEnabled } from './billing-service.js';
+import { recurringStripePriceError } from './stripe-price-contract.js';
+import { CALLCOMMAND_CAPACITY_PRICES } from '@operatoros/sdk';
 import { callCommandNumberBillingGraceDays } from './callcommand-managed-number.js';
 import { resolveAppBaseUrl } from './public-url.js';
 
@@ -12,8 +14,8 @@ export const CALLCOMMAND_LOCAL_NUMBER_ENTITLEMENT_KEY = 'callcommand.additional_
 export const CALLCOMMAND_TOLL_FREE_NUMBER_ENTITLEMENT_KEY = 'callcommand.toll_free_numbers';
 export const CALLCOMMAND_LOCAL_NUMBER_LOOKUP_KEY = 'operatoros_callcommand_additional_local_number_monthly_v1';
 export const CALLCOMMAND_TOLL_FREE_NUMBER_LOOKUP_KEY = 'operatoros_callcommand_toll_free_number_monthly_v1';
-export const CALLCOMMAND_LOCAL_NUMBER_DEFAULT_PRICE_CENTS = 500;
-export const CALLCOMMAND_TOLL_FREE_NUMBER_DEFAULT_PRICE_CENTS = 800;
+export const CALLCOMMAND_LOCAL_NUMBER_DEFAULT_PRICE_CENTS = CALLCOMMAND_CAPACITY_PRICES.localNumber.cents;
+export const CALLCOMMAND_TOLL_FREE_NUMBER_DEFAULT_PRICE_CENTS = CALLCOMMAND_CAPACITY_PRICES.tollFreeNumber.cents;
 
 type Row = Record<string, any>;
 
@@ -280,8 +282,7 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
       for (const [kind, priceId] of [['local', localPriceId], ['toll_free', tollFreePriceId]] as const) {
         if (!priceId) continue;
         const price = await getStripeCatalogClient().prices.retrieve(priceId);
-        if (!price.active || price.currency !== 'usd' || price.unit_amount !== configuredCents(kind)
-          || price.recurring?.interval !== 'month' || price.recurring.interval_count !== 1 || price.recurring.usage_type !== 'licensed') {
+        if (recurringStripePriceError(price, { priceId, unitAmountCents: configuredCents(kind), mode: getStripeRuntimeMode() })) {
           throw new CallCommandNumberBillingError('The billing price does not match the displayed monthly number price. Contact OperatorOS support.', 'CALLCOMMAND_NUMBER_PRICE_MISMATCH');
         }
       }

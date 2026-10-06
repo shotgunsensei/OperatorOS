@@ -42,7 +42,7 @@ let priceMismatch = false;
 let upgradePending = false;
 const metadata = () => ({ type:'feature_addon',feature:'managed_phone_numbers',tenant_id:owner.currentTenantId,requested_billable_local_quantity:'999' });
 const stripe = {
-  prices: { retrieve: async (id: string) => ({ id, active:true,currency:'usd',unit_amount:priceMismatch ? 999 : id.includes('tollfree') ? 800 : 500,recurring:{interval:'month',interval_count:1,usage_type:'licensed'} }) },
+  prices: { retrieve: async (id: string) => ({ id, active:true,livemode:false,type:'recurring',billing_scheme:'per_unit',currency:'usd',unit_amount:priceMismatch ? 999 : id.includes('tollfree') ? 800 : 500,recurring:{interval:'month',interval_count:1,usage_type:'licensed'} }) },
   customers: { create: async () => ({ id:'cus_cc_setup_test' }) },
   checkout: { sessions: { create: async () => { checkoutCount++; return { id:'cs_cc_setup_test',url:'https://checkout.stripe.com/c/pay/cc_setup_test' }; } } },
   subscriptions: {
