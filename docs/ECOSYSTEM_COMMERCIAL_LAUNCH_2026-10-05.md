@@ -1,5 +1,12 @@
 # Ecosystem commercial launch acceptance - 2026-10-05
 
+October 6 continuation: authenticated live Stripe setup and production credit
+catalog binding are now verified in
+[the current configuration record](ECOSYSTEM_STRIPE_CONFIGURATION_2026-10-06.md).
+Historical unavailable-access/no-provider-mutation statements in this dated
+record describe October 5. Release publication and full paid-tenant/module
+acceptance remain open.
+
 Status: **SOURCE CANDIDATE / LOCAL SCOPES PASSED / LIVE COMMERCIAL ACCEPTANCE OPEN**.
 
 Candidate branch: `codex/ecosystem-commercial-launch`, based on

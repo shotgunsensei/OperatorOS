@@ -102,6 +102,13 @@ OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
 
 [userenv.shared]
 STRIPE_MODE = "live"
+STRIPE_BILLING_PORTAL_CONFIGURATION_ID = "bpc_1UNaVGLb6JkgBESXZ6yTKJdn"
+STRIPE_EXPECTED_ACCOUNT_ID = "acct_1TU5WeLb6JkgBESX"
+STRIPE_PRICE_CALLCOMMAND_CONCURRENT_LANE_MONTHLY = "price_1UNaZlLb6JkgBESXencjlAvs"
+STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY = "price_1UNaZlLb6JkgBESXuMONaXu1"
+STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY = "price_1UNaZlLb6JkgBESXshS1TKYu"
+STRIPE_WEBHOOK_ENDPOINT_URL = "https://api.operatoros.net/v1/billing/webhook"
+STRIPE_WEBHOOK_EVENTS = "checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,payment_intent.payment_failed,charge.refunded,charge.dispute.created,charge.dispute.closed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,invoice.paid,invoice.payment_succeeded,invoice.payment_failed"
 
 [postMerge]
 path = "scripts/post-merge.sh"

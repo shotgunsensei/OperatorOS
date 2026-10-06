@@ -1,5 +1,23 @@
 # OperatorOS module parity index
 
+## Authenticated Stripe and catalog evidence (2026-10-06)
+
+**PARITY COUNTS UNCHANGED / LIVE STRIPE CONFIGURATION PASSED /
+TARGET TENANT AND MODULE ACCEPTANCE OPEN**.
+
+| Surface | New evidence | Remaining gate |
+| --- | --- | --- |
+| Flagships, six paid companions, additional seats | Exact live core/companion/seat Prices and restricted portal validate; canonical webhook has all required events | Approved candidate publication, effective production configuration, hosted payment/signed settlement and non-admin tenant acceptance |
+| CallCommand AI | Three missing monthly capacity Product/Price pairs created and validated; Replit bindings saved; authenticated production SSO/usage page reached | Tenant voice setup, Realtime SIP configuration and controlled live calls, numbers, recording/transfer and capacity payment acceptance |
+| TorqueShed / Torque Assist | Three live credit Product/Price pairs created; canonical mapping service writes/readback pass 3/3 against production; published Credit Catalog independently shows validated rows | Exact-release purchase activation, signed paid credits and target workflow acceptance |
+| OutCall | Published module registry still coming soon; sales closed | Commercial/activation and controlled verified-self real-provider acceptance |
+
+Compiled provider audit passes 11/11 Prices, portal/webhook, zero issues.
+Fresh configuration/release static checks pass 22/22, zero skips, and all four
+workspace typechecks pass. No real charge, entitlement grant or publication
+occurred. These are provider/configuration facts, not full module acceptance.
+See [the October 6 evidence and remaining gates](../ECOSYSTEM_STRIPE_CONFIGURATION_2026-10-06.md).
+
 ## Commercial launch verification overlay (2026-10-05)
 
 **PARITY COUNTS UNCHANGED / PRICE CONTRACT HARDENED / LIVE ACCEPTANCE OPEN**.

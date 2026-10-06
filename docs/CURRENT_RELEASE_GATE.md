@@ -1,5 +1,26 @@
 # OperatorOS current release gate
 
+## Live Stripe configuration and production credit catalog (2026-10-06)
+
+**STRIPE PROVIDER CONFIGURATION PASSED / CANDIDATE UNPUBLISHED / PAID TENANT
+AND MODULE ACCEPTANCE OPEN**. Explicitly authorized setup created six missing
+live Product/Price pairs and saved the restricted portal/canonical webhook.
+The compiled source audit validates all eleven Prices, portal and webhook with
+zero issues against `acct_1TU5WeLb6JkgBESX`; charges and payouts are enabled.
+Three Torque Assist mappings were added through the canonical service to
+production and are visible as validated in the published Credit Catalog.
+Seven non-secret Replit bindings are saved; effective new published runtime
+configuration, purchase activation and signed settlement still require proof.
+
+Serving source remains `62fb640c`, build `dbca1e6f06bbb7aa9bb2de15`, v65/65;
+October 6 readiness reports deployment start `2026-10-06T08:31:11.606Z`.
+No source push/publication or real charge occurred. Fresh typecheck passes four
+projects and configuration/release static checks pass 22/22 with zero skips.
+The tested `6d3f60ae` candidate plus saved configuration needs exact-commit CI
+and approved production publication. OutCall remains coming soon; controlled
+voice/realtime and non-admin paid-tenant acceptance remain open. See
+[the complete October 6 record](ECOSYSTEM_STRIPE_CONFIGURATION_2026-10-06.md).
+
 ## Observed publication and commercial launch candidate (2026-10-05)
 
 Current public readiness supersedes the historical publication identities below:
