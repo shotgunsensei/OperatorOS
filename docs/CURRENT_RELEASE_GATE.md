@@ -1,5 +1,19 @@
 # OperatorOS current release gate
 
+## Authorized publication continuation (2026-10-06)
+
+**PUSHED / PUBLISHING AUTHORIZED / FRESH CORRECTED CI PENDING**. PR #115 is
+open. Earlier exact branch and PR CI pass 13/14 scopes and fail only dependency
+hardening; the newly reported advisories have upstream fixes applied, with
+zero unresolved advisories and zero critical after local verification. Four
+prior patched high exceptions remain disclosed. Fresh local production build,
+four typechecks and 37 focused security/preflight checks pass with zero skips.
+Serving source is still `62fb640c`, database v65/65. Replit source/configuration
+is staged with recovery copies; sales switch remains closed and the final
+Torque Assist release pin must follow the corrected verified commit. OutCall,
+live Realtime/call acceptance and non-admin paid-tenant acceptance remain open.
+See [the exact continuation evidence](ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
 ## Live Stripe configuration and production credit catalog (2026-10-06)
 
 **STRIPE PROVIDER CONFIGURATION PASSED / CANDIDATE UNPUBLISHED / PAID TENANT

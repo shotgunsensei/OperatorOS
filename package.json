@@ -126,10 +126,10 @@
     "verify:techdeck:resolution-contract": "node scripts/techdeck/generate-resolution-contract.mjs && node scripts/techdeck/generate-resolution-storage.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^8.2.0",
+    "@capacitor/android": "^8.5.1",
     "@capacitor/browser": "^8.0.3",
     "@capacitor/cli": "^7.6.0",
-    "@capacitor/core": "^8.2.0",
+    "@capacitor/core": "^8.5.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.1",
     "@fastify/cookie": "^11.0.2",

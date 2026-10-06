@@ -1,5 +1,24 @@
 # OperatorOS implementation status
 
+## Authorized publication and dependency remediation (2026-10-06)
+
+**PUSHED / PUBLICATION AUTHORIZED / CORRECTED EXACT-COMMIT CI REQUIRED**.
+PR #115 is open. The first branch/PR release runs pass 13/14 scopes, including
+32 browser and four visual checks, but retain a failed security scope caused
+by six newly reported high/critical advisories. Eight upstream dependency fixes
+(including the two new moderate findings) now clear all unresolved advisories;
+four prior patched high exceptions remain disclosed, zero critical. No new
+exception was added. Frozen install, four typechecks, production build, 21
+Phase 39 tests and 16 static/mocked API preflight checks pass locally, zero
+fail/cancel/skip/todo. The six installed-package regressions are included in
+the 21 count. SBOM contains 1,238 unique components.
+
+Replit's seven Stripe bindings are preserved and live credit mode/release pin
+are staged; sales remain closed pending corrected CI and runtime verification.
+No publication, real payment or voice action has occurred. Exact commands,
+environment, original CI failures, remediation and remaining gates are in
+[the publication continuation](ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
 ## Live Stripe configuration continuation (2026-10-06)
 
 Status: **LIVE STRIPE CONFIGURATION VALIDATED / PRODUCTION CATALOG BOUND /

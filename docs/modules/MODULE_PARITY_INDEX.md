@@ -1,5 +1,17 @@
 # OperatorOS module parity index
 
+## Authorized publication continuation (2026-10-06)
+
+**PARITY COUNTS UNCHANGED / CORRECTED RELEASE CI PENDING**. PR #115 is pushed
+and publication is authorized. The first exact branch/PR runs pass 32 compiled
+browser tests and four visual tests, but retain a 13/14 aggregate failure from
+new dependency advisories. Upstream fixes now pass local security, four
+typechecks, production build and 37 focused security/preflight checks with no
+skips. Torque Assist copy now covers live credits; its live mode/release pin
+are staged, with purchases still closed pending the corrected CI/runtime gate.
+These changes grant no entitlement and do not promote OutCall or voice/module
+provider acceptance. See [the publication evidence](../ECOSYSTEM_PUBLICATION_2026-10-06.md).
+
 ## Authenticated Stripe and catalog evidence (2026-10-06)
 
 **PARITY COUNTS UNCHANGED / LIVE STRIPE CONFIGURATION PASSED /
