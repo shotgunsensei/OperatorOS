@@ -109,6 +109,9 @@ STRIPE_PRICE_CALLCOMMAND_ADDITIONAL_LOCAL_NUMBER_MONTHLY = "price_1UNaZlLb6JkgBE
 STRIPE_PRICE_CALLCOMMAND_TOLL_FREE_NUMBER_MONTHLY = "price_1UNaZlLb6JkgBESXshS1TKYu"
 STRIPE_WEBHOOK_ENDPOINT_URL = "https://api.operatoros.net/v1/billing/webhook"
 STRIPE_WEBHOOK_EVENTS = "checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,payment_intent.payment_failed,charge.refunded,charge.dispute.created,charge.dispute.closed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,invoice.paid,invoice.payment_succeeded,invoice.payment_failed"
+TORQUESHED_CREDIT_PURCHASES_MODE = "live"
+TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT = "0ea0f792db70936c95f60be41fbf457da3fdbf91"
+TORQUESHED_CREDIT_PURCHASES_ENABLED = "1"
 
 [postMerge]
 path = "scripts/post-merge.sh"
