@@ -69,6 +69,7 @@ import { ensureSharedCustomerLinks } from './shared-customer-db-init.js';
 import { withDatabaseReleaseLock } from './database-release-lock.js';
 import { ensureTechDeckResolutionTables, verifyTechDeckResolutionTables } from './techdeck-resolution-db-init.js';
 import { ensureResolutionSemanticTables, verifyResolutionSemanticTables } from './techdeck-resolution-semantic-db.js';
+import { ensureSharedAiBudgetTables, verifySharedAiBudgetTables } from './shared-ai-budget-db-init.js';
 
 export { DATABASE_RELEASE_CONTRACT, DATABASE_RELEASE_STEPS };
 
@@ -139,6 +140,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   auth_security_controls: ensureAuthSecurityControls,
   techdeck_resolution_intelligence_tables: ensureTechDeckResolutionTables,
   techdeck_resolution_semantic_tables: ensureResolutionSemanticTables,
+  shared_ai_budget_tables: ensureSharedAiBudgetTables,
   core_suite_trial_tables: ensureCoreSuiteTrialTables,
   forward_commerce_contract: ensureForwardCommerceContract,
 };
@@ -718,6 +720,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
   }
   await verifyTechDeckResolutionTables();
   await verifyResolutionSemanticTables();
+  await verifySharedAiBudgetTables();
 }
 
 export async function applyOperatorOSDatabaseRelease(report: StepReporter = () => {}): Promise<void> {

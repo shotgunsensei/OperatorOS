@@ -1,5 +1,23 @@
 # OperatorOS module parity index
 
+## TechDeck AI guidance overlay (2026-10-07, local only)
+
+**PARITY COUNTS UNCHANGED / LOCAL SLICE VERIFIED / LIVE ACCEPTANCE OPEN**.
+TechDeck's existing reviewed guidance form now displays structured Responses
+output under its tenant/member/entitlement/write guards. New server-owned monetary
+reservations and measured cache-aware cost telemetry default to no spending;
+unknown usage keeps holds and no scripts/devices execute. This cap covers only
+the selected TechDeck flow. Focused API/browser checks pass 21/21, including actual
+console desktop/mobile rendering and in-flight tenant switching. Production build,
+typechecks, additive disposable v66/66 rehearsal and compiled Replit supervisor
+smoke pass; inherited security exceptions remain intact. No module is promoted
+to deployed/customer acceptance. Live model access/budget approval, exact release
+CI, migration/publication and non-admin customer acceptance remain gates.
+Current public health reports serving `5b50b2ca` and database v65/65; historical
+acceptance below does not describe this unpushed slice.
+See [commands and acceptance limits](../ai/IMPLEMENTATION-EVIDENCE.md) and
+[revised stages](../ai/OPENAI-FIRST-REVISED-PLAN.md).
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PARITY COUNTS UNCHANGED / CI GREEN / PUBLISHED / RUNTIME VERIFIED**.

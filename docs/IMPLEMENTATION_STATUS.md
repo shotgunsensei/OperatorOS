@@ -1,5 +1,33 @@
 # OperatorOS implementation status
 
+## Budgeted TechDeck Responses slice (2026-10-07, local only)
+
+**IMPLEMENTED / OFFLINE VERIFIED / NOT PUSHED OR DEPLOYED / PARITY UNCHANGED**.
+Isolated branch `codex/openai-responses-budget-oct7` extends the existing AI
+interface and TechDeck guidance form with stateless Responses, reviewed structured
+output, server-owned tenant budgets, durable reservations and measured cache-aware
+cost telemetry. Defaults allow no spending; unknown usage retains holds. Release
+step 66 is additive, with the first 65 steps integrity-tested unchanged. Existing
+AI/voice paths remain outside this new workflow's cap.
+
+Final focused API/browser checks pass **21/21**, offline environment **1/1**,
+parity quality gates **20/20**, provider isolation/preflight **13/13** and patched
+security regressions **12/12**, all zero fail/cancel/skip/todo. Production build,
+four workspace typechecks, current root lint, clean/idempotent disposable v66/66
+apply/verify and actual compiled Replit supervisor smoke pass. Four inherited
+patched high advisory exceptions remain disclosed and integrity-tested; zero
+critical/unresolved findings. No full release matrix, hosted CI, live model or
+deployed customer acceptance is inferred. Exact commands, environment, corrected
+fixture failures, artifacts and gates: [implementation evidence](ai/IMPLEMENTATION-EVIDENCE.md).
+
+Read-only current health reports serving `5b50b2ca`, build
+`224589f065463d1b7a8db358`, database v65/65; the October 6 acceptance below is
+historical. Landing commit `5aedd03da26f54fe4bf54dcce698ee04eb7d21b5` and its
+existing local SBOM modification remain preserved in their separate worktree.
+Push/CI/publication remain gated on GitHub's exhausted included minutes and
+unverified enforced $0 spending cap. Live provider/budget enablement and production
+migration need separate human decisions. [Revised stages and cost inventory](ai/OPENAI-FIRST-REVISED-PLAN.md).
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PUBLISHED / CI GREEN / EXACT SERVING IDENTITY VERIFIED / CHECKOUT OPENING VERIFIED**.
