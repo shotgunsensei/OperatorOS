@@ -4,10 +4,17 @@
 
 **LOCAL INTEGRATION / FOCUSED MERGED-SOURCE PASS / COMBINED GATE PENDING**.
 Remote main `5b50b2ca` and PR117 `47d32d71` were verified read-only. AI `2a388cdf`
-is integrated with PR117 in an isolated branch; fresh combined AI, legacy,
-host/session and workflow checks pass **95/95**, with zero fail/cancel/skip/todo.
-The landing commit `5aedd03d` is preserved and is next to reconcile. These
-focused and individual-branch results do not accept the combined release.
+is integrated with PR117 and the complete preserved landing commit `5aedd03d`
+in an isolated branch. Fresh AI, legacy, host/session, workflow and landing checks
+pass **167/167**, zero fail/cancel/skip/todo; production build/typechecks pass.
+Saved-cart authority and catalog-failure checkout closure pass in **5/5** focused
+production-browser journeys. The separate landing production fixture passes
+**13/13**, including loading/error recovery and responsive handoffs. The pricing
+conflict preserves both authoritative pending carts and campaign/selection handoff;
+authenticated checkout revalidates the bounded catalog read. Earlier build/browser
+and harness failures are disclosed in the integration record. These pre-commit
+results do not accept the exact combined release; populated upgrade, all 14 stages,
+clean build and exact-identity supervisor smoke follow the candidate commit.
 No push, hosted CI, production apply, settings/secret change, paid API or
 publication occurred. [Source inventory and migration gates](COORDINATED_RELEASE_2026-10-07.md).
 
@@ -151,6 +158,26 @@ schema/copy or real charge occurred. See
 
 This supersedes the extension-overlay blocker and current candidate CI status
 in the October 6 checkpoint; its prior deployed evidence remains historical.
+
+## Flagship landing/pricing current-main integration (2026-10-06 UTC)
+
+Status: **LOCAL INTEGRATION VERIFIED / NOT PUSHED OR DEPLOYED**.
+Branch `codex/flagship-landings-current-main` starts from verified documentation
+main `e62c89356f11d50940134790c8dad7e3eee268ab` and integrates preserved original
+landing/pricing commit `5e4c8c435405436eeef6fe33e27b13692c718a04`. Source applies
+without conflict; the two documentation overlays retain current-main publication
+history. The three audience pages, server-loaded catalog, failure/retry states
+and selection-preserving auth handoff do not change API authority or prices.
+The PR #115 dependency fixes and four existing advisory exceptions are retained
+unchanged. Fresh checks pass: 53 affected regressions, 15 mocked-provider/static
+commerce tests, 18 installed-package/security-policy tests and 18 compiled local
+Chromium cases, zero failures/skips/browser retries. Root lint, four-app typechecks
+and production build pass. The unchanged security gate now passes with zero
+unresolved IDs and four disclosed high advisories under the tested inherited
+exceptions; this is not a zero-vulnerability claim.
+No hosted CI, push or publication is authorized for this continuation; included
+Actions minutes are exhausted and additional cost protection is unverified.
+Fresh evidence is recorded in [the integration report](FLAGSHIP_LANDINGS_MAIN_INTEGRATION_2026-10-06.md).
 
 ## Final exact-commit commercial release gate (2026-10-06)
 

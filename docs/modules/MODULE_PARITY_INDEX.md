@@ -3,8 +3,12 @@
 ## Coordinated integration checkpoint (2026-10-07)
 
 AI `2a388cdf` and PR117 `47d32d71` retain sealed module outcomes, legacy Assist
-and default-disabled TechDeck guidance. Fresh merged-source checks pass **95/95**;
-landing reconciliation and the full combined release gate remain pending. No
+and default-disabled TechDeck guidance alongside preserved landing `5aedd03d`.
+Fresh merged-source checks pass **167/167** with zero fail/cancel/skip/todo;
+production build/typechecks, focused production browser **5/5**, and separate
+landing production fixture **13/13** pass. Saved-cart authority, scoped outcomes,
+catalog read failures, loading/retry and campaign handoffs are covered. The exact
+combined release gate, populated upgrade and clean identity smoke remain pending. No
 deployed parity or live provider/customer acceptance is promoted by this checkpoint.
 [Integration inventory and gates](../COORDINATED_RELEASE_2026-10-07.md).
 
@@ -88,6 +92,20 @@ configuration alone. See
 | Torque Assist | Fleet $50/500,000 live Checkout and return to selected diagnostic; zero balance/no payment | Signed paid credits, provider workflow and cross-module preview acceptance |
 | CallCommand AI | Specifically approved incoming-call webhook exists in the existing OperatorOS OpenAI project; masked owner-saved webhook secret verified; project/Mini model source bindings set | Routing-secret handoff, effective API-key/project access, publication, signed event and controlled live voice/capacity/number acceptance |
 | OutCall | Coming-soon and sales gates preserved | Commercial/activation and verified-self real-provider acceptance |
+
+## Flagship public-page current-main integration (2026-10-06 UTC)
+
+**PARITY COUNTS UNCHANGED / LOCAL INTEGRATION VERIFIED / NOT DEPLOYED**.
+The preserved three-page/catalog-pricing candidate is integrated on isolated
+`codex/flagship-landings-current-main` from `e62c8935`; current publication history
+and PR #115 dependency policy remain intact. No module functionality, API
+authority, catalog price, provider setting or deployment changes. 53 affected,
+15 commerce and 18 security-policy tests plus 18 local browser cases pass;
+lint, four-app typechecks and production build pass. The inherited security gate
+passes with zero unresolved IDs and four disclosed high patched exceptions.
+Current-main hosted acceptance does not cover this candidate. Fresh evidence
+and remaining cost/exact-candidate release gates are recorded in
+[the integration report](../FLAGSHIP_LANDINGS_MAIN_INTEGRATION_2026-10-06.md).
 
 ## Final exact-commit commercial release gate (2026-10-06)
 

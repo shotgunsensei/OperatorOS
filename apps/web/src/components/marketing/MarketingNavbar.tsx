@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from '@/components/marketing/MarketingLink';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { pricingAccountPath, pricingSelectionPath, readPricingSelection } from '@/lib/pricing-selection';
+import { campaignQuery, withCampaign, type PublicQuery } from '@/lib/campaign-query';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
 import OperatorLogo from '../brand/OperatorLogo';
@@ -34,9 +36,18 @@ const NAV_LINKS: NavLink[] = [
  * Compact/tablet (< 1024px): collapses links into a hamburger drawer so the
  * complete navigation never overflows an intermediate-width viewport.
  */
-export default function MarketingNavbar() {
+export default function MarketingNavbar({ conversion }: { conversion?: { label: string; pricingPath: string; signInPath: string } }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
+  const params = useSearchParams();
+  const query: PublicQuery = {};
+  params.forEach((_value, key) => { const values = params.getAll(key); query[key] = values.length === 1 ? values[0] : values; });
+  const pricingSelection = pathname === '/pricing' ? readPricingSelection(query) : null;
+  const campaign = campaignQuery(query);
+  const signInPath = conversion?.signInPath ?? (pricingSelection ? pricingAccountPath(pricingSelection, 'login', campaign) : '/login');
+  const registerPath = pricingSelection ? pricingAccountPath(pricingSelection, 'register', campaign) : '/login?mode=register';
+  const pricingPath = conversion?.pricingPath ?? (pricingSelection ? withCampaign(pricingSelectionPath(pricingSelection), campaign) : '/pricing');
+  const navLinks = NAV_LINKS.map(link => link.href === '/pricing' ? { ...link, href: pricingPath } : link);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -52,7 +63,7 @@ export default function MarketingNavbar() {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/' || pathname?.startsWith('/for/');
-    return pathname?.startsWith(href);
+    return pathname?.startsWith(href.split('?')[0].split('#')[0]);
   };
 
   return (
@@ -153,7 +164,7 @@ export default function MarketingNavbar() {
             aria-label="Site navigation"
             style={{ display: 'flex', alignItems: 'center', gap: 28, marginLeft: 16 }}
           >
-            {NAV_LINKS.map((link) =>
+            {navLinks.map((link) =>
               link.external ? (
                 <a
                   key={link.href}
@@ -195,18 +206,18 @@ export default function MarketingNavbar() {
               ) : (
                 <>
                   <Link
-                    href="/login"
+                    href={signInPath}
                     className="operatoros-cta-secondary"
                     data-testid="cta-sign-in"
                   >
                     Sign in
                   </Link>
                   <Link
-                    href="/login?mode=register"
+                    href={conversion?.pricingPath ?? registerPath}
                     className="operatoros-cta-primary"
                     data-testid="cta-launch-console"
                   >
-                    Get started <ArrowRight size={14} />
+                    {conversion?.label ?? 'Get started'} <ArrowRight size={14} />
                   </Link>
                 </>
               )
@@ -254,7 +265,7 @@ export default function MarketingNavbar() {
               aria-label="Site navigation"
               style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
             >
-              {NAV_LINKS.map((link) =>
+              {navLinks.map((link) =>
                 link.external ? (
                   <a
                     key={link.href}
@@ -293,7 +304,7 @@ export default function MarketingNavbar() {
                 ) : (
                   <>
                     <Link
-                      href="/login"
+                      href={signInPath}
                       className="operatoros-cta-secondary"
                       style={{ flex: 1, justifyContent: 'center' }}
                       data-testid="cta-mobile-sign-in"
@@ -301,12 +312,12 @@ export default function MarketingNavbar() {
                       Sign in
                     </Link>
                     <Link
-                      href="/login?mode=register"
+                      href={conversion?.pricingPath ?? registerPath}
                       className="operatoros-cta-primary"
                       style={{ flex: 1, justifyContent: 'center' }}
                       data-testid="cta-mobile-launch-console"
                     >
-                      Get started <ArrowRight size={14} />
+                      {conversion?.label ?? 'Get started'} <ArrowRight size={14} />
                     </Link>
                   </>
                 )

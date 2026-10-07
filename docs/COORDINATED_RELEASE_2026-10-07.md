@@ -1,6 +1,7 @@
 # Coordinated OperatorOS integration - 2026-10-07
 
-Status: isolated local integration in progress; no remote action or publication.
+Status: sources reconciled locally; exact combined release gate pending. No remote
+action or publication.
 Branch: `codex/coordinated-release-oct7-main`.
 Git `ls-remote` verified current main at
 `5b50b2cadd815ba1c6de1af79deb04e8971af0b4` and PR117 at
@@ -16,17 +17,43 @@ Git `ls-remote` verified current main at
   workflow browser coverage and owner-configured non-secret provider bindings.
 - Landing/pricing: `5aedd03da26f54fe4bf54dcce698ee04eb7d21b5`, based on
   `e62c89356f11d50940134790c8dad7e3eee268ab`. The original worktree and its
-  modified SBOM remain untouched. Landing reconciliation is next.
+  modified SBOM remain untouched. Its complete commit is merged with ancestry
+  preserved, including the original landing implementation.
 - PR114 research and its conflicting v66 step are excluded. No older source
   branch is reset, deleted or rewritten.
 
 The PR117 merge retains canonical auth Origin and the isolated checkout client
 from the AI review. Both status histories survive. Shared auth preserves the
 host-derived outcome namespace; platform administrative endpoints stay sealed.
-Fresh merged-source focused AI, host, workflow and legacy checks pass **95/95**,
-zero failures, cancellations, skips or todo. This is pre-commit focused evidence;
-the complete combined gate and clean final identity check are still required.
-Root AGENTS now describes the existing lint command accurately.
+Fresh merged-source focused AI, host, workflow, legacy and landing checks pass
+**167/167**, zero failures, cancellations, skips or todo. Production typecheck/build
+passes after reconciliation. Focused production-browser journeys pass **5/5** with
+no retries. The separate production landing fixture passes **13/13**, with retries
+disabled, covering server prices, responsive campaign handoffs, loading/errors,
+recovery and checkout restrictions. These are pre-commit results; the full combined
+gate and clean final identity check remain required. Root AGENTS accurately
+describes the already existing lint command, addressing PR117's open lint-policy
+review comment without removing a release gate or changing security policy.
+
+The substantive pricing conflict preserves both URL-selected offers and the
+server's authoritative pending cart. A saved unpaid cart wins over conflicting URL
+preferences, locks its controls and is used for checkout. URL campaign handoff and
+the bounded seat limit remain intact. Authenticated checkout now performs the
+existing bounded catalog read before becoming eligible; a read failure displays
+the pricing error and disables checkout. Public server-rendered prices remain
+immediate. Shared auth retains both module-host outcome namespaces and the
+catalog request AbortSignal. The browser runner retains native workflow and new
+pricing selection coverage. `.replit` is byte-for-byte PR117's tracked blob
+`4f6f5352b9e69df3affd133a97b1bcd71f17a641`; secret values were not inspected.
+
+Earlier attempts are retained as failures, not acceptance: the first focused
+wrapper had six HTTP skips until its required Next process was started; the first
+preview build exposed a readonly-array assignment, now cloned into the mutable
+selection type; the first five-case browser run exposed the missing authenticated
+catalog refresh (4/5). The separate fixture initially lacked the build-time API
+rewrite target (9/13), then a synchronous temporary proxy blocked requests (5/13).
+The corrected asynchronous loopback fixture passes all 13 unchanged cases. No
+production guards, assertions or release stages were relaxed.
 
 Tests use only `operatoros-coordinated-oct7`, cached PostgreSQL 16 on
 `127.0.0.1:55443`, synthetic secrets and allowlisted OS/tool environment variables.
@@ -40,7 +67,9 @@ Only AI adds v66 `shared_ai_budget_tables`; the preceding 65 identifiers and
 implementation remain intact. Policies are disabled/zero by default, with no
 positive policy seeds or customer backfill. PR117 and landing add no schema step.
 Run the populated v65-to-v66/reapply rehearsal and the full combined release gate
-on disposable databases before proposing a production change.
+on disposable databases before proposing a production change. The upgrade fixture
+is exported directly from verified main `5b50b2ca`; its release-contract blob
+matches `08d4834b5826bb106ecd51cc8adf7455bf217d6f` exactly.
 
 Publication authority does not waive the shared database backup/apply gates.
 Review `db:plan`, verify an approved recoverable production backup, separately
@@ -67,14 +96,43 @@ current presence is not independently verified. No secret value was read,
 printed or configured. The exact cloud thread for the named activation session
 remains unidentified; no private raw history or duplicate provider work is used.
 
+Read-only GitHub metadata now reports both PR117 workflows completed successfully:
+release gate `37677334718` and semantic vector gate `37677334698`. This verifies
+PR117's own head, not the integration candidate. No new workflow was triggered.
+
 No inference, transcription, call or payment acceptance is implied. Provider
 handoffs and signed events, real paid tenant/customer flows and live voice remain
 separate acceptance gates. Four inherited patched high-advisory exceptions remain
 disclosed and must pass the existing integrity/package regressions.
 
-After combined local verification, inspect existing read-only GitHub billing,
-required-check and Replit publication capabilities. The exhausted included
-Actions quota and unverified enforced $0 cap prohibit a potentially billable
-push/check trigger. No budgets, account settings, credentials or security policy
-may be changed. The parent coordinates any remote action; no fresh general
-merge/publication approval is required under the owner's direct instruction.
+The repository is public and all three automatic workflows use standard hosted
+runner labels (`ubuntu-latest` / `macos-latest`). GitHub documents free standard
+runner minutes for public repositories. The release workflow also uploads
+artifacts with 14-day retention; storage cannot be assumed covered by the free
+minutes rule. Main's legacy protection endpoint returns "Branch not protected",
+and applicable branch rules are empty; the repository's release/security contract
+still requires its checks. No protections are changed or bypassed.
+
+Current cache usage is 4,421,035,323 bytes / 14 entries. The cache storage-limit
+read returns HTTP 402 requiring a valid payment method; this alone is not proof
+of an enforced product-wide $0 cap. The documented personal billing-summary read
+returns HTTP 404 with the existing CLI credential lacking `user` scope. No scope
+or account setting was changed. The personal budget is not verifiable through
+the exposed organization-only budget API. No current Replit masked settings or
+publication tools are callable. Before a potentially billable trigger, the exact
+human step is to inspect the existing GitHub Actions budget and confirm an enforced
+$0 stop-usage setting covering storage, or an already enforced equivalent that
+blocks paid usage. Do not create/change a budget in this task.
+
+The parent coordinates any remote action; no fresh general merge/publication
+approval is required under the owner's direct instruction. Proposed sequence after
+cost verification: push this isolated branch, open one integration PR against the
+freshly verified main, wait for the exact candidate checks and reviewed conflict
+resolution, merge, then coordinate backed-up database convergence and Replit
+sync/publication under the existing release authority. No source push, CI trigger,
+remote merge, production apply or publication has occurred here.
+
+Sources checked October 7: [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions),
+[runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing),
+[billing usage API](https://docs.github.com/en/rest/billing/usage), and
+[budget API](https://docs.github.com/en/rest/billing/budgets).
