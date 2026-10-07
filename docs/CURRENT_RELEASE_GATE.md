@@ -1,5 +1,21 @@
 # OperatorOS current release gate
 
+## Exact-head static contract correction (2026-10-07)
+
+**CI FAILURE RETAINED / FOCUSED CORRECTION PASS / UPDATED CI REQUIRED**.
+Both `cde70cef` release runs finish 13/14 scopes. API has 1,610 passes and one
+stale source assertion failure, with zero skips; the 34 exact-host browser
+journeys, four visual checks, 108 integration checks and 52 unit checks pass.
+The static correction now requires the host-aware workflow route helper while
+retaining the encoded workflow key. Fresh focused verification passes 13/13;
+the full isolated API rerun is in progress. No product/security policy changes.
+The owner-created restricted OpenAI runtime key is active and saved in Replit.
+A refreshed Shell matches it, with model discovery 200 and missing-file
+transcription validation 400. No inference or call acceptance is implied.
+Secure routing-secret replacement, published provider binding, publication
+and commercial/provider acceptance remain open. See
+[the current implementation evidence](IMPLEMENTATION_STATUS.md).
+
 ## Module-session workflow release candidate (2026-10-07)
 
 **LOCAL PASS / UPDATED EXACT-HEAD CI REQUIRED / CREDENTIAL HANDOFF OPEN**.

@@ -2,19 +2,23 @@
 
 ## Module-session workflow continuation (2026-10-07)
 
-**PARITY COUNTS UNCHANGED / LOCAL WORKFLOW PASS / UPDATED CI REQUIRED**.
+**PARITY COUNTS UNCHANGED / FOCUSED CORRECTION PASS / UPDATED CI REQUIRED**.
 The earlier checkout candidate passes both release gates 14/14: 1,608 API,
 108 integration, 52 unit, 33 browser and four visual tests. The additional
 module-session workflow repair passes 37 focused checks, production build/four
 typechecks, ESLint, and two first-attempt exact-host browser journeys in
-18.4 seconds. This is isolated source/local evidence; the new head needs fresh
-CI and publication. No complete module or provider acceptance is inferred.
+18.4 seconds. Both `cde70cef` CI runs subsequently pass all 34 browser journeys,
+four visual checks, 108 integration and 52 unit checks, but finish 13/14 scopes
+because one existing static API assertion still expected the old platform-only
+URL. Its corrected helper/encoded-workflow assertions pass 13/13 focused checks;
+the full isolated API rerun is in progress and the updated head needs fresh CI
+before publication. No complete module or provider acceptance is inferred.
 
 | Surface | New evidence | Remaining gate |
 | --- | --- | --- |
 | Customer outcomes across ten contracts | Source-scoped readiness/submission/polling; all contract sources checked through module sessions; real TradeFlowKit-to-SnapProofOS native delivery, persistent results and refresh/resume proved locally | New exact-head CI, publication, authenticated target acceptance |
 | Stack and billing | $143 pending cart resumes actual published live Checkout; local owner/paid gates pass again | Actual signed payment and non-admin tenant acceptance |
-| CallCommand AI | Owner-saved routing row and shape readiness verified; project-only linked-key override removed; read-only effective/project model discovery returns 401 | Routing-key replacement, restricted runtime-key handoffs, effective provider authentication, publication and controlled live voice/capacity/number acceptance |
+| CallCommand AI | Owner-created restricted runtime key is active through October 7, 2027 and saved directly; refreshed Shell matches it; model discovery 200 and missing-file transcription validation 400 | Secure routing-key replacement, published provider binding, publication and controlled live voice/capacity/number acceptance |
 | OutCall | Coming-soon and sales gates retained | Commercial activation and verified-self real-provider acceptance |
 
 See [the continuation and retained failures](../ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).

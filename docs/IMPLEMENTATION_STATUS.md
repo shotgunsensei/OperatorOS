@@ -1,5 +1,42 @@
 # OperatorOS implementation status
 
+## Exact-head CI static contract correction (2026-10-07)
+
+Both release runs for `cde70cef` (`37655864318` and `37655910611`) finish
+**13/14 scopes**: API **1,610 passed / 1 failed / 0 skipped**, integration
+**108/108**, unit **52/52**, exact-host browser **34/34**, and visual **4/4**.
+The sole failure is the existing named-outcome static assertion expecting a
+literal platform-only workflow URL after the browser API moved to its
+host-aware route helper. Its corrected submission/readiness assertions retain
+the encoded workflow key and now require that helper. No product, session,
+tenant, schema, entitlement or payment behavior changes in this correction.
+
+Fresh focused verification passes **13/13**, zero fail/cancel/skip/todo,
+in **506.9441 ms** with the isolated test environment:
+
+```powershell
+. ./build/launch/CheckoutRecoveryEnvironment.ps1
+corepack pnpm --dir apps/api exec tsx --test test/named-module-outcome-workflows-static.test.ts test/cross-module-data-fabric-static.test.ts
+```
+
+The full API gate is running against the owned disposable PostgreSQL 16
+container on `127.0.0.1:55476`; updated exact-head CI remains required before
+publication. Failed CI logs are retained in
+`build/launch/release-cde70cef-pr-failed.log` and
+`build/launch/release-cde70cef-dispatch-failed.log`. OpenAI now lists the
+owner-created restricted **OperatorOS production runtime** key as active,
+expiring October 7, 2027. The initial boolean-only Shell check did not match
+that key. The owner then saved it directly; the closed edit form was verified.
+A refreshed Shell matches the new key: read-only model discovery returns
+**200 / gpt-realtime-2.1-mini** and a deliberately missing-file transcription
+request returns **400 / invalid_request_error**, rather than 401/403. These
+are authentication/permission checks, not inference or call acceptance.
+Reconnecting to the Shell retained an earlier routing output in its
+accessibility snapshot, so a secure replacement remains required. No
+credential value is recorded here. Published binding and actual provider
+workflows remain unverified. No inference request,
+real charge, call, production schema mutation or publication occurred.
+
 ## Module-session workflow and credential continuation (2026-10-07)
 
 **LOCAL PASS / UPDATED CANDIDATE CI REQUIRED / PROVIDER HANDOFF OPEN**.

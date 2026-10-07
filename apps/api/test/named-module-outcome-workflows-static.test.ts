@@ -12,8 +12,8 @@ test('outcome handoffs preview, confirm, recover the accepted run, and return sa
   const component = read('apps/web/src/components/module-shells/OutcomeWorkflowAction.tsx');
   const auth = read('apps/web/src/lib/auth.ts');
 
-  assert.match(auth, /startDataFabricWorkflow:[\s\S]*data-fabric\/workflows/);
-  assert.match(auth, /dataFabricWorkflowReadiness:[\s\S]*\/readiness/);
+  assert.match(auth, /startDataFabricWorkflow:[\s\S]*\$\{dataFabricApiBase\(tenantId\)\}\/workflows\/\$\{encodeURIComponent\(workflowKey\)\}/);
+  assert.match(auth, /dataFabricWorkflowReadiness:[\s\S]*\$\{dataFabricApiBase\(tenantId\)\}\/workflows\/\$\{encodeURIComponent\(workflowKey\)\}\/readiness/);
   assert.match(component, /sharedPlatformApi\.dataFabricWorkflowReadiness/);
   assert.match(component, /disabled=\{disabled \|\| accessCheck\.status !== 'ready'\}/);
   assert.match(component, /Open My Apps/);

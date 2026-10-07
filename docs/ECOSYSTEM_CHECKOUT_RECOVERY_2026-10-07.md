@@ -2,6 +2,30 @@
 
 ## Current checkpoint
 
+The later `cde70cef` PR release run `37655864318` and standalone run
+`37655910611` both finish **13/14 scopes**. Their sole failure is an existing
+named-outcome static assertion expecting the former literal platform workflow
+path. API records **1,610 passed / 1 failed / 0 skipped**; integration **108/108**,
+unit **52/52**, exact-host browser **34/34** and visual **4/4** pass. The two
+assertions now require the host-aware route helper and encoded workflow key.
+Focused static checks pass **13/13** in **506.9441 ms**, with zero
+fail/cancel/skip/todo; the full API rerun is in progress on the same owned
+disposable database. Failed logs remain under `build/launch/`. No product
+logic, authorization, schema or billing behavior changes in this correction.
+Updated exact-head CI remains a publication gate.
+
+OpenAI lists the owner-created restricted **OperatorOS production runtime**
+key as active, expiring October 7, 2027. The initial Shell binding check did
+not match it; the owner then saved the key directly and the closed form was
+verified. The refreshed Shell now matches the new key. Read-only model
+discovery returns **200 / gpt-realtime-2.1-mini**, and deliberately missing-file
+transcription validation returns **400 / invalid_request_error**, not 401/403.
+This verifies runtime binding/authentication and request validation only; no
+inference, transcription or call was performed. A Shell reconnect retained earlier
+routing output in its accessibility snapshot, so a secure replacement remains
+required; no credential value is recorded here. The earlier key-creation-pending checkpoint
+below is historical; no credential value is recorded in this document.
+
 The `9405fae1` PR release run `37651363364` and standalone run `37651361980`
 now both pass **14/14 scopes**:
 API **1,608/1,608**, integration **108/108**, unit **52/52**, exact-host browser
