@@ -26,6 +26,7 @@ export async function reserveAiBudget(input: AiBudgetScope & {
         throw new AiBudgetError('AI_REQUEST_CONFLICT', 409);
       }
       if (prior.status === 'completed') return { replay: prior.response_json as Record<string, any> };
+      if (prior.status === 'failed') throw new AiBudgetError('AI_REQUEST_FAILED', 502);
       throw new AiBudgetError('AI_REQUEST_PENDING', 409);
     }
     const totals = (await tx.execute(sql`SELECT
@@ -58,6 +59,11 @@ export async function settleAiBudget(reservation: AiBudgetReservation, input: {
     await tx.execute(sql`SELECT tenant_id FROM shared_ai_budget_policies
       WHERE tenant_id=${reservation.tenantId} AND module_id=${reservation.moduleId} FOR UPDATE`);
     const cost = input.usage ? priceUsageMicros(input.usage, reservation.pricing) : null;
+    // Numeric counts are safe telemetry; "*Tokens" keys are intentionally removed
+    // by the shared secret-key sanitizer. Do not weaken that sanitizer.
+    const usageTelemetry = input.usage ? { unit: 'tokens', input: input.usage.inputTokens,
+      output: input.usage.outputTokens, cachedInput: input.usage.cachedInputTokens,
+      cacheWrite: input.usage.cacheWriteTokens } : null;
     const overrun = cost !== null && cost > reservation.reservedMicros;
     const status = cost === null ? 'unknown' : overrun ? 'overrun' : input.response ? 'completed' : 'failed';
     const updated = await tx.execute(sql`UPDATE shared_ai_requests SET
@@ -74,14 +80,14 @@ export async function settleAiBudget(reservation: AiBudgetReservation, input: {
     if (cost !== null && cost > 0) await recordUsageEvent({ ...reservation,
       operation: reservation.workflow, units: cost, unitKind: 'usd_micros',
       idempotencyKey: reservation.id, externalReference: reservation.id,
-      metadata: { measured: true, usage: input.usage, pricing: reservation.pricing, status },
+      metadata: { measured: true, usage: usageTelemetry, pricing: reservation.pricing, status },
     }, tx);
     await appendActivityEvent({ tenantId: reservation.tenantId, moduleId: reservation.moduleId,
       actorUserId: reservation.userId, objectType: 'ai_request', objectId: reservation.id,
       eventType: `ai_${status}`, summary: status === 'completed'
-        ? 'Generated reviewed documentation-only guidance' : 'AI guidance needs review or reconciliation',
+        ? 'Generated documentation-only guidance for review' : 'AI guidance needs review or reconciliation',
       metadata: { status, reservedMicros: reservation.reservedMicros, measuredMicros: cost,
-        usage: input.usage ?? null, model: reservation.pricing.model, errorCode: input.errorCode ?? null },
+        usage: usageTelemetry, model: reservation.pricing.model, errorCode: input.errorCode ?? null },
       correlationId: reservation.correlationId,
     }, tx);
   });

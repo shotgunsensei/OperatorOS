@@ -1,5 +1,16 @@
 # OperatorOS module parity index
 
+## TechDeck guidance review overlay (2026-10-07)
+
+**PARITY UNCHANGED / REVIEW VERIFIED / LIVE ACCEPTANCE OPEN**. Review of
+`bfd9bf0d` fixes shared usage metadata, settled-failure retry reporting and visible
+support references/busy state. Selected compatibility/API/browser checks pass
+43/43, including legacy Torque Assist and TechDeck literal workflows; actual
+populated v65-to-v66 migration/reapply preserves complete snapshots. No AI
+spending authority is seeded and no device command executes. Exact release CI,
+approved live model/budgets, publication and customer acceptance remain gates.
+See [review commands and evidence](../ai/LOCAL-REVIEW-2026-10-07.md).
+
 ## TechDeck AI guidance overlay (2026-10-07, local only)
 
 **PARITY COUNTS UNCHANGED / LOCAL SLICE VERIFIED / LIVE ACCEPTANCE OPEN**.

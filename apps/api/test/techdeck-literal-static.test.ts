@@ -9,6 +9,7 @@ const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 test('TechDeck literal routes retain OperatorOS authority and shared safety services', () => {
   const routes = read('apps/api/src/routes/techdeck-literal-routes.ts');
+  const guidance = read('apps/api/src/lib/techdeck-ai-guidance.ts');
   assert.match(routes, /requireTenantModuleAccess\('techdeck'\)/);
   assert.match(routes, /adminGuards = \[\.\.\.writeGuards, requireTenantAdmin\]/);
   assert.match(routes, /createSharedSchedule/);
@@ -20,8 +21,11 @@ test('TechDeck literal routes retain OperatorOS authority and shared safety serv
   assert.match(routes, /objectType: 'shared_export'/);
   assert.match(routes, /TECHDECK_COMPLIANCE_PACKET_NOT_FOUND/);
   assert.match(routes, /bcrypt\.hash\(password,12\)/);
-  assert.match(routes, /documentation_only/);
-  assert.match(routes, /executionAvailable:false/);
+  assert.match(routes, /runTechdeckGuidance/);
+  assert.match(guidance, /documentation_only/);
+  assert.match(guidance, /executionAvailable:\s*false/);
+  assert.match(guidance, /reserveAiBudget/);
+  assert.doesNotMatch(guidance, /child_process|execFile|spawn\(/);
   assert.doesNotMatch(routes, /child[_-]?session|child[_-]?billing|query-string credential/i);
 });
 

@@ -3,6 +3,8 @@
 Status: bounded local implementation and offline verification complete on the
 isolated local branch. Push, hosted CI, merge, publication, live provider calls and
 production database changes remain gated. See [implementation evidence](IMPLEMENTATION-EVIDENCE.md).
+The [local review of bfd9bf0d](LOCAL-REVIEW-2026-10-07.md) verifies legacy
+compatibility, retry accounting, populated v65 upgrades and visible error states.
 
 ## Evidence and decisions
 
@@ -51,6 +53,10 @@ it, binds it to the tenant view and reuses the request key for safe replays.
    tenant/role/entitlement denials, invalid output and unknown usage tests.
    Stages 1-4 are locally complete: 21 focused API/browser checks, production
    build/typechecks and disposable v66 migration/startup verification pass.
+   The subsequent review passes 43 selected compatibility/API/browser checks
+   and a real populated v65-to-v66 upgrade/reapply preserving complete snapshots.
+   Shared telemetry retains safe usage counts without weakening secret filtering;
+   completed and failed retries do not add usage or provider calls.
 5. After approved spend/CI/deployment gates, validate configured model access,
    backup/apply, exact deployed release and non-admin customer acceptance. Then
    extend existing credit-controlled flows. Choose routing using domain evals,

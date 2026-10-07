@@ -1,5 +1,24 @@
 # OperatorOS implementation status
 
+## Local review of budgeted TechDeck guidance (2026-10-07)
+
+**REVIEWED AND FIXED / LOCAL ONLY / PARITY UNCHANGED**. Review of `bfd9bf0d`
+preserves safe measured usage counts in shared telemetry without weakening secret
+filtering, distinguishes settled failures from uncertain retries, and displays
+bounded error references and a generating state. Inherited static checks now
+follow the extracted service and documentation-only copy remains visible.
+Legacy Chat Completions and Torque Assist compatibility pass; no global provider
+selection or credit/billing behavior changed. The selected gate passes **43/43**,
+actual populated v65 upgrade/reapply **1/1**, provider isolation/preflight **13/13**,
+offline/security regressions **13/13**, production build and all four typechecks.
+The compiled supervisor smoke passes on separate public/web ports with its local
+build identity checked, providers off and a disposable populated v66 database.
+Complete synthetic authority/billing/work/usage snapshots are unchanged after
+both v66 applications, and migration grants no AI spending. Four patched high
+exceptions remain disclosed; no critical/unresolved advisory or lockfile change.
+No push, paid API, account setting, production migration or publication occurred.
+Commands, corrected failures and artifacts: [review evidence](ai/LOCAL-REVIEW-2026-10-07.md).
+
 ## Budgeted TechDeck Responses slice (2026-10-07, local only)
 
 **IMPLEMENTED / OFFLINE VERIFIED / NOT PUSHED OR DEPLOYED / PARITY UNCHANGED**.

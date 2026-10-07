@@ -115,6 +115,10 @@ test('authorized guidance is structured, visible to caller, durably measured and
   assert.equal(Number(ledger[0].measured_micros), priceUsageMicros(usage, pricing));
   assert.equal(ledger[0].usage_json.cacheWriteTokens, 300);
   assert.equal((await db.execute(sql`SELECT count(*)::int AS n FROM shared_usage_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0].n, 1);
+  const event = (await db.execute(sql`SELECT metadata_json FROM shared_usage_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0];
+  assert.deepEqual(event.metadata_json.usage, { unit: 'tokens', input: 1000, output: 100, cachedInput: 200, cacheWrite: 300 });
+  const activity = (await db.execute(sql`SELECT metadata_json FROM shared_activity_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0];
+  assert.deepEqual(activity.metadata_json.usage, event.metadata_json.usage);
   const conflict = await app.inject({ ...request, payload: { query: 'Changed request' } });
   assert.equal(conflict.statusCode, 409); assert.equal(calls, 1);
 });
@@ -143,6 +147,44 @@ test('invalid guidance charges measured provider cost and never returns unvalida
   assert.doesNotMatch(response.body, /unvalidated output/);
   const row = (await db.execute(sql`SELECT * FROM shared_ai_requests WHERE tenant_id=${owner.currentTenantId}`)).rows[0];
   assert.equal(row.status, 'failed'); assert.equal(row.response_json, null); assert.equal(Number(row.measured_micros), 2790);
+  const retry = await app.inject({ method: 'POST', url: route, headers: headers(), payload: { query: 'Synthetic issue' } });
+  assert.equal(retry.statusCode, 502); assert.equal(retry.json().code, 'AI_REQUEST_FAILED'); assert.equal(calls, 1);
+  assert.equal((await db.execute(sql`SELECT SUM(units)::int AS n FROM shared_usage_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0].n, 2790);
+});
+
+test('an explicit new attempt retains the failed attempt cost and replay adds no usage', async () => {
+  await resetPolicy(); installResponse('invalid synthetic guidance');
+  const request = { method: 'POST' as const, url: route, headers: headers(), payload: { query: 'Synthetic retry issue' } };
+  assert.equal((await app.inject(request)).statusCode, 502);
+  installResponse();
+  const next = { ...request, headers: { ...headers(), 'idempotency-key': 'synthetic-guidance-retry-002' } };
+  assert.equal((await app.inject(next)).statusCode, 200);
+  assert.equal((await app.inject(next)).statusCode, 200); assert.equal(calls, 2);
+  const sum = (await db.execute(sql`SELECT count(*)::int AS n,SUM(measured_micros)::int AS cost
+    FROM shared_ai_requests WHERE tenant_id=${owner.currentTenantId}`)).rows[0];
+  assert.deepEqual(sum, { n: 2, cost: 5580 });
+  const telemetry = (await db.execute(sql`SELECT count(*)::int AS n,SUM(units)::int AS cost
+    FROM shared_usage_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0];
+  assert.deepEqual(telemetry, sum);
+});
+
+test('an in-flight same-key retry dispatches once and later replays the completed result', async () => {
+  await resetPolicy();
+  const transport = globalThis.fetch;
+  let release!: () => void; let entered!: () => void;
+  const paused = new Promise<void>(resolve => { release = resolve; });
+  const dispatched = new Promise<void>(resolve => { entered = resolve; });
+  globalThis.fetch = (async (...args: Parameters<typeof fetch>) => { entered(); await paused; return transport(...args); }) as typeof fetch;
+  const request = { method: 'POST' as const, url: route, headers: headers(), payload: { query: 'Synthetic concurrent retry' } };
+  const first = app.inject(request);
+  await dispatched;
+  try {
+    const retry = await app.inject(request);
+    assert.equal(retry.statusCode, 409); assert.equal(retry.json().code, 'AI_REQUEST_PENDING');
+  } finally { release(); }
+  assert.equal((await first).statusCode, 200);
+  assert.equal((await app.inject(request)).statusCode, 200); assert.equal(calls, 1);
+  assert.equal((await db.execute(sql`SELECT count(*)::int AS n FROM shared_usage_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0].n, 1);
 });
 
 test('missing usage and transport ambiguity retain full holds without zero-cost settlement or automatic retries', async () => {

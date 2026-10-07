@@ -1,5 +1,10 @@
 # TechDeck budgeted Responses slice - local evidence, 2026-10-07
 
+Follow-up: [local review of bfd9bf0d](LOCAL-REVIEW-2026-10-07.md) adds actual
+populated upgrade, legacy compatibility, retry telemetry and visible-error
+evidence. The original 21-check results below are the initial implementation
+checkpoint; the review has its own 43-check gate and fresh build/security results.
+
 Implementation and local verification are complete. This document accompanies
 the local source commit on `codex/openai-responses-budget-oct7`, based on
 `5b50b2cadd815ba1c6de1af79deb04e8971af0b4`. No push, hosted CI, merge, publication,

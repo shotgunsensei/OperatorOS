@@ -23,6 +23,8 @@ export class AiBudgetError extends Error {
       ? 'AI guidance has reached its approved budget. Contact your administrator.'
       : code === 'AI_REQUEST_PENDING'
         ? 'This guidance request is pending reconciliation. Do not submit it again.'
+        : code === 'AI_REQUEST_FAILED'
+          ? 'This request did not produce usable guidance. Contact support or revise the request after review.'
         : 'AI guidance is unavailable until its approved configuration and budget are ready.');
   }
 }

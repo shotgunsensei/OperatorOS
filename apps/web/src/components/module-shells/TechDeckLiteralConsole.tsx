@@ -20,6 +20,12 @@ function values(form: HTMLFormElement): Record<string, string> {
   return Object.fromEntries(Array.from(new FormData(form).entries()).map(([key, value]) => [key, String(value).trim()]));
 }
 
+function guidanceErrorMessage(error: unknown): string {
+  const reference = error && typeof error === 'object' && 'requestId' in error ? error.requestId : null;
+  return errorMessage(error) + (typeof reference === 'string' && /^[A-Za-z0-9._:-]{1,200}$/.test(reference)
+    ? ` Reference: ${reference}` : '');
+}
+
 function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -115,7 +121,7 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
         setGuidance({ ...result.guidance, tenantKey: requestTenant });
         setNotice('Guidance is ready for your review. No commands were run.');
       }
-    } catch (err) { if (guidanceTenant.current === requestTenant) setError(errorMessage(err)); }
+    } catch (err) { if (guidanceTenant.current === requestTenant) setError(guidanceErrorMessage(err)); }
     finally { if (guidanceTenant.current === requestTenant) setBusy(null); }
   };
 
@@ -190,7 +196,7 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
           <h3><FileArchive size={17} />Compliance packages and IT guidance</h3>
           <RowList rows={workspace?.exports ?? []} empty="No compliance packages have been created yet." label={row => <><strong>Compliance package</strong><span>{packageStatus(row.status, row.attachment_scan_status)} · requested {new Date(row.created_at).toLocaleString()}</span>{row.status === 'completed' && ['clean', 'unavailable'].includes(row.attachment_scan_status) && row.result_attachment_id && <button type="button" disabled={busy === `packet-download-${row.id}`} onClick={() => void downloadCompliancePacket(row.id)}><Download size={14} />Download package</button>}</>} />
           {canWrite && <button type="button" className="tdl-wide" disabled={busy === 'packet'} onClick={() => void act('packet', 'compliance-packets', { filters: {} }, { idempotencyKey: crypto.randomUUID() })}>Build compliance package</button>}
-          {canWrite && <form onSubmit={requestGuidance}><textarea name="query" required maxLength={4000} aria-label="IT operations guidance request" placeholder="Describe the technical issue without passwords, client records, or medical information." /><button disabled={busy === 'itops'}>Generate reviewed guidance</button></form>}
+          {canWrite && <form onSubmit={requestGuidance} aria-busy={busy === 'itops'}><textarea name="query" required maxLength={4000} aria-label="IT operations guidance request" placeholder="Ask for documentation-only diagnostic guidance without passwords, client records, or medical information." /><button disabled={busy === 'itops'}>{busy === 'itops' ? 'Generating guidance…' : 'Generate reviewed guidance'}</button></form>}
           {guidance?.tenantKey === tenantKey && <section aria-label="IT operations guidance" aria-live="polite"><h4>Review before taking action</h4><p>{guidance.summary}</p><ul>{guidance.checks.map((check, index) => <li key={index}>{check}</li>)}</ul><p className="tdl-note">These are suggested checks. No commands were run.</p></section>}
           <p className="tdl-note">The package includes an index, recorded file checks, and activity history for review. AI output is guidance only—TechDeck does not run scripts automatically.</p>
         </article>}
