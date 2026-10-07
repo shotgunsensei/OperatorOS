@@ -1,5 +1,22 @@
 # OperatorOS module parity index
 
+## Checkout recovery and CallCommand continuation (2026-10-07)
+
+**PARITY COUNTS UNCHANGED / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**.
+Fresh focused contracts pass 28/28, production build/four typechecks pass,
+and the isolated exact-host recovery case passes 1/1 without retry. The prior
+head's failed browser case is retained and corrected; source publication
+requires new CI. No module parity is promoted by checkout opening or provider
+configuration alone. See
+[the continuation evidence](../ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
+| Surface | New evidence | Remaining gate |
+| --- | --- | --- |
+| Flagship Stack and billing | Exact pending-cart recovery and unpaid labels; $143 live cart/cancel-return observed; owner/paid gates verified locally | Exact candidate CI/publication, actual signed payment and non-admin tenant acceptance |
+| Torque Assist | Fleet $50/500,000 live Checkout and return to selected diagnostic; zero balance/no payment | Signed paid credits, provider workflow and cross-module preview acceptance |
+| CallCommand AI | Specifically approved incoming-call webhook exists in the existing OperatorOS OpenAI project; masked owner-saved webhook secret verified; project/Mini model source bindings set | Routing-secret handoff, effective API-key/project access, publication, signed event and controlled live voice/capacity/number acceptance |
+| OutCall | Coming-soon and sales gates preserved | Commercial/activation and verified-self real-provider acceptance |
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PARITY COUNTS UNCHANGED / CI GREEN / PUBLISHED / RUNTIME VERIFIED**.

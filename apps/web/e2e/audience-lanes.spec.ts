@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Route } from '@playwright/test';
 import { registerAndLogin } from './session-auth';
 
 const WEB = process.env.E2E_WEB_BASE_URL ?? 'http://127.0.0.1:5000';
@@ -39,17 +39,43 @@ test('plan selection fails safely for unknown or repeated query values', async (
 });
 
 test('an unpaid Stack resumes its saved cart after return while paid and non-owner gates remain closed', async ({ page }) => {
-  await registerAndLogin(page.context().request, {
+  const account = {
     email: `checkout-recovery-${Date.now()}@example.com`,
     password: 'CorrectHorseBattery9!', name: 'Checkout Recovery Owner',
-  });
+  };
+  if (process.env.E2E_PRODUCTION_HOSTS === '1') {
+    const registration = await page.request.post(`${process.env.E2E_API_URL}/v1/auth/register`, {
+      headers: { host: 'auth.operatoros.net', 'x-forwarded-host': 'auth.operatoros.net', 'x-forwarded-proto': 'https' },
+      data: account,
+    });
+    expect(registration.status(), await registration.text()).toBe(202);
+    await page.goto(`${WEB}/login?next=${encodeURIComponent('/pricing?product=pulsedesk&billing=canceled#build-stack')}`);
+    await page.getByTestId('input-email').fill(account.email);
+    await page.getByTestId('input-password').fill(account.password);
+    await Promise.all([
+      page.waitForURL(`${WEB}/pricing?product=pulsedesk&billing=canceled#build-stack`),
+      page.getByTestId('button-login').click(),
+    ]);
+  } else {
+    await registerAndLogin(page.context().request, account);
+  }
   // Simulate provider availability and a server-owned pending projection only
   // in the isolated local browser harness. No Stripe call or charge is made.
   let status = 'incomplete';
   let role = 'owner';
   let submitted: unknown = null;
+  async function fetchLocal(route: Route) {
+    // APIRequestContext does not inherit Chromium's exact-host DNS mapping.
+    // Keep fixture reads on the loopback TLS proxy with the original Host.
+    const url = new URL(route.request().url());
+    const response = process.env.E2E_PRODUCTION_HOSTS === '1'
+      ? await route.fetch({ url: `https://127.0.0.1${url.pathname}${url.search}`, headers: { ...route.request().headers(), host: url.host } })
+      : await route.fetch();
+    expect(response.ok(), `local fixture ${url.pathname}: ${response.status()} ${await response.text()}`).toBeTruthy();
+    return response;
+  }
   await page.route('**/api/billing/catalog', async route => {
-    const response = await route.fetch();
+    const response = await fetchLocal(route);
     const catalog = await response.json();
     await route.fulfill({ json: { ...catalog, stripeConfigured: {
       tradeflowkit: true, pulsedesk: true, techdeck: true,
@@ -57,12 +83,12 @@ test('an unpaid Stack resumes its saved cart after return while paid and non-own
     } } });
   });
   await page.route('**/api/me/tenants', async route => {
-    const response = await route.fetch();
+    const response = await fetchLocal(route);
     const tenants = await response.json();
     await route.fulfill({ json: { ...tenants, tenants: tenants.tenants.map((row: Record<string, unknown>) => ({ ...row, role })) } });
   });
   await page.route('**/api/billing/stack', async route => {
-    const response = await route.fetch();
+    const response = await fetchLocal(route);
     const stack = await response.json();
     await route.fulfill({ json: { ...stack, applicationSubscription: {
       status, coreProduct: 'techdeck', includedCompanionKey: 'snapproofos',
@@ -79,7 +105,7 @@ test('an unpaid Stack resumes its saved cart after return while paid and non-own
   await expect(page.locator('#build-stack').getByRole('button', { name: /^TechDeck/ })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#build-stack').getByRole('button', { name: /^PulseDesk/ })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Add additional seat', exact: true })).toBeDisabled();
-  await expect(page.getByRole('complementary')).toContainText('Paid access begins only after payment is confirmed');
+  await expect(page.locator('.stack-summary')).toContainText('Paid access begins only after payment is confirmed');
   await page.getByTestId('stack-checkout-cta').click();
   await expect(page.getByRole('alert').filter({ hasText: 'Recovery request captured' })).toBeVisible();
   expect(submitted).toEqual({ coreProduct: 'techdeck', freeCompanionModule: 'snapproofos', additionalModules: ['brandforgeos'], additionalSeats: 1, interval: 'month' });

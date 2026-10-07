@@ -1,5 +1,25 @@
 # OperatorOS implementation status
 
+## Checkout recovery and CallCommand continuation (2026-10-07)
+
+**SOURCE CANDIDATE / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**. The owner
+committed the pending checkout patch in `d0e3e213`; resumed base is `5b50b2ca`.
+An unpaid Stack now resumes its exact saved cart, labels pending companions
+accurately, and preserves paid-flagship/non-owner gates. The inherited browser
+CI failure is repaired through real central sign-in and explicit loopback
+fixture reads. Fresh contracts pass **28/28**, production build/four typechecks
+pass, and the exact-host isolated recovery case passes **1/1** in 6.5 seconds
+without retry. Original failures are retained. Fleet $50 live Checkout and
+cancel return are observed without payment. The specifically approved OpenAI
+incoming-call webhook exists in the OperatorOS project; the owner-saved
+webhook secret is visible as a masked Replit row. Routing-secret entry and
+effective published voice/provider acceptance remain open. No production
+schema/copy or real charge occurred. See
+[the complete continuation](ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
+This supersedes the extension-overlay blocker and current candidate CI status
+in the October 6 checkpoint; its prior deployed evidence remains historical.
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PUBLISHED / CI GREEN / EXACT SERVING IDENTITY VERIFIED / CHECKOUT OPENING VERIFIED**.

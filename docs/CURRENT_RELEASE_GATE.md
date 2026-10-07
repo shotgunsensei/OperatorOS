@@ -1,5 +1,20 @@
 # OperatorOS current release gate
 
+## Checkout recovery candidate (2026-10-07)
+
+**SOURCE READY / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**. Pending
+checkout recovery retains the saved $143/month cart, with no premature paid
+access, and keeps existing flagship/non-owner gates closed. Fresh focused
+contracts pass 28/28, production build/four typechecks pass, and the corrected
+isolated exact-host browser case passes 1/1 without retry. The inherited
+`5b50b2ca` release run failed its new browser case; the original failed run and
+local correction are retained. Publication remains owner-authorized but waits
+for fresh candidate CI. Fleet $50 Checkout/cancel return and the owner-approved
+OpenAI incoming-call webhook are verified. Saved provider settings still need
+published readiness/event/call acceptance. Paid settlement, non-admin tenant,
+live voice and OutCall gates remain open. See
+[the complete continuation](ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PUBLISHED / CI GREEN / EXACT SERVING IDENTITY VERIFIED / CHECKOUT OPENING VERIFIED**.
