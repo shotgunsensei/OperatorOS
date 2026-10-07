@@ -6,6 +6,12 @@ Branch: `codex/coordinated-release-oct7-main`.
 Git `ls-remote` verified current main at
 `5b50b2cadd815ba1c6de1af79deb04e8971af0b4` and PR117 at
 `47d32d71f0b74af15b0f322424a2c27e61035de4` on October 7 at 21:26 UTC.
+The next read at 22:11 UTC reports main
+`12ac4446bf07eebc168f69d7a385f71cf22f6820`. Its tree is exactly the original main
+tree `ea20d2a0231cf8509581cbc4c9f39185d826e336`; it is an empty Replit deployment
+marker, not PR117 source. The integration preserves this new main commit as an
+additional merge parent before the exact-candidate release gate. The marker alone
+does not prove current live deployment health or customer acceptance.
 
 ## Source inventory and reconciliation
 
@@ -54,6 +60,10 @@ catalog refresh (4/5). The separate fixture initially lacked the build-time API
 rewrite target (9/13), then a synchronous temporary proxy blocked requests (5/13).
 The corrected asynchronous loopback fixture passes all 13 unchanged cases. No
 production guards, assertions or release stages were relaxed.
+The first populated-upgrade attempt failed while loading the exported legacy
+fixture because the archive omitted `packages/auth`. The exact baseline archive
+now includes all shared packages; no database migration ran in that failed
+attempt. Its log is retained and the complete rehearsal follows the final commit.
 
 Tests use only `operatoros-coordinated-oct7`, cached PostgreSQL 16 on
 `127.0.0.1:55443`, synthetic secrets and allowlisted OS/tool environment variables.

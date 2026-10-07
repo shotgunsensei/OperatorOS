@@ -3,7 +3,9 @@
 ## Coordinated integration checkpoint (2026-10-07)
 
 **LOCAL INTEGRATION / FOCUSED MERGED-SOURCE PASS / COMBINED GATE PENDING**.
-Remote main `5b50b2ca` and PR117 `47d32d71` were verified read-only. AI `2a388cdf`
+Remote main first `5b50b2ca`, then `12ac4446`, and PR117 `47d32d71` were verified
+read-only. The new main is an empty deployment marker with the identical source
+tree; its ancestry is preserved without importing another feature. AI `2a388cdf`
 is integrated with PR117 and the complete preserved landing commit `5aedd03d`
 in an isolated branch. Fresh AI, legacy, host/session, workflow and landing checks
 pass **167/167**, zero fail/cancel/skip/todo; production build/typechecks pass.
