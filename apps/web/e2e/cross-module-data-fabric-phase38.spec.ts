@@ -4,12 +4,14 @@ import { establishParitySession } from './parity-auth';
 
 const ROOT = process.env.E2E_ROOT_URL ?? 'https://operatoros.net';
 const APP = process.env.E2E_APP_URL ?? 'https://app.operatoros.net';
-const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:5001';
 
 test.describe('Phase 38 cross-module data fabric', () => {
   test.setTimeout(180_000);
 
-  test('queues a native workflow and shows entitlement-filtered provenance on the exact host', async ({ page }) => {
+  test('a module session creates native field proof and shows scoped provenance on the exact hosts', async ({ page }) => {
+    // Keep disposable browser identities separate under the harness's trusted
+    // loopback proxy; production authentication rate limits remain enabled.
+    await page.context().setExtraHTTPHeaders({ 'x-forwarded-for':`10.79.38.${10 + Math.floor(Math.random() * 200)}` });
     const session = await establishParitySession(page.request);
     const pg = new Client({ connectionString: process.env.DATABASE_URL });
     await pg.connect();
@@ -36,24 +38,6 @@ test.describe('Phase 38 cross-module data fabric', () => {
       await pg.end();
     }
 
-    const queued = await page.request.post(
-      `${API}/v1/tenants/${session.tenantId}/data-fabric/workflows/tradeflowkit.job_to_snapproof`,
-      { data: {
-        aggregateId: jobId,
-        sourceDeepLink: `/modules/tradeflowkit/jobs/${jobId}`,
-        idempotencyKey: `phase38-browser:${jobId}`,
-        correlationId: `phase38-exact-host:${jobId}`,
-      } },
-    );
-    expect(queued.status(), await queued.text()).toBe(202);
-    const runId = String((await queued.json()).run.id);
-
-    await expect.poll(async () => {
-      const response = await page.request.get(`${API}/v1/tenants/${session.tenantId}/data-fabric/runs/${runId}`);
-      if (!response.ok()) return `http-${response.status()}`;
-      return (await response.json()).run.status;
-    }, { timeout: 60_000 }).toBe('completed');
-
     await page.goto(`${ROOT}/app`, { waitUntil: 'networkidle' });
     if (/\/login(?:[?#]|$)/.test(page.url())) {
       await page.getByTestId('input-email').fill(session.email);
@@ -63,15 +47,64 @@ test.describe('Phase 38 cross-module data fabric', () => {
         page.getByTestId('button-login').click(),
       ]);
     }
+    const scopedBase = `/api/tenants/${session.tenantId}/modules/tradeflowkit/data-fabric`;
+    const readinessResponse = page.waitForResponse(response => response.url().includes(`${scopedBase}/workflows/tradeflowkit.job_to_snapproof/readiness`), { timeout:30_000 });
+    await page.getByTestId('button-launch-tradeflowkit').click();
+    await expect(page.getByTestId('tradeflowkit-module-shell')).toBeVisible();
+    const readiness = await readinessResponse;
+    expect(readiness.status(), await readiness.text()).toBe(200);
+    expect((await readiness.json()).readiness.available).toBe(true);
+    const outcome = page.getByTestId('tradeflowkit-start-field-proof');
+    await expect(outcome).toContainText('Phase 38 exact-host field proof');
+    await page.getByText('Prepare proof of completed work', { exact:true }).click();
+    await expect(outcome.getByRole('button', { name:'Review field-proof package' })).toBeEnabled();
+    const deniedPlatform = await page.evaluate(async tenantId => {
+      const response = await fetch(`/api/tenants/${tenantId}/data-fabric/workflows/tradeflowkit.job_to_snapproof/readiness`);
+      return { status:response.status,code:(await response.json()).code };
+    }, session.tenantId);
+    expect(deniedPlatform).toEqual({ status:403,code:'SESSION_SCOPE_DENIED' });
+    await outcome.getByRole('button', { name:'Review field-proof package' }).click();
+    await page.getByTestId('tradeflowkit-start-field-proof-confirmation').check();
+    const queuedResponse = page.waitForResponse(response => response.request().method() === 'POST'
+      && response.url().endsWith(`${scopedBase}/workflows/tradeflowkit.job_to_snapproof`));
+    const polledResponse = page.waitForResponse(response => response.url().includes(`${scopedBase}/runs/`));
+    await page.getByTestId('tradeflowkit-start-field-proof-confirm').click();
+    const queued = await queuedResponse;
+    expect(queued.status(), await queued.text()).toBe(202);
+    const runId = String((await queued.json()).run.id);
+    const polled = await polledResponse;
+    expect(polled.status(), await polled.text()).toBe(200);
+    await expect(outcome).toContainText('Items created', { timeout:60_000 });
+    await expect(outcome.getByRole('link').first()).toHaveAttribute('href', /\/modules\/snapproofos\//);
+    await page.reload({ waitUntil:'networkidle' });
+    await page.getByText('Prepare proof of completed work', { exact:true }).click();
+    let repeatedSubmissions = 0;
+    page.on('request', request => {
+      if (request.method() === 'POST' && request.url().endsWith(`${scopedBase}/workflows/tradeflowkit.job_to_snapproof`)) repeatedSubmissions += 1;
+    });
+    await outcome.getByRole('button', { name:'Review field-proof package' }).click();
+    await page.getByTestId('tradeflowkit-start-field-proof-confirmation').check();
+    await page.getByTestId('tradeflowkit-start-field-proof-confirm').click();
+    await expect(outcome).toContainText('Items created', { timeout:60_000 });
+    expect(repeatedSubmissions).toBe(0);
+    const verification = new Client({ connectionString:process.env.DATABASE_URL });
+    await verification.connect();
+    try {
+      const persisted = await verification.query<{ status:string; count:string }>(
+        `select r.status,(select count(*) from shared_resource_links l where l.tenant_id=r.tenant_id and l.workflow_run_id=r.id)::text as count
+         from shared_workflow_runs r where r.tenant_id=$1 and r.id=$2`, [session.tenantId,runId],
+      );
+      expect(persisted.rows).toEqual([{ status:'completed',count:'2' }]);
+    } finally { await verification.end(); }
     await page.goto(`${APP}/app`, { waitUntil: 'networkidle' });
     await page.getByTestId('nav-tenant-shared-services').click();
     await expect(page.getByTestId('page-shared-services-admin')).toBeVisible();
     const provenance = page.getByTestId('cross-module-provenance');
     await expect(provenance).toContainText('TradeFlowKit');
     await expect(provenance).toContainText('SnapProofOS');
-    await expect(provenance).toContainText('completed');
-    await expect(provenance.getByRole('link', { name: 'Open source' }).first()).toHaveAttribute('href', `/modules/tradeflowkit/jobs/${jobId}`);
-    await expect(provenance.getByRole('link', { name: 'Open destination' }).first()).toHaveAttribute('href', /\/modules\/snapproofos\//);
+    await expect(provenance).toContainText('Complete');
+    await expect(provenance.getByRole('link', { name: 'Open original item' }).first()).toHaveAttribute('href', `/modules/tradeflowkit/jobs/${jobId}`);
+    await expect(provenance.getByRole('link', { name: 'Open created item' }).first()).toHaveAttribute('href', /\/modules\/snapproofos\//);
 
     await page.setViewportSize({ width: 390, height: 844 });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

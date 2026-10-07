@@ -28,6 +28,12 @@ production applications.
 - Platform sessions can use platform APIs. Module sessions are sealed to one
   tenant and one module and can use only `/auth/me`, logout/refresh, tenant
   identity, and that module's API namespace.
+- Customer-outcome readiness, submission and result polling use
+  `/tenants/:tenantId/modules/:moduleId/data-fabric`. The module route fixes
+  the workflow source to that namespace and filters run detail by source
+  module; existing source/destination entitlements and roles are revalidated.
+  Administrative data-fabric activity, contracts, rules and replay remain
+  platform-only surfaces with no module aliases.
 - `POST /api/auth/refresh` rotates a session only inside the final 24 hours,
   revokes the replaced token fingerprint, preserves platform/module scope,
   and returns `Cache-Control: no-store`. The browser checks on visibility and

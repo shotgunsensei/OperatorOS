@@ -1,5 +1,13 @@
 # OperatorOS module parity index
 
+## Coordinated integration checkpoint (2026-10-07)
+
+AI `2a388cdf` and PR117 `47d32d71` retain sealed module outcomes, legacy Assist
+and default-disabled TechDeck guidance. Fresh merged-source checks pass **95/95**;
+landing reconciliation and the full combined release gate remain pending. No
+deployed parity or live provider/customer acceptance is promoted by this checkpoint.
+[Integration inventory and gates](../COORDINATED_RELEASE_2026-10-07.md).
+
 ## Auth fixture rate isolation follow-up (2026-10-07)
 
 **PARITY UNCHANGED / FINAL GATE PENDING**. The new auth-host fixture now uses its own client address and asserts that default loopback rate counters remain unchanged. Combined host/invitation checks pass **11/11** after the earlier cross-suite 429 failure. Production rate limits and auth guards are unchanged. The stopped `fd8129e8` attempt is preserved as incomplete; a new clean-candidate full gate follows the repair commit.
@@ -40,6 +48,46 @@ Current public health reports serving `5b50b2ca` and database v65/65; historical
 acceptance below does not describe this unpushed slice.
 See [commands and acceptance limits](../ai/IMPLEMENTATION-EVIDENCE.md) and
 [revised stages](../ai/OPENAI-FIRST-REVISED-PLAN.md).
+
+## Module-session workflow continuation (2026-10-07)
+
+**PARITY COUNTS UNCHANGED / FOCUSED CORRECTION PASS / UPDATED CI REQUIRED**.
+The earlier checkout candidate passes both release gates 14/14: 1,608 API,
+108 integration, 52 unit, 33 browser and four visual tests. The additional
+module-session workflow repair passes 37 focused checks, production build/four
+typechecks, ESLint, and two first-attempt exact-host browser journeys in
+18.4 seconds. Both `cde70cef` CI runs subsequently pass all 34 browser journeys,
+four visual checks, 108 integration and 52 unit checks, but finish 13/14 scopes
+because one existing static API assertion still expected the old platform-only
+URL. Its corrected helper/encoded-workflow assertions pass 13/13 focused checks;
+the full isolated API rerun is in progress and the updated head needs fresh CI
+before publication. No complete module or provider acceptance is inferred.
+
+| Surface | New evidence | Remaining gate |
+| --- | --- | --- |
+| Customer outcomes across ten contracts | Source-scoped readiness/submission/polling; all contract sources checked through module sessions; real TradeFlowKit-to-SnapProofOS native delivery, persistent results and refresh/resume proved locally | New exact-head CI, publication, authenticated target acceptance |
+| Stack and billing | $143 pending cart resumes actual published live Checkout; local owner/paid gates pass again | Actual signed payment and non-admin tenant acceptance |
+| CallCommand AI | Owner-created restricted runtime key is active through October 7, 2027 and saved directly; refreshed Shell matches it; model discovery 200 and missing-file transcription validation 400 | Secure routing-key replacement, published provider binding, publication and controlled live voice/capacity/number acceptance |
+| OutCall | Coming-soon and sales gates retained | Commercial activation and verified-self real-provider acceptance |
+
+See [the continuation and retained failures](../ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
+## Checkout recovery and CallCommand continuation (2026-10-07)
+
+**PARITY COUNTS UNCHANGED / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**.
+Fresh focused contracts pass 28/28, production build/four typechecks pass,
+and the isolated exact-host recovery case passes 1/1 without retry. The prior
+head's failed browser case is retained and corrected; source publication
+requires new CI. No module parity is promoted by checkout opening or provider
+configuration alone. See
+[the continuation evidence](../ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
+| Surface | New evidence | Remaining gate |
+| --- | --- | --- |
+| Flagship Stack and billing | Exact pending-cart recovery and unpaid labels; $143 live cart/cancel-return observed; owner/paid gates verified locally | Exact candidate CI/publication, actual signed payment and non-admin tenant acceptance |
+| Torque Assist | Fleet $50/500,000 live Checkout and return to selected diagnostic; zero balance/no payment | Signed paid credits, provider workflow and cross-module preview acceptance |
+| CallCommand AI | Specifically approved incoming-call webhook exists in the existing OperatorOS OpenAI project; masked owner-saved webhook secret verified; project/Mini model source bindings set | Routing-secret handoff, effective API-key/project access, publication, signed event and controlled live voice/capacity/number acceptance |
+| OutCall | Coming-soon and sales gates preserved | Commercial/activation and verified-self real-provider acceptance |
 
 ## Final exact-commit commercial release gate (2026-10-06)
 

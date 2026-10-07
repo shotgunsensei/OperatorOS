@@ -1,5 +1,51 @@
 # OperatorOS current release gate
 
+## Exact-head static contract correction (2026-10-07)
+
+**CI FAILURE RETAINED / FOCUSED CORRECTION PASS / UPDATED CI REQUIRED**.
+Both `cde70cef` release runs finish 13/14 scopes. API has 1,610 passes and one
+stale source assertion failure, with zero skips; the 34 exact-host browser
+journeys, four visual checks, 108 integration checks and 52 unit checks pass.
+The static correction now requires the host-aware workflow route helper while
+retaining the encoded workflow key. Fresh focused verification passes 13/13;
+the full isolated API rerun is in progress. No product/security policy changes.
+The owner-created restricted OpenAI runtime key is active and saved in Replit.
+A refreshed Shell matches it, with model discovery 200 and missing-file
+transcription validation 400. No inference or call acceptance is implied.
+Secure routing-secret replacement, published provider binding, publication
+and commercial/provider acceptance remain open. See
+[the current implementation evidence](IMPLEMENTATION_STATUS.md).
+
+## Module-session workflow release candidate (2026-10-07)
+
+**LOCAL PASS / UPDATED EXACT-HEAD CI REQUIRED / CREDENTIAL HANDOFF OPEN**.
+The preceding `9405fae1` checkout candidate now passes both GitHub release gates
+14/14, with 1,608 API, 108 integration, 52 unit, 33 browser and four visual passes.
+The additional module-scoped workflow repair passes 37 focused checks,
+production build/four typechecks, ESLint, and two isolated exact-host browser
+journeys in 18.4 seconds, without retry. It preserves tenant/module sealing and
+all source/destination access checks, and adds the previously omitted native
+workflow browser journey to the release harness. Fresh CI for this repair and
+the secure provider handoffs remain publication gates. The current published
+identity is `5b50b2ca`, verified 47/47; its $143 unpaid cart resumes live Checkout.
+Payment/signed settlement and full provider, tenant and OutCall acceptance
+remain open. See [the complete evidence](ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
+## Checkout recovery candidate (2026-10-07)
+
+**SOURCE READY / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**. Pending
+checkout recovery retains the saved $143/month cart, with no premature paid
+access, and keeps existing flagship/non-owner gates closed. Fresh focused
+contracts pass 28/28, production build/four typechecks pass, and the corrected
+isolated exact-host browser case passes 1/1 without retry. The inherited
+`5b50b2ca` release run failed its new browser case; the original failed run and
+local correction are retained. Publication remains owner-authorized but waits
+for fresh candidate CI. Fleet $50 Checkout/cancel return and the owner-approved
+OpenAI incoming-call webhook are verified. Saved provider settings still need
+published readiness/event/call acceptance. Paid settlement, non-admin tenant,
+live voice and OutCall gates remain open. See
+[the complete continuation](ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
 ## Final exact-commit commercial release gate (2026-10-06)
 
 **PUBLISHED / CI GREEN / EXACT SERVING IDENTITY VERIFIED / CHECKOUT OPENING VERIFIED**.
