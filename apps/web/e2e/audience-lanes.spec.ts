@@ -39,6 +39,7 @@ test('plan selection fails safely for unknown or repeated query values', async (
 });
 
 test('an unpaid Stack resumes its saved cart after return while paid and non-owner gates remain closed', async ({ page }) => {
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for':`10.79.39.${10 + Math.floor(Math.random() * 200)}` });
   const account = {
     email: `checkout-recovery-${Date.now()}@example.com`,
     password: 'CorrectHorseBattery9!', name: 'Checkout Recovery Owner',

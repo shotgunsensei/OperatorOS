@@ -23,6 +23,20 @@ function context(request: FastifyRequest) {
   };
 }
 
+/** Bind a module alias to its source namespace; the session guard also binds tenant/module. */
+function workflowSource(request: FastifyRequest, requestedSource: unknown): string | undefined {
+  const moduleId = (request.params as Row).moduleId;
+  const supplied = typeof requestedSource === 'string'
+    ? text(requestedSource, 'sourceModuleSlug', 2, 80)
+    : undefined;
+  if (moduleId === undefined) return supplied;
+  const scopedSource = text(moduleId, 'moduleId', 2, 80);
+  if (supplied && supplied !== scopedSource) {
+    throw new DataFabricError('FABRIC_SOURCE_MODULE_MISMATCH', 'Source module does not match this application route', 403);
+  }
+  return scopedSource;
+}
+
 function body(request: FastifyRequest): Row {
   if (!request.body || typeof request.body !== 'object' || Array.isArray(request.body)) {
     throw new DataFabricError('FABRIC_BODY_INVALID', 'A JSON object is required');
@@ -90,6 +104,7 @@ function sendError(request: FastifyRequest, reply: FastifyReply, error: unknown)
 
 export async function registerCrossModuleDataFabricRoutes(app: FastifyInstance): Promise<void> {
   const base = '/v1/tenants/:tenantId/data-fabric';
+  const moduleBase = '/v1/tenants/:tenantId/modules/:moduleId/data-fabric';
 
   // Ordinary members may discover and start outcome workflows. The service
   // revalidates write access to both the source and destination modules before
@@ -99,16 +114,14 @@ export async function registerCrossModuleDataFabricRoutes(app: FastifyInstance):
     return reply.send({ schemaVersion: 1, workflows: DATA_FABRIC_WORKFLOWS });
   });
 
-  app.get(`${base}/workflows/:workflowKey/readiness`, { preHandler: [requireTenantMember] }, async (request, reply) => {
+  const readinessHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const workflowKey = text((request.params as Row).workflowKey, 'workflowKey', 3, 120) as DataFabricWorkflowKey;
       if (!(workflowKey in DATA_FABRIC_WORKFLOWS)) {
         throw new DataFabricError('FABRIC_WORKFLOW_NOT_REGISTERED', 'Workflow is not registered', 404);
       }
       const query = (request.query ?? {}) as Row;
-      const sourceModuleSlug = typeof query.sourceModuleSlug === 'string'
-        ? text(query.sourceModuleSlug, 'sourceModuleSlug', 2, 80)
-        : undefined;
+      const sourceModuleSlug = workflowSource(request, query.sourceModuleSlug);
       return reply.send({
         readiness: await getDataFabricWorkflowReadiness({
           ...context(request),
@@ -117,7 +130,9 @@ export async function registerCrossModuleDataFabricRoutes(app: FastifyInstance):
         }),
       });
     } catch (error) { return sendError(request, reply, error); }
-  });
+  };
+  app.get(`${base}/workflows/:workflowKey/readiness`, { preHandler: [requireTenantMember] }, readinessHandler);
+  app.get(`${moduleBase}/workflows/:workflowKey/readiness`, { preHandler: [requireTenantMember] }, readinessHandler);
 
   app.get(`${base}/activity`, { preHandler: [requireTenantAdmin] }, async (request, reply) => {
     const query = (request.query ?? {}) as Row;
@@ -127,11 +142,16 @@ export async function registerCrossModuleDataFabricRoutes(app: FastifyInstance):
     } catch (error) { return sendError(request,reply,error); }
   });
 
-  app.get(`${base}/runs/:runId`, { preHandler: [requireTenantMember] }, async (request, reply) => {
+  const runHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      return reply.send(await getDataFabricRun({ ...context(request), runId: identifier((request.params as Row).runId,'runId') }));
+      return reply.send(await getDataFabricRun({
+        ...context(request), runId: identifier((request.params as Row).runId,'runId'),
+        sourceModuleSlug: workflowSource(request, undefined),
+      }));
     } catch (error) { return sendError(request,reply,error); }
-  });
+  };
+  app.get(`${base}/runs/:runId`, { preHandler: [requireTenantMember] }, runHandler);
+  app.get(`${moduleBase}/runs/:runId`, { preHandler: [requireTenantMember] }, runHandler);
 
   app.get(`${base}/rules`, { preHandler: [requireTenantAdmin] }, async (request, reply) => {
     try { return reply.send({ rules: await listDataFabricRules(context(request)) }); }
@@ -157,7 +177,7 @@ export async function registerCrossModuleDataFabricRoutes(app: FastifyInstance):
     } catch (error) { return sendError(request,reply,error); }
   });
 
-  app.post(`${base}/workflows/:workflowKey`, { preHandler: [requireTenantMember] }, async (request, reply) => {
+  const publishHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const input = body(request);
       const workflowKey = text((request.params as Row).workflowKey,'workflowKey',3,120) as DataFabricWorkflowKey;
@@ -171,7 +191,7 @@ export async function registerCrossModuleDataFabricRoutes(app: FastifyInstance):
         causationId:typeof input.causationId === 'string' ? text(input.causationId,'causationId',1,120) : null,
         rootEventId:input.rootEventId ? identifier(input.rootEventId,'rootEventId') : null,
         propagationDepth:boundedInteger(input.propagationDepth,'propagationDepth',0,0,12),
-        sourceModuleSlug:typeof input.sourceModuleSlug === 'string' ? text(input.sourceModuleSlug,'sourceModuleSlug',2,80) : undefined,
+        sourceModuleSlug:workflowSource(request, input.sourceModuleSlug),
         sourceType:typeof input.sourceType === 'string' ? text(input.sourceType,'sourceType',2,100) : undefined,
         sourceKind:typeof input.sourceKind === 'string' ? text(input.sourceKind,'sourceKind',2,32) : undefined,
         expectedSourceVersion:sourceVersion(input.expectedSourceVersion),
@@ -187,7 +207,9 @@ export async function registerCrossModuleDataFabricRoutes(app: FastifyInstance):
       await writeAudit({ actorUserId,tenantId,targetType:'shared_workflow_run',targetId:String((queued.run as Row).id),action:auditAction,after:{ workflowKey,aggregateId,duplicate:queued.duplicate,requeued:queued.requeued } },request);
       return reply.code(queued.duplicate ? 200 : 202).send({ duplicate:queued.duplicate,requeued:queued.requeued,run:queued.run });
     } catch (error) { return sendError(request,reply,error); }
-  });
+  };
+  app.post(`${base}/workflows/:workflowKey`, { preHandler: [requireTenantMember] }, publishHandler);
+  app.post(`${moduleBase}/workflows/:workflowKey`, { preHandler: [requireTenantMember] }, publishHandler);
 
   app.post(`${base}/inbox/:inboxId/replay`, { preHandler: [requireTenantAdmin] }, async (request, reply) => {
     try {

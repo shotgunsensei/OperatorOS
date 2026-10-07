@@ -1,10 +1,19 @@
 'use client';
 
 import type { GameState, Shot, ShotEvents } from './ninja-pool-hall/types';
+import { getModuleByHost } from '../../../../packages/modules/registry.js';
 
 const API_BASE = '/api';
 
 const ACTIVE_TENANT_KEY = 'activeTenantId';
+
+function dataFabricApiBase(tenantId: string): string {
+  const module = typeof window === 'undefined' ? undefined : getModuleByHost(window.location.hostname);
+  const tenantPath = `/tenants/${encodeURIComponent(tenantId)}`;
+  return module && module.category !== 'platform'
+    ? `${tenantPath}/modules/${encodeURIComponent(module.id)}/data-fabric`
+    : `${tenantPath}/data-fabric`;
+}
 
 export function getActiveTenantId(): string | null {
   if (typeof window === 'undefined') return null;
@@ -325,18 +334,18 @@ export const sharedPlatformApi = {
       expectedSourceVersion: string | number;
       payload?: Record<string, unknown>;
     },
-  ) => apiFetch(`/tenants/${tenantId}/data-fabric/workflows/${encodeURIComponent(workflowKey)}`, {
+  ) => apiFetch(`${dataFabricApiBase(tenantId)}/workflows/${encodeURIComponent(workflowKey)}`, {
     method: 'POST',
     body: JSON.stringify(input),
   }),
   dataFabricWorkflowReadiness: (tenantId: string, workflowKey: string, sourceModuleSlug?: string) => {
     const query = sourceModuleSlug ? `?sourceModuleSlug=${encodeURIComponent(sourceModuleSlug)}` : '';
-    return apiFetch(`/tenants/${tenantId}/data-fabric/workflows/${encodeURIComponent(workflowKey)}/readiness${query}`);
+    return apiFetch(`${dataFabricApiBase(tenantId)}/workflows/${encodeURIComponent(workflowKey)}/readiness${query}`);
   },
   dataFabricActivity: (tenantId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/activity`),
   rescanAttachment: (tenantId: string, attachmentId: string, moduleSlug: string) =>
     apiFetch(`/tenants/${tenantId}/shared-platform/attachments/${encodeURIComponent(attachmentId)}/rescan`, { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
-  dataFabricRun: (tenantId: string, runId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/runs/${runId}`),
+  dataFabricRun: (tenantId: string, runId: string) => apiFetch(`${dataFabricApiBase(tenantId)}/runs/${encodeURIComponent(runId)}`),
   replayDataFabricInbox: (tenantId: string, inboxId: string) =>
     apiFetch(`/tenants/${tenantId}/data-fabric/inbox/${inboxId}/replay`, { method: 'POST' }),
 };

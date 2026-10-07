@@ -1,5 +1,24 @@
 # OperatorOS module parity index
 
+## Module-session workflow continuation (2026-10-07)
+
+**PARITY COUNTS UNCHANGED / LOCAL WORKFLOW PASS / UPDATED CI REQUIRED**.
+The earlier checkout candidate passes both release gates 14/14: 1,608 API,
+108 integration, 52 unit, 33 browser and four visual tests. The additional
+module-session workflow repair passes 37 focused checks, production build/four
+typechecks, ESLint, and two first-attempt exact-host browser journeys in
+18.4 seconds. This is isolated source/local evidence; the new head needs fresh
+CI and publication. No complete module or provider acceptance is inferred.
+
+| Surface | New evidence | Remaining gate |
+| --- | --- | --- |
+| Customer outcomes across ten contracts | Source-scoped readiness/submission/polling; all contract sources checked through module sessions; real TradeFlowKit-to-SnapProofOS native delivery, persistent results and refresh/resume proved locally | New exact-head CI, publication, authenticated target acceptance |
+| Stack and billing | $143 pending cart resumes actual published live Checkout; local owner/paid gates pass again | Actual signed payment and non-admin tenant acceptance |
+| CallCommand AI | Owner-saved routing row and shape readiness verified; project-only linked-key override removed; read-only effective/project model discovery returns 401 | Routing-key replacement, restricted runtime-key handoffs, effective provider authentication, publication and controlled live voice/capacity/number acceptance |
+| OutCall | Coming-soon and sales gates retained | Commercial activation and verified-self real-provider acceptance |
+
+See [the continuation and retained failures](../ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
 ## Checkout recovery and CallCommand continuation (2026-10-07)
 
 **PARITY COUNTS UNCHANGED / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**.

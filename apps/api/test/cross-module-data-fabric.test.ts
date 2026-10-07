@@ -100,8 +100,11 @@ after(async () => {
   await closeDatabasePool();
 });
 
-function bearer(user: any) {
-  return { authorization:`Bearer ${signToken({ userId:user.id,email:user.email,role:user.role,tokenVersion:user.tokenVersion,sessionType:'platform' })}` };
+function bearer(user: any, moduleId?: string) {
+  return { authorization:`Bearer ${signToken({
+    userId:user.id,email:user.email,role:user.role,tokenVersion:user.tokenVersion,
+    ...(moduleId ? { sessionType:'module',tenantId:owner.currentTenantId,moduleId } : { sessionType:'platform' }),
+  })}` };
 }
 
 function stableForLegacyEnvelope(value: unknown): string {
@@ -243,6 +246,82 @@ test('workflow readiness reports destination and manager access before confirmat
   });
   assert.equal(mismatchedSource.statusCode,400,mismatchedSource.body);
   assert.equal(mismatchedSource.json().code,'FABRIC_SOURCE_MODULE_MISMATCH');
+});
+
+test('module sessions check every registered outcome through their sealed source namespace', async () => {
+  const { DATA_FABRIC_WORKFLOWS } = await import('../src/lib/cross-module-data-fabric.js');
+  for (const [workflowKey, contract] of Object.entries(DATA_FABRIC_WORKFLOWS)) {
+    for (const source of contract.source ? [contract.source] : ['techdeck','pulsedesk']) {
+      const response = await app.inject({
+        method:'GET',
+        url:`/v1/tenants/${owner.currentTenantId}/modules/${source}/data-fabric/workflows/${workflowKey}/readiness`,
+        headers:bearer(owner, source),
+      });
+      assert.equal(response.statusCode,200,`${workflowKey}: ${response.body}`);
+      assert.equal(response.json().readiness.source.moduleSlug,source);
+      assert.equal(response.json().readiness.available,true);
+    }
+  }
+});
+
+test('module outcome routes reject platform, foreign tenant/module, source substitution and admin surfaces', async () => {
+  const workflow = 'tradeflowkit.job_to_snapproof';
+  const scopedBase = `/v1/tenants/${owner.currentTenantId}/modules/tradeflowkit/data-fabric`;
+  const headers = bearer(owner,'tradeflowkit');
+  for (const [url, status, code] of [
+    [`/v1/tenants/${owner.currentTenantId}/data-fabric/workflows/${workflow}/readiness`,403,'SESSION_SCOPE_DENIED'],
+    [`/v1/tenants/${owner.currentTenantId}/modules/techdeck/data-fabric/workflows/support.resolved_to_faultlinelab/readiness`,403,'SESSION_SCOPE_DENIED'],
+    [`/v1/tenants/${foreign.currentTenantId}/modules/tradeflowkit/data-fabric/workflows/${workflow}/readiness`,403,'SESSION_TENANT_MISMATCH'],
+    [`${scopedBase}/workflows/${workflow}/readiness?sourceModuleSlug=pulsedesk`,403,'FABRIC_SOURCE_MODULE_MISMATCH'],
+    [`${scopedBase}/workflows/callcommand.analysis_to_tradeflowkit/readiness`,400,'FABRIC_SOURCE_MODULE_MISMATCH'],
+  ] as const) {
+    const response = await app.inject({ method:'GET',url,headers });
+    assert.equal(response.statusCode,status,response.body);
+    assert.equal(response.json().code,code,response.body);
+  }
+  for (const route of ['activity','rules','contracts']) {
+    const response = await app.inject({ method:'GET',url:`${scopedBase}/${route}`,headers });
+    assert.equal(response.statusCode,404,response.body);
+  }
+  const replay = await app.inject({ method:'POST',url:`${scopedBase}/inbox/${randomUUID()}/replay`,headers });
+  assert.equal(replay.statusCode,404,replay.body);
+});
+
+test('module sessions submit once, poll persistent results and cannot read another source module run', async () => {
+  const job = await db.execute(sql`
+    INSERT INTO tradeflowkit_jobs(tenant_id,customer_id,created_by_user_id,title,status,priority,source_id)
+    VALUES (${owner.currentTenantId},${customerId},${owner.id},'Module session proof job','scheduled','normal',${`phase38-module-${randomUUID()}`}) RETURNING id,version
+  `);
+  const jobId = String(job.rows[0].id);
+  const base = `/v1/tenants/${owner.currentTenantId}/modules/tradeflowkit/data-fabric`;
+  const headers = bearer(owner,'tradeflowkit');
+  const payload = {
+    aggregateId:jobId,sourceDeepLink:`/modules/tradeflowkit/jobs/${jobId}`,
+    expectedSourceVersion:Number(job.rows[0].version),idempotencyKey:`phase38:module:${jobId}`,
+  };
+  const substituted = await app.inject({ method:'POST',url:`${base}/workflows/tradeflowkit.job_to_snapproof`,headers,payload:{ ...payload,sourceModuleSlug:'techdeck' } });
+  assert.equal(substituted.statusCode,403,substituted.body);
+  assert.equal(substituted.json().code,'FABRIC_SOURCE_MODULE_MISMATCH');
+  const first = await app.inject({ method:'POST',url:`${base}/workflows/tradeflowkit.job_to_snapproof`,headers,payload });
+  assert.equal(first.statusCode,202,first.body);
+  const duplicate = await app.inject({ method:'POST',url:`${base}/workflows/tradeflowkit.job_to_snapproof`,headers,payload });
+  assert.equal(duplicate.statusCode,200,duplicate.body);
+  assert.equal(duplicate.json().run.id,first.json().run.id);
+  const fabric = await import('../src/lib/cross-module-data-fabric.js');
+  await fabric.deliverDataFabricInbox(String(first.json().run.inbox_id));
+  const runId = String(first.json().run.id);
+  const detail = await app.inject({ method:'GET',url:`${base}/runs/${runId}`,headers });
+  assert.equal(detail.statusCode,200,detail.body);
+  assert.equal(detail.json().run.status,'completed');
+  assert.equal(detail.json().links.length,2);
+  const unrelated = await app.inject({
+    method:'GET',url:`/v1/tenants/${owner.currentTenantId}/modules/snapproofos/data-fabric/runs/${runId}`,
+    headers:bearer(owner,'snapproofos'),
+  });
+  assert.equal(unrelated.statusCode,404,unrelated.body);
+  assert.equal(unrelated.json().code,'FABRIC_RUN_NOT_FOUND');
+  const foreignView = await app.inject({ method:'GET',url:`${base}/runs/${runId}`,headers:bearer(foreign,'tradeflowkit') });
+  assert.equal(foreignView.statusCode,404,foreignView.body);
 });
 
 test('Phase 38 API queues idempotently, filters tenant activity, and exposes run provenance', async () => {

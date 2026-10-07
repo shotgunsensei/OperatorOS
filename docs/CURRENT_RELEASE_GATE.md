@@ -1,5 +1,20 @@
 # OperatorOS current release gate
 
+## Module-session workflow release candidate (2026-10-07)
+
+**LOCAL PASS / UPDATED EXACT-HEAD CI REQUIRED / CREDENTIAL HANDOFF OPEN**.
+The preceding `9405fae1` checkout candidate now passes both GitHub release gates
+14/14, with 1,608 API, 108 integration, 52 unit, 33 browser and four visual passes.
+The additional module-scoped workflow repair passes 37 focused checks,
+production build/four typechecks, ESLint, and two isolated exact-host browser
+journeys in 18.4 seconds, without retry. It preserves tenant/module sealing and
+all source/destination access checks, and adds the previously omitted native
+workflow browser journey to the release harness. Fresh CI for this repair and
+the secure provider handoffs remain publication gates. The current published
+identity is `5b50b2ca`, verified 47/47; its $143 unpaid cart resumes live Checkout.
+Payment/signed settlement and full provider, tenant and OutCall acceptance
+remain open. See [the complete evidence](ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
 ## Checkout recovery candidate (2026-10-07)
 
 **SOURCE READY / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**. Pending

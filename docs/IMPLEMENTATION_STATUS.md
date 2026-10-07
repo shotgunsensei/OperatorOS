@@ -1,5 +1,30 @@
 # OperatorOS implementation status
 
+## Module-session workflow and credential continuation (2026-10-07)
+
+**LOCAL PASS / UPDATED CANDIDATE CI REQUIRED / PROVIDER HANDOFF OPEN**.
+The earlier `9405fae1` candidate passes both release runs `37651363364` and
+`37651361980`: **14/14 scopes**, API **1,608/1,608**, integration **108/108**,
+unit **52/52**, browser **33/33**, visual **4/4**, with no final browser retry.
+The subsequent repair binds customer workflow readiness, submission and polling
+to module namespaces without widening session or tenant authority. Fresh
+isolated focused checks pass **37/37**, production build/four typechecks and
+ESLint pass, and real exact-host browser checks pass **2/2** in **18.4 seconds**,
+without retry. The browser proves native SnapProofOS records, persisted run
+details, refresh/resume without another submission, platform-path denial,
+platform activity and mobile bounds. Original fixture failures are retained;
+the previously omitted workflow case is now part of the release harness.
+The published $143 pending cart resumes actual live Checkout, without payment.
+The owner-saved routing credential requires replacement after an inadvertent
+handoff screenshot exposure. Existing effective/project OpenAI credentials
+return 401; the restricted runtime-key creation and secret-save handoffs remain
+open. No new runtime key, provider call, production schema change, payment or
+module-availability grant occurred. Full evidence and rollback remain in
+[the continuation](ECOSYSTEM_CHECKOUT_RECOVERY_2026-10-07.md).
+
+This supersedes the October 7 checkpoint below for candidate CI and workflow
+repair evidence. The new repair must pass its own exact-head CI before publishing.
+
 ## Checkout recovery and CallCommand continuation (2026-10-07)
 
 **SOURCE CANDIDATE / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED**. The owner

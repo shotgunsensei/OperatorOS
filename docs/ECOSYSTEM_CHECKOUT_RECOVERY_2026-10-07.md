@@ -2,6 +2,13 @@
 
 ## Current checkpoint
 
+The `9405fae1` PR release run `37651363364` and standalone run `37651361980`
+now both pass **14/14 scopes**:
+API **1,608/1,608**, integration **108/108**, unit **52/52**, exact-host browser
+**33/33**, and visual **4/4**. The final browser result has no retry. This
+accepts the checkout-recovery candidate only; the subsequent module-session
+workflow repair below requires its own exact-head CI before publication.
+
 **SOURCE CANDIDATE / LOCAL RECOVERY PASS / EXACT-HEAD CI REQUIRED / PROVIDER
 CONFIGURATION IN PROGRESS**. Publication remains explicitly authorized by the
 owner. This record supplements the [October 6 publication evidence](ECOSYSTEM_PUBLICATION_2026-10-06.md);
@@ -103,10 +110,94 @@ The owner saved `OPENAI_WEBHOOK_SECRET` in Replit; the masked row was verified.
 No secret is recorded here. The saved project/model bindings in source are
 `OPENAI_PROJECT_ID` and `CALLCOMMAND_REALTIME_MODEL=gpt-realtime-2.1-mini`.
 
-`CALLCOMMAND_SIP_ROUTE_SECRET` entry remains a direct owner handoff at this
-checkpoint. Existing effective API-key/project access, published provider
-readiness and signed event/call acceptance still need verification. No new
-OpenAI API key was created and no call was initiated.
+The owner saved `CALLCOMMAND_SIP_ROUTE_SECRET`; the masked row and refreshed
+runtime shape check were verified. A one-time handoff screenshot inadvertently
+included that routing credential. That local screenshot was removed and a fresh
+replacement was generated directly in the project Shell, without reading or
+recording its value. Owner entry/submission of the replacement remains pending.
+
+The linked account-level `OPENAI_API_KEY` overrode the project's own secret.
+Only that binding to this project was unlinked, preserving the global account
+secret and other applications. Both the original effective credential and the
+project credential returned **401 / invalid_api_key** on read-only model
+discovery, including the explicit OperatorOS project header. A restricted,
+365-day project runtime-key form is prepared for the owner's specific
+access-creation confirmation and direct secret-save handoff. No new runtime
+key has been created. Published provider readiness, signed events and controlled
+call acceptance remain open. A configured shape check is not successful provider
+authentication, and no real call or charge was initiated.
+
+## Module-session workflow repair
+
+Authenticated module sessions correctly reject platform-only data-fabric
+URLs. `OutcomeWorkflowAction` used those platform URLs from module domains,
+so readiness, submission and polling could fail even when the user had
+valid access to both applications. This explains the observed diagnostic
+preview access-check error.
+
+The repair adds only readiness, submission and run-detail aliases beneath
+`/v1/tenants/:tenantId/modules/:moduleId/data-fabric`. The existing session
+ceiling binds the path to the sealed module and tenant. The alias forces that
+module as the workflow source, rejects source substitution, and filters run
+detail by the source module in addition to the trusted tenant. Existing service
+checks retain source/destination entitlements, write/manager roles, source
+visibility/version, signed events, delivery-time checks and idempotency.
+Administrative activity, contracts, rules and replay have no module aliases.
+Platform routes remain available to platform sessions. The browser selects
+the alias from the canonical host registry; platform hosts retain their original
+API paths. No session policy, schema or commercial entitlement was widened.
+
+Focused isolated validation passes **37/37**, zero fail/cancel/skip/todo,
+in **11,431.0848 ms**:
+
+```powershell
+. ./build/launch/CheckoutRecoveryEnvironment.ps1
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/cross-module-data-fabric.test.ts test/cross-module-data-fabric-static.test.ts test/module-session-boundary.test.ts
+$env:INTERNAL_API_URL='http://localhost:5001'; corepack pnpm build:production
+corepack pnpm lint
+```
+
+The focused cases cover all ten contracts (both support source modules),
+persistent native delivery and duplicate prevention, platform/foreign
+tenant/module denial, source substitution, unrelated-source run hiding and
+absence of module administration aliases. Production build/four workspace
+typechecks and ESLint with zero warnings pass. The real module-session
+browser workflow is included in the release harness. Fresh exact-host browser
+acceptance passes **2/2** in **18.4 seconds**, without retry, through the
+readiness-gated production supervisor and local TLS proxy:
+
+```powershell
+. ./build/launch/CheckoutRecoveryEnvironment.ps1
+$env:PARITY_BROWSER_GREP='a module session creates native field proof|an unpaid Stack resumes'
+node scripts/parity/run-browser-tests.mjs --suite e2e
+```
+
+The module journey uses real central sign-in, a sealed TradeFlowKit module
+session, the native confirmation UI and real persistent delivery into
+SnapProofOS. It proves 403 on the platform-only path, successful scoped
+submission/polling, completed database state and two durable links, refresh
+and manual resume without another POST, tenant-filtered platform activity,
+and a 390-pixel viewport. The billing fixture remains synthetic and no external
+provider is called. Logs are `build/launch/module-outcome-focused-20261007.log`,
+`module-outcome-production-build-20261007.log`,
+`module-outcome-lint-final-20261007.log` and
+`module-outcome-browser-clean-20261007.log`.
+
+Earlier local workflow attempts are retained. The first waited for readiness
+after it had already fired on dashboard launch and incorrectly expected the
+action on job detail. The next did not open the existing native disclosure.
+Another expected automatic completion restoration rather than the current
+review/confirm resume path; the corrected case proves that resume sends no new
+submission. Repeated disposable sessions then reached the shared test-client
+login limit; the fixture now uses a distinct synthetic client through the
+existing trusted loopback proxy, as other release fixtures do. Authentication
+limits remain enabled. The last older assertions used stale activity labels;
+they now match the current customer-visible labels while database assertions
+still require authoritative `completed` state. Superseded retries were stopped
+where appropriate, and their logs are not accepted as passing evidence. No
+authorization, retry budget, payment or persistence check was weakened.
+The final clean browser result and fresh web typecheck/fixture ESLint pass;
+updated exact-head CI remains required before publication.
 
 ## Remaining acceptance and rollback
 
