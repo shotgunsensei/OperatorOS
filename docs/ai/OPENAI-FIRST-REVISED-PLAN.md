@@ -9,7 +9,9 @@ compatibility, retry accounting, populated v65 upgrades and visible error states
 ## Evidence and decisions
 
 The full 1,193-line Library plan (`libfile_c60ec2c7f9a88191ab5345bdae09bb29`)
-was read. Canonical and remote main are `5b50b2cadd815ba1c6de1af79deb04e8971af0b4`.
+was read. At the initial audit, canonical/remote main were `5b50b2cadd815ba1c6de1af79deb04e8971af0b4`.
+During the local continuation canonical is on separate checkout/provider branch
+`codex/checkout-provider-release-20261007` at `cde70cef`; preserve it unchanged.
 Read-only public health on October 7 reports serving commit `5b50b2ca`, build
 `224589f065463d1b7a8db358`, reviewed lock fingerprint and database v65/65.
 The October 6 acceptance for `0ea0f792db70936c95f60be41fbf457da3fdbf91`
@@ -57,7 +59,12 @@ it, binds it to the tenant view and reuses the request key for safe replays.
    and a real populated v65-to-v66 upgrade/reapply preserving complete snapshots.
    Shared telemetry retains safe usage counts without weakening secret filtering;
    completed and failed retries do not add usage or provider calls.
-5. After approved spend/CI/deployment gates, validate configured model access,
+5. The final local continuation verifies actor-bound replay and concurrent zero-budget
+   denial in the 45-check focused gate, corrects the generate button wording, then
+   pins a clean commit before the documented full local release gate and exact
+   build/runtime identity check. [Procedure](FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+   At this candidate commit the full gate remains pending.
+   After approved spend/CI/deployment gates, validate configured model access,
    backup/apply, exact deployed release and non-admin customer acceptance. Then
    extend existing credit-controlled flows. Choose routing using domain evals,
    not model self-confidence or automatic frontier escalation.

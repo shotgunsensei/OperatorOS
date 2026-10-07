@@ -23,7 +23,7 @@ const config = { OPERATOROS_AI_SPEND_ENABLED: '1', OPERATOROS_BUDGETED_AI_PROVID
 const usage = { inputTokens: 1000, outputTokens: 100, cachedInputTokens: 200, cacheWriteTokens: 300 };
 const guidance = { summary: 'Review synthetic recorded service evidence.', checks: ['Compare the recorded event timestamps.'],
   reviewRequired: true, executionPerformed: false };
-let owner: any; let foreign: any; let viewer: any; let moduleId: string; let app: any;
+let owner: any; let foreign: any; let viewer: any; let writer: any; let moduleId: string; let app: any;
 let signToken: any;
 let calls = 0;
 const originalFetch = globalThis.fetch;
@@ -57,10 +57,12 @@ async function resetPolicy(daily = 10_000_000) {
 
 before(async () => {
   await ensureSchemaReady(); await ensureSharedAiBudgetTables(); await ensureSharedAiBudgetTables();
-  owner = await createTestUser(); foreign = await createTestUser(); viewer = await createTestUser();
+  owner = await createTestUser(); foreign = await createTestUser(); viewer = await createTestUser(); writer = await createTestUser();
   [moduleId] = (await db.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'techdeck')).limit(1)).map(row => row.id);
   if (!moduleId) moduleId = (await createTestModule('techdeck')).id;
   await db.insert(tenantUsers).values({ tenantId: owner.currentTenantId, userId: viewer.id, role: 'member' });
+  await db.insert(tenantUsers).values({ tenantId: owner.currentTenantId, userId: writer.id, role: 'member' });
+  await db.insert(tenantUserModuleAccess).values({ tenantId: owner.currentTenantId, userId: writer.id, moduleId, accessLevel: 'user' });
   await db.insert(tenantModules).values({ tenantId: owner.currentTenantId, moduleId, status: 'enabled', source: 'admin', allowAllMembers: true }).onConflictDoNothing();
   await db.insert(tenantUserModuleAccess).values({ tenantId: owner.currentTenantId, userId: viewer.id, moduleId, accessLevel: 'viewer' });
   ({ signToken } = await import('../src/lib/auth.js'));
@@ -123,6 +125,42 @@ test('authorized guidance is structured, visible to caller, durably measured and
   assert.equal(conflict.statusCode, 409); assert.equal(calls, 1);
 });
 
+test('idempotent replay is bound to the original actor even for another authorized tenant writer', async () => {
+  for (const state of ['completed', 'failed', 'unknown'] as const) {
+    await resetPolicy();
+    installResponse(state === 'failed' ? 'invalid synthetic guidance' : JSON.stringify(guidance), state !== 'unknown');
+    const request = { method: 'POST' as const, url: route, headers: headers(), payload: { query: 'Synthetic actor-bound request' } };
+    const first = await app.inject(request);
+    assert.equal(first.statusCode, state === 'completed' ? 200 : 502);
+    const denied = await app.inject({ ...request, headers: headers(writer, owner.currentTenantId) });
+    assert.equal(denied.statusCode, 409, denied.body);
+    assert.equal(denied.json().code, 'AI_REQUEST_CONFLICT');
+    assert.equal(denied.json().guidance, undefined); assert.equal(calls, 1);
+    const rows = (await db.execute(sql`SELECT status,user_id,measured_micros FROM shared_ai_requests WHERE tenant_id=${owner.currentTenantId}`)).rows;
+    assert.equal(rows.length, 1); assert.equal(rows[0].user_id, owner.id); assert.equal(rows[0].status, state);
+    assert.equal(rows[0].measured_micros, state === 'unknown' ? null : '2790');
+    const telemetry = (await db.execute(sql`SELECT count(*)::int AS n,COALESCE(SUM(units),0)::int AS cost FROM shared_usage_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0];
+    assert.deepEqual(telemetry, state === 'unknown' ? { n: 0, cost: 0 } : { n: 1, cost: 2790 });
+    // A distinct key proves this actor is authorized to write, rather than being
+    // rejected by an earlier read-only/member guard.
+    installResponse();
+    const own = await app.inject({ ...request, headers: { ...headers(writer, owner.currentTenantId), 'idempotency-key': `writer-own-${state}` } });
+    assert.equal(own.statusCode, 200, own.body); assert.equal(calls, 2);
+  }
+});
+
+test('concurrent requests under an enabled zero budget never reserve, dispatch or emit usage', async () => {
+  await resetPolicy();
+  await db.execute(sql`UPDATE shared_ai_budget_policies SET per_call_micros=0,daily_micros=0,monthly_micros=0 WHERE tenant_id=${owner.currentTenantId} AND module_id=${moduleId}`);
+  const responses = await Promise.all(Array.from({ length: 12 }, (_, index) => app.inject({
+    method: 'POST', url: route, headers: { ...headers(), 'idempotency-key': `zero-budget-${index}` }, payload: { query: 'Synthetic zero-budget issue' },
+  })));
+  for (const response of responses) { assert.equal(response.statusCode, 429, response.body); assert.equal(response.json().code, 'AI_BUDGET_EXCEEDED'); }
+  assert.equal(calls, 0);
+  assert.equal((await db.execute(sql`SELECT count(*)::int AS n FROM shared_ai_requests WHERE tenant_id=${owner.currentTenantId}`)).rows[0].n, 0);
+  assert.equal((await db.execute(sql`SELECT count(*)::int AS n FROM shared_usage_events WHERE tenant_id=${owner.currentTenantId}`)).rows[0].n, 0);
+});
+
 test('concurrent reservations cannot exceed tenant budget and unknown holds survive month rollover', async () => {
   await resetPolicy(52_000);
   const input = { tenantId: owner.currentTenantId, moduleId, userId: owner.id, query: 'Synthetic issue', correlationId: 'synthetic-correlation' };
@@ -181,6 +219,8 @@ test('an in-flight same-key retry dispatches once and later replays the complete
   try {
     const retry = await app.inject(request);
     assert.equal(retry.statusCode, 409); assert.equal(retry.json().code, 'AI_REQUEST_PENDING');
+    const otherActor = await app.inject({ ...request, headers: headers(writer, owner.currentTenantId) });
+    assert.equal(otherActor.statusCode, 409); assert.equal(otherActor.json().code, 'AI_REQUEST_CONFLICT');
   } finally { release(); }
   assert.equal((await first).statusCode, 200);
   assert.equal((await app.inject(request)).statusCode, 200); assert.equal(calls, 1);

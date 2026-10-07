@@ -1,5 +1,9 @@
 # OperatorOS implementation status
 
+## Final local guidance candidate continuation (2026-10-07)
+
+**LOCAL CANDIDATE / FULL RELEASE GATE PENDING**. Corrected the button to "Generate guidance" and added actor-bound replay and enabled-zero-budget concurrency checks. Focused compatibility/API/Chromium checks pass **45/45**, with no fail/cancel/skip/todo. Commit this verified source before running the documented full 14-stage local gate and exact-commit build/supervisor smoke. Historical `bfd9bf0d` artifact identity is not final commit evidence. No provider setup or source from parallel checkout work was imported. [Candidate procedure and gates](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
 ## Local review of budgeted TechDeck guidance (2026-10-07)
 
 **REVIEWED AND FIXED / LOCAL ONLY / PARITY UNCHANGED**. Review of `bfd9bf0d`

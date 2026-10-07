@@ -68,24 +68,24 @@ after(async()=>{
 });
 
 for(const [name,viewport]of [['desktop',{width:1280,height:900}],['mobile',{width:390,height:844}]]as const){
-  test(`actual TechDeck console renders reviewed guidance, replays safely and shows disabled recovery (${name})`,async()=>{
+  test(`actual TechDeck console renders guidance requiring review, replays safely and shows disabled recovery (${name})`,async()=>{
     const page=await browser.newPage({viewport});
     const errors:string[]=[];page.on('pageerror',(error:any)=>errors.push(error.message));
     await page.goto(origin+'/_fixture');
     await page.getByRole('textbox',{name:'IT operations guidance request'}).fill('Synthetic service issue '+name);
     const beforeCalls=providerCalls;
-    await page.getByRole('button',{name:'Generate reviewed guidance'}).click();
+    await page.getByRole('button',{name:'Generate guidance'}).click();
     await page.getByRole('region',{name:'IT operations guidance'}).waitFor();
     assert.match(await page.getByRole('region',{name:'IT operations guidance'}).innerText(),/Review the synthetic service evidence/);
     assert.match(await page.getByRole('region',{name:'IT operations guidance'}).innerText(),/No commands were run/);
     assert.equal(providerCalls,beforeCalls+1);
-    await page.getByRole('button',{name:'Generate reviewed guidance'}).click();
+    await page.getByRole('button',{name:'Generate guidance'}).click();
     await page.getByRole('region',{name:'IT operations guidance'}).waitFor();
     assert.equal(providerCalls,beforeCalls+1);
     await page.screenshot({path:resolve(root,'build/ai',`guidance-${name}.png`),fullPage:true});
     process.env.OPERATOROS_AI_SPEND_ENABLED='0';
     await page.getByRole('textbox',{name:'IT operations guidance request'}).fill('Another synthetic issue '+name);
-    await page.getByRole('button',{name:'Generate reviewed guidance'}).click();
+    await page.getByRole('button',{name:'Generate guidance'}).click();
     await page.getByRole('alert').waitFor();
     assert.match(await page.getByRole('alert').innerText(),/unavailable/);
     assert.match(await page.getByRole('alert').innerText(),/Reference:/);
@@ -104,7 +104,7 @@ test('an answer completing after a tenant switch stays out of the new tenant vie
     await page.goto(origin + '/_fixture');
     await page.getByRole('textbox', { name: 'IT operations guidance request' }).fill('Synthetic delayed issue');
     const response = page.waitForResponse(r => r.url().endsWith('/itops/query'));
-    await page.getByRole('button', { name: 'Generate reviewed guidance' }).click();
+    await page.getByRole('button', { name: 'Generate guidance' }).click();
     await entered;
     assert.equal(await page.getByRole('button',{name:'Generating guidance…'}).isDisabled(),true);
     await page.evaluate(() => (window as any).__switchTenant());
@@ -113,7 +113,7 @@ test('an answer completing after a tenant switch stays out of the new tenant vie
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.equal(await page.getByRole('region', { name: 'IT operations guidance' }).count(), 0);
     assert.equal(await page.getByText('Guidance is ready for your review. No commands were run.').count(), 0);
-    assert.equal(await page.getByRole('button', { name: 'Generate reviewed guidance' }).isDisabled(), false);
+    assert.equal(await page.getByRole('button', { name: 'Generate guidance' }).isDisabled(), false);
   } finally {
     releaseProvider(); providerGate = undefined; providerEntered = undefined; await page.close();
   }
@@ -127,12 +127,12 @@ for (const mode of ['invalid', 'unknown'] as const) {
       await page.goto(origin + '/_fixture');
       await page.getByRole('textbox',{name:'IT operations guidance request'}).fill('Synthetic '+mode+' issue');
       const initialCalls = providerCalls;
-      await page.getByRole('button',{name:'Generate reviewed guidance'}).click();
+      await page.getByRole('button',{name:'Generate guidance'}).click();
       await page.getByRole('alert').waitFor();
       assert.match(await page.getByRole('alert').innerText(),/Reference:/);
       assert.doesNotMatch(await page.getByRole('alert').innerText(),/unvalidated synthetic output/);
       assert.equal(await page.getByRole('region',{name:'IT operations guidance'}).count(),0);
-      await page.getByRole('button',{name:'Generate reviewed guidance'}).click();
+      await page.getByRole('button',{name:'Generate guidance'}).click();
       await page.getByRole('alert').waitFor();
       await expect(page.getByRole('alert')).toContainText(mode === 'unknown' ? /pending reconciliation/ : /did not produce usable guidance/);
       assert.equal(providerCalls,initialCalls+1);
