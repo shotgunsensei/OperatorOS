@@ -2,7 +2,7 @@
 
 ## Final local guidance candidate continuation (2026-10-07)
 
-**LOCAL CANDIDATE / FULL RELEASE GATE PENDING**. Corrected the button to "Generate guidance" and added actor-bound replay and enabled-zero-budget concurrency checks. Focused compatibility/API/Chromium checks pass **45/45**, with no fail/cancel/skip/todo. Commit this verified source before running the documented full 14-stage local gate and exact-commit build/supervisor smoke. Historical `bfd9bf0d` artifact identity is not final commit evidence. No provider setup or source from parallel checkout work was imported. [Candidate procedure and gates](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+**LOCAL FIXTURES VERIFIED / FINAL CANDIDATE GATE PENDING**. Corrected the button to "Generate guidance" and added actor-bound replay and enabled-zero-budget concurrency checks; focused checks pass **45/45**. The complete `325b6108` local gate finished **12/14** stages, with API 1,623/1,626, integration 108/108, browser 32/33 and visual 4/4. Three API fixture corrections now pass **15/15** with original binding snapshots preserved; runtime entitlement rules are unchanged. A separate checkout test helper hits the correct production auth-host denial. Commit these verified fixture repairs before rerunning all 14 stages and the clean exact-commit build/supervisor smoke. No parallel checkout/provider source, push, spending or deployment occurred. [Candidate procedure and gates](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
 
 ## Local review of budgeted TechDeck guidance (2026-10-07)
 

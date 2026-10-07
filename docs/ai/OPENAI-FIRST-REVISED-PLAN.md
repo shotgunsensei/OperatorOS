@@ -63,7 +63,13 @@ it, binds it to the tenant view and reuses the request key for safe replays.
    denial in the 45-check focused gate, corrects the generate button wording, then
    pins a clean commit before the documented full local release gate and exact
    build/runtime identity check. [Procedure](FINAL-LOCAL-CANDIDATE-2026-10-07.md).
-   At this candidate commit the full gate remains pending.
+   The complete `325b6108` gate ran all stages: 12/14 passed. Three API failures
+   were stale release identities and catalog fixture bindings, reproduced on
+   the v65 baseline. This follow-up fixes only the fixtures; affected tests
+   pass 15/15 and original plan-binding snapshots match. A separate checkout
+   browser helper still fails the production exact-host auth guard. Keep that
+   guard and disclose the failure if it persists. The new candidate's full
+   gate and exact clean build/runtime repeat remain pending at commit time.
    After approved spend/CI/deployment gates, validate configured model access,
    backup/apply, exact deployed release and non-admin customer acceptance. Then
    extend existing credit-controlled flows. Choose routing using domain evals,

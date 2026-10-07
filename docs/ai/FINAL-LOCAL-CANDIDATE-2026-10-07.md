@@ -39,6 +39,26 @@ candidate base; no parallel checkout/provider source is imported.
 
 ## Exact candidate release verification
 
+The complete local run at `325b61088b34fe6e34ca7ab817ab5d675e2e8669`
+finished all 14 stages: **12 passed, 2 failed, 0 not run**. Unit tests passed
+52/52, API tests 1,623/1,626, integration tests 108/108, exact-host browser tests
+32/33 and visual checks 4/4. Build, security and production preflight passed.
+Three API failures exposed test fixture issues: two identity fixtures still
+expected release 65; the catalog-tier fixture inherited earlier explicit Starter
+grants. The latter also fails on the unchanged v65 source with those bindings.
+This follow-up updates the identity fixtures to v66 and temporarily normalizes
+only the fixture's two plans' live-catalog bindings, restoring original IDs,
+values and PostgreSQL timestamps afterward. All 15 affected checks pass with
+the conflicting bindings present; full original binding snapshots match.
+Runtime entitlement rules and the paid/disabled denial assertions are unchanged.
+
+The remaining exact-host failure is the separate saved-cart checkout scenario:
+its generic session helper registers through `127.0.0.1:5001`, and the production
+authentication guard correctly returns `403 AUTH_HOST_NOT_ALLOWED`. Do not weaken
+that guard or import parallel checkout/provider changes to hide this failure.
+The final gate must report the failure if it persists. Prior complete and
+interrupted runs are preserved as historical evidence, not final-commit passes.
+
 The prior build/runtime identified `bfd9bf0d` with working-tree review fixes; it
 is historical evidence and does not prove exact commit `12d804bb`. After this
 commit, run the existing **14-stage** `corepack pnpm verify:release` gate using
@@ -47,7 +67,8 @@ including broad API, apply/reapply, production build, exact-host E2E/visual and
 core preflight. At commit time this full gate is **not yet run**; its exact final
 passed/failed/not-run results belong to the subsequent delivery report.
 
-After the gate, restore only its own generated tracked SBOM timestamp if needed,
+After the gate, archive and restore only its own generated tracked SBOM and
+CallCommand screenshots if needed,
 verify a clean source tree, and build/start the exact candidate. Compare both the
 full commit and generated build ID to public health through the Replit supervisor.
 Use the task-owned database and synthetic/no-spend configuration. Do not stop
