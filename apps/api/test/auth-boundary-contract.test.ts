@@ -68,6 +68,8 @@ test('P22-ADAPTER-SSO-001: production public auth accepts only the exact platfor
 });
 
 test('local canonical auth fixture host/origin headers preserve production boundaries', async () => {
+  const { ensureSchemaReady } = await import('./_setup.js');
+  await ensureSchemaReady();
   const previous = { appEnv: process.env.APP_ENV, trustProxy: process.env.TRUST_PROXY };
   const Fastify = (await import('fastify')).default;
   const { registerAuthRoutes } = await import('../src/routes/auth-routes.ts');
