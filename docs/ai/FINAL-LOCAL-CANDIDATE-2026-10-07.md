@@ -1,5 +1,21 @@
 # Final local AI guidance candidate - 2026-10-07
 
+## Auth fixture rate isolation follow-up
+
+The `fd8129e8` full gate completed API **1,625/1,627**, with two later invitation
+logins denied by the unchanged persistent rate limiter. The new host fixture
+had consumed three login attempts from their shared default loopback address.
+Give only that fixture `remoteAddress: '10.79.40.250'` and assert that the complete
+default loopback counter snapshots remain unchanged. No rate limit is raised,
+cleared or disabled. The auth-host and real invitation suites pass **11/11**
+together after the correction. Before rerunning the final clean candidate, the
+task-owned failed gate was stopped deliberately during browser verification:
+**11 stages passed, API failed, browser incomplete, preflight not run**. Its raw
+results are retained under `candidate-fd8129e8`; no completed full-gate claim or
+hang/quota claim is made for that attempt. A new commit and full exact-candidate
+gate are required because this test-fixture change addresses the demonstrated
+cross-suite regression.
+
 ## Canonical-host checkout fixture continuation
 
 The clean `78701290` full gate finished **13/14 passed, 1 failed, 0 not run**:

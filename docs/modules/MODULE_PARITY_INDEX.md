@@ -1,5 +1,9 @@
 # OperatorOS module parity index
 
+## Auth fixture rate isolation follow-up (2026-10-07)
+
+**PARITY UNCHANGED / FINAL GATE PENDING**. The new auth-host fixture now uses its own client address and asserts that default loopback rate counters remain unchanged. Combined host/invitation checks pass **11/11** after the earlier cross-suite 429 failure. Production rate limits and auth guards are unchanged. The stopped `fd8129e8` attempt is preserved as incomplete; a new clean-candidate full gate follows the repair commit.
+
 ## Canonical-host checkout fixture completion (2026-10-07)
 
 **PARITY UNCHANGED / LOCAL FIXTURE VERIFIED / FINAL GATE PENDING**. The only failed `78701290` release stage is addressed by the inspected PR117 browser fixture correction. Real central login, canonical host/origin and local proxy reads now pass the checkout journey **1/1**; auth-boundary checks pass **7/7** with forbidden hosts still rejected. No runtime guard or parallel provider/data-fabric source was imported. New clean-candidate full gate and identity smoke follow the commit; deployment, paid-provider and customer acceptance remain unverified. [Procedure](../ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).

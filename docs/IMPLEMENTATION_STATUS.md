@@ -1,5 +1,9 @@
 # OperatorOS implementation status
 
+## Auth fixture rate isolation follow-up (2026-10-07)
+
+**LOCAL REGRESSION FIXED / FINAL GATE PENDING**. The new host fixture consumed the default loopback login allowance, causing two later invitation tests to receive correct 429 denials in the `fd8129e8` API run (1,625/1,627). The fixture now has its own client address and verifies unchanged loopback counter snapshots; production limits remain intact. Combined auth-host/invitation checks pass **11/11**. The task-owned failed gate was deliberately stopped with 11 stages passed, API failed, browser incomplete and preflight not run; its evidence is retained. Commit this repair and rerun the complete exact-candidate gate. [Evidence procedure](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
 ## Canonical-host checkout fixture completion (2026-10-07)
 
 **LOCAL FIXTURE VERIFIED / FINAL GATE PENDING / PARITY UNCHANGED**. The `78701290` AI candidate completed 13/14 release stages, with one checkout helper host denial. Reused only PR117's compatible browser fixture: canonical auth registration with matching Origin, real browser login, loopback TLS fixture reads retaining Host, and isolated client IP. The corrected journey passes **1/1**, and auth-boundary regressions pass **7/7** including production loopback/module/lookalike and untrusted-forwarded-host denial. Production guards, commerce/provider/data-fabric code and account configuration are unchanged. Commit this verified follow-up, then run the full local gate and clean exact-identity smoke. Parent coordinates merge/publication; no hosted CI or paid API is authorized here. [Procedure and history](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).

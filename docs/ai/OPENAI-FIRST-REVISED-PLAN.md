@@ -77,6 +77,11 @@ it, binds it to the tenant view and reuses the request key for safe replays.
    forbidden host regressions 7/7. Runtime authentication guards and parallel
    commerce/provider/data-fabric code are unchanged. Commit this follow-up and
    record its complete local gate and exact-identity smoke before handoff.
+   The `fd8129e8` repeat exposed two invitation 429s from the new host fixture's
+   shared loopback allowance. Isolate its test client and assert unchanged
+   loopback counters; combined host/invitation checks pass 11/11. Production
+   limits remain intact. The task-owned failed attempt was stopped and retained
+   as incomplete; rerun all stages on the next clean repair commit.
    After approved spend/CI/deployment gates, validate configured model access,
    backup/apply, exact deployed release and non-admin customer acceptance. Then
    extend existing credit-controlled flows. Choose routing using domain evals,
