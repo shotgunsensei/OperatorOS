@@ -1,5 +1,35 @@
 # Final local AI guidance candidate - 2026-10-07
 
+## Canonical-host checkout fixture continuation
+
+The clean `78701290` full gate finished **13/14 passed, 1 failed, 0 not run**:
+unit 52/52, API 1,626/1,626, integration 108/108, exact-host 32/33 and visual 4/4.
+Its independent clean build and Replit supervisor smoke matched that commit.
+The one remaining checkout test is now corrected by reusing only the compatible
+`audience-lanes.spec.ts` fixture changes from PR117 commits `9405fae1` and
+`cde70cef` (inspected at `47d32d71`). Registration uses the canonical auth host
+with a matching HTTPS Origin, browser login establishes the real host-only
+session, and fixture reads use the loopback TLS proxy while retaining the
+original Host. A separate test client address preserves abuse controls. The
+summary assertion selects the actual Stack summary without changing its text.
+No commerce implementation, data-fabric, provider, `.replit` or auth-guard
+changes were imported.
+
+The corrected production-host checkout journey passes **1/1**; the expanded
+auth-boundary suite passes **7/7**, including canonical root/app/auth hosts,
+production loopback/module/lookalike rejection, and rejection of an untrusted
+forwarded host even with a canonical Origin. Authentication is not bypassed.
+The first isolated host test lacked its required auth-rate-limit table; after
+explicitly applying v66 to the task-owned fixture it passed. A transient executor
+transport disconnect recovered in the same environment; no quota workaround,
+account action or model/environment change occurred.
+
+Commit this bounded test/documentation follow-up before the new complete local
+14-stage gate and clean exact-identity build/smoke. Those final results are
+pending at commit time and are recorded in the subsequent Library handoff.
+The parent coordinates any later merge/publication and parallel activation work;
+Actions zero-dollar enforcement and new spending remain unapproved gates.
+
 This continuation corrects the remaining wording and evidence gaps after local
 review commit `12d804bbbc29f94a87fad2b845cab985009e0397`. The candidate is the
 local commit containing this document on `codex/openai-responses-budget-oct7`.

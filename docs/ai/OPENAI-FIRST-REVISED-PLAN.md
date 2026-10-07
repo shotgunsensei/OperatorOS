@@ -70,6 +70,13 @@ it, binds it to the tenant view and reuses the request key for safe replays.
    browser helper still fails the production exact-host auth guard. Keep that
    guard and disclose the failure if it persists. The new candidate's full
    gate and exact clean build/runtime repeat remain pending at commit time.
+   The clean `78701290` repeat finished 13/14 stages; its independent clean
+   build/supervisor identity passed. The remaining checkout helper is now fixed
+   using only the compatible PR117 browser fixture, with real central login and
+   matching canonical host/origin. The focused journey passes 1/1 and allowed/
+   forbidden host regressions 7/7. Runtime authentication guards and parallel
+   commerce/provider/data-fabric code are unchanged. Commit this follow-up and
+   record its complete local gate and exact-identity smoke before handoff.
    After approved spend/CI/deployment gates, validate configured model access,
    backup/apply, exact deployed release and non-admin customer acceptance. Then
    extend existing credit-controlled flows. Choose routing using domain evals,

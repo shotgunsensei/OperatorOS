@@ -1,5 +1,9 @@
 # OperatorOS module parity index
 
+## Canonical-host checkout fixture completion (2026-10-07)
+
+**PARITY UNCHANGED / LOCAL FIXTURE VERIFIED / FINAL GATE PENDING**. The only failed `78701290` release stage is addressed by the inspected PR117 browser fixture correction. Real central login, canonical host/origin and local proxy reads now pass the checkout journey **1/1**; auth-boundary checks pass **7/7** with forbidden hosts still rejected. No runtime guard or parallel provider/data-fabric source was imported. New clean-candidate full gate and identity smoke follow the commit; deployment, paid-provider and customer acceptance remain unverified. [Procedure](../ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
 ## Final local guidance candidate continuation (2026-10-07)
 
 **PARITY UNCHANGED / LOCAL FIXTURES VERIFIED / FINAL GATE PENDING**. Guidance wording and actor-bound/zero-budget checks pass with legacy/workflow/browser checks **45/45**. The complete `325b6108` gate passed 12/14 stages; three API fixture repairs pass **15/15** without changing runtime entitlement rules. A separate checkout browser helper still triggers the correct production auth-host denial. Final candidate release results and exact artifact identity follow its clean commit; deployment and real customer acceptance remain unverified. [Candidate procedure](../ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).

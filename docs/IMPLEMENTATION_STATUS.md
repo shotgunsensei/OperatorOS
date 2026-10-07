@@ -1,5 +1,9 @@
 # OperatorOS implementation status
 
+## Canonical-host checkout fixture completion (2026-10-07)
+
+**LOCAL FIXTURE VERIFIED / FINAL GATE PENDING / PARITY UNCHANGED**. The `78701290` AI candidate completed 13/14 release stages, with one checkout helper host denial. Reused only PR117's compatible browser fixture: canonical auth registration with matching Origin, real browser login, loopback TLS fixture reads retaining Host, and isolated client IP. The corrected journey passes **1/1**, and auth-boundary regressions pass **7/7** including production loopback/module/lookalike and untrusted-forwarded-host denial. Production guards, commerce/provider/data-fabric code and account configuration are unchanged. Commit this verified follow-up, then run the full local gate and clean exact-identity smoke. Parent coordinates merge/publication; no hosted CI or paid API is authorized here. [Procedure and history](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
 ## Final local guidance candidate continuation (2026-10-07)
 
 **LOCAL FIXTURES VERIFIED / FINAL CANDIDATE GATE PENDING**. Corrected the button to "Generate guidance" and added actor-bound replay and enabled-zero-budget concurrency checks; focused checks pass **45/45**. The complete `325b6108` local gate finished **12/14** stages, with API 1,623/1,626, integration 108/108, browser 32/33 and visual 4/4. Three API fixture corrections now pass **15/15** with original binding snapshots preserved; runtime entitlement rules are unchanged. A separate checkout test helper hits the correct production auth-host denial. Commit these verified fixture repairs before rerunning all 14 stages and the clean exact-commit build/supervisor smoke. No parallel checkout/provider source, push, spending or deployment occurred. [Candidate procedure and gates](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
