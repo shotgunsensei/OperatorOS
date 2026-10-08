@@ -1,5 +1,84 @@
 # OperatorOS implementation status
 
+## Coordinated integration checkpoint (2026-10-07)
+
+**LOCAL INTEGRATION / FOCUSED MERGED-SOURCE PASS / COMBINED GATE PENDING**.
+Remote main first `5b50b2ca`, then `12ac4446`, and PR117 `47d32d71` were verified
+read-only. The new main is an empty deployment marker with the identical source
+tree; its ancestry is preserved without importing another feature. AI `2a388cdf`
+is integrated with PR117 and the complete preserved landing commit `5aedd03d`
+in an isolated branch. Fresh AI, legacy, host/session, workflow and landing checks
+pass **167/167**, zero fail/cancel/skip/todo; production build/typechecks pass.
+Saved-cart authority and catalog-failure checkout closure pass in **5/5** focused
+production-browser journeys. The separate landing production fixture passes
+**13/13**, including loading/error recovery and responsive handoffs. The pricing
+conflict preserves both authoritative pending carts and campaign/selection handoff;
+authenticated checkout revalidates the bounded catalog read. Earlier build/browser
+and harness failures are disclosed in the integration record. These pre-commit
+results do not accept the exact combined release; populated upgrade, all 14 stages,
+clean build and exact-identity supervisor smoke follow the candidate commit.
+No push, hosted CI, production apply, settings/secret change, paid API or
+publication occurred. [Source inventory and migration gates](COORDINATED_RELEASE_2026-10-07.md).
+
+## Auth fixture rate isolation follow-up (2026-10-07)
+
+**LOCAL REGRESSION FIXED / FINAL GATE PENDING**. The new host fixture consumed the default loopback login allowance, causing two later invitation tests to receive correct 429 denials in the `fd8129e8` API run (1,625/1,627). The fixture now has its own client address and verifies unchanged loopback counter snapshots; production limits remain intact. Combined auth-host/invitation checks pass **11/11**. The task-owned failed gate was deliberately stopped with 11 stages passed, API failed, browser incomplete and preflight not run; its evidence is retained. Commit this repair and rerun the complete exact-candidate gate. [Evidence procedure](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## Canonical-host checkout fixture completion (2026-10-07)
+
+**LOCAL FIXTURE VERIFIED / FINAL GATE PENDING / PARITY UNCHANGED**. The `78701290` AI candidate completed 13/14 release stages, with one checkout helper host denial. Reused only PR117's compatible browser fixture: canonical auth registration with matching Origin, real browser login, loopback TLS fixture reads retaining Host, and isolated client IP. The corrected journey passes **1/1**, and auth-boundary regressions pass **7/7** including production loopback/module/lookalike and untrusted-forwarded-host denial. Production guards, commerce/provider/data-fabric code and account configuration are unchanged. Commit this verified follow-up, then run the full local gate and clean exact-identity smoke. Parent coordinates merge/publication; no hosted CI or paid API is authorized here. [Procedure and history](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## Final local guidance candidate continuation (2026-10-07)
+
+**LOCAL FIXTURES VERIFIED / FINAL CANDIDATE GATE PENDING**. Corrected the button to "Generate guidance" and added actor-bound replay and enabled-zero-budget concurrency checks; focused checks pass **45/45**. The complete `325b6108` local gate finished **12/14** stages, with API 1,623/1,626, integration 108/108, browser 32/33 and visual 4/4. Three API fixture corrections now pass **15/15** with original binding snapshots preserved; runtime entitlement rules are unchanged. A separate checkout test helper hits the correct production auth-host denial. Commit these verified fixture repairs before rerunning all 14 stages and the clean exact-commit build/supervisor smoke. No parallel checkout/provider source, push, spending or deployment occurred. [Candidate procedure and gates](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## Local review of budgeted TechDeck guidance (2026-10-07)
+
+**REVIEWED AND FIXED / LOCAL ONLY / PARITY UNCHANGED**. Review of `bfd9bf0d`
+preserves safe measured usage counts in shared telemetry without weakening secret
+filtering, distinguishes settled failures from uncertain retries, and displays
+bounded error references and a generating state. Inherited static checks now
+follow the extracted service and documentation-only copy remains visible.
+Legacy Chat Completions and Torque Assist compatibility pass; no global provider
+selection or credit/billing behavior changed. The selected gate passes **43/43**,
+actual populated v65 upgrade/reapply **1/1**, provider isolation/preflight **13/13**,
+offline/security regressions **13/13**, production build and all four typechecks.
+The compiled supervisor smoke passes on separate public/web ports with its local
+build identity checked, providers off and a disposable populated v66 database.
+Complete synthetic authority/billing/work/usage snapshots are unchanged after
+both v66 applications, and migration grants no AI spending. Four patched high
+exceptions remain disclosed; no critical/unresolved advisory or lockfile change.
+No push, paid API, account setting, production migration or publication occurred.
+Commands, corrected failures and artifacts: [review evidence](ai/LOCAL-REVIEW-2026-10-07.md).
+
+## Budgeted TechDeck Responses slice (2026-10-07, local only)
+
+**IMPLEMENTED / OFFLINE VERIFIED / NOT PUSHED OR DEPLOYED / PARITY UNCHANGED**.
+Isolated branch `codex/openai-responses-budget-oct7` extends the existing AI
+interface and TechDeck guidance form with stateless Responses, reviewed structured
+output, server-owned tenant budgets, durable reservations and measured cache-aware
+cost telemetry. Defaults allow no spending; unknown usage retains holds. Release
+step 66 is additive, with the first 65 steps integrity-tested unchanged. Existing
+AI/voice paths remain outside this new workflow's cap.
+
+Final focused API/browser checks pass **21/21**, offline environment **1/1**,
+parity quality gates **20/20**, provider isolation/preflight **13/13** and patched
+security regressions **12/12**, all zero fail/cancel/skip/todo. Production build,
+four workspace typechecks, current root lint, clean/idempotent disposable v66/66
+apply/verify and actual compiled Replit supervisor smoke pass. Four inherited
+patched high advisory exceptions remain disclosed and integrity-tested; zero
+critical/unresolved findings. No full release matrix, hosted CI, live model or
+deployed customer acceptance is inferred. Exact commands, environment, corrected
+fixture failures, artifacts and gates: [implementation evidence](ai/IMPLEMENTATION-EVIDENCE.md).
+
+Read-only current health reports serving `5b50b2ca`, build
+`224589f065463d1b7a8db358`, database v65/65; the October 6 acceptance below is
+historical. Landing commit `5aedd03da26f54fe4bf54dcce698ee04eb7d21b5` and its
+existing local SBOM modification remain preserved in their separate worktree.
+Push/CI/publication remain gated on GitHub's exhausted included minutes and
+unverified enforced $0 spending cap. Live provider/budget enablement and production
+migration need separate human decisions. [Revised stages and cost inventory](ai/OPENAI-FIRST-REVISED-PLAN.md).
+
 ## Exact-head CI static contract correction (2026-10-07)
 
 Both release runs for `cde70cef` (`37655864318` and `37655910611`) finish
@@ -81,6 +160,26 @@ schema/copy or real charge occurred. See
 
 This supersedes the extension-overlay blocker and current candidate CI status
 in the October 6 checkpoint; its prior deployed evidence remains historical.
+
+## Flagship landing/pricing current-main integration (2026-10-06 UTC)
+
+Status: **LOCAL INTEGRATION VERIFIED / NOT PUSHED OR DEPLOYED**.
+Branch `codex/flagship-landings-current-main` starts from verified documentation
+main `e62c89356f11d50940134790c8dad7e3eee268ab` and integrates preserved original
+landing/pricing commit `5e4c8c435405436eeef6fe33e27b13692c718a04`. Source applies
+without conflict; the two documentation overlays retain current-main publication
+history. The three audience pages, server-loaded catalog, failure/retry states
+and selection-preserving auth handoff do not change API authority or prices.
+The PR #115 dependency fixes and four existing advisory exceptions are retained
+unchanged. Fresh checks pass: 53 affected regressions, 15 mocked-provider/static
+commerce tests, 18 installed-package/security-policy tests and 18 compiled local
+Chromium cases, zero failures/skips/browser retries. Root lint, four-app typechecks
+and production build pass. The unchanged security gate now passes with zero
+unresolved IDs and four disclosed high advisories under the tested inherited
+exceptions; this is not a zero-vulnerability claim.
+No hosted CI, push or publication is authorized for this continuation; included
+Actions minutes are exhausted and additional cost protection is unverified.
+Fresh evidence is recorded in [the integration report](FLAGSHIP_LANDINGS_MAIN_INTEGRATION_2026-10-06.md).
 
 ## Final exact-commit commercial release gate (2026-10-06)
 

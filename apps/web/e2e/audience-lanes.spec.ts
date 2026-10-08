@@ -39,6 +39,7 @@ test('plan selection fails safely for unknown or repeated query values', async (
 });
 
 test('an unpaid Stack resumes its saved cart after return while paid and non-owner gates remain closed', async ({ page }) => {
+  const requestedCartPath = '/pricing?product=pulsedesk&companion=brandforgeos&additional=snapproofos&seats=2&utm_source=integration&billing=canceled#build-stack';
   await page.context().setExtraHTTPHeaders({ 'x-forwarded-for':`10.79.39.${10 + Math.floor(Math.random() * 200)}` });
   const account = {
     email: `checkout-recovery-${Date.now()}@example.com`,
@@ -46,15 +47,15 @@ test('an unpaid Stack resumes its saved cart after return while paid and non-own
   };
   if (process.env.E2E_PRODUCTION_HOSTS === '1') {
     const registration = await page.request.post(`${process.env.E2E_API_URL}/v1/auth/register`, {
-      headers: { host: 'auth.operatoros.net', 'x-forwarded-host': 'auth.operatoros.net', 'x-forwarded-proto': 'https' },
+      headers: { host: 'auth.operatoros.net', origin: 'https://auth.operatoros.net', 'x-forwarded-host': 'auth.operatoros.net', 'x-forwarded-proto': 'https' },
       data: account,
     });
     expect(registration.status(), await registration.text()).toBe(202);
-    await page.goto(`${WEB}/login?next=${encodeURIComponent('/pricing?product=pulsedesk&billing=canceled#build-stack')}`);
+    await page.goto(`${WEB}/login?next=${encodeURIComponent(requestedCartPath)}`);
     await page.getByTestId('input-email').fill(account.email);
     await page.getByTestId('input-password').fill(account.password);
     await Promise.all([
-      page.waitForURL(`${WEB}/pricing?product=pulsedesk&billing=canceled#build-stack`),
+      page.waitForURL(`${WEB}${requestedCartPath}`),
       page.getByTestId('button-login').click(),
     ]);
   } else {
@@ -65,6 +66,7 @@ test('an unpaid Stack resumes its saved cart after return while paid and non-own
   let status = 'incomplete';
   let role = 'owner';
   let submitted: unknown = null;
+  let catalogUnavailable = false;
   async function fetchLocal(route: Route) {
     // APIRequestContext does not inherit Chromium's exact-host DNS mapping.
     // Keep fixture reads on the loopback TLS proxy with the original Host.
@@ -76,6 +78,10 @@ test('an unpaid Stack resumes its saved cart after return while paid and non-own
     return response;
   }
   await page.route('**/api/billing/catalog', async route => {
+    if (catalogUnavailable) {
+      await route.fulfill({ status: 503, json: { error: 'Synthetic catalog unavailable' } });
+      return;
+    }
     const response = await fetchLocal(route);
     const catalog = await response.json();
     await route.fulfill({ json: { ...catalog, stripeConfigured: {
@@ -100,16 +106,21 @@ test('an unpaid Stack resumes its saved cart after return while paid and non-own
     submitted = route.request().postDataJSON();
     await route.fulfill({ status: 409, json: { error: 'Recovery request captured; nothing was charged.' } });
   });
-  await page.goto(`${WEB}/pricing?product=pulsedesk&billing=canceled#build-stack`);
+  await page.goto(`${WEB}${requestedCartPath}`);
   await expect(page.getByRole('button', { name: 'Resume Secure Checkout', exact: true })).toBeEnabled();
   await expect(page.getByTestId('stack-monthly-total')).toHaveText('$143/month');
+  await expect(page.getByTestId('additional-seat-count')).toHaveText('1');
   await expect(page.locator('#build-stack').getByRole('button', { name: /^TechDeck/ })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#build-stack').getByRole('button', { name: /^PulseDesk/ })).toBeDisabled();
+  await expect(page.locator('#build-stack').getByRole('button', { name: /^SnapProofOS\s*\$0/ })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Add additional seat', exact: true })).toBeDisabled();
   await expect(page.locator('.stack-summary')).toContainText('Paid access begins only after payment is confirmed');
   await page.getByTestId('stack-checkout-cta').click();
   await expect(page.getByRole('alert').filter({ hasText: 'Recovery request captured' })).toBeVisible();
   expect(submitted).toEqual({ coreProduct: 'techdeck', freeCompanionModule: 'snapproofos', additionalModules: ['brandforgeos'], additionalSeats: 1, interval: 'month' });
+  expect(new URL(page.url()).searchParams.get('product')).toBe('pulsedesk');
+  expect(new URL(page.url()).searchParams.get('seats')).toBe('2');
+  expect(new URL(page.url()).searchParams.get('utm_source')).toBe('integration');
 
   submitted = null;
   status = 'active';
@@ -119,6 +130,12 @@ test('an unpaid Stack resumes its saved cart after return while paid and non-own
   role = 'admin';
   await page.reload();
   await expect(page.getByRole('button', { name: 'Owner Action Required', exact: true })).toBeDisabled();
+  expect(submitted).toBeNull();
+  role = 'owner';
+  catalogUnavailable = true;
+  await page.reload();
+  await expect(page.getByRole('alert').filter({ hasText: 'Current pricing could not be loaded' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Resume Secure Checkout', exact: true })).toBeDisabled();
   expect(submitted).toBeNull();
 });
 
