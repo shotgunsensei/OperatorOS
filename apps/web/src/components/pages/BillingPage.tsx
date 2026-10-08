@@ -199,7 +199,7 @@ export default function BillingPage() {
             onClick={() => { window.location.href = applicationSubscription && !hasPendingCheckout ? '/app?page=tenant-billing' : '/pricing#build-stack'; }}
             disabled={!isOwner && (!applicationSubscription || hasPendingCheckout)}
             title={!isOwner && (!applicationSubscription || hasPendingCheckout) ? 'Only the organization owner can start Application Stack checkout' : undefined}
-            style={{ marginTop: 22, minHeight: 42, padding: '10px 16px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`, color: brand.accentInk, fontSize: 13, fontWeight: 800, cursor: !isOwner && !applicationSubscription ? 'not-allowed' : 'pointer', opacity: !isOwner && !applicationSubscription ? .55 : 1, display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: brand.ctaGlowSoft }}
+            style={{ marginTop: 22, minHeight: 42, padding: '10px 16px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`, color: brand.accentInk, fontSize: 13, fontWeight: 800, cursor: !isOwner && (!applicationSubscription || hasPendingCheckout) ? 'not-allowed' : 'pointer', opacity: !isOwner && (!applicationSubscription || hasPendingCheckout) ? .55 : 1, display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: brand.ctaGlowSoft }}
           >
             {!isOwner && hasPendingCheckout ? 'Owner action required' : hasPendingCheckout ? 'Resume Secure Checkout' : applicationSubscription ? 'View Application Stack details' : isOwner ? 'Build Application Stack' : 'Owner action required'} <ArrowRight size={14} />
           </button>

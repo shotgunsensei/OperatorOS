@@ -1219,7 +1219,7 @@ export async function listDataFabricActivity(input: { tenantId: string; actorUse
   return rows;
 }
 
-export async function getDataFabricRun(input: { tenantId: string; actorUserId: string; runId: string }) {
+export async function getDataFabricRun(input: { tenantId: string; actorUserId: string; runId: string; sourceModuleSlug?: string }) {
   if (!validId(input.runId)) throw new DataFabricError('FABRIC_RUN_ID_INVALID', 'runId must be a UUID');
   const found = await db.execute(sql`
     SELECT r.*,sm.slug AS source_module_slug,sm.name AS source_module_name,dm.slug AS destination_module_slug,dm.name AS destination_module_name,
@@ -1233,7 +1233,9 @@ export async function getDataFabricRun(input: { tenantId: string; actorUserId: s
     LEFT JOIN shared_resource_references dr ON dr.tenant_id=r.tenant_id AND dr.id=r.destination_reference_id
     LEFT JOIN shared_event_inbox i ON i.tenant_id=r.tenant_id AND i.workflow_run_id=r.id
     LEFT JOIN users u ON u.id=r.actor_user_id
-    WHERE r.tenant_id=${input.tenantId} AND r.id=${input.runId} LIMIT 1
+    WHERE r.tenant_id=${input.tenantId} AND r.id=${input.runId}
+      ${input.sourceModuleSlug ? sql`AND sm.slug=${input.sourceModuleSlug}` : sql``}
+    LIMIT 1
   `);
   const run = found.rows[0] as Row | undefined;
   if (!run) throw new DataFabricError('FABRIC_RUN_NOT_FOUND', 'Workflow run was not found or is not visible', 404);
