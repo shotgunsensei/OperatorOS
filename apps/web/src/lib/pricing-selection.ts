@@ -1,5 +1,5 @@
 import {
-  INCLUDED_SEATS,
+  MAX_ADDITIONAL_SEATS,
   isEligibleCompanionModuleKey,
   normalizeStackSelection,
   type CompanionModuleKey,
@@ -22,9 +22,8 @@ export type PricingSelectionQuery = {
   seats?: string | string[];
 };
 
-// Existing PostgreSQL integer capacity, including the five bundled seats.
-// This is an input sanity boundary; checkout policy and prices stay server-owned.
-export const MAX_PRICING_ADDITIONAL_SEATS = 2_147_483_647 - INCLUDED_SEATS;
+// Share the existing checkout/database limit; prices and access stay server-owned.
+export const MAX_PRICING_ADDITIONAL_SEATS = MAX_ADDITIONAL_SEATS;
 
 /** Public preferences only. Catalog prices, billing authority and access stay server-owned. */
 export function readPricingSelection(query: PricingSelectionQuery): PricingSelection {

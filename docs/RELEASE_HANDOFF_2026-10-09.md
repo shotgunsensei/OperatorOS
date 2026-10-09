@@ -69,13 +69,16 @@ tables and one budget index. There are no positive policy seeds, provider
 activation, customer backfills or new payment-schema steps. The conflicting
 PR114 research v66 is excluded.
 
-**Publication is held until the separately authorized database gate is met.**
+**Publication is held until the verified database/recovery gate is met.**
 `docs/DATABASE_BACKUP_RESTORE.md` requires: "Production backup, release apply,
 traffic switch, and restore are separate human-authorized operations."
-The current source release authority does not supply a missing backup or proof
-of development/production convergence. Have the owner/operator authorize and
-identify both targets, a fresh recoverable encrypted backup, traffic/write
-pause and the supported one-shot v66 operation. Keep private backup/data/URL
+The owner's standing authority covers normal reviewed reversible release
+operations, including this additive v66 apply. It does not supply a missing
+backup or proof of development/production convergence. The supported operator
+must identify both targets, verify fresh recoverable backup receipts, establish
+the traffic/write-pause window and use the supported one-shot v66 operation.
+Destructive changes and restore/traffic recovery need separate authorization.
+Keep private backup/data/URL
 material out of Git, Library reports and public logs; retain only safe receipt
 identifiers/checksums and aggregate reconciliation. Do not create paid storage.
 
@@ -96,6 +99,13 @@ positive policy seed. Never echo the database URL or secrets. Keep the apply
 variable unset in the serving/deployment environment. Automatic Replit
 database copy/apply stays off, production-data copy stays off, and destructive
 schema diffs are rejected. Do not substitute child migrations or ad hoc SQL.
+
+The supported operator verified clean Replit main at `58cab0cf`, with v65/65
+read-only root verification. Existing production PITR is On with a seven-day
+window and scheduled backups Off; no settings were changed. This establishes
+an observed recovery capability, not complete target-specific recovery receipts.
+Private production one-shot context, safe target mapping and the approved
+write-pause window must still be established without printing connection values.
 
 ## Build, publication and smoke
 

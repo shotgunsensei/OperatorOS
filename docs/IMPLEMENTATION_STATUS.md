@@ -1,5 +1,38 @@
 # OperatorOS implementation status
 
+## PR118 checkout boundary review (2026-10-09)
+
+Independent review identified an oversized-seat preference that the URL/UI
+and shared checkout normalizer accepted. The real disposable database rejects
+it under the existing `additional_seats BETWEEN 0 AND 10000` constraint before
+an intent/session can persist; the claimed persisted-cart poisoning did not
+reproduce. The remaining defect did reproduce: provider price/customer stub
+calls precede the constraint error, whose SQL details reach the caller.
+
+The shared SDK now enforces that existing 10,000-seat limit and a conservative
+USD total ceiling before provider requests or pending-intent writes. Public
+preferences and pending-cart presentation use the same bounds. Invalid stored
+selections fail closed without rewriting or discarding a valid authoritative
+cart. Current healthy v60+ constraints prevent oversized carts from existing;
+no speculative data cleanup or migration is added.
+
+Stripe's current [currency documentation](https://docs.stripe.com/currencies)
+distinguishes most-card, AmEx and non-card limits. The chosen USD non-card
+ceiling is 99,999,999 cents; payment methods can be stricter, so this does not
+certify provider acceptance. Tests include the exact seat boundary, total
+overflow, zero stub provider calls/no persisted intent for invalid input,
+subsequent valid checkout, and unchanged valid-cart retry authority.
+
+Fresh focused command: `corepack pnpm --dir apps/api exec tsx --test
+--test-concurrency=1 test/pricing-selection.test.ts
+test/commerce-forward-model-db.test.ts
+test/application-stack-checkout-recovery.test.ts`: **23/23**, zero failures,
+skips or cancellations, using disposable loopback PostgreSQL and provider
+stubs without credentials. Initial red, dependency-link and test-harness
+failures remain in the external receipt. Original PR head `44e9eccc` passed
+both required workflows, including all 14 release scopes; this runtime repair
+requires its own exact-head checks and independent review before merge.
+
 ## TradeFlowKit payment cancellation and current release (2026-10-09)
 
 Current live main is `74dc1e3b`, build `a8b41fff98705abb62132f29`,

@@ -2,6 +2,21 @@
 
 Status: current execution plan
 
+## PR118 independent review repair (2026-10-09)
+
+Align pricing preferences, pending-cart presentation and server normalization
+with the existing 10,000 additional-seat database constraint. Enforce the
+reviewed USD checkout total ceiling before provider calls or intent writes;
+preserve valid server-owned carts and avoid speculative data cleanup.
+Focused regressions pass 23/23 without paid provider calls. The prior PR head
+has green required CI; require fresh exact-head CI and review for this repair
+before merging. Preserve all original AI, integration and landing branches.
+
+Standing authority covers ordinary reviewed reversible release operations.
+Replit publication still requires safe target mapping, verified recoverable
+backup receipts, a write-pause window and independent v66/66 verification.
+Destructive changes or restore/traffic recovery require separate authorization.
+
 ## TradeFlowKit first customer outcome (2026-10-09)
 
 Current main `74dc1e3b` has green exact-main release CI and is serving healthy

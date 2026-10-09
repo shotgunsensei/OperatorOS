@@ -40,6 +40,12 @@ export interface ModuleCatalogItem {
 }
 
 export const INCLUDED_SEATS = 5;
+// Match the existing tenant_application_subscriptions_seats_check constraint.
+export const MAX_ADDITIONAL_SEATS = 10000;
+// USD non-card ceiling, below the general card/AmEx ceilings. Individual
+// payment methods can impose stricter limits; this does not promise acceptance.
+// Verified 2026-10-09: https://docs.stripe.com/currencies#maximum-charge-amounts
+export const MAX_STACK_MONTHLY_CENTS = 99_999_999;
 export const COMPANION_MODULE_PRICE_CENTS = 2900;
 export const DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS = 1500;
 
@@ -153,6 +159,15 @@ export function getAdditionalSeatPriceCents(envValue?: string): number {
   return DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS;
 }
 
+export function assertStackCheckoutBounds(additionalSeats: number, totalMonthlyCents: number): void {
+  if (!Number.isSafeInteger(additionalSeats) || additionalSeats < 0 || additionalSeats > MAX_ADDITIONAL_SEATS) {
+    throw new Error(`Additional seats must be an integer between 0 and ${MAX_ADDITIONAL_SEATS}`);
+  }
+  if (!Number.isSafeInteger(totalMonthlyCents) || totalMonthlyCents < 0 || totalMonthlyCents > MAX_STACK_MONTHLY_CENTS) {
+    throw new Error('Application Stack monthly total exceeds the supported USD checkout amount');
+  }
+}
+
 export function normalizeStackSelection(selection: StackSelection): StackSelection {
   if (!CORE_PRODUCTS_BY_KEY[selection.coreProduct]) {
     throw new Error(`Unknown core product: ${selection.coreProduct}`);
@@ -168,9 +183,10 @@ export function normalizeStackSelection(selection: StackSelection): StackSelecti
   }
 
   const additionalSeats = selection.additionalSeats ?? 0;
-  if (!Number.isSafeInteger(additionalSeats) || additionalSeats < 0) {
-    throw new Error('Additional seats must be a non-negative integer');
-  }
+  assertStackCheckoutBounds(additionalSeats,
+    CORE_PRODUCTS_BY_KEY[selection.coreProduct].monthlyPriceCents
+    + additionalModules.length * COMPANION_MODULE_PRICE_CENTS
+    + additionalSeats * DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS);
 
   return { ...selection, additionalModules, additionalSeats };
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COMPANION_MODULES, CORE_PRODUCTS, calculateStackMonthlyPrice, type CompanionModuleKey } from '@operatoros/sdk';
+import { COMPANION_MODULES, CORE_PRODUCTS, assertStackCheckoutBounds, calculateStackMonthlyPrice, normalizeStackSelection, type CompanionModuleKey } from '@operatoros/sdk';
 import { pricingAccountPath, pricingSelectionPath, readPricingSelection } from '../../web/src/lib/pricing-selection';
 import { sanitizeReturnTo } from '../../../packages/modules/public-url';
 
@@ -51,11 +51,14 @@ test('untrusted query values cannot add excluded companions, duplicate charges, 
   assert.deepEqual(readPricingSelection({ product: ['techdeck', 'pulsedesk'], companion: ['ninjamation', 'snapproofos'], additional: ['brandforgeos', 'ninjamation'] }), readPricingSelection({}));
 });
 
-test('seat preferences must fit the existing integer capacity including the five included seats', () => {
-  for (const seats of ['2147483643', '2147483647', '9007199254740991']) {
+test('seat preferences and checkout validation respect the existing 10000 additional-seat database limit', () => {
+  for (const seats of ['10001', '2147483642', '2147483643', '2147483647', '9007199254740991']) {
     assert.equal(readPricingSelection({ seats }).additionalSeats, 0);
   }
-  assert.equal(readPricingSelection({ seats: '2147483642' }).additionalSeats, 2147483642);
+  const maximum = readPricingSelection({ seats: '10000' });
+  assert.equal(maximum.additionalSeats, 10000);
+  assert.equal(normalizeStackSelection(maximum).additionalSeats, 10000);
+  assert.throws(() => normalizeStackSelection({ ...maximum, additionalSeats: 10001 }), /Additional seats/);
 });
 
 test('handoff carries preferences only and has a fixed local return destination', () => {
@@ -63,4 +66,18 @@ test('handoff carries preferences only and has a fixed local return destination'
   const path = pricingAccountPath(readPricingSelection(query), 'register');
   assert.equal(new URL(path, 'https://operatoros.net').searchParams.get('next'), '/pricing?product=tradeflowkit#build-stack');
   for (const untrusted of ['outside.example', 'tenantId', 'foreign', 'role', 'price=', 'token', 'untrusted']) assert.equal(path.includes(untrusted), false);
+});
+
+test('USD checkout total has a safe ceiling independent of the seat-count boundary', () => {
+  assert.doesNotThrow(() => assertStackCheckoutBounds(10000, 99_999_999));
+  for (const total of [100_000_000, Number.MAX_SAFE_INTEGER, Number.NaN, -1, 1.5]) {
+    assert.throws(() => assertStackCheckoutBounds(0, total), /monthly total/);
+  }
+  for (const product of CORE_PRODUCTS) {
+    const maximum = normalizeStackSelection({
+      coreProduct: product.key, freeCompanionModule: 'snapproofos',
+      additionalModules: COMPANION_MODULES.map(module => module.key as CompanionModuleKey), additionalSeats: 10000,
+    });
+    assert.ok(calculateStackMonthlyPrice(maximum).totalMonthlyCents < 99_999_999);
+  }
 });
