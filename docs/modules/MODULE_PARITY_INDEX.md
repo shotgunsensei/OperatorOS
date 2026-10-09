@@ -8,13 +8,16 @@ the original combined AI/landing tree remains local at `aa6b5ea4`.
 
 | Outcome | Fresh local evidence | Remaining acceptance |
 | --- | --- | --- |
-| TradeFlowKit canceled manual payment | Reproduced accidental POST; reused PR112 null guard; 8 focused API and 2 desktop/mobile browser cases pass, no skips/retries; repeated Cancel preserves invoice/payment/job/audit, accepted empty/filled reference works, duplicates are rejected, viewer write is forbidden | Exact final build/browser receipts; authorized release after verified zero paid-usage route; deployed entitled non-admin tenant workflow |
+| TradeFlowKit canceled manual payment | Reproduced accidental POST; reused PR112 null guard; 8 focused API and 2 desktop/mobile browser cases pass, no skips/retries; clean ef4ba9b7 build and browser identity; repeated Cancel preserves invoice/payment/job/audit, accepted empty/filled reference works, duplicates are rejected, viewer write is forbidden | Exact release CI after reconciliation, approved v66 backup/apply/verify, supported-browser publication, deployed entitled non-admin tenant workflow |
 | Existing paid acquisition and business payments | Current-main CI/public health; synthetic manual-payment journey is provider-free | Stack purchase and signed settlement; separate Stripe Connect customer-payment configuration/settlement; actual delivery and approved legacy-data cutover |
 | TechDeck monetary control | Preserved default-disabled tenant Responses budget | Separate activation/acceptance; legacy AI/voice/provider routes remain outside this new workflow-specific cap |
 
 See [payment cancellation evidence](tradeflowkit/PAYMENT_CANCEL_ACCEPTANCE_2026-10-09.md).
 This overlay supersedes stale main CI/publication statements below without
 promoting any module to deployed customer acceptance.
+The dedicated browser task has verified the existing account-wide Actions $0
+stopping budget including artifact storage. Parent source-release clearance
+does not waive the [database/publication runbook](../RELEASE_HANDOFF_2026-10-09.md).
 
 ## Coordinated integration checkpoint (2026-10-07)
 

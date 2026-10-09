@@ -26,6 +26,12 @@ the worker and queues ready. Provider flags say configured; they do not
 prove delivery or successful customer use. The unauthenticated TradeFlowKit
 invoice host returns 307 to canonical `https://auth.operatoros.net/login`.
 
+At 16:29 UTC remote main is `58cab0cf0f6f9232403dc15e8f5ee5836b9ad14c`,
+a Replit publication marker with parent `74dc1e3b` and the identical source
+tree `42ba17257f30c8709da6367b4418d03460fe2e20`. Public health/readiness still
+serve the `74dc1e3b` artifact above. The marker is reconciled into this isolated
+branch without changing source or the preserved original worktrees.
+
 GitHub release run
 [37820669355](https://github.com/shotgunsensei/OperatorOS/actions/runs/37820669355)
 is completed/success at exact main `74dc1e3b`, verified with owner-authenticated
@@ -120,7 +126,7 @@ high advisory exceptions remain disclosed and unchanged:
 
 The owner authorized ordinary end-to-end source release on October 9.
 Publication is not held for a new general release approval. New paid usage is
-not authorized. Owner-authenticated billing-summary reads return 404; the
+not authorized. Earlier owner-authenticated billing-summary reads return 404; the
 cache-storage-limit endpoint returns 402 requiring a valid payment method.
 Neither result alone proves artifact-storage enforcement. A background Chrome
 window opens the exact GitHub budgets URL, but read-only Windows accessibility
@@ -128,13 +134,19 @@ exposes the toolbar and no document text. Automatic approval review rejects
 focusing that window because it could interrupt the owner's browser session;
 no workaround, access change, secret entry or settings mutation is performed.
 
-The concrete human step is to inspect existing
-`https://github.com/settings/billing/budgets` and confirm an owner-wide Actions
-budget of $0 with **Stop usage when budget limit is reached** enabled,
-including artifact storage, or independently confirm an existing equivalent
-that blocks paid usage (such as no valid payment method on file). An alert-only
-budget is not enforcement. Report the existing values only. The current
-read-only confirmation question remains pending.
+The dedicated supported-extension browser task subsequently verifies the
+existing account `shotgunsensei`, Product Actions, **Stop usage Yes**, **$0 spent**
+and **$0 budget**. Its read succeeds before notice of the native-focus denial;
+it makes no native focus call, setting change or workaround. Product Actions
+includes `actions_storage` according to the
+[official product/SKU reference](https://docs.github.com/en/billing/reference/product-and-sku-names).
+Evidence is retained at
+`C:\Users\John Xodus\Documents\Codex\2026-10-09\task-2\browser-access-evidence-2026-10-09.md`.
+The parent clears authorized push/PR/required CI/merge and release preparation
+on that evidence. This supersedes the earlier pending budget confirmation;
+native focus remains prohibited. The dedicated browser operator owns Replit
+publication after exact-source checks and the separate database safety gate.
+See [the release runbook](../../RELEASE_HANDOFF_2026-10-09.md).
 
 The local TechDeck Responses monetary cap is workflow-specific. It requires
 an explicit spend switch, provider/model/pricing configuration and a trusted

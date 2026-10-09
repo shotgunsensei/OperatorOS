@@ -25,6 +25,17 @@ The new TechDeck monetary cap does not cover retained legacy AI/provider paths.
 No paid API, live payment, production migration or account-setting change is
 used in this local acceptance slice.
 
+The dedicated supported browser task verifies the existing account-wide
+Product Actions $0 stopping budget, including artifact storage; the parent
+clears source push/PR/required CI/merge. Native focus remains prohibited.
+Remote marker `58cab0cf` has main's identical tree and is reconciled locally.
+Clean payment-fix build `0b7e8878516111e313c8c520` and final browser **2/2**,
+zero skips/retries, identify `ef4ba9b7`; subsequent release documentation and
+source-identical ancestry reconciliation require their own exact-source CI.
+Replit publication remains with the browser operator and requires independently
+approved backup and v66/66 apply/verify on both selected databases.
+[Release handoff](RELEASE_HANDOFF_2026-10-09.md).
+
 ## Coordinated integration checkpoint (2026-10-07)
 
 **LOCAL INTEGRATION / FOCUSED MERGED-SOURCE PASS / COMBINED GATE PENDING**.
