@@ -2,6 +2,48 @@
 
 Status: current execution plan
 
+## PR118 independent review repair (2026-10-09)
+
+Align pricing preferences, pending-cart presentation and server normalization
+with the existing 10,000 additional-seat database constraint. Enforce the
+reviewed USD checkout total ceiling before provider calls or intent writes;
+preserve valid server-owned carts and avoid speculative data cleanup.
+Focused regressions pass 23/23 without paid provider calls. The prior PR head
+has green required CI; require fresh exact-head CI and review for this repair
+before merging. Preserve all original AI, integration and landing branches.
+
+Standing authority covers ordinary reviewed reversible release operations.
+Replit publication still requires safe target mapping, verified recoverable
+backup receipts, a write-pause window and independent v66/66 verification.
+Destructive changes or restore/traffic recovery require separate authorization.
+
+## TradeFlowKit first customer outcome (2026-10-09)
+
+Current main `74dc1e3b` has green exact-main release CI and is serving healthy
+v65/65. Preserve the validated local combined AI/landing candidate `aa6b5ea4`.
+Prioritize the concrete invoice payment-cancel defect and first customer
+acceptance over adding modules. The compatible PR112 guard and desktop/mobile
+workflow are reused; focused API, browser, build/typecheck and lint checks pass.
+The [payment evidence](docs/modules/tradeflowkit/PAYMENT_CANCEL_ACCEPTANCE_2026-10-09.md)
+defines the exact source, retained reproduction, final artifact identities,
+provider boundaries and customer acceptance criteria.
+
+Ordinary PR/merge/Replit release is authorized. The dedicated browser task
+verifies an existing account-wide Product Actions $0 budget with stopping
+enabled, including artifact storage. Perform the required exact-revision
+release checks and supported Replit synchronization
+without overwriting unrelated work. A combined v66 release separately requires
+approved recoverable backup and ordered development/production apply/verify.
+Do not enable provider spending or treat the local TechDeck cap as a global
+legacy-AI dollar limit. Finish with exact deployed identity and an approved
+entitled non-admin TradeFlowKit outcome; local synthetic evidence alone is not
+customer acceptance. The earlier phase/status entries below remain historical.
+
+Remote publication marker `58cab0cf` has the same source tree as `74dc1e3b` and
+is reconciled without dropping the preserved AI or landing work.
+[The exact-source publication runbook](docs/RELEASE_HANDOFF_2026-10-09.md)
+defines backup/apply gates, serving-mode checks and recovery.
+
 ## TechDeck semantic retrieval continuation (2026-09-29)
 
 Phase 5 implements the remaining Prompt 5 semantic portion on

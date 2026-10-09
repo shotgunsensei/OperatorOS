@@ -24,6 +24,9 @@ test('P22-ADAPTER-SSO-001: production public auth accepts only the exact platfor
     'api.operatoros.net',
     'www.operatoros.net',
     'unknown.operatoros.net',
+    'localhost:5001',
+    '127.0.0.1:5001',
+    'auth.operatoros.net.example.com',
   ]) {
     assert.equal(isPlatformPublicAuthHostAllowed({ host, production: true, trustProxy: false }), false, host);
   }
@@ -62,6 +65,65 @@ test('P22-ADAPTER-SSO-001: production public auth accepts only the exact platfor
     production: false,
     trustProxy: false,
   }), false, 'unregistered public preview hosts cannot receive credentials');
+});
+
+test('local canonical auth fixture host/origin headers preserve production boundaries', async () => {
+  const { ensureSchemaReady } = await import('./_setup.js');
+  await ensureSchemaReady();
+  const { createHash } = await import('node:crypto');
+  const { sql } = await import('drizzle-orm');
+  const { db } = await import('../src/db.js');
+  const loopbackKeys = ['register:127.0.0.1', 'login:127.0.0.1']
+    .map(key => createHash('sha256').update(key).digest('hex'));
+  const loopbackSnapshot = async () => (await db.execute(sql`
+    SELECT key_hash, request_count, resets_at::text FROM auth_request_limits
+    WHERE key_hash IN (${sql.join(loopbackKeys.map(key => sql`${key}`), sql`, `)})
+    ORDER BY key_hash
+  `)).rows;
+  const loopbackBefore = await loopbackSnapshot();
+  const previous = { appEnv: process.env.APP_ENV, trustProxy: process.env.TRUST_PROXY };
+  const Fastify = (await import('fastify')).default;
+  const { registerAuthRoutes } = await import('../src/routes/auth-routes.ts');
+  const app = Fastify();
+  try {
+    process.env.APP_ENV = 'production';
+    process.env.TRUST_PROXY = '1';
+    await registerAuthRoutes(app);
+    await app.ready();
+    for (const url of ['/v1/auth/register', '/v1/auth/login']) {
+      for (const host of ['operatoros.net', 'app.operatoros.net', 'auth.operatoros.net']) {
+        // Keep this fixture's allowance separate from later loopback login tests.
+        const response = await app.inject({ method: 'POST', url, remoteAddress: '10.79.40.250', payload: {}, headers: {
+          host, origin: `https://${host}`, 'x-forwarded-host': host, 'x-forwarded-proto': 'https',
+        } });
+        assert.equal(response.statusCode, 400, `${url} ${host}: ${response.body}`);
+        assert.equal(response.json().code, 'VALIDATION_ERROR');
+        assert.equal(response.headers['set-cookie'], undefined);
+      }
+      for (const host of ['127.0.0.1:5001', 'localhost:5001', 'techdeck.operatoros.net', 'auth.operatoros.net.example.com']) {
+        const response = await app.inject({ method: 'POST', url, remoteAddress: '10.79.40.250', payload: {}, headers: {
+          host, origin: 'https://auth.operatoros.net', 'x-forwarded-host': host, 'x-forwarded-proto': 'https',
+        } });
+        assert.equal(response.statusCode, 403, `${url} ${host}: ${response.body}`);
+        assert.equal(response.json().code, 'AUTH_HOST_NOT_ALLOWED');
+        assert.equal(response.headers['set-cookie'], undefined);
+      }
+      process.env.TRUST_PROXY = 'false';
+      const untrusted = await app.inject({ method: 'POST', url, remoteAddress: '10.79.40.250', payload: {}, headers: {
+        host: '127.0.0.1:5001', origin: 'https://auth.operatoros.net',
+        'x-forwarded-host': 'auth.operatoros.net', 'x-forwarded-proto': 'https',
+      } });
+      assert.equal(untrusted.statusCode, 403, url);
+      assert.equal(untrusted.json().code, 'AUTH_HOST_NOT_ALLOWED');
+      process.env.TRUST_PROXY = '1';
+    }
+    assert.deepEqual(await loopbackSnapshot(), loopbackBefore,
+      'host-boundary fixtures must not consume another suite\'s loopback allowance');
+  } finally {
+    await app.close();
+    if (previous.appEnv === undefined) delete process.env.APP_ENV; else process.env.APP_ENV = previous.appEnv;
+    if (previous.trustProxy === undefined) delete process.env.TRUST_PROXY; else process.env.TRUST_PROXY = previous.trustProxy;
+  }
 });
 
 test('OperatorOS browser client builds a platform token while child clients stay tenant scoped', async () => {

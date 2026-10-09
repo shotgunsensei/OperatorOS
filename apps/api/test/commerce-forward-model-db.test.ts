@@ -88,6 +88,7 @@ let v60ConvergenceEvidence: {
 let customerCreateCalls = 0;
 let checkoutCreateCalls = 0;
 let checkoutRetrieveCalls = 0;
+let priceRetrieveCalls = 0;
 const portalCustomers: string[] = [];
 const portalConfigurations: string[] = [];
 const providerSubscriptions = new Map<string, any>();
@@ -424,7 +425,10 @@ before(async () => {
         },
       },
       prices: {
-        retrieve: async (id: string) => providerPrice(id),
+        retrieve: async (id: string) => {
+          priceRetrieveCalls += 1;
+          return providerPrice(id);
+        },
       },
     },
   });
@@ -578,6 +582,28 @@ test('raw tenant billing state is restricted to billing administrators and redac
     assert.doesNotMatch(allowed.body, /stripe_(?:customer|subscription|checkout|event)_id/i);
     assert.doesNotMatch(allowed.body, /cus_[A-Za-z0-9_]+|sub_[A-Za-z0-9_]+|cs_[A-Za-z0-9_]+/);
   }
+});
+
+test('invalid seat counts stop before provider calls or persistent checkout/customer state', async () => {
+  const before = { customerCreateCalls, checkoutCreateCalls, checkoutRetrieveCalls, priceRetrieveCalls };
+  for (const additionalSeats of [-1, 1.5, 10001, 2147483642]) {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/billing/stack/checkout',
+      headers: bearer(owner),
+      payload: {
+        interval: 'month', coreProduct: 'tradeflowkit', freeCompanionModule: 'snapproofos',
+        additionalModules: [], additionalSeats,
+      },
+    });
+    assert.equal(response.statusCode, 400, response.body);
+    assert.equal(response.json().code, 'STACK_CHECKOUT_INVALID');
+    assert.match(response.json().error, /Additional seats/);
+    assert.doesNotMatch(response.body, /insert into|params:|cus_/i);
+  }
+  assert.deepEqual({ customerCreateCalls, checkoutCreateCalls, checkoutRetrieveCalls, priceRetrieveCalls }, before);
+  assert.equal((await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.tenantId, owner.currentTenantId!))).length, 0);
 });
 
 test('application-stack checkout is monthly-only, resumes an open checkout, and enforces one flagship per tenant', async () => {

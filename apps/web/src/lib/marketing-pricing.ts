@@ -28,7 +28,7 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'additional-seats',
     question: 'Can I buy more seats?',
-    answer: 'Yes. Additional team seats are $15 per seat each month.',
+    answer: 'Yes. Review the current monthly price for each additional team seat in the Stack configurator.',
   },
   {
     slug: 'included-apps',
@@ -43,7 +43,7 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'additional-modules',
     question: 'What do additional companions cost?',
-    answer: 'Each eligible organization-wide companion beyond the included selection costs $29 per month.',
+    answer: 'Each eligible organization-wide companion beyond the included selection has an additional monthly cost. Review the current catalog price in the Stack configurator.',
   },
   {
     slug: 'billing-interval',

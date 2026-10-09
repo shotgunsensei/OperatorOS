@@ -13,6 +13,7 @@ test('pending checkout preserves the original cart rather than a new pricing-pag
     additionalModules: ['brandforgeos'], additionalSeats: 1,
   });
   assert.equal(pendingStackSelection({ ...pending, additionalSeats: 0 })?.additionalSeats, 0);
+  assert.equal(pendingStackSelection({ ...pending, additionalSeats: 10000 })?.additionalSeats, 10000);
 });
 
 test('settled, ended and missing subscriptions are not resumable unpaid carts', () => {
@@ -28,6 +29,7 @@ test('malformed or excluded pending selections fail closed without dropping paid
     { additionalModuleKeys: ['outcall'] }, { additionalModuleKeys: ['brandforgeos', 'brandforgeos'] },
     { additionalModuleKeys: ['snapproofos'] }, { additionalModuleKeys: 'brandforgeos' },
     { additionalModuleKeys: [null] }, { additionalSeats: -1 }, { additionalSeats: 1.5 },
-    { additionalSeats: '1' }, { additionalSeats: Number.MAX_SAFE_INTEGER + 1 },
+    { additionalSeats: '1' }, { additionalSeats: 10001 }, { additionalSeats: 2147483642 },
+    { additionalSeats: Number.MAX_SAFE_INTEGER + 1 },
   ]) assert.equal(pendingStackSelection({ ...pending, ...changes }), null);
 });
