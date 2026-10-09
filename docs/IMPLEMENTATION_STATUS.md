@@ -33,6 +33,12 @@ failures remain in the external receipt. Original PR head `44e9eccc` passed
 both required workflows, including all 14 release scopes; this runtime repair
 requires its own exact-head checks and independent review before merge.
 
+The root build now compiles the SDK before starting parallel application
+builds. A warm production build previously exited zero while Next reported
+the new SDK export missing: API-side SDK compilation raced the web build's
+older generated SDK output. Fresh SDK/web output is exercised after the
+ordering fix; no dependency versions, lockfile or release checks are changed.
+
 ## TradeFlowKit payment cancellation and current release (2026-10-09)
 
 Current live main is `74dc1e3b`, build `a8b41fff98705abb62132f29`,
