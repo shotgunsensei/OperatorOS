@@ -45,7 +45,7 @@ for (const width of [1440, 390]) test(`selected TradeFlowKit Stack survives acco
   expect(new URL(page.url()).searchParams.get('next')).toBe(next);
 });
 
-test('manipulated preferences stay local and cannot overflow the seat counter', async ({ page }) => {
+test('manipulated preferences stay local and obey the existing checkout seat limit', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   const query = new URLSearchParams({
@@ -58,10 +58,18 @@ test('manipulated preferences stay local and cannot overflow the seat counter', 
   await expect(page.getByTestId('stack-monthly-total')).toHaveText('$178/month');
   const href = await page.getByTestId('stack-create-account-cta').getAttribute('href');
   expect(new URL(href!, WEB).searchParams.get('next')).toBe('/pricing?product=tradeflowkit&additional=brandforgeos#build-stack');
-  await page.goto(`${WEB}/pricing?seats=2147483642#build-stack`);
-  await expect(page.getByTestId('additional-seat-count')).toHaveText('2147483642');
+  for (const seats of ['10001', '2147483642']) {
+    await page.goto(`${WEB}/pricing?seats=${seats}#build-stack`);
+    await expect(page.getByTestId('additional-seat-count')).toHaveText('0');
+    await expect(page.getByTestId('stack-monthly-total')).toHaveText('$149/month');
+    const correctedHref = await page.getByTestId('stack-create-account-cta').getAttribute('href');
+    expect(new URL(correctedHref!, WEB).searchParams.get('next')).toBe('/pricing?product=tradeflowkit#build-stack');
+  }
+  await page.goto(`${WEB}/pricing?seats=10000#build-stack`);
+  await expect(page.getByTestId('additional-seat-count')).toHaveText('10000');
   await expect(page.getByRole('button', { name: 'Add additional seat', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Remove additional seat', exact: true }).click();
-  await expect(page.getByTestId('additional-seat-count')).toHaveText('2147483641');
+  await expect(page.getByTestId('additional-seat-count')).toHaveText('9999');
+  await expect(page.getByRole('button', { name: 'Add additional seat', exact: true })).toBeEnabled();
   expect(errors).toEqual([]);
 });

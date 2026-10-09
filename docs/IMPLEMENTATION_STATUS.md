@@ -33,11 +33,13 @@ failures remain in the external receipt. Original PR head `44e9eccc` passed
 both required workflows, including all 14 release scopes; this runtime repair
 requires its own exact-head checks and independent review before merge.
 
-The root build now compiles the SDK before starting parallel application
-builds. A warm production build previously exited zero while Next reported
-the new SDK export missing: API-side SDK compilation raced the web build's
-older generated SDK output. Fresh SDK/web output is exercised after the
-ordering fix; no dependency versions, lockfile or release checks are changed.
+Local production-build attempts exited zero while Next reported the new SDK
+export missing. An ordered SDK build did not fix the warning. The copied
+cached Next launcher injected canonical `NODE_PATH`, selecting the old SDK;
+the isolated local launcher is corrected and the unnecessary build-order
+change is reverted. Fresh web output must pass with the actual SDK export.
+The required browser regression now exercises 10,000, 10,001 and the crafted
+oversized URL. Dependency versions, lockfile and release checks stay unchanged.
 
 ## TradeFlowKit payment cancellation and current release (2026-10-09)
 
