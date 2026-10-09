@@ -48,7 +48,9 @@ budget step and requires its reviewed backup/apply/verification sequence.
 The original immutable `7ea010a3` production artifact reproduces the bug:
 the 1440px test fails because dismissing the prompt issues one payment POST
 with `expectedVersion: 2` and `paymentMethod: other`. Runtime logs record a
-200 response for that write. The failed browser log and trace are retained.
+200 response for that write. The failed browser and runtime logs are retained.
+Later successful browser runs replaced the temporary screenshot/trace output;
+those failure images and traces are not part of the final evidence package.
 
 After the guard is applied:
 
@@ -105,7 +107,7 @@ node tradeflow-payment-oct9/run-check.mjs final-build
 node tradeflow-payment-oct9/run-check.mjs final-browser
 ```
 
-Logs, completion receipts, runtime identities, failed browser artifacts,
+Logs, completion receipts, runtime identities,
 source patches and the final release handoff are kept outside the repository
 at `C:\Users\John Xodus\Documents\Codex\2026-10-07\task\tradeflow-payment-oct9`.
 Original integration evidence and Library identities remain preserved in
