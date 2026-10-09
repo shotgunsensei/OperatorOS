@@ -1,5 +1,16 @@
 # TradeFlowKit parity matrix
 
+## Payment cancellation acceptance overlay (2026-10-09)
+
+The first-invoice/manual-payment journey now distinguishes dismissed prompts
+from explicitly accepted optional references. PR112's compatible guard and
+browser workflow are reused with stronger persistence, audit, duplicate and
+viewer assertions. Eight focused API tests and both desktop/mobile journeys
+pass locally; the new journey is required by the existing release browser
+runner. This proves a synthetic pre-entitled tenant workflow, not a Stripe
+purchase or real customer deployment. [Current evidence and remaining gates](PAYMENT_CANCEL_ACCEPTANCE_2026-10-09.md)
+preserve those distinctions and the earlier parity history.
+
 ## Executable-route closure truth notice (2026-08-17)
 
 The matrix below is historical implementation evidence. Current release truth

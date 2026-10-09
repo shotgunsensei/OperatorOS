@@ -1,5 +1,30 @@
 # OperatorOS implementation status
 
+## TradeFlowKit payment cancellation and current release (2026-10-09)
+
+Current live main is `74dc1e3b`, build `a8b41fff98705abb62132f29`,
+health/readiness 200 and v65/65, verified read-only October 9 at 15:51 UTC.
+Exact-main release run `37820669355` is green; the parent log audit records
+14/14 scopes, 1,611 API, 108 integration, 52 unit, 34 browser and four visual
+passes. Historical PR117 corrected-CI/publication-pending statements below
+are superseded for main. Local combined `aa6b5ea4` remains preserved separately.
+
+The payment-reference Cancel bug is reproduced against the preserved production
+artifact and corrected with PR112's explicit null guard. Focused API passes
+8/8, desktop/mobile browser passes 2/2 with no retries, production build/all
+four typechecks and zero-warning lint pass. The new required browser journey
+proves zero writes on repeated Cancel, accepted empty/filled references,
+in-flight disablement, durable single-payment/job consistency, rejected repeated
+writes and a server-enforced read-only teammate. See
+[the evidence and boundaries](modules/tradeflowkit/PAYMENT_CANCEL_ACCEPTANCE_2026-10-09.md)
+for exact commands, retained failure, preview/final identity distinction,
+publication authority, existing zero-cost/browsing gate, and missing customer
+outcomes. No candidate-wide new 14-stage or deployed acceptance is claimed.
+
+The new TechDeck monetary cap does not cover retained legacy AI/provider paths.
+No paid API, live payment, production migration or account-setting change is
+used in this local acceptance slice.
+
 ## Coordinated integration checkpoint (2026-10-07)
 
 **LOCAL INTEGRATION / FOCUSED MERGED-SOURCE PASS / COMBINED GATE PENDING**.

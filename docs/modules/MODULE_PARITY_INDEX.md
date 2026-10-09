@@ -1,5 +1,21 @@
 # OperatorOS module parity index
 
+## Current main and TradeFlowKit payment safety (2026-10-09)
+
+Live main `74dc1e3b` is identified by health/readiness 200, build
+`a8b41fff98705abb62132f29`, database v65/65. Exact-main release CI is green;
+the original combined AI/landing tree remains local at `aa6b5ea4`.
+
+| Outcome | Fresh local evidence | Remaining acceptance |
+| --- | --- | --- |
+| TradeFlowKit canceled manual payment | Reproduced accidental POST; reused PR112 null guard; 8 focused API and 2 desktop/mobile browser cases pass, no skips/retries; repeated Cancel preserves invoice/payment/job/audit, accepted empty/filled reference works, duplicates are rejected, viewer write is forbidden | Exact final build/browser receipts; authorized release after verified zero paid-usage route; deployed entitled non-admin tenant workflow |
+| Existing paid acquisition and business payments | Current-main CI/public health; synthetic manual-payment journey is provider-free | Stack purchase and signed settlement; separate Stripe Connect customer-payment configuration/settlement; actual delivery and approved legacy-data cutover |
+| TechDeck monetary control | Preserved default-disabled tenant Responses budget | Separate activation/acceptance; legacy AI/voice/provider routes remain outside this new workflow-specific cap |
+
+See [payment cancellation evidence](tradeflowkit/PAYMENT_CANCEL_ACCEPTANCE_2026-10-09.md).
+This overlay supersedes stale main CI/publication statements below without
+promoting any module to deployed customer acceptance.
+
 ## Coordinated integration checkpoint (2026-10-07)
 
 AI `2a388cdf` and PR117 `47d32d71` retain sealed module outcomes, legacy Assist

@@ -106,6 +106,7 @@ try {
       'e2e/techdeck-resolution-workspace.spec.ts',
       'e2e/techdeck-resolution-documents.spec.ts',
       'e2e/parity-route-control.spec.ts',
+      'e2e/tradeflowkit-first-outcome.spec.ts',
       'e2e/twilio-compliance.spec.ts',
       'e2e/callcommand-guided-setup.spec.ts',
       'e2e/cross-module-data-fabric-phase38.spec.ts',
