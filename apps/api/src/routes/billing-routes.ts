@@ -31,6 +31,7 @@ import {
   registerTorqueTokenWebhookHandler,
 } from '../lib/operatoros-token-billing.js';
 import { getPaymentProviderAdapter } from '../lib/shared-provider-adapters.js';
+import { stripeWebhookFailureDiagnostic, type StripeWebhookFailureStage } from '../lib/stripe-webhook-diagnostics.js';
 import {
   COMPANION_MODULES,
   COMPANION_MODULE_PRICE_CENTS,
@@ -538,6 +539,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       });
     }
 
+    let failureStage: StripeWebhookFailureStage = 'signature_verification';
     try {
       const signature = request.headers['stripe-signature'] as string;
       if (!signature) {
@@ -559,10 +561,13 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       // Canonical revenue dispatcher: Torque credit events are routed before
       // the generic plan/add-on claim. Signature verification happens exactly
       // once, and the shared receipt owns exactly-once fulfillment.
+      failureStage = 'credit_classification';
       if (await isTorqueTokenStripeEvent(event)) {
+        failureStage = 'credit_receipt';
         const received = await receiveVerifiedTorqueTokenStripeEvent({ event, rawBody });
         const receipt = received.receipt as Record<string, any>;
         const payload = (receipt.safe_payload_json ?? {}) as Record<string, any>;
+        failureStage = 'credit_dispatch_record';
         await recordTorqueStripeEventDispatch({
           event,
           tenantId: String(receipt.tenant_id),
@@ -587,7 +592,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       // with ON CONFLICT DO NOTHING. Duplicate => return early without
       // running side effects. Handler outcome updates the claim row with
       // processed_at or error_message so admin DLQ retry can see it.
+      failureStage = 'event_classification';
       const classification = classifyWebhookEvent(event);
+      failureStage = 'event_claim';
       const { claimedRowId, isDuplicate, duplicateState } = await claimStripeEvent(event, classification);
 
       if (isDuplicate) {
@@ -618,6 +625,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }
 
       let result: { handled: boolean; action?: string; error?: string };
+      failureStage = 'event_processing';
       try {
         result = classification.isFeatureAddon
           ? classification.featureKey === CALLCOMMAND_NUMBER_FEATURE_KEY
@@ -627,6 +635,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
             ? await processAddonWebhookEvent(event)
             : await processWebhookEvent(event);
       } catch (err: any) {
+        failureStage = 'event_status_update';
         if (claimedRowId) await markStripeEventFailed(claimedRowId, err.message ?? String(err));
         return reply.code(503).send({
           received: true,
@@ -636,6 +645,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }
 
       if (claimedRowId) {
+        failureStage = 'event_status_update';
         if (result.handled) {
           await markStripeEventProcessed(claimedRowId, result.action);
         } else {
@@ -652,9 +662,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       console.log(`[billing webhook] ${event.type} (${kind}): handled=${result.handled} action=${result.action || 'none'} matched=${classification.matchedAt}`);
       return { received: true, kind, ...result };
     } catch (err: any) {
-      console.error('[billing webhook] Verification or processing failed', {
-        code: typeof err?.code === 'string' ? err.code : 'WEBHOOK_REJECTED',
-      });
+      console.error('[billing webhook] Verification or processing failed', stripeWebhookFailureDiagnostic(failureStage, err));
       if (err instanceof OperatorOsTokenBillingError) {
         return reply.code(err.statusCode).send({
           error: 'Torque payment event validation failed',
