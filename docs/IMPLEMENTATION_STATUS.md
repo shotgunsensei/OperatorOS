@@ -1,5 +1,57 @@
 # OperatorOS implementation status
 
+## Reviewed Stripe diagnostics integrated into current main (2026-10-10)
+
+**LOCAL PASS / NORMAL PR CHECKS AND MERGE PENDING / NO MAIN PUBLICATION**.
+Branch `codex/stripe-webhook-diag-main-oct10` is based on freshly fetched
+remote main `6db8dacc45cd197b85f5853bda9e3fc936813140`. Only the independently
+reviewed diagnostic helper, webhook logging and tests from v65 commit
+`9f485444e34ce214982ea61e456c4a4c1ca3ecb7` are integrated. Both main's AI/
+checkout changes and manifest v66 remain intact. No source from main is reset
+or replaced with the older v65 tree; all unrelated tracked files are retained.
+
+The existing outer failure log emits fixed `code=WEBHOOK_REJECTED` and bounded
+stage/category values. HTTP, raw signature verification, claims, retries,
+idempotency, auth and tenant authority are unchanged. No payload, signature,
+credential, identifier, raw exception/SQL text or SQLSTATE is added to that
+diagnostic. Root cause and real customer acceptance remain open.
+
+Fresh local validation uses Node 24.16.0 and pinned pnpm 10.34.5, an offline
+frozen install (zero downloads), private-variable exclusion and a network
+blocker for validation children. **40 tests pass / 0 fail / 0 skip**:
+
+```powershell
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/stripe-webhook-diagnostics.test.ts test/callcommand-commercial-security-contract.test.ts test/stripe-mode-disabled.test.ts test/stripe-test-mode-enable.test.ts
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/ai-provider-legacy-compatibility.test.ts test/openai-responses-budget.test.ts
+corepack pnpm exec node --test scripts/phase39/security-scan.test.mjs scripts/phase39/image-size-regression.test.mjs scripts/phase39/launch-dependency-regression.test.mjs
+corepack pnpm --dir apps/api exec tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --skipLibCheck test/stripe-webhook-diagnostics.test.ts
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm --dir apps/api build
+```
+
+Four workspace typechecks, the diagnostic test's own typecheck, zero-warning
+lint and SDK/API compilation pass. AI tests retain legacy request/response
+compatibility, measured usage/refusal/incomplete/error handling and closed new
+spend defaults. This does not create a global monetary cap for retained legacy
+provider paths. The four inherited patched advisory exceptions remain
+disclosed and covered by fresh installed-package regressions:
+`GHSA-5p2g-fcmc-qvqq`, `GHSA-w3rx-r6r6-pgpr`, `GHSA-86w9-cpqp-85rv` and
+`GHSA-vfj7-8cjw-p6xm`. Lockfile, dependencies, patches and security policy stay
+unchanged. No new registry advisory audit or full local release-harness pass
+is claimed; normal exact-source PR gates remain required before merge.
+
+The coordinator reports the separately vetted v65 diagnostic deployment Live
+at 20:29:54 UTC, Replit build `dc29f272-1a7a-4684-bca5-1284e5961fab`; clean local
+checkpoint `55f7959aeea84a21418ac89048c109b795410433` has the same reviewed tree
+as `9f485444`. This source task did not observe runtime or publish main. Main/
+v66 production migration and publication remain outside scope, with the
+existing private target, recovery and current write-pause gates preserved.
+Module parity and product acceptance have not changed. Local commands, logs
+and code-equivalence receipts are under
+`C:\Users\John Xodus\Documents\Codex\2026-10-07\task\stripe-diag-main-oct10`.
+See [natural-retry examples and conditional next fixes](billing/STRIPE_WEBHOOK_DIAGNOSTIC_GUIDANCE_2026-10-10.md).
+
 ## PR118 checkout boundary review (2026-10-09)
 
 Independent review identified an oversized-seat preference that the URL/UI
