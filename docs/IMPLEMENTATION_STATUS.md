@@ -1,5 +1,58 @@
 # OperatorOS implementation status
 
+## Stripe webhook bounded failure diagnostics (2026-10-10)
+
+**LOCAL PASS / INDEPENDENT REVIEW AND RELEASE GATES OPEN**. Isolated branch
+`codex/stripe-webhook-diag-oct10` is based on the observed deployed source
+`58cab0cf0f6f9232403dc15e8f5ee5836b9ad14c` (database manifest v65).
+Only the existing outer webhook failure log gains a bounded `stage` and
+`category`; its `code` is now always `WEBHOOK_REJECTED`. No error text, SQL,
+SQLSTATE, payload, signature, credential or customer identifier is emitted
+by this diagnostic. Classification inspects only own exception data fields
+and at most four cause objects; unknown values remain `unknown`.
+
+Signature verification, raw-body handling, authentication, tenant authority,
+event claims, retries, duplicate handling, fulfillment and HTTP bodies/statuses
+are unchanged. The observed generic production 400s remain unexplained until
+an authorized deployment provides a discriminating stage. Existing processing
+errors that return 503 inside the handler retain their existing logging behavior.
+
+Fresh local checks use Node 24.16.0, pnpm 10.34.5, synthetic signatures,
+an environment allowlist excluding private configuration, and a network blocker
+for validation children. Frozen installation uses the existing offline cache
+with zero downloads. Final results: **33 passed / 0 failed / 0 skipped** across
+the following commands; four workspace typechecks, the diagnostic test's own
+typecheck, root lint with zero warnings, and SDK/API compilation also pass:
+
+```powershell
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/stripe-webhook-diagnostics.test.ts
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/callcommand-commercial-security-contract.test.ts test/stripe-mode-disabled.test.ts test/stripe-test-mode-enable.test.ts
+corepack pnpm exec node --test scripts/phase39/security-scan.test.mjs scripts/phase39/image-size-regression.test.mjs scripts/phase39/launch-dependency-regression.test.mjs
+corepack pnpm --dir apps/api exec tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --skipLibCheck test/stripe-webhook-diagnostics.test.ts
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm --dir apps/api build
+```
+
+The first broader contract selection included `addon-stripe-metadata.test.ts`;
+its database setup was blocked by the offline guard (**17 passed / 4 failed**).
+That original log is retained. The final selection above excludes that
+database-dependent suite rather than weakening the guard or reporting it as
+a pass. No database connection or mutation, provider API call, hosted workflow,
+push, production publication or customer acceptance occurred. This is not a
+full release-harness or production-readiness receipt.
+
+The four inherited patched advisory exceptions remain disclosed and covered
+by fresh installed-package regressions: `GHSA-5p2g-fcmc-qvqq`,
+`GHSA-w3rx-r6r6-pgpr`, `GHSA-86w9-cpqp-85rv`, and
+`GHSA-vfj7-8cjw-p6xm`. Dependency, patch and security-policy inputs are unchanged;
+no new registry advisory audit is claimed. This platform observability change
+does not change module parity or acceptance evidence.
+
+See [the diagnostic review and deployment options](STRIPE_WEBHOOK_DIAGNOSTICS_2026-10-10.md).
+Local raw logs, sanitized check receipts and the immutable patch package are
+under `C:\Users\John Xodus\Documents\Codex\2026-10-07\task\billing-webhook-2026-10-10`.
+
 ## Exact-head CI static contract correction (2026-10-07)
 
 Both release runs for `cde70cef` (`37655864318` and `37655910611`) finish
