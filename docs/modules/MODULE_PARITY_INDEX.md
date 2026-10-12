@@ -1,5 +1,16 @@
 # OperatorOS module parity index
 
+## Generic checkout expiry safety (2026-10-12)
+
+Parity remains unchanged. A canonical-dispatch generic unpaid-expiry acknowledgment
+passes actual route/SDK/database coverage, including concurrent claims,
+immutable receipts, active/expired leases, no authority changes, strict signature
+rejection and retained Torque settlement. The focused set passes 42/42; workspace
+types, strict new-test types and zero-warning lint pass. Full candidate checks,
+independent review, publication and deployed customer acceptance remain separate
+gates. The production signing-binding incident is not fixed by this code.
+See [the evidence and limits](../billing/CHECKOUT_EXPIRATION_2026-10-12.md).
+
 ## Current main and TradeFlowKit payment safety (2026-10-09)
 
 Live main `74dc1e3b` is identified by health/readiness 200, build
