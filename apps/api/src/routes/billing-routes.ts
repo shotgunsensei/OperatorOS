@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { BillingWebhookBindingError } from '../lib/billing-webhook-binding.js';
 import { db } from '../db.js';
 import { subscriptions, subscriptionPlans, billingEvents, modules, tenantEntitlements, tenants, tenantApplicationSubscriptions, addonSubscriptions } from '../schema.js';
 import { eq, desc, isNull, asc, and, inArray, sql } from 'drizzle-orm';
@@ -186,6 +187,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }, request);
       return result;
     } catch (error) {
+      if (error instanceof BillingWebhookBindingError) {
+        return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+      }
       const policy = error instanceof CommercePolicyError || error instanceof ProductEntitlementConflictError;
       return reply.code(policy ? error.httpStatus : 400).send({
         error: error instanceof Error ? error.message : 'Could not create checkout',

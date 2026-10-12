@@ -6080,3 +6080,14 @@ Release decision:
   reviewed owner waivers with reasons and scope. The release gate must not be
   made green by silently relabeling blocked work, adding skips, weakening
   assertions, or treating current partial module restoration as complete.
+
+
+## Dedicated billing binding candidate (2026-10-12, main)
+
+Isolated source base daf78578267ff929f049c0d7dc18619f03f28a82. John approved the specific namespace and owner-only private setup at2026-10-12T20:46:18Z; the transcript is retained unchanged in the local billing-binding-oct12 artifact folder.
+
+Canonical verification now requires OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET with no inherited generic-key fallback. One contract owns full-value format validation; one server snapshot drives SDK/adapter/health, while preflight and audit use the same policy. New Stack and credit Checkout initiation fail before provider/intent access when binding is missing/invalid. isStripeEnabled, cancellation/reactivation, refund/settlement, raw bytes, SDK arguments/default tolerance and receipt idempotency are preserved. Next and the DB verification child do not inherit this new credential. No schema/migration, API key, signing-key generation or provider activation change.
+
+Fresh local focused44/44 and security12/12 pass, zero fail/cancel/skip/todo. Workspace typechecks, dedicated test typecheck, zero-warning lint and SDK/API compilation pass. Two compiled-process smoke cases pass and prove the JSON contract is packaged; tests use synthetic values, an allowlisted environment and blocked networking. Frozen offline installations download zero packages. Initial check-helper PATH and an SDK declaration-only test issue were corrected; their failure logs remain. Required full aggregate release/vector CI and independent review are still pending at this checkpoint, and will be bound to immutable heads in the final receipt. Earlier main/v65 CI is not substituted for the new change.
+
+[Policy, owner setup and rollback](billing/DEDICATED_WEBHOOK_BINDING_2026-10-12.md). Account/workspace name absence and provider persistence/provenance remain owner checks. No agent has seen or set a real credential, pushed production config, published, migrated or replayed. New persistent binding entry is owner-only after the parent handoff; live signing acceptance and resumed checkout intake remain separate gates. Main integration preserves PR120/AI/v66; v65 gains no unrelated v66 work. Four patched advisory exceptions remain unchanged, disclosed and integrity-tested; no release gate is weakened.

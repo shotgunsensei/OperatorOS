@@ -10,7 +10,7 @@ import { cleanupModule, cleanupUser, createTestModule, createTestUser, ensureSch
 
 const fixtureSecret = 'whsec_synthetic_checkout_expiration_only';
 const prefix = `evt_expiry_${randomUUID().replaceAll('-', '')}`;
-const managedKeys = ['APP_ENV', 'NODE_ENV', 'OPERATOROS_DETERMINISTIC_PROVIDER_MODE', 'STRIPE_MODE', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'] as const;
+const managedKeys = ['APP_ENV', 'NODE_ENV', 'OPERATOROS_DETERMINISTIC_PROVIDER_MODE', 'STRIPE_MODE', 'STRIPE_SECRET_KEY', 'OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET'] as const;
 const savedEnv = new Map(managedKeys.map(key => [key, process.env[key]]));
 let app: FastifyInstance;
 let noRawBodyApp: FastifyInstance;
@@ -111,7 +111,7 @@ before(async () => {
   process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE = '0';
   process.env.STRIPE_MODE = 'test';
   process.env.STRIPE_SECRET_KEY = 'sk_test_synthetic_checkout_expiration_only';
-  process.env.STRIPE_WEBHOOK_SECRET = fixtureSecret;
+  process.env.OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET = fixtureSecret;
   billing = await import('../src/lib/billing-service.js');
   billing.__setStripeTestOverrides({ enabled: true, client: stripe });
   const { registerBillingRoutes } = await import('../src/routes/billing-routes.js');

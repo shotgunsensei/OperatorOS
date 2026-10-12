@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import http from 'node:http';
 import { resolve } from 'node:path';
-import { evaluateProductionEnvironment } from './production-env-preflight.mjs';
+import { evaluateProductionEnvironment, BILLING_WEBHOOK_SIGNING_ENV } from './production-env-preflight.mjs';
 
 const DEFAULT_API_PORT = 5001;
 const DEFAULT_PUBLIC_PORT = 5000;
@@ -226,6 +226,10 @@ export async function startUnifiedRuntime(env = process.env) {
     INTERNAL_API_URL: env.INTERNAL_API_URL ?? config.internalApiUrl,
     INTERNAL_SERVICE_HOST,
   };
+  // Only the API child verifies canonical Stripe webhooks. Do not grant the
+  // new signing binding to Next or the database verification child.
+  const nonBillingEnv = { ...runtimeEnv };
+  delete nonBillingEnv[BILLING_WEBHOOK_SIGNING_ENV];
   validateDeploymentEnvironment(runtimeEnv);
   const entrypoints = resolveRuntimeEntrypoints();
   for (const [name, path] of Object.entries(entrypoints)) {
@@ -280,7 +284,7 @@ export async function startUnifiedRuntime(env = process.env) {
   const databaseVerification = spawnNode(
     entrypoints.databaseReleaseEntry,
     ['--verify-current'],
-    runtimeEnv,
+    nonBillingEnv,
     process.cwd(),
     ['--conditions=production'],
   );
@@ -290,7 +294,7 @@ export async function startUnifiedRuntime(env = process.env) {
   const web = spawnNode(
     entrypoints.nextCli,
     ['start', '-p', String(config.nextPort), '-H', NEXT_INTERNAL_HOST],
-    { ...runtimeEnv, PORT: String(config.nextPort), INTERNAL_API_URL: config.internalApiUrl },
+    { ...nonBillingEnv, PORT: String(config.nextPort), INTERNAL_API_URL: config.internalApiUrl },
     resolve(process.cwd(), 'apps/web'),
   );
   children.add(web);
