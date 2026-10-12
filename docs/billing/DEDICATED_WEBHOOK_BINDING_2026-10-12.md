@@ -12,8 +12,10 @@ Canonical platform billing now requires
 OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET. The inherited generic
 STRIPE_WEBHOOK_SECRET is never selected or retried as a fallback, in any mode.
 Missing, empty and malformed dedicated values disable the canonical payment
-adapter and block new Stack and usage-credit Checkout initiation before SDK
-access or purchase-intent persistence. Tenant/owner and price validation remain
+adapter and block new Stack, usage-credit and CallCommand lane/number sales
+before provider access or purchase-intent persistence. CallCommand checks the
+locked existing entitlement before any idempotency write, so cancellation,
+included-only numbers and reductions of existing subscriptions remain available. Tenant/owner and price validation remain
 in their existing paths. Requests receive a bounded503 configuration error.
 
 One non-secret JSON contract owns the name and full-value format pattern.
@@ -38,8 +40,9 @@ Connect signing configuration is unchanged.
 isStripeEnabled() still describes the API key/mode. It is deliberately not
 changed to depend on signing readiness: that helper also controls legacy
 cancellation/provider management. Cancellation, reactivation, existing
-subscription management and refund/settlement code are preserved. Only new
-charge-initiating Stack and usage-credit Checkouts gain the additional guard.
+subscription management and refund/settlement code are preserved. New Stack and usage-credit Checkouts, plus new/increasing CallCommand paid
+capacity requests, gain the additional guard. CallCommand errors explicitly
+report503, the bounded binding code and providerActionConfirmed:false.
 The runtime supervisor omits this new credential from Next and database
 verification children; the API child retains the binding.
 

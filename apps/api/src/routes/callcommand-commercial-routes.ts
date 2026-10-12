@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
+import { BillingWebhookBindingError } from '../lib/billing-webhook-binding.js';
 import { db } from '../db.js';
 import { requireTenantAdmin, requireTenantModuleAccess, requireTenantModuleWriteAccess } from '../lib/tenant-auth.js';
 import { maskPhone, normalizeE164, phoneFingerprint } from '../lib/callcommand.js';
@@ -135,6 +136,7 @@ function fail(reply: FastifyReply, error: unknown) {
   const value = error as any;
   if (value instanceof CallCommandCommercialError
     || value instanceof CallCommandPhase35Error
+    || value instanceof BillingWebhookBindingError
     || (Number(value?.statusCode) >= 400 && Number(value?.statusCode) < 500)) {
     return reply.code(value.statusCode ?? 400).send({
       error: value.message,

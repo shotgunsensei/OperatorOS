@@ -1,3 +1,4 @@
+import './_billing-webhook-env.js';
 process.env.SESSION_SECRET ||= 'callcommand-guided-setup-test-secret';
 process.env.NODE_ENV = 'test'; process.env.APP_ENV = 'test';
 process.env.TWILIO_ACCOUNT_SID = `AC${'1'.repeat(32)}`;
