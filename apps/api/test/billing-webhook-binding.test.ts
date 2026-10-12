@@ -133,3 +133,63 @@ test('runtime projection excludes dedicated signing key from nonbilling children
   assert.match(runtime,/\{ \.\.\.nonBillingEnv, PORT: String\(config\.nextPort\)/);
   assert.match(runtime,/entrypoints\.apiEntry,[\s\S]*?\.\.\.runtimeEnv,/);
 });
+
+
+function callCommandFixture(kind:'lane'|'number',current:Record<string,any>|null) {
+  const source=readFileSync(fileURLToPath(new URL('../src/lib/callcommand-'+kind+'-billing.ts',import.meta.url)),'utf8').replace(/\r\n/g,'\n');
+  const name=kind==='lane'?'createOrUpdateCallCommandLaneCheckout':'requestCallCommandNumberBilling';
+  const start=source.indexOf('export async function '+name+'(');
+  const end=kind==='lane'?source.indexOf('\nexport ',start+10):source.indexOf('\nfunction metadataCandidates(',start);
+  assert.ok(start>0&&end>start);
+  const missing=captureBillingWebhookBinding({STRIPE_WEBHOOK_SECRET:inherited});
+  const calls={sdk:0,provider:0,intents:0,writes:0};
+  const sql=(chunks:TemplateStringsArray)=>chunks.join('?');
+  const execute=async(query:string)=>{
+    if(/INSERT|UPDATE|DELETE/.test(query.replace(/FOR UPDATE/g,'')))calls.writes++;
+    if(query.includes('COUNT(*)'))return {rows:[{local:0,toll_free:0}]};
+    if(query.includes('billing_entitlements')||query.includes('capacity_entitlements'))return {rows:current?[current]:[]};
+    return {rows:[]};
+  };
+  let selections=0;
+  const tx:any={execute,select(){const chain:any={from(){return chain;},where(){return chain;},innerJoin(){return chain;},async limit(){selections++;return [selections===1?{id:'module'}:selections===2?{id:'actor',status:'active',email:'fixture@example.test'}:{}];}};return chain;}};
+  const exports:Record<string,any>={};
+  runInNewContext(compile(source.slice(start,end)),{
+    exports,db:{execute,transaction:(fn:any)=>fn(tx)},sql,modules:{},users:{},tenantUsers:{},subscriptions:{},eq:()=>true,and:()=>true,
+    additionalLaneQuantity:(value:number)=>value,laneBillingIdempotencyKey:()=> 'synthetic-key',configuredPriceId:()=> 'price_synthetic',
+    quantity:(value:number)=>value,idempotencyKey:()=> 'synthetic-key',isStripeEnabled:()=>true,
+    assertBillingWebhookBindingReady:missing.assertReady,
+    getStripeFeatureBillingClient:()=>{calls.sdk++;return {subscriptions:{async update(){calls.provider++;return {};}}};},
+    beginIdempotentOperation:async()=>{calls.intents++;return {state:'acquired',id:'operation'};},completeIdempotentOperation:async()=>{},
+    getStripeCatalogClient:()=>({prices:{async retrieve(){calls.provider++;return {};}}}),recurringStripePriceError:()=>null,
+    getCallCommandLanePriceCents:()=>3000,configuredCents:()=>500,getStripeRuntimeMode:()=> 'test',
+    CALLCOMMAND_LANE_FEATURE_KEY:'concurrent_call_lane',CALLCOMMAND_LANE_ENTITLEMENT_KEY:'callcommand.concurrent_calls',CALLCOMMAND_LANE_PRICE_LOOKUP_KEY:'synthetic',
+    CALLCOMMAND_NUMBER_FEATURE_KEY:'managed_phone_numbers',stripeIdempotencyKey:()=> 'synthetic',stripeKey:()=> 'synthetic',
+  });
+  return {run:(input:any)=>exports[name]({tenantId:'tenant',userId:'actor',idempotencyKey:'synthetic-key',...input}),calls};
+}
+
+for(const kind of ['lane','number'] as const)for(const existing of [false,true])test('CallCommand '+kind+' '+(existing?'increase':'new checkout')+' blocks before SDK, idempotency or DB write',async()=>{
+  const current=existing?{stripe_subscription_id:'sub_fixture',stripe_subscription_item_id:'si_fixture',additional_lanes:1,licensed_billable_local_quantity:1,licensed_billable_toll_free_quantity:0}:null;
+  const fixture=callCommandFixture(kind,current);
+  await assert.rejects(fixture.run(kind==='lane'?{additionalLanes:2}:{billableLocalQuantity:2,billableTollFreeQuantity:0}),BillingWebhookBindingError);
+  assert.deepEqual(fixture.calls,{sdk:0,provider:0,intents:0,writes:0});
+});
+for(const kind of ['lane','number'] as const)for(const cancel of [false,true])test('CallCommand '+kind+' '+(cancel?'cancellation':'subscription reduction')+' remains available without binding',async()=>{
+  const fixture=callCommandFixture(kind,{stripe_subscription_id:'sub_fixture',stripe_subscription_item_id:'si_fixture',stripe_local_subscription_item_id:'si_local',additional_lanes:2,licensed_billable_local_quantity:2,licensed_billable_toll_free_quantity:0});
+  const result=await fixture.run(kind==='lane'?{additionalLanes:cancel?0:1}:{billableLocalQuantity:cancel?0:1,billableTollFreeQuantity:0});
+  assert.equal(result.action,'quantity_update_pending');assert.equal(fixture.calls.sdk,1);assert.ok(fixture.calls.provider>0);assert.equal(fixture.calls.intents,1);
+});
+test('CallCommand included-only numbers remain available without signing or Stripe access',async()=>{
+  const fixture=callCommandFixture('number',null);
+  assert.equal((await fixture.run({billableLocalQuantity:0,billableTollFreeQuantity:0})).action,'included_only');
+  assert.equal(fixture.calls.sdk,0);assert.equal(fixture.calls.provider,0);assert.equal(fixture.calls.intents,0);
+});
+test('CallCommand route exposes bounded binding error with no provider action',()=>{
+  const source=readFileSync(fileURLToPath(new URL('../src/routes/callcommand-commercial-routes.ts',import.meta.url)),'utf8').replace(/\r\n/g,'\n');
+  const start=source.indexOf('function fail('),end=source.indexOf('\nasync function moduleId(',start);
+  const exports:Record<string,any>={};let code=0,body:any;
+  runInNewContext(compile('export '+source.slice(start,end)),{exports,BillingWebhookBindingError,CallCommandCommercialError:class extends Error{},CallCommandPhase35Error:class extends Error{}});
+  exports.fail({code(value:number){code=value;return this;},send(value:any){body=value;}},new BillingWebhookBindingError());
+  assert.equal(code,503);assert.equal(body.code,'BILLING_WEBHOOK_BINDING_NOT_READY');assert.equal(body.providerActionConfirmed,false);
+  assert.doesNotMatch(JSON.stringify(body),/whsec_|SYNTHETIC/);
+});
