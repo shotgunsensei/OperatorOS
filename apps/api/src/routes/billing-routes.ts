@@ -624,10 +624,14 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         return { received: true, kind, handled: true, action: 'duplicate_ignored' };
       }
 
-      let result: { handled: boolean; action?: string; error?: string };
+      let result: { handled: boolean; action?: string; error?: string; shouldPropagate?: boolean };
       failureStage = 'event_processing';
       try {
-        result = classification.isFeatureAddon
+        // Only this verified dispatch has excluded Torque credit events. Keep
+        // saved-event admin retry on its existing separate processing path.
+        result = event.type === 'checkout.session.expired' && !classification.isAddon
+          ? { handled: true, action: 'checkout_expired_ignored', shouldPropagate: false }
+          : classification.isFeatureAddon
           ? classification.featureKey === CALLCOMMAND_NUMBER_FEATURE_KEY
             ? await processCallCommandNumberWebhookEvent(event)
             : await processCallCommandLaneWebhookEvent(event)

@@ -1,5 +1,34 @@
 # OperatorOS implementation status
 
+## Generic checkout expiration acknowledgment (2026-10-12)
+
+**IMPLEMENTED / ISOLATED DATABASE VERIFIED / PRODUCTION ACCEPTANCE OPEN**.
+The clean `codex/checkout-expired-oct12` worktree starts from verified main
+`210482a380b4cf663315c3cece17c3787dd86682`. A generic signed unpaid
+`checkout.session.expired` previously returned `handled=false` and a retryable
+503. The canonical verified dispatch acknowledges it without changing cart,
+subscription, entitlement, or credit authority. Torque keeps its earlier shared
+receipt dispatcher; unsupported generic and separate add-on events retain their
+existing retry behavior. Signature verification, leases and claims are unchanged.
+
+Actual Fastify/Stripe SDK/PostgreSQL regressions reproduce four failures on
+unchanged main and pass after the correction. Final focused verification is
+**42/42**, zero failures/cancellations/skips/todos, including twelve new expiration
+tests and existing Stack, add-on DLQ, Torque, CallCommand and diagnostics tests.
+All four workspace typechecks, strict typechecking of the new test, and root
+zero-warning lint pass. The isolated environment excludes inherited provider
+credentials and confines database traffic to the task-owned loopback PostgreSQL
+container. No production, replay, credential or account-setting action occurred.
+
+The full exact-candidate release contract and independent review follow this
+checkpoint; no module is promoted to deployed customer acceptance. This code
+does not repair the existing production signature rejection. The owner reports
+he almost certainly did not submit the last outer Republish; current masked
+binding/source/generation inspection and owner-only credential submission remain
+necessary. Browser runtime, migration, recovery and interruption gates are open.
+Commands, retained harness failures and scope are in
+[the regression evidence](billing/CHECKOUT_EXPIRATION_2026-10-12.md).
+
 ## Reviewed Stripe diagnostics integrated into current main (2026-10-10)
 
 **LOCAL PASS / NORMAL PR CHECKS AND MERGE PENDING / NO MAIN PUBLICATION**.
