@@ -55,7 +55,7 @@ type StripeClient = {
   customers: { create: (args: unknown, options?: { idempotencyKey?: string }) => Promise<{ id: string }> };
   subscriptions: {
     update: (id: string, args: unknown) => Promise<any>;
-    retrieve: (id: string, args?: unknown) => Promise<any>;
+    retrieve: (id: string, args?: unknown, options?: { timeout?: number; maxNetworkRetries?: number }) => Promise<any>;
   };
   billingPortal: {
     sessions: { create: (args: unknown) => Promise<{ url: string }> };
