@@ -5,3 +5,4 @@
 // late — ESM hoists imports to the top.
 process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_for_unit_tests';
 process.env.STRIPE_MODE = process.env.STRIPE_MODE || 'live';
+process.env.OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET ??= 'whsec_dummy_for_unit_tests';

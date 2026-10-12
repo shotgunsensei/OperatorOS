@@ -10,7 +10,7 @@ Set these existing deployment secrets in the correct Stripe account/mode:
 
 ```text
 STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET
+OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET
 STRIPE_MODE=test        # "test" for the sandbox, "live" for production
 STRIPE_EXPECTED_ACCOUNT_ID
 STRIPE_PRICE_TRADEFLOWKIT_MONTHLY
@@ -126,7 +126,7 @@ For local testing, forward events with the Stripe CLI:
 stripe listen --forward-to localhost:5001/v1/billing/webhook
 ```
 
-Use the `whsec_…` secret it prints as `STRIPE_WEBHOOK_SECRET`.
+Use the `whsec_…` secret it prints as `OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET`.
 
 Checkout metadata includes `billing_model`, `tenant_id`, `user_id`,
 `selected_core_product`, `selected_free_companion_module`,

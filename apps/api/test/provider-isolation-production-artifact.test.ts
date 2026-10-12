@@ -16,7 +16,7 @@ const ISOLATED_ENV = {
   EMAIL_FROM: 'OperatorOS Test <test@example.test>',
   STRIPE_MODE: 'live',
   STRIPE_SECRET_KEY: 'sk_live_deterministic_provider_test_only',
-  STRIPE_WEBHOOK_SECRET: 'whsec_deterministic_provider_test_only',
+  OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET: 'whsec_deterministic_provider_test_only',
   STRIPE_CLIENT_ID: 'ca_deterministic_provider_test',
   TRADEFLOWKIT_PAYMENT_PROVIDER: 'stripe_connect',
   TRADEFLOWKIT_STRIPE_CONNECT_WEBHOOK_SECRET: 'whsec_deterministic_provider_test_only',

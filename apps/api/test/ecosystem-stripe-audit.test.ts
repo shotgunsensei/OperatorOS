@@ -27,7 +27,7 @@ test('all recurring billing flows reject wrong amounts, modes, cadences and quan
 });
 
 function fixture() {
-  const env: Record<string, string> = { STRIPE_MODE: 'test', STRIPE_EXPECTED_ACCOUNT_ID: 'acct_test', STRIPE_WEBHOOK_SECRET: 'whsec_test', STRIPE_BILLING_PORTAL_CONFIGURATION_ID: 'bpc_test' };
+  const env: Record<string, string> = { STRIPE_MODE: 'test', STRIPE_EXPECTED_ACCOUNT_ID: 'acct_test', OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET: 'whsec_test', STRIPE_BILLING_PORTAL_CONFIGURATION_ID: 'bpc_test' };
   const catalog = recurringCommercialPrices(env);
   const priceById = new Map<string, any>();
   for (const item of catalog) {

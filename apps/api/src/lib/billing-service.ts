@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import crypto from 'node:crypto';
+import { assertBillingWebhookBindingReady, billingWebhookBindingStatus, billingWebhookSigningSecret } from './billing-webhook-binding.js';
 import { createRequire } from 'node:module';
 import {
   users, subscriptions, subscriptionPlans, billingEvents, activityFeed,
@@ -84,7 +85,7 @@ let __stripeSingleton: StripeClient | null = null;
 // To enable Stripe (test sandbox OR live production):
 //   1. Set STRIPE_SECRET_KEY in your environment secrets
 //      (sk_test_… for the sandbox, sk_live_… for production)
-//   2. Set STRIPE_WEBHOOK_SECRET in your environment secrets
+//   2. Set OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET in production deployment secrets
 //   3. Set the forward application-stack and capacity Price IDs documented in
 //      .env.example; stripe:verify:ecosystem checks all eleven commercial SKUs
 //   4. Set STRIPE_MODE=test (sandbox) or STRIPE_MODE=live (production)
@@ -94,7 +95,6 @@ let __stripeSingleton: StripeClient | null = null;
 // ---------------------------------------------------------------------------
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 // Raw env value (empty string when unset). Stripe is only enabled when this is
 // EXPLICITLY 'test' or 'live' — a missing/unknown mode leaves billing disabled.
 const STRIPE_MODE = process.env.STRIPE_MODE ?? '';
@@ -779,6 +779,8 @@ export async function createStackCheckoutSession(
     throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
+  assertBillingWebhookBindingReady();
+
   const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
   if (!user) throw new Error('User not found');
 
@@ -1205,6 +1207,7 @@ export async function createUsageCreditCheckoutSession(
       code: 'STRIPE_NOT_CONFIGURED',
     });
   }
+  assertBillingWebhookBindingReady();
   if (
     !Number.isSafeInteger(input.units) ||
     input.units <= 0 ||
@@ -1328,11 +1331,9 @@ export interface WebhookProcessResult {
 }
 
 export function verifyWebhookSignature(payload: string | Buffer, signature: string): any {
-  if (!STRIPE_WEBHOOK_SECRET) {
-    throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
-  }
+  const secret = billingWebhookSigningSecret();
   const stripe = getStripe();
-  return stripe.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
+  return stripe.webhooks.constructEvent(payload, signature, secret);
 }
 
 function stripeId(value: unknown, prefix: string): string | null {
@@ -3353,7 +3354,7 @@ export function getBillingMode() {
   return {
     mode: isStripeEnabled() ? 'stripe' : 'local',
     stripeConfigured: !!STRIPE_SECRET_KEY,
-    webhookConfigured: !!STRIPE_WEBHOOK_SECRET,
+    webhookConfigured: billingWebhookBindingStatus().configured,
     prices: {
       starter: !!getStripePriceIdForInterval('starter', 'month'),
       pro: !!getStripePriceIdForInterval('pro', 'month'),

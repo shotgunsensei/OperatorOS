@@ -24,6 +24,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import { billingWebhookBindingStatus } from '../lib/billing-webhook-binding.js';
 import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
@@ -1287,7 +1288,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     try { await db.execute(`SELECT 1`); dbOk = true; } catch {}
     const stripeMode = process.env.STRIPE_MODE || 'off';
     const stripeKey = !!process.env.STRIPE_SECRET_KEY;
-    const stripeWebhook = !!process.env.STRIPE_WEBHOOK_SECRET;
+    const stripeWebhook = billingWebhookBindingStatus().configured;
     const sessionSecret = !!process.env.SESSION_SECRET;
     const openaiKey = !!process.env.OPENAI_API_KEY;
     // Last webhook event = most recent billing_events row.

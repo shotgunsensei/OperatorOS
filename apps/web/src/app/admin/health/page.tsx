@@ -156,7 +156,7 @@ function HealthDashboard() {
 
       <Section title="Stripe">
         <Row label="STRIPE_SECRET_KEY configured" ok={health.stripe.secretConfigured} />
-        <Row label="STRIPE_WEBHOOK_SECRET configured" ok={health.stripe.webhookConfigured} />
+        <Row label="OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET configured" ok={health.stripe.webhookConfigured} />
         <Row label="Stripe mode = live" ok={health.stripe.live} sub={health.stripe.mode} />
         <Row label="Last verified webhook seen" ok={!!health.stripe.lastSuccessfulWebhookAt}
              sub={health.stripe.lastSuccessfulWebhookAt ?? 'never'} />
