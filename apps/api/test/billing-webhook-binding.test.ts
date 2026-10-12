@@ -135,7 +135,7 @@ test('runtime projection excludes dedicated signing key from nonbilling children
 });
 
 
-function callCommandFixture(kind:'lane'|'number',current:Record<string,any>|null) {
+function callCommandFixture(kind:'lane'|'number',current:Record<string,any>|null,providerQuantity=2,pending=false,unavailable=false) {
   const source=readFileSync(fileURLToPath(new URL('../src/lib/callcommand-'+kind+'-billing.ts',import.meta.url)),'utf8').replace(/\r\n/g,'\n');
   const name=kind==='lane'?'createOrUpdateCallCommandLaneCheckout':'requestCallCommandNumberBilling';
   const start=source.indexOf('export async function '+name+'(');
@@ -157,8 +157,8 @@ function callCommandFixture(kind:'lane'|'number',current:Record<string,any>|null
     exports,db:{execute,transaction:(fn:any)=>fn(tx)},sql,modules:{},users:{},tenantUsers:{},subscriptions:{},eq:()=>true,and:()=>true,
     additionalLaneQuantity:(value:number)=>value,laneBillingIdempotencyKey:()=> 'synthetic-key',configuredPriceId:()=> 'price_synthetic',
     quantity:(value:number)=>value,idempotencyKey:()=> 'synthetic-key',isStripeEnabled:()=>true,
-    assertBillingWebhookBindingReady:missing.assertReady,
-    getStripeFeatureBillingClient:()=>{calls.sdk++;return {subscriptions:{async update(){calls.provider++;return {};}}};},
+    assertBillingWebhookBindingReady:missing.assertReady,assertBillingWebhookBindingOrSubscriptionReduction:missing.assertReadyOrSubscriptionReduction,
+    getStripeFeatureBillingClient:()=>{calls.sdk++;return {subscriptions:{async retrieve(...args:any[]){assert.equal(args.length,3);assert.equal(args[0],'sub_fixture');assert.equal(args[2].timeout,5000);assert.equal(args[2].maxNetworkRetries,0);calls.provider++;if(unavailable)throw new Error('private synthetic upstream detail');return {id:'sub_fixture',pending_update:pending?{}:null,items:{has_more:false,data:[{id:'si_fixture',quantity:providerQuantity},{id:'si_local',quantity:providerQuantity}]}};},async update(){calls.provider++;return {};}}};},
     beginIdempotentOperation:async()=>{calls.intents++;return {state:'acquired',id:'operation'};},completeIdempotentOperation:async()=>{},
     getStripeCatalogClient:()=>({prices:{async retrieve(){calls.provider++;return {};}}}),recurringStripePriceError:()=>null,
     getCallCommandLanePriceCents:()=>3000,configuredCents:()=>500,getStripeRuntimeMode:()=> 'test',
@@ -192,4 +192,36 @@ test('CallCommand route exposes bounded binding error with no provider action',(
   exports.fail({code(value:number){code=value;return this;},send(value:any){body=value;}},new BillingWebhookBindingError());
   assert.equal(code,503);assert.equal(body.code,'BILLING_WEBHOOK_BINDING_NOT_READY');assert.equal(body.providerActionConfirmed,false);
   assert.doesNotMatch(JSON.stringify(body),/whsec_|SYNTHETIC/);
+});
+
+for(const kind of ['lane','number'] as const)for(const rollback of [false,true])test('CallCommand '+kind+' blocks restoring settled2 after provider reduction to1 '+(rollback?'and local rollback':'with pending settlement'),async()=>{
+  const fixture=callCommandFixture(kind,{stripe_subscription_id:'sub_fixture',stripe_subscription_item_id:'si_fixture',stripe_local_subscription_item_id:'si_local',additional_lanes:2,pending_additional_lanes:rollback?0:1,licensed_billable_local_quantity:2,pending_billable_local_quantity:rollback?0:1,licensed_billable_toll_free_quantity:0},1);
+  await assert.rejects(fixture.run(kind==='lane'?{additionalLanes:2}:{billableLocalQuantity:2,billableTollFreeQuantity:0}),BillingWebhookBindingError);
+  assert.deepEqual(fixture.calls,{sdk:1,provider:1,intents:0,writes:0});
+});
+for(const kind of ['lane','number'] as const)for(const pending of [true,false])test('CallCommand '+kind+' fails closed before intent on '+(pending?'pending provider update':'read-only lookup failure'),async()=>{
+  const fixture=callCommandFixture(kind,{stripe_subscription_id:'sub_fixture',stripe_subscription_item_id:'si_fixture',stripe_local_subscription_item_id:'si_local',additional_lanes:2,licensed_billable_local_quantity:2,licensed_billable_toll_free_quantity:0},2,pending,!pending);
+  await assert.rejects(fixture.run(kind==='lane'?{additionalLanes:1}:{billableLocalQuantity:1,billableTollFreeQuantity:0}),(error:any)=>error instanceof BillingWebhookBindingError&&!/private synthetic/.test(error.message));
+  assert.deepEqual(fixture.calls,{sdk:1,provider:1,intents:0,writes:0});
+});
+test('configured binding does not introduce a subscription lookup',async()=>{
+  let reads=0;
+  await captureBillingWebhookBinding({[BILLING_WEBHOOK_SIGNING_ENV]:dedicated}).assertReadyOrSubscriptionReduction('sub_fixture',[{itemId:'si_fixture',quantity:3}],async()=>{reads++;throw new Error('MUST_NOT_READ');});
+  assert.equal(reads,0);
+});
+
+const validSubscription=()=>({id:'sub_fixture',pending_update:null,items:{has_more:false,data:[{id:'si_fixture',quantity:2}]}});
+for(const [label,change] of [
+  ['wrong subscription',(s:any)=>{s.id='sub_foreign';}],
+  ['missing item',(s:any)=>{s.items.data=[];}],
+  ['duplicate item',(s:any)=>{s.items.data.push({...s.items.data[0]});}],
+  ['truncated list',(s:any)=>{s.items.has_more=true;}],
+  ['unknown completeness',(s:any)=>{delete s.items.has_more;}],
+  ['unknown quantity',(s:any)=>{s.items.data[0].quantity=null;}],
+  ['fractional quantity',(s:any)=>{s.items.data[0].quantity=1.5;}],
+  ['mixed zeroed item mismatch',(s:any)=>{s.items.data=[{id:'si_fixture',quantity:2}];}],
+] as const)test('reduction management fails closed on '+label,async()=>{
+  const subscription=validSubscription();change(subscription);
+  const requested=[{itemId:'si_fixture',quantity:1},...(label==='mixed zeroed item mismatch'?[{itemId:'si_missing',quantity:0}]:[])];
+  await assert.rejects(captureBillingWebhookBinding({}).assertReadyOrSubscriptionReduction('sub_fixture',requested,async()=>subscription),BillingWebhookBindingError);
 });

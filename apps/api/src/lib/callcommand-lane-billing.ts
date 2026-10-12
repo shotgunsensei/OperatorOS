@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { assertBillingWebhookBindingReady } from './billing-webhook-binding.js';
+import { assertBillingWebhookBindingReady, assertBillingWebhookBindingOrSubscriptionReduction } from './billing-webhook-binding.js';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { modules, subscriptions, tenantUsers, users } from '../schema.js';
@@ -230,6 +230,10 @@ export async function createOrUpdateCallCommandLaneCheckout(
       assertBillingWebhookBindingReady();
     }
     const stripe = getStripeFeatureBillingClient();
+    await assertBillingWebhookBindingOrSubscriptionReduction(
+      subscriptionId, [{ itemId: subscriptionItemId || null, quantity }],
+      () => stripe.subscriptions.retrieve(subscriptionId, {}, { timeout: 5000, maxNetworkRetries: 0 }),
+    );
 
     const idempotency = await beginIdempotentOperation({
       tenantId: input.tenantId,

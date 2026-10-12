@@ -15,7 +15,14 @@ Missing, empty and malformed dedicated values disable the canonical payment
 adapter and block new Stack, usage-credit and CallCommand lane/number sales
 before provider access or purchase-intent persistence. CallCommand checks the
 locked existing entitlement before any idempotency write, so cancellation,
-included-only numbers and reductions of existing subscriptions remain available. Tenant/owner and price validation remain
+included-only numbers and confirmed reductions of existing subscriptions remain available.
+With an unavailable signing binding, an otherwise eligible positive reduction
+requires a read-only existing-subscription lookup (5-second timeout, no SDK
+network retry), exact item identity and nonincreasing provider quantity. Pending
+updates, missing/truncated items or read failure stop before intent persistence.
+This prevents restoring stale settled capacity after an unsettled reduction or
+local rollback. Zero-quantity cancellation needs no extra provider read. A valid
+binding adds no lookup. Tests stub all such reads; no live provider was queried. Tenant/owner and price validation remain
 in their existing paths. Requests receive a bounded503 configuration error.
 
 One non-secret JSON contract owns the name and full-value format pattern.

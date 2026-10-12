@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { assertBillingWebhookBindingReady } from './billing-webhook-binding.js';
+import { assertBillingWebhookBindingReady, assertBillingWebhookBindingOrSubscriptionReduction } from './billing-webhook-binding.js';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { modules, subscriptions, tenantUsers, users } from '../schema.js';
@@ -232,6 +232,11 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
       assertBillingWebhookBindingReady();
     }
     const stripe = getStripeFeatureBillingClient();
+    const existingSubscriptionId = String(current?.stripe_subscription_id ?? '');
+    await assertBillingWebhookBindingOrSubscriptionReduction(existingSubscriptionId, [
+      { itemId: current?.stripe_local_subscription_item_id ?? null, quantity: local },
+      { itemId: current?.stripe_toll_free_subscription_item_id ?? null, quantity: tollFree },
+    ], () => stripe.subscriptions.retrieve(existingSubscriptionId, {}, { timeout: 5000, maxNetworkRetries: 0 }));
     const operation = await beginIdempotentOperation({ tenantId: input.tenantId, moduleId: module.id,
       scope: 'callcommand-number-billing', idempotencyKey: key,
       request: { userId: input.userId, local, tollFree, localPriceId, tollFreePriceId }, leaseMs: 300000 }, tx);
