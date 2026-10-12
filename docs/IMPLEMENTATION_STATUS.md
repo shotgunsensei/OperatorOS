@@ -6080,3 +6080,28 @@ Release decision:
   reviewed owner waivers with reasons and scope. The release gate must not be
   made green by silently relabeling blocked work, adding skips, weakening
   assertions, or treating current partial module restoration as complete.
+
+
+## Dedicated billing binding candidate (2026-10-12, main)
+
+Isolated source base daf78578267ff929f049c0d7dc18619f03f28a82. John approved the specific namespace and owner-only private setup at2026-10-12T20:46:18Z; the transcript is retained unchanged in the local billing-binding-oct12 artifact folder.
+
+Canonical verification now requires OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET with no inherited generic-key fallback. One contract owns full-value format validation; one server snapshot drives SDK/adapter/health, while preflight and audit use the same policy. New Stack and credit Checkout initiation fail before provider/intent access when binding is missing/invalid. isStripeEnabled, cancellation/reactivation, refund/settlement, raw bytes, SDK arguments/default tolerance and receipt idempotency are preserved. Next and the DB verification child do not inherit this new credential. No schema/migration, API key, signing-key generation or provider activation change.
+
+Fresh local focused44/44 and security12/12 pass, zero fail/cancel/skip/todo. Workspace typechecks, dedicated test typecheck, zero-warning lint and SDK/API compilation pass. Two compiled-process smoke cases pass and prove the JSON contract is packaged; tests use synthetic values, an allowlisted environment and blocked networking. Frozen offline installations download zero packages. Initial check-helper PATH and an SDK declaration-only test issue were corrected; their failure logs remain. Required full aggregate release/vector CI and independent review are still pending at this checkpoint, and will be bound to immutable heads in the final receipt. Earlier main/v65 CI is not substituted for the new change.
+
+[Policy, owner setup and rollback](billing/DEDICATED_WEBHOOK_BINDING_2026-10-12.md). Account/workspace name absence and provider persistence/provenance remain owner checks. No agent has seen or set a real credential, pushed production config, published, migrated or replayed. New persistent binding entry is owner-only after the parent handoff; live signing acceptance and resumed checkout intake remain separate gates. Main integration preserves PR120/AI/v66; v65 gains no unrelated v66 work. Four patched advisory exceptions remain unchanged, disclosed and integrity-tested; no release gate is weakened.
+
+
+### Independent-review corrections and refreshed local verification
+
+The initial independent review identified unguarded CallCommand lane/number purchases, missing synthetic commerce fixture initialization, and omitted dedicated-key sanitation in the disposable release harness. All four are corrected. CallCommand checks locked existing entitlement before idempotency/provider access; cancellation, included-only numbers and reductions of existing subscriptions remain available. Its bounded503 error explicitly reports providerActionConfirmed:false. Shared API-key enablement remains unchanged. Synthetic signing-only side-effect fixtures preserve the existing Stripe mode, and mixed-case isolation regression proves the new key is stripped.
+
+Fresh corrected-source checks pass on both candidates: focused54/54, isolation20/20, security12/12, zero fail/cancel/skip/todo; root types, dedicated test types, zero-warning lint and SDK/API build pass. Compiled policy packaging smoke2/2 passes, without asserting full API startup. Receipt input lists bind all changed non-documentation source even after commits. Corrected-head independent review and full aggregate/vector CI remain required and are not inferred from these local checks. No provider calls, private values, production writes, migration, settings change, publication or replay occurred.
+
+
+### Final quantity-safety correction and local checkpoint
+
+Independent re-review caught restoration of stale settled quantity after an unsettled reduction. New/increasing local quantities still fail before SDK. With signing unavailable, an otherwise eligible existing positive reduction now performs one bounded read-only subscription lookup (5s, no SDK retry) before any idempotency or DB write. Exact subscription/item identity, complete provider item list, known nonincreasing quantities and no pending update are required. Unknown/read failure returns the fixed503. Zero cancellation remains available without this extra read; configured signing adds no lookup. This also rejects stale local quantities after a provider update followed by local rollback. It does not attest arbitrary concurrent out-of-band provider changes or live storage provenance.
+
+Fresh final-source local verification per target: focused71/71, isolation20/20, security12/12, zero fail/cancel/skip/todo; types, dedicated test types, zero-warning lint and SDK/API build pass. Compiled policy packaging smoke2/2 passes. All seven receipt source hashes were checked against final files. Synthetic tests include stale/pending/rollback quantities, bounded lookup options, wrong/missing/duplicate item identity, incomplete lists, unknown quantities, upstream-detail suppression and valid-binding no-read behavior. No real provider was queried. The narrow SDK retrieve type was extended for existing supported RequestOptions after an initial type failure. Superseded source CI is recorded as canceled/old vector success and is not release evidence. Full replacement-head CI and final independent review remain separate gates.

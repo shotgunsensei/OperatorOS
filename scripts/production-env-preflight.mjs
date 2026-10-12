@@ -8,6 +8,16 @@ const CONTRACT_PATH = resolve(SCRIPT_DIR, '../config/production-environment.cont
 export const PRODUCTION_ENVIRONMENT_CONTRACT = Object.freeze(
   JSON.parse(readFileSync(CONTRACT_PATH, 'utf8')),
 );
+export const BILLING_WEBHOOK_SIGNING_ENV = PRODUCTION_ENVIRONMENT_CONTRACT.billingWebhookSigning.envKey;
+const billingSigningPattern = new RegExp(PRODUCTION_ENVIRONMENT_CONTRACT.billingWebhookSigning.pattern);
+export function inspectBillingWebhookBinding(env) {
+  const value = env[BILLING_WEBHOOK_SIGNING_ENV];
+  if (value === undefined) return { configured: false, errorCode: 'BILLING_WEBHOOK_BINDING_MISSING' };
+  if (typeof value !== 'string' || !billingSigningPattern.test(value)) {
+    return { configured: false, errorCode: 'BILLING_WEBHOOK_BINDING_INVALID' };
+  }
+  return { configured: true, errorCode: null };
+}
 
 const PROFILE_ORDER = ['core', 'revenue', 'email', 'callcommand', 'outcall', 'ai'];
 
@@ -167,7 +177,7 @@ function checkRevenue(env, issues) {
     addIssue(issues, 'revenue', 'STRIPE_MODE', 'must equal live');
   }
   requirePresent(env, issues, 'revenue', [
-    'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_WEBHOOK_ENDPOINT_URL',
+    'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_ENDPOINT_URL',
     'STRIPE_WEBHOOK_EVENTS', 'STRIPE_EXPECTED_ACCOUNT_ID',
     'TORQUESHED_CREDIT_PURCHASES_ENABLED', 'TORQUESHED_CREDIT_PURCHASES_MODE',
     'TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT',
@@ -176,8 +186,8 @@ function checkRevenue(env, issues) {
   if (isPresent(env, 'STRIPE_SECRET_KEY') && !env.STRIPE_SECRET_KEY.startsWith('sk_live_')) {
     addIssue(issues, 'revenue', 'STRIPE_SECRET_KEY', 'must be a live Stripe secret key');
   }
-  if (isPresent(env, 'STRIPE_WEBHOOK_SECRET') && !env.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) {
-    addIssue(issues, 'revenue', 'STRIPE_WEBHOOK_SECRET', 'must be a Stripe webhook signing secret');
+  if (!inspectBillingWebhookBinding(env).configured) {
+    addIssue(issues, 'revenue', BILLING_WEBHOOK_SIGNING_ENV, 'must be the dedicated Stripe webhook signing secret without whitespace, quotes or control characters');
   }
   if (isPresent(env, 'STRIPE_WEBHOOK_ENDPOINT_URL') && env.STRIPE_WEBHOOK_ENDPOINT_URL !== 'https://api.operatoros.net/v1/billing/webhook') {
     addIssue(issues, 'revenue', 'STRIPE_WEBHOOK_ENDPOINT_URL', 'must equal the one canonical Stripe webhook URL');

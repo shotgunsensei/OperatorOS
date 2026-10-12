@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { billingWebhookBindingStatus } from './billing-webhook-binding.js';
 import { getAiProvider, getProviderInfo, type AiCompletionRequest, type AiCompletionResponse } from './ai-provider.js';
 import { resolveTelephonyConfig, restAuthHeader } from './telephony.js';
 import {
@@ -174,7 +175,7 @@ export function getPaymentProviderAdapter(): PaymentProviderAdapter {
   }
   const configured = Boolean(
     process.env.STRIPE_SECRET_KEY &&
-    process.env.STRIPE_WEBHOOK_SECRET &&
+    billingWebhookBindingStatus().configured &&
     ['test', 'live'].includes(process.env.STRIPE_MODE || ''),
   );
   return {

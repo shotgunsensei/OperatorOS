@@ -50,7 +50,7 @@ keeps billing in local mode.
 | Var                                     | Notes                                                             |
 | --------------------------------------- | ----------------------------------------------------------------- |
 | `STRIPE_SECRET_KEY`                     | live secret key.                                                  |
-| `STRIPE_WEBHOOK_SECRET`                 | webhook signing secret.                                           |
+| `OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET`                 | webhook signing secret.                                           |
 | `STRIPE_PRICE_TRADEFLOWKIT_MONTHLY`     | TradeFlowKit recurring monthly Price.                             |
 | `STRIPE_PRICE_PULSEDESK_MONTHLY`        | PulseDesk recurring monthly Price.                                |
 | `STRIPE_PRICE_TECHDECK_MONTHLY`         | TechDeck recurring monthly Price.                                 |
@@ -86,7 +86,7 @@ feature disabled.
 | `TRADEFLOWKIT_PUBLIC_INTAKE_HMAC_SECRET` | public intake | Server-only 32+ byte key used for rate-limit fingerprints and per-adapter HMAC secrets; raw client IPs are not stored. |
 | `TRADEFLOWKIT_PAYMENT_PROVIDER` | business payments | Must equal `stripe_connect`; any other value fails closed. |
 | `STRIPE_CLIENT_ID` | Stripe Connect | Connect platform client ID (`ca_...`) used for Standard-account OAuth. |
-| `TRADEFLOWKIT_STRIPE_CONNECT_WEBHOOK_SECRET` | Stripe Connect | Signing secret for the separate connected-account Checkout webhook. Never reuse `STRIPE_WEBHOOK_SECRET`. |
+| `TRADEFLOWKIT_STRIPE_CONNECT_WEBHOOK_SECRET` | Stripe Connect | Signing secret for the separate connected-account Checkout webhook. Never reuse `OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET`. |
 | `TRADEFLOWKIT_STRIPE_CONNECT_REDIRECT_URI` | Stripe Connect | Exact `https://tradeflowkit.operatoros.net/v1/modules/tradeflowkit/payments/connect/callback`. |
 | `TRADEFLOWKIT_PUBLIC_BASE_URL` | business payments | Exact `https://tradeflowkit.operatoros.net` origin used only for Checkout success/cancel returns. |
 

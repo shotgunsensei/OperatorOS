@@ -1,3 +1,4 @@
+import './_billing-webhook-env.js';
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { and, eq, sql } from 'drizzle-orm';

@@ -148,7 +148,7 @@ test('all readiness profiles pass with live shared-runtime providers', () => {
     ...coreEnv,
     STRIPE_MODE: 'live',
     STRIPE_SECRET_KEY: 'sk_live_test_placeholder',
-    STRIPE_WEBHOOK_SECRET: 'whsec_test_placeholder',
+    OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET: 'whsec_test_placeholder',
     STRIPE_WEBHOOK_ENDPOINT_URL: 'https://api.operatoros.net/v1/billing/webhook',
     STRIPE_WEBHOOK_EVENTS: 'checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,payment_intent.payment_failed,charge.refunded,charge.dispute.created,charge.dispute.closed',
     STRIPE_EXPECTED_ACCOUNT_ID: 'acct_testplaceholder',
@@ -200,7 +200,7 @@ test('preflight output contains names and messages but never secret values', () 
   const output = preflight.formatReport(report);
   assert.equal(report.ok, false);
   assert.match(output, /STRIPE_SECRET_KEY/);
-  assert.match(output, /STRIPE_WEBHOOK_SECRET/);
+  assert.match(output, /OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET/);
   assert.doesNotMatch(output, new RegExp(secret));
 });
 
@@ -209,7 +209,7 @@ test('revenue preflight requires the TorqueShed kill switch, mode, and release p
     ...coreEnv,
     STRIPE_MODE: 'live',
     STRIPE_SECRET_KEY: 'sk_live_test_placeholder',
-    STRIPE_WEBHOOK_SECRET: 'whsec_test_placeholder',
+    OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET: 'whsec_test_placeholder',
     STRIPE_WEBHOOK_ENDPOINT_URL: 'https://api.operatoros.net/v1/billing/webhook',
     STRIPE_WEBHOOK_EVENTS: 'checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,payment_intent.payment_failed,charge.refunded,charge.dispute.created,charge.dispute.closed',
     STRIPE_EXPECTED_ACCOUNT_ID: 'acct_testplaceholder',

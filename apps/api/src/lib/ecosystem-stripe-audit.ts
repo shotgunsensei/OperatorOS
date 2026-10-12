@@ -1,5 +1,6 @@
 import { recurringCommercialPrices, TORQUESHED_CREDIT_CATALOG } from '@operatoros/sdk';
 import { recurringStripePriceError } from './stripe-price-contract.js';
+import { inspectBillingWebhookBinding } from './billing-webhook-binding.js';
 
 export const ECOSYSTEM_STRIPE_WEBHOOK_URL = 'https://api.operatoros.net/v1/billing/webhook';
 export const ECOSYSTEM_STRIPE_EVENTS = [
@@ -34,7 +35,8 @@ export async function auditEcosystemStripe(
   if (mode === 'live' && (account.charges_enabled !== true || account.payouts_enabled !== true)) {
     issues.push('STRIPE_ACCOUNT_PAYMENTS_OR_PAYOUTS_DISABLED');
   }
-  if (!env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) issues.push('STRIPE_WEBHOOK_SECRET_MISSING');
+  const signingBinding = inspectBillingWebhookBinding(env);
+  if (signingBinding.errorCode) issues.push(signingBinding.errorCode);
 
   async function productErrors(price: any): Promise<string[]> {
     if (!price?.product) return ['PRODUCT_MISSING'];

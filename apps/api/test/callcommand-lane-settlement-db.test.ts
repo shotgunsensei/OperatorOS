@@ -1,3 +1,4 @@
+import './_billing-webhook-env.js';
 process.env.SESSION_SECRET ||= 'operatoros-callcommand-lane-settlement-test-v1';
 process.env.NODE_ENV = 'test';
 process.env.APP_ENV = 'test';
