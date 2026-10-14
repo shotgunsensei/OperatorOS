@@ -757,6 +757,62 @@ test('provider-confirmed hangup followed by persistence failure remains outcome-
   closeCallCommandRealtimeSideband(callId);
 });
 
+test('long call renews the same sideband owner beyond the initial thirty-second lease', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'long-heartbeat',withLease:true});
+  const providerCall=openAiCallId('long-heartbeat');
+  const eventId=`evt_${PHONE_SEED}_long_heartbeat`;
+  const response=await injectSigned(signedEnvelope({eventId,openAiCallId:providerCall,internalCallId:callId}));
+  assert.equal(response.statusCode,200,response.body);
+  const initial=(await db.execute(sql`SELECT processing_owner,processing_lease_expires_at FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0] as Row;
+  await new Promise(resolve=>setTimeout(resolve,35_000));
+  const renewed=(await db.execute(sql`SELECT processing_owner,processing_lease_expires_at FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0] as Row;
+  assert.equal(renewed.processing_owner,initial.processing_owner);
+  assert.ok(new Date(initial.processing_lease_expires_at).getTime()<Date.now(),'the original owner lease has elapsed');
+  assert.ok(new Date(renewed.processing_lease_expires_at).getTime()>Date.now(),'heartbeat retains current ownership');
+  const result=await sidebands.at(-1)!.callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_long_call_end',name:'end_call',arguments:{summary:'Synthetic long-call request captured',reason:'Caller agreed to finish'}}) as Row;
+  assert.equal(result.ok,true);
+  closeCallCommandRealtimeSideband(callId);
+});
+
+test('sideband loss hangs up once, releases its lane and queues one incomplete-intake notification', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'sideband-loss',withLease:true});
+  const providerCall=openAiCallId('sideband-loss');
+  const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_sideband_loss`,openAiCallId:providerCall,internalCallId:callId}));
+  assert.equal(response.statusCode,200,response.body);
+  const callbacks=sidebands.at(-1)!.callbacks;
+  await callbacks.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
+  await callbacks.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
+  assert.equal(hungUp.filter(id=>id===providerCall).length,1);
+  const saved=(await db.execute(sql`SELECT c.realtime_status,c.summary,lease.status AS lease_status FROM callcommand_calls c JOIN callcommand_lane_leases lease ON lease.tenant_id=c.tenant_id AND lease.call_id=c.id WHERE c.tenant_id=${owner.currentTenantId} AND c.id=${callId}`)).rows[0];
+  assert.equal(saved.realtime_status,'failed');assert.equal(saved.lease_status,'released');
+  assert.match(String(saved.summary),/disconnected before a summary/);
+  const messages=await db.execute(sql`SELECT id FROM shared_outbox_messages WHERE tenant_id=${owner.currentTenantId} AND context_json->>'callId'=${callId}`);
+  assert.equal(messages.rows.length,1);
+});
+
+test('expired owner stops tools and replay reattaches without accepting or letting the former controller hang up', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'owner-expiry',withLease:true});
+  const providerCall=openAiCallId('owner-expiry');
+  const eventId=`evt_${PHONE_SEED}_owner_expiry`;
+  const envelope=signedEnvelope({eventId,openAiCallId:providerCall,internalCallId:callId});
+  const acceptedBefore=accepted.length;
+  assert.equal((await injectSigned(envelope)).statusCode,200);
+  const previous=sidebands.at(-1)!.callbacks;
+  const initialOwner=(await db.execute(sql`SELECT processing_owner FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0].processing_owner;
+  closeCallCommandRealtimeSideband(callId);
+  await db.execute(sql`UPDATE callcommand_ingestion_events SET processing_lease_expires_at=NOW()-INTERVAL '1 second' WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`);
+  await assert.rejects(previous.executeTool({openAiCallId:providerCall,toolCallId:'tool_expired_owner',name:'send_email',arguments:{summary:'Synthetic stale operation'}}),{code:'CALLCOMMAND_REALTIME_OWNER_EXPIRED'});
+  const recovered=await injectSigned(envelope);assert.equal(recovered.statusCode,200,recovered.body);
+  assert.equal(recovered.json().duplicate,false);assert.equal(accepted.length,acceptedBefore+1);
+  const nextOwner=(await db.execute(sql`SELECT processing_owner FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0].processing_owner;
+  assert.notEqual(nextOwner,initialOwner);
+  await previous.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
+  assert.equal(hungUp.filter(id=>id===providerCall).length,0,'a stale callback cannot terminate the successor owner');
+  const result=await sidebands.at(-1)!.callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_recovered_owner_end',name:'end_call',arguments:{summary:'Synthetic recovered call captured',reason:'Caller agreed to finish'}}) as Row;
+  assert.equal(result.ok,true);assert.equal(hungUp.filter(id=>id===providerCall).length,1);
+  closeCallCommandRealtimeSideband(callId);
+});
+
 after(async () => {
   __setCallCommandRealtimeAdapterFactoryForTests(null);
   if (app) await app.close();

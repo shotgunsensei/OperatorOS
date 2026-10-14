@@ -1,5 +1,15 @@
 # OperatorOS implementation status
 
+## Combined v67 source delivery preparation (2026-10-14)
+
+Preserved OutCall `24e15d2b` and reviewed test-only CallCommand `bda93ac` are
+reconciled on a separate combined branch. Application/SDK/lockfile contents are
+unchanged from v67. New lifecycle checks pass 3/3 and corrected v67 identity
+fixtures 12/12; strict changed-test typing and scoped lint pass. Connector
+delivery is authorized, but transfer/PR/required checks/merge and production
+remain separate recorded stages. No exposed shell credential is used. See
+[source evidence and delivery gates](COMBINED_SOURCE_DELIVERY_2026-10-14.md).
+
 ## OutCall country and account resource controls (2026-10-14, local only)
 
 Continuation of preserved `2f943eed...` implements metadata-based country/type
@@ -32,6 +42,19 @@ Credential hold, Stripe recovery, geography/aggregate spend controls, provider
 configuration and deployed customer acceptance remain gates. No calls,
 production data, publication or hosted CI occurred. See [the complete ledger,
 commands and blockers](PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
+
+## CallCommand post-reboot lifecycle preflight (2026-10-14, 19:05 UTC)
+
+Application patch `31b00596` remains intact and is already in the separate
+OutCall v67 candidate. Three additional synthetic lifecycle checks pass:
+heartbeat renewal beyond the initial lease, one sideband-loss fallback and
+notification, and expired-owner fencing with replay reattachment. Changed-test
+strict types and scoped zero-warning lint pass. No application/schema/provider
+change or full-gate rerun occurred. Actual process death and autonomous recovery
+remain open. Fresh public probes still identify healthy `7c212305`, v65/65.
+The native host passes read-only diagnostics, but this task has no callable
+browser runtime; private credit, routing and rotation evidence remain unverified.
+See [the post-reboot evidence and next actions](callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
 
 ## CallCommand inbound call outcome repair (2026-10-14)
 
