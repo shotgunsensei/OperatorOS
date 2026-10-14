@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
@@ -14,6 +14,7 @@ import {
   parsePhoneVerificationStart,
   parseProfile,
   parseSchedule,
+  parseScheduleIdentity,
   parseTrigger,
   protect,
   unprotect,
@@ -23,7 +24,8 @@ import {
   confirmOutCallPhoneVerification,
   isOutCallInboundNumber,
   normalizeOutCallProviderPhone,
-  outCallProviderState,
+  outCallReadyState,
+  assertOutCallDestinationAllowed,
   placeOutCallVoice,
   startOutCallPhoneVerification,
   verifyOutCallTwilioSignature,
@@ -33,8 +35,9 @@ import { appendActivityEvent, recordUsageEvent, summarizeUsage } from '../lib/sh
 import { receiveVerifiedWebhook, registerSharedWebhookHandler } from '../lib/shared-webhooks.js';
 import { verifyPassword } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
-import { resolveEntitlements } from '../lib/entitlement-resolver.js';
-import { recordOperatorOsMessagingKeyword } from '../lib/operatoros-messaging-compliance.js';
+import { resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
+import { isOperatorOsSmsRevoked, recordOperatorOsMessagingKeyword } from '../lib/operatoros-messaging-compliance.js';
+import { OutCallResourceError, finishOutCallCallResource, outCallCallReservation, reserveOutCallResource, beginOutCallSubmission, finishOutCallResource, clearOutCallResourceOwner } from '../lib/outcall-resources.js';
 
 const readGuards = [requireTenantModuleAccess('outcall')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -97,6 +100,9 @@ async function activity(request: FastifyRequest, objectType: string, objectId: s
 }
 
 function providerFailure(reply: FastifyReply, error: unknown): boolean {
+  if(error instanceof OutCallResourceError) {
+    reply.code(error.statusCode).send({error:error.message,code:error.code});return true;
+  }
   if (!(error instanceof OutCallProviderError)) return false;
   reply.code(error.code === 'OUTCALL_COUNTRY_NOT_ALLOWED' ? 400 : 503).send({
     error: error.message,
@@ -125,10 +131,37 @@ function twiml(reply: FastifyReply, body: string) {
     .send(`<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`);
 }
 
-function mapProviderStatus(value: string): 'processing' | 'completed' | 'failed' {
+function mapProviderStatus(value: string): 'processing' | 'completed' | 'failed' | null {
   if (value === 'completed') return 'completed';
   if (['busy', 'no-answer', 'canceled', 'failed'].includes(value)) return 'failed';
-  return 'processing';
+  return ['queued', 'initiated', 'ringing', 'in-progress'].includes(value) ? 'processing' : null;
+}
+
+async function canPlaceOutCall(userId: string, tenantId: string): Promise<boolean> {
+  const access = await resolveTenantModuleAccess(userId, tenantId, 'outcall');
+  return access.hasAccess && ['user', 'manager'].includes(access.accessLevel);
+}
+
+async function outCallSmsReply(request:FastifyRequest,reply:FastifyReply,message:string) {
+  const provider=await outCallReadyState();
+  if(provider.name==='test')return twiml(reply,message);
+  if(!provider.ready)return twiml(reply,'');
+  try {
+    const body=webhookBody(request);const phone=normalizeOutCallProviderPhone(body.From);
+    assertOutCallDestinationAllowed(phone);
+    const owner=await db.execute(sql`SELECT s.tenant_id,s.user_id FROM outcall_phone_owners o
+      JOIN users u ON u.id=o.user_id AND u.status='active'
+      JOIN outcall_settings s ON s.user_id=u.id AND s.tenant_id=u.current_tenant_id AND s.phone_fingerprint=o.phone_fingerprint
+      WHERE o.phone_fingerprint=${fingerprint(`phone:${phone}`)} AND s.phone_verified_at IS NOT NULL LIMIT 1`);
+    if(!owner.rows[0] || !/^SM[a-zA-Z0-9]{8,}$/.test(body.MessageSid ?? ''))return twiml(reply,'');
+    const tenantId=String(owner.rows[0].tenant_id);const userId=String(owner.rows[0].user_id);
+    const id=await db.transaction(tx=>reserveOutCallResource({tenantId,userId,operation:'sms_reply',idempotencyKey:body.MessageSid},tx));
+    await beginOutCallSubmission(id,tenantId,userId,'sms_reply');
+    // Conservatively debit the ceiling before returning potentially chargeable
+    // TwiML. A webhook replay cannot emit a second app-generated SMS reply.
+    await db.transaction(tx=>finishOutCallResource(id,'spent',tx));
+    return twiml(reply,message);
+  } catch { return twiml(reply,''); }
 }
 
 async function consumeRateLimit(input: {
@@ -233,15 +266,63 @@ registerSharedJobHandler(OUTCALL_JOB, async (job) => {
     RETURNING *
   `);
   const request = claimed.rows[0] as Row | undefined;
-  if (!request) return;
+  if (!request) {
+    // An expired job lease can follow process death on either side of the
+    // carrier request. Preserve the ambiguous outcome and never submit twice.
+    await db.execute(sql`
+      UPDATE outcall_call_requests SET failure_code='OUTCALL_PROVIDER_OUTCOME_UNKNOWN',updated_at=NOW()
+      WHERE tenant_id=${job.tenantId} AND id=${requestId} AND status='processing'
+        AND provider='twilio' AND provider_call_sid IS NULL
+    `);
+    return;
+  }
 
-  const provider = outCallProviderState();
+  // A queued job carries identity, never enduring authorization. Recheck the
+  // canonical decision after claiming and before either provider can execute.
+  if (job.requestedByUserId !== String(request.user_id)
+    || !await canPlaceOutCall(String(request.user_id), job.tenantId)) {
+    await db.execute(sql`
+      UPDATE outcall_call_requests
+      SET status='failed',failure_code='OUTCALL_ACCESS_REVOKED',completed_at=NOW(),updated_at=NOW()
+      WHERE tenant_id=${job.tenantId} AND id=${requestId} AND status='processing'
+    `);
+    await db.transaction(tx=>finishOutCallCallResource(requestId,'released',tx));
+    throw Object.assign(new Error('OutCall calling access is no longer available'), { code: 'OUTCALL_ACCESS_REVOKED' });
+  }
+
+  const eligibility = await db.execute(sql`
+    SELECT s.phone_ciphertext,s.phone_fingerprint
+    FROM outcall_settings s
+    JOIN outcall_profiles p ON p.tenant_id=s.tenant_id AND p.user_id=s.user_id
+    JOIN outcall_phone_owners o ON o.user_id=s.user_id AND o.phone_fingerprint=s.phone_fingerprint
+    WHERE s.tenant_id=${job.tenantId} AND s.user_id=${String(request.user_id)}
+      AND s.phone_verified_at IS NOT NULL AND s.disclaimer_accepted_at IS NOT NULL
+      AND p.id=${String(request.profile_id)} AND p.active=TRUE AND p.deleted_at IS NULL
+    LIMIT 1
+  `);
+  const settings = eligibility.rows[0] as Row | undefined;
+  const destination = settings ? unprotect(String(settings.phone_ciphertext)) : null;
+  if (!settings || !destination
+    || fingerprint(`phone:${destination}`) !== String(settings.phone_fingerprint)
+    || fingerprint(`phone:${destination}`) !== String(request.destination_fingerprint)
+    || (request.source === 'sms' && await isOperatorOsSmsRevoked(destination))) {
+    await db.execute(sql`
+      UPDATE outcall_call_requests
+      SET status='failed',failure_code='OUTCALL_CALL_CONFIGURATION_INVALID',completed_at=NOW(),updated_at=NOW()
+      WHERE tenant_id=${job.tenantId} AND id=${requestId} AND status='processing'
+    `);
+    await db.transaction(tx=>finishOutCallCallResource(requestId,'released',tx));
+    throw Object.assign(new Error('OutCall verified destination or consent is unavailable'), { code: 'OUTCALL_CALL_CONFIGURATION_INVALID' });
+  }
+
+  const provider = await outCallReadyState();
   if (!provider.ready) {
     await db.execute(sql`
       UPDATE outcall_call_requests
       SET status='failed',failure_code='OUTCALL_PROVIDER_NOT_READY',completed_at=NOW(),updated_at=NOW()
       WHERE tenant_id=${job.tenantId} AND id=${requestId} AND status='processing'
     `);
+    await db.transaction(tx=>finishOutCallCallResource(requestId,'released',tx));
     throw Object.assign(new Error('OutCall provider is not ready'), { code: 'OUTCALL_PROVIDER_NOT_READY' });
   }
 
@@ -275,7 +356,7 @@ registerSharedJobHandler(OUTCALL_JOB, async (job) => {
     SELECT s.phone_ciphertext,s.phone_fingerprint,p.message,p.voice,p.language
     FROM outcall_call_requests c
     JOIN outcall_settings s ON s.tenant_id=c.tenant_id AND s.user_id=c.user_id
-    JOIN outcall_profiles p ON p.tenant_id=c.tenant_id AND p.id=c.profile_id
+    JOIN outcall_profiles p ON p.tenant_id=c.tenant_id AND p.user_id=c.user_id AND p.id=c.profile_id
     WHERE c.tenant_id=${job.tenantId} AND c.id=${requestId}
       AND c.status='processing' AND p.active=TRUE AND p.deleted_at IS NULL
     LIMIT 1
@@ -287,18 +368,19 @@ registerSharedJobHandler(OUTCALL_JOB, async (job) => {
         completed_at=NOW(),updated_at=NOW()
       WHERE tenant_id=${job.tenantId} AND id=${requestId} AND status='processing'
     `);
+    await db.transaction(tx=>finishOutCallCallResource(requestId,'released',tx));
     throw Object.assign(new Error('OutCall request configuration is unavailable'), { code: 'OUTCALL_CALL_CONFIGURATION_INVALID' });
   }
-  const destination = unprotect(String(detail.phone_ciphertext));
-  if (fingerprint(`phone:${destination}`) !== String(detail.phone_fingerprint)
-    || fingerprint(`phone:${destination}`) !== String(request.destination_fingerprint)) {
+  if (fingerprint(`phone:${unprotect(String(detail.phone_ciphertext))}`) !== String(request.destination_fingerprint)) {
     await db.execute(sql`
       UPDATE outcall_call_requests SET status='failed',failure_code='OUTCALL_DESTINATION_INTEGRITY_FAILED',
         completed_at=NOW(),updated_at=NOW()
       WHERE tenant_id=${job.tenantId} AND id=${requestId} AND status='processing'
     `);
+    await db.transaction(tx=>finishOutCallCallResource(requestId,'released',tx));
     throw Object.assign(new Error('OutCall destination integrity check failed'), { code: 'OUTCALL_DESTINATION_INTEGRITY_FAILED' });
   }
+  let providerAccepted = false;
   try {
     const placed = await placeOutCallVoice({
       requestId,
@@ -306,7 +388,10 @@ registerSharedJobHandler(OUTCALL_JOB, async (job) => {
       message: String(detail.message),
       voice: String(detail.voice),
       language: String(detail.language),
+      reservationId:await outCallCallReservation(requestId,job.tenantId,String(request.user_id)),
+      tenantId:job.tenantId,userId:String(request.user_id),
     });
+    providerAccepted = true;
     await db.transaction(async (tx) => {
       await tx.execute(sql`
         UPDATE outcall_call_requests
@@ -332,12 +417,16 @@ registerSharedJobHandler(OUTCALL_JOB, async (job) => {
       }, tx as any);
     });
   } catch (error) {
-    const code = error instanceof OutCallProviderError ? error.code : 'OUTCALL_PROVIDER_FAILED';
+    const code = providerAccepted ? 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN'
+      : error instanceof OutCallProviderError ? error.code : 'OUTCALL_PROVIDER_FAILED';
+    const unknown = code === 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN';
     await db.execute(sql`
       UPDATE outcall_call_requests
-      SET status='failed',failure_code=${code},completed_at=NOW(),updated_at=NOW()
+      SET status=${unknown ? 'processing' : 'failed'},failure_code=${code},
+        completed_at=CASE WHEN ${unknown} THEN NULL ELSE NOW() END,updated_at=NOW()
       WHERE tenant_id=${job.tenantId} AND id=${requestId} AND status='processing'
     `);
+    await db.transaction(tx=>finishOutCallCallResource(requestId,unknown?'unknown':'released',tx));
     throw error;
   }
 });
@@ -352,16 +441,29 @@ registerSharedWebhookHandler(OUTCALL_STATUS_WEBHOOK, async (event) => {
   await db.transaction(async (tx) => {
     const result = await tx.execute(sql`
       UPDATE outcall_call_requests SET
-        provider='twilio',provider_call_sid=COALESCE(provider_call_sid,${sid}),status=${status},
+        provider='twilio',provider_call_sid=COALESCE(provider_call_sid,${sid}),
+        status=CASE WHEN status IN ('completed','failed') THEN status ELSE ${status} END,
         completed_at=CASE WHEN ${status} IN ('completed','failed') THEN COALESCE(completed_at,NOW()) ELSE completed_at END,
-        failure_code=CASE WHEN ${status}='failed' THEN COALESCE(NULLIF(${String(event.payload.failureCode ?? '')},''),'OUTCALL_PROVIDER_FAILED') ELSE failure_code END,
+        failure_code=CASE WHEN status='processing' AND ${status}='completed' THEN NULL
+          WHEN status='processing' AND ${status}='failed' THEN COALESCE(NULLIF(${String(event.payload.failureCode ?? '')},''),'OUTCALL_PROVIDER_FAILED') ELSE failure_code END,
         updated_at=NOW()
       WHERE tenant_id=${event.tenantId} AND id=${callId}
         AND status IN ('processing','completed','failed')
         AND (provider_call_sid IS NULL OR provider_call_sid=${sid})
-      RETURNING id
+      RETURNING id,user_id
     `);
     if (!result.rows[0]) throw Object.assign(new Error('OutCall call was not found'), { code: 'OUTCALL_CALL_NOT_FOUND' });
+    await finishOutCallCallResource(callId,status==='processing'?'active':'spent',tx);
+    // A signed carrier status can recover acceptance evidence lost between
+    // submission and local persistence. Share the placement usage identity.
+    await recordUsageEvent({
+      tenantId: event.tenantId,
+      moduleId: event.moduleId,
+      userId: String(result.rows[0].user_id),
+      operation: 'outcall.live_call', units: 1, unitKind: 'call',
+      idempotencyKey: `call:${callId}`, externalReference: callId,
+      metadata: { provider: 'twilio', recording: false },
+    }, tx as any);
     await tx.execute(sql`
       INSERT INTO outcall_events (tenant_id,call_request_id,event_type,safe_payload,provider_event_id)
       VALUES (${event.tenantId},${callId},${`provider.status.${status}`},
@@ -391,11 +493,14 @@ registerSharedWebhookHandler(OUTCALL_SMS_WEBHOOK, async (event) => {
   if (!userId || !triggerId || !messageSid) {
     throw Object.assign(new Error('OutCall SMS event is invalid'), { code: 'OUTCALL_WEBHOOK_INVALID' });
   }
+  if (!await canPlaceOutCall(userId, event.tenantId)) {
+    throw Object.assign(new Error('OutCall calling access is no longer available'), { code: 'OUTCALL_ACCESS_REVOKED' });
+  }
   const trigger = await db.execute(sql`
-    SELECT t.profile_id,t.delay_seconds,s.phone_fingerprint,s.phone_masked
+    SELECT t.profile_id,t.delay_seconds,s.phone_fingerprint,s.phone_masked,s.phone_ciphertext
     FROM outcall_triggers t
     JOIN outcall_settings s ON s.tenant_id=t.tenant_id AND s.user_id=t.user_id
-    JOIN outcall_profiles p ON p.tenant_id=t.tenant_id AND p.id=t.profile_id
+    JOIN outcall_profiles p ON p.tenant_id=t.tenant_id AND p.user_id=t.user_id AND p.id=t.profile_id
     WHERE t.tenant_id=${event.tenantId} AND t.user_id=${userId} AND t.id=${triggerId}
       AND t.enabled=TRUE AND t.deleted_at IS NULL AND p.active=TRUE AND p.deleted_at IS NULL
       AND s.phone_verified_at IS NOT NULL AND s.disclaimer_accepted_at IS NOT NULL
@@ -403,7 +508,12 @@ registerSharedWebhookHandler(OUTCALL_SMS_WEBHOOK, async (event) => {
   `);
   const row = trigger.rows[0] as Row | undefined;
   if (!row) throw Object.assign(new Error('OutCall trigger is unavailable'), { code: 'OUTCALL_TRIGGER_NOT_FOUND' });
+  if (await isOperatorOsSmsRevoked(unprotect(String(row.phone_ciphertext)))) {
+    throw Object.assign(new Error('OutCall SMS consent has been revoked'), { code: 'OUTCALL_SMS_REVOKED' });
+  }
   const runAt = new Date(Date.now() + Number(row.delay_seconds) * 1000);
+  const provider=await outCallReadyState();
+  if(provider.name!=='test') assertOutCallDestinationAllowed(unprotect(String(row.phone_ciphertext)));
   await db.transaction(async (tx) => {
     const created = await tx.execute(sql`
       INSERT INTO outcall_call_requests (
@@ -416,6 +526,7 @@ registerSharedWebhookHandler(OUTCALL_SMS_WEBHOOK, async (event) => {
     `);
     const requestId = created.rows[0]?.id ? String(created.rows[0].id) : null;
     if (requestId) {
+      if(provider.name!=='test') await reserveOutCallResource({tenantId:event.tenantId,userId,operation:'voice',idempotencyKey:requestId,callId:requestId,dueAt:runAt},tx);
       await enqueueSharedJob({
         tenantId: event.tenantId,
         moduleId: event.moduleId,
@@ -439,7 +550,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
   app.get('/v1/modules/outcall/health', async () => ({
     status: 'ok',
     module: 'outcall',
-    provider: outCallProviderState().ready ? 'configured' : 'disabled',
+    provider: (await outCallReadyState()).ready ? 'configured' : 'disabled',
   }));
 
   app.get('/v1/modules/outcall/workspace', { preHandler: readGuards }, async (request) => {
@@ -467,16 +578,17 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
           scheduled_at,started_at,completed_at,canceled_at,failure_code,created_at,updated_at
         FROM outcall_call_requests
         WHERE tenant_id=${tenantId} AND user_id=${userId}
-        ORDER BY created_at DESC LIMIT 100
+        ORDER BY created_at DESC,id DESC LIMIT 101
       `),
       summarizeUsage({ tenantId, moduleId, userId }),
     ]);
-    const provider = outCallProviderState();
+    const provider = await outCallReadyState();
     return {
       settings: settings.rows[0] ? camel(settings.rows[0] as Row) : null,
       profiles: profiles.rows.map(row => camel(row as Row)),
       triggers: triggers.rows.map(row => camel(row as Row)),
-      calls: calls.rows.map(row => camel(row as Row)),
+      calls: calls.rows.slice(0, 100).map(row => camel(row as Row)),
+      callsHasMore: calls.rows.length > 100,
       usage: usage.map(row => camel(row as Row)),
       provider,
       safety: {
@@ -489,6 +601,40 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
         locationEnabled: false,
       },
     };
+  });
+
+  app.get('/v1/modules/outcall/calls', { preHandler: readGuards }, async (request, reply) => {
+    const { tenantId, userId } = context(request);
+    const before = (request.query as { before?: unknown }).before;
+    if (typeof before !== 'string' || !/^[a-zA-Z0-9-]{1,36}$/.test(before)) {
+      return reply.code(400).send({ error: 'A call cursor is required', code: 'OUTCALL_CURSOR_INVALID' });
+    }
+    const cursor = await db.execute(sql`
+      SELECT created_at,id FROM outcall_call_requests
+      WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${before} LIMIT 1
+    `);
+    if (!cursor.rows[0]) return reply.code(404).send({ error: 'Call not found', code: 'OUTCALL_CALL_NOT_FOUND' });
+    const rows = await db.execute(sql`
+      SELECT id,profile_id,destination_masked,source,status,provider,scheduled_at,
+        started_at,completed_at,canceled_at,failure_code,created_at,updated_at
+      FROM outcall_call_requests
+      WHERE tenant_id=${tenantId} AND user_id=${userId}
+        AND (created_at,id) < (${cursor.rows[0].created_at as Date},${before})
+      ORDER BY created_at DESC,id DESC LIMIT 101
+    `);
+    return { calls: rows.rows.slice(0, 100).map(row => camel(row as Row)), hasMore: rows.rows.length > 100 };
+  });
+
+  app.get('/v1/modules/outcall/calls/:id', { preHandler: readGuards }, async (request, reply) => {
+    const { tenantId, userId } = context(request);
+    const id = String((request.params as { id: string }).id);
+    const result = await db.execute(sql`
+      SELECT id,profile_id,destination_masked,source,status,provider,scheduled_at,
+        started_at,completed_at,canceled_at,failure_code,created_at,updated_at
+      FROM outcall_call_requests WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${id} LIMIT 1
+    `);
+    if (!result.rows[0]) return reply.code(404).send({ error: 'Call not found', code: 'OUTCALL_CALL_NOT_FOUND' });
+    return { call: camel(result.rows[0] as Row) };
   });
 
   app.post('/v1/modules/outcall/onboarding/accept-safety', { preHandler: writeGuards }, async (request, reply) => {
@@ -510,7 +656,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
   app.post('/v1/modules/outcall/phone-verification', { preHandler: writeGuards }, async (request, reply) => {
     try {
       const input = parsePhoneVerification(request.body);
-      const provider = outCallProviderState();
+      const provider = await outCallReadyState();
       if (!provider.ready || provider.name !== 'test') {
         return reply.code(503).send({
           error: 'The compatibility verification route is available only to isolated tests',
@@ -536,7 +682,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
   app.post('/v1/modules/outcall/phone-verification/start', { preHandler: writeGuards }, async (request, reply) => {
     try {
       const input = parsePhoneVerificationStart(request.body);
-      const provider = outCallProviderState();
+      const provider = await outCallReadyState();
       if (!provider.ready || provider.name !== 'twilio') {
         return reply.code(503).send({ error: provider.reason, code: 'OUTCALL_VERIFY_NOT_READY' });
       }
@@ -544,7 +690,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       if (!await consumeRateLimit({ tenantId, userId, scope: 'verify-start', max: 3, windowMs: 15 * 60_000 })) {
         return reply.code(429).send({ error: 'Please wait before requesting another verification code', code: 'OUTCALL_RATE_LIMITED' });
       }
-      await startOutCallPhoneVerification(input.phone);
+      await startOutCallPhoneVerification(input.phone,{tenantId,userId,idempotencyKey:randomUUID()});
       await activity(request, 'outcall_settings', userId, 'phone.verification_started', 'OutCall phone verification started.');
       return { started: true, phoneMasked: input.masked };
     } catch (error) {
@@ -556,7 +702,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
   app.post('/v1/modules/outcall/phone-verification/confirm', { preHandler: writeGuards }, async (request, reply) => {
     try {
       const input = parsePhoneVerification(request.body);
-      const provider = outCallProviderState();
+      const provider = await outCallReadyState();
       if (!provider.ready || provider.name !== 'twilio') {
         return reply.code(503).send({ error: provider.reason, code: 'OUTCALL_VERIFY_NOT_READY' });
       }
@@ -564,7 +710,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       if (!await consumeRateLimit({ tenantId, userId, scope: 'verify-confirm', max: 8, windowMs: 15 * 60_000 })) {
         return reply.code(429).send({ error: 'Please wait before checking another verification code', code: 'OUTCALL_RATE_LIMITED' });
       }
-      if (!await confirmOutCallPhoneVerification(input.phone, input.verificationCode)) {
+      if (!await confirmOutCallPhoneVerification(input.phone, input.verificationCode,{tenantId,userId,idempotencyKey:randomUUID()})) {
         return reply.code(400).send({ error: 'Verification could not be completed', code: 'OUTCALL_VERIFY_FAILED' });
       }
       const ownership = await persistVerifiedPhone({ tenantId, userId, ...input });
@@ -631,19 +777,33 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
 
   app.post('/v1/modules/outcall/calls', { preHandler: writeGuards }, async (request, reply) => {
     try {
+      const identity = parseScheduleIdentity(request.body);
+      const { tenantId, userId } = context(request);
+      const existing = await db.execute(sql`
+        SELECT * FROM outcall_call_requests
+        WHERE tenant_id=${tenantId} AND user_id=${userId} AND idempotency_key=${identity.idempotencyKey} LIMIT 1
+      `);
+      if (existing.rows[0]) {
+        const prior = existing.rows[0] as Row;
+        const runAt = (request.body as { runAt?: unknown }).runAt;
+        if (String(prior.profile_id) !== identity.profileId
+          || (runAt != null && new Date(String(runAt)).getTime() !== new Date(prior.scheduled_at).getTime())) {
+          return reply.code(409).send({ error: 'This request key belongs to a different call', code: 'OUTCALL_IDEMPOTENCY_CONFLICT' });
+        }
+        return { call: camel(prior), replayed: true };
+      }
       const input = parseSchedule(request.body);
-      const provider = outCallProviderState();
+      const provider = await outCallReadyState();
       if (!provider.ready) {
         return reply.code(503).send({ error: provider.reason, code: 'OUTCALL_PROVIDER_NOT_READY' });
       }
-      const { tenantId, userId } = context(request);
       if (!await consumeRateLimit({ tenantId, userId, scope: 'schedule', max: 5, windowMs: 5 * 60_000 })) {
         return reply.code(429).send({ error: 'Please wait before scheduling another call', code: 'OUTCALL_RATE_LIMITED' });
       }
       const moduleId = await outcallModuleId();
       const result = await db.transaction(async (tx) => {
         const settings = await tx.execute(sql`
-          SELECT phone_fingerprint,phone_masked,phone_verified_at,disclaimer_accepted_at
+          SELECT phone_ciphertext,phone_fingerprint,phone_masked,phone_verified_at,disclaimer_accepted_at
           FROM outcall_settings WHERE tenant_id=${tenantId} AND user_id=${userId} FOR UPDATE
         `);
         const current = settings.rows[0] as Row | undefined;
@@ -655,6 +815,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
             AND active=TRUE AND deleted_at IS NULL LIMIT 1
         `);
         if (!profile.rows[0]) return { state: 'profile' as const };
+        if(provider.name!=='test') assertOutCallDestinationAllowed(unprotect(String(current.phone_ciphertext)));
         const inserted = await tx.execute(sql`
           INSERT INTO outcall_call_requests (
             tenant_id,user_id,profile_id,destination_fingerprint,destination_masked,
@@ -676,6 +837,11 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
           `);
           row = existing.rows[0] as Row;
         }
+        if (duplicate && (String(row.profile_id) !== input.profileId
+          || ((request.body as { runAt?: unknown }).runAt != null && new Date(row.scheduled_at).getTime() !== input.runAt.getTime()))) {
+          return { state: 'conflict' as const };
+        }
+        if(provider.name!=='test') await reserveOutCallResource({tenantId,userId,operation:'voice',idempotencyKey:String(row.id),callId:String(row.id),dueAt:input.runAt},tx);
         await enqueueSharedJob({
           tenantId,
           moduleId,
@@ -692,10 +858,11 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       if (result.state === 'disclaimer') return reply.code(409).send({ error: 'Accept the safety disclaimer first', code: 'OUTCALL_DISCLAIMER_REQUIRED' });
       if (result.state === 'phone') return reply.code(409).send({ error: 'Verify your own mobile number first', code: 'OUTCALL_PHONE_REQUIRED' });
       if (result.state === 'profile') return reply.code(404).send({ error: 'Rescue profile not found', code: 'OUTCALL_PROFILE_NOT_FOUND' });
+      if (result.state === 'conflict') return reply.code(409).send({ error: 'This request key belongs to a different call', code: 'OUTCALL_IDEMPOTENCY_CONFLICT' });
       await activity(request, 'outcall_call', String(result.row.id), 'call.scheduled', 'Verified-self OutCall request scheduled.');
       return reply.code(result.duplicate ? 200 : 201).send({ call: camel(result.row), replayed: result.duplicate });
     } catch (error) {
-      if (validation(reply, error)) return;
+      if (validation(reply, error) || providerFailure(reply,error)) return;
       throw error;
     }
   });
@@ -858,12 +1025,12 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
           SELECT phone_fingerprint FROM outcall_settings
           WHERE tenant_id=${tenantId} AND user_id=${userId} FOR UPDATE
         `);
-        const inFlight = await tx.execute(sql`
-          SELECT id FROM outcall_call_requests
-          WHERE tenant_id=${tenantId} AND user_id=${userId} AND status='processing'
-          LIMIT 1 FOR UPDATE
+        const ownedCalls = await tx.execute(sql`
+          SELECT id,status FROM outcall_call_requests
+          WHERE tenant_id=${tenantId} AND user_id=${userId}
+          ORDER BY id FOR UPDATE
         `);
-        if (inFlight.rows[0]) return { deleted: false, inFlight: true };
+        if (ownedCalls.rows.some(row=>row.status==='processing')) return { deleted: false, inFlight: true };
         const phoneFingerprint = current.rows[0]?.phone_fingerprint ? String(current.rows[0].phone_fingerprint) : null;
         await tx.execute(sql`
           UPDATE shared_jobs SET status='cancelled',completed_at=NOW(),updated_at=NOW()
@@ -881,6 +1048,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
               )
             )
         `);
+        await clearOutCallResourceOwner(tenantId,userId,tx);
         await tx.execute(sql`DELETE FROM outcall_events WHERE call_request_id IN (
           SELECT id FROM outcall_call_requests WHERE tenant_id=${tenantId} AND user_id=${userId}
         )`);
@@ -934,6 +1102,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
         RETURNING *
       `);
       if (!call.rows[0]) return null;
+      await finishOutCallCallResource(id,'released',tx);
       await tx.execute(sql`
         UPDATE shared_jobs SET status='cancelled',completed_at=NOW(),updated_at=NOW()
         WHERE tenant_id=${tenantId} AND requested_by_user_id=${userId}
@@ -967,6 +1136,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
     `);
     if (!call.rows[0]) return reply.code(404).send({ error: 'Call not found', code: 'OUTCALL_CALL_NOT_FOUND' });
     const status = mapProviderStatus(String(body.CallStatus ?? ''));
+    if (!status) return reply.code(400).send({ error: 'Provider status is invalid', code: 'OUTCALL_PROVIDER_STATUS_INVALID' });
     const raw = webhookBytes(request, body);
     const sequence = /^\d{1,10}$/.test(String(body.SequenceNumber ?? ''))
       ? String(body.SequenceNumber)
@@ -1031,9 +1201,6 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
     if (!verifyOutCallTwilioSignature(request.url, body, signature)) {
       return reply.code(403).send({ error: 'Invalid signature', code: 'OUTCALL_SIGNATURE_INVALID' });
     }
-    if (!outCallProviderState().ready) {
-      return reply.code(503).send({ error: 'OutCall inbound triggers are not active', code: 'OUTCALL_PROVIDER_NOT_READY' });
-    }
     const messageSid = String(body.MessageSid ?? '');
     let from: string;
     let to: string;
@@ -1045,7 +1212,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       normalized = String(body.Body ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('en-US');
       if (!normalized || normalized.length > 120 || !isOutCallInboundNumber(to)) throw new Error('invalid sms');
     } catch {
-      return twiml(reply, '<Message>Request received.</Message>');
+      return outCallSmsReply(request,reply, '<Message>Request received.</Message>');
     }
     const keyword = await recordOperatorOsMessagingKeyword({
       phoneNumber: from,
@@ -1060,16 +1227,19 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
     if (keyword.handled) {
       if (body.OptOutType) return twiml(reply, '');
       if (keyword.type === 'HELP') {
-        return twiml(reply, '<Message>OperatorOS: Help is available at operatoros.net/john or john@shotgunninjas.com. Reply STOP to unsubscribe.</Message>');
+        return outCallSmsReply(request,reply, '<Message>OperatorOS: Help is available at operatoros.net/john or john@shotgunninjas.com. Reply STOP to unsubscribe.</Message>');
       }
       if (keyword.type === 'START' && keyword.changed) {
-        return twiml(reply, '<Message>OperatorOS: You are resubscribed to service messages. Reply STOP to unsubscribe or HELP for help.</Message>');
+        return outCallSmsReply(request,reply, '<Message>OperatorOS: You are resubscribed to service messages. Reply STOP to unsubscribe or HELP for help.</Message>');
       }
       if (keyword.type === 'STOP') {
-        return twiml(reply, '<Message>OperatorOS: You have been unsubscribed and will receive no further messages from this program.</Message>');
+        return outCallSmsReply(request,reply, '<Message>OperatorOS: You have been unsubscribed and will receive no further messages from this program.</Message>');
       }
       return twiml(reply, '');
     }
+    // STOP remains effective for subsequent phrases and their automatic reply.
+    if (await isOperatorOsSmsRevoked(from)) return twiml(reply, '');
+    if(!(await outCallReadyState()).ready)return twiml(reply,'');
     const phoneDigest = fingerprint(`phone:${from}`);
     const triggerDigest = fingerprint(`trigger:${normalized}`);
     const candidate = await db.execute(sql`
@@ -1078,7 +1248,7 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       JOIN users u ON u.id=o.user_id AND u.status='active'
       JOIN outcall_settings s ON s.user_id=o.user_id AND s.tenant_id=u.current_tenant_id
       JOIN outcall_triggers t ON t.tenant_id=s.tenant_id AND t.user_id=s.user_id
-      JOIN outcall_profiles p ON p.tenant_id=t.tenant_id AND p.id=t.profile_id
+      JOIN outcall_profiles p ON p.tenant_id=t.tenant_id AND p.user_id=t.user_id AND p.id=t.profile_id
       WHERE o.phone_fingerprint=${phoneDigest} AND s.phone_fingerprint=o.phone_fingerprint
         AND s.phone_verified_at IS NOT NULL AND s.disclaimer_accepted_at IS NOT NULL
         AND t.phrase_digest=${triggerDigest} AND t.enabled=TRUE AND t.deleted_at IS NULL
@@ -1086,13 +1256,11 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       LIMIT 1
     `);
     const match = candidate.rows[0] as Row | undefined;
-    if (!match) return twiml(reply, '<Message>Request received.</Message>');
+    if (!match) return outCallSmsReply(request,reply, '<Message>Request received.</Message>');
     const tenantId = String(match.tenant_id);
     const userId = String(match.user_id);
-    const entitlements = await resolveEntitlements(userId, tenantId);
-    const entitlement = entitlements?.modules.find(entry => entry.slug === 'outcall');
-    if (!entitlement?.enabled || !await consumeRateLimit({ tenantId, userId, scope: 'sms-trigger', max: 5, windowMs: 15 * 60_000 })) {
-      return twiml(reply, '<Message>Request received.</Message>');
+    if (!await canPlaceOutCall(userId, tenantId) || !await consumeRateLimit({ tenantId, userId, scope: 'sms-trigger', max: 5, windowMs: 15 * 60_000 })) {
+      return outCallSmsReply(request,reply, '<Message>Request received.</Message>');
     }
     const raw = webhookBytes(request, body);
     const receipt = await receiveVerifiedWebhook({
@@ -1108,6 +1276,6 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       maxAttempts: 1,
     });
     if (receipt.status !== 'processed') return reply.code(503).send({ error: 'Trigger could not be queued', code: 'OUTCALL_WEBHOOK_RETRY' });
-    return twiml(reply, '<Message>Request received.</Message>');
+    return outCallSmsReply(request,reply, '<Message>Request received.</Message>');
   });
 }

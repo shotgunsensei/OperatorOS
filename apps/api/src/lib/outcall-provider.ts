@@ -1,6 +1,9 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { normalizeE164 } from './callcommand.js';
 import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
+import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
+import { db } from '../db.js';
+import { beginOutCallSubmission, finishOutCallResource, hasApprovedOutCallResourcePolicy, readOutCallResourcePolicy, reserveOutCallResource } from './outcall-resources.js';
 
 export type OutCallProviderName = 'test' | 'twilio' | 'disabled';
 
@@ -38,6 +41,7 @@ function enabled(value: string | undefined): boolean {
 
 function testAdapterEnabled(): boolean {
   return process.env.APP_ENV === 'test'
+    && process.env.NODE_ENV === 'test'
     && process.env.OUTCALL_TEST_ADAPTER === 'enabled';
 }
 
@@ -54,7 +58,7 @@ function readTwilioConfig(): OutCallTwilioConfig | null {
     String(process.env.TWILIO_ALLOWED_COUNTRIES ?? '')
       .split(',')
       .map(value => value.trim().toUpperCase())
-      .filter(value => /^[A-Z]{2}$/.test(value)),
+      .filter(Boolean),
   );
   const restUsername = apiKeySid || accountSid;
   const restSecret = apiKeySid ? apiKeySecret : signingToken;
@@ -66,6 +70,7 @@ function readTwilioConfig(): OutCallTwilioConfig | null {
     || !/^\+[1-9]\d{7,14}$/.test(fromNumber)
     || publicUrl !== 'https://outcall.operatoros.net'
     || allowedCountries.size === 0
+    || [...allowedCountries].some(country => !['US','CA'].includes(country))
     || !restUsername
     || !restSecret) {
     return null;
@@ -100,24 +105,28 @@ export function outCallProviderState(): OutCallProviderState {
   }
   const configured = readTwilioConfig() !== null;
   const active = configured && enabled(process.env.OUTCALL_LIVE_PROVIDER);
-  if (active) {
-    return { name: 'twilio', configured: true, ready: true, reason: null };
-  }
   return {
     name: configured ? 'twilio' : 'disabled',
     configured,
     ready: false,
-    reason: configured
+    reason: active ? 'Live calling requires a current approved account resource policy.' : configured
       ? 'Live calling is configured but awaiting controlled activation.'
       : 'Live phone verification and calling are not configured.',
   };
+}
+
+export async function outCallReadyState(): Promise<OutCallProviderState> {
+  const state=outCallProviderState();
+  if(state.name==='test' || !state.configured || !enabled(process.env.OUTCALL_LIVE_PROVIDER))return state;
+  if(!readOutCallResourcePolicy() || !await hasApprovedOutCallResourcePolicy())return state;
+  return {name:'twilio',configured:true,ready:true,reason:null};
 }
 
 function authHeader(config: OutCallTwilioConfig): string {
   return `Basic ${Buffer.from(`${config.restUsername}:${config.restSecret}`).toString('base64')}`;
 }
 
-async function twilioFormRequest<T>(url: string, form: URLSearchParams): Promise<T> {
+async function twilioFormRequest<T>(url: string, form: URLSearchParams, voiceSubmission = false): Promise<T> {
   const config = requireTwilioConfig();
   let response: Response;
   try {
@@ -128,26 +137,37 @@ async function twilioFormRequest<T>(url: string, form: URLSearchParams): Promise
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: form.toString(),
+      signal: AbortSignal.timeout(15_000),
     });
   } catch {
-    throw new OutCallProviderError('The phone provider could not be reached', 'OUTCALL_PROVIDER_UNAVAILABLE', true);
+    throw new OutCallProviderError(
+      voiceSubmission ? 'Call submission could not be confirmed. Do not repeat it.' : 'The phone provider could not be reached',
+      voiceSubmission ? 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN' : 'OUTCALL_PROVIDER_UNAVAILABLE',
+      !voiceSubmission,
+    );
   }
   if (!response.ok) {
     throw new OutCallProviderError(
       'The phone provider rejected the request',
-      `OUTCALL_PROVIDER_HTTP_${response.status}`,
-      response.status === 429 || response.status >= 500,
+      voiceSubmission && response.status >= 500 ? 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN' : `OUTCALL_PROVIDER_HTTP_${response.status}`,
+      !voiceSubmission && (response.status === 429 || response.status >= 500),
     );
   }
-  return await response.json() as T;
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new OutCallProviderError('The phone provider response could not be confirmed', voiceSubmission ? 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN' : 'OUTCALL_PROVIDER_RESPONSE_INVALID');
+  }
 }
 
 export function assertOutCallDestinationAllowed(phone: string): void {
   const config = requireTwilioConfig();
-  // The initial controlled launch is intentionally North-America-only. A
-  // reviewed numbering library and Twilio geo-permission acceptance are
-  // required before widening this boundary.
-  if (!phone.startsWith('+1') || (!config.allowedCountries.has('US') && !config.allowedCountries.has('CA'))) {
+  const parsed=parsePhoneNumberFromString(phone,{extract:false});
+  // Country calling code 1 is shared. Never infer a country from a prefix,
+  // a default region, or the existence of US/CA anywhere in the allowlist.
+  if (!parsed || parsed.number!==phone || !parsed.isValid() || !parsed.country
+    || !config.allowedCountries.has(parsed.country)
+    || !['MOBILE','FIXED_LINE_OR_MOBILE'].includes(parsed.getType() ?? '')) {
     throw new OutCallProviderError(
       'This destination is outside the approved launch countries',
       'OUTCALL_COUNTRY_NOT_ALLOWED',
@@ -155,10 +175,18 @@ export function assertOutCallDestinationAllowed(phone: string): void {
   }
 }
 
-export async function startOutCallPhoneVerification(phone: string): Promise<void> {
+type VerificationContext={tenantId:string;userId:string;idempotencyKey:string};
+async function verificationReservation(context:VerificationContext,operation:'verify_start'|'verify_check') {
+  const id=await db.transaction(tx=>reserveOutCallResource({...context,operation},tx));
+  await beginOutCallSubmission(id,context.tenantId,context.userId,operation);
+  return id;
+}
+export async function startOutCallPhoneVerification(phone: string,context:VerificationContext): Promise<void> {
   assertOutCallDestinationAllowed(phone);
   const config = requireTwilioConfig();
   const form = new URLSearchParams({ To: phone, Channel: 'sms' });
+  const reservation=await verificationReservation(context,'verify_start');
+  try {
   const result = await twilioFormRequest<{ status?: string }>(
     `https://verify.twilio.com/v2/Services/${encodeURIComponent(config.verifyServiceSid)}/Verifications`,
     form,
@@ -166,17 +194,23 @@ export async function startOutCallPhoneVerification(phone: string): Promise<void
   if (result.status !== 'pending') {
     throw new OutCallProviderError('Phone verification could not be started', 'OUTCALL_VERIFY_START_FAILED');
   }
+  await db.transaction(tx=>finishOutCallResource(reservation,'spent',tx));
+  } catch(error) { await db.transaction(tx=>finishOutCallResource(reservation,'unknown',tx));throw error; }
 }
 
-export async function confirmOutCallPhoneVerification(phone: string, code: string): Promise<boolean> {
+export async function confirmOutCallPhoneVerification(phone: string, code: string,context:VerificationContext): Promise<boolean> {
   assertOutCallDestinationAllowed(phone);
   const config = requireTwilioConfig();
   const form = new URLSearchParams({ To: phone, Code: code });
+  const reservation=await verificationReservation(context,'verify_check');
+  try {
   const result = await twilioFormRequest<{ status?: string; valid?: boolean }>(
     `https://verify.twilio.com/v2/Services/${encodeURIComponent(config.verifyServiceSid)}/VerificationCheck`,
     form,
   );
+  await db.transaction(tx=>finishOutCallResource(reservation,'spent',tx));
   return result.status === 'approved' && result.valid !== false;
+  } catch(error) { await db.transaction(tx=>finishOutCallResource(reservation,'unknown',tx));throw error; }
 }
 
 function xml(value: string): string {
@@ -195,9 +229,13 @@ export async function placeOutCallVoice(input: {
   message: string;
   voice: string;
   language: string;
+  reservationId:string;
+  tenantId:string;
+  userId:string;
 }): Promise<{ sid: string; status: string }> {
   assertOutCallDestinationAllowed(input.destination);
   const config = requireTwilioConfig();
+  const timeLimit=await beginOutCallSubmission(input.reservationId,input.tenantId,input.userId,'voice',input.requestId);
   const statusCallback = new URL(
     `/api/modules/outcall/webhooks/twilio/voice/status?request_id=${encodeURIComponent(input.requestId)}`,
     config.publicUrl,
@@ -223,18 +261,29 @@ export async function placeOutCallVoice(input: {
     StatusCallback: statusCallback,
     StatusCallbackMethod: 'POST',
     Record: 'false',
+    TimeLimit: String(timeLimit),
+    Timeout: '30',
   });
   for (const event of ['initiated', 'ringing', 'answered', 'completed']) {
     form.append('StatusCallbackEvent', event);
   }
+  try {
   const result = await twilioFormRequest<{ sid?: string; status?: string }>(
     `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.accountSid)}/Calls.json`,
     form,
+    true,
   );
   if (!result.sid || !/^CA[a-zA-Z0-9]{8,}$/.test(result.sid)) {
-    throw new OutCallProviderError('The phone provider returned an invalid call identifier', 'OUTCALL_PROVIDER_RESPONSE_INVALID');
+    throw new OutCallProviderError('Call submission could not be confirmed. Do not repeat it.', 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN');
   }
+  await db.transaction(tx=>finishOutCallResource(input.reservationId,'active',tx));
   return { sid: result.sid, status: result.status ?? 'queued' };
+  } catch(error) {
+    const rejected=error instanceof OutCallProviderError && /^OUTCALL_PROVIDER_HTTP_4\d\d$/.test(error.code);
+    try { await db.transaction(tx=>finishOutCallResource(input.reservationId,rejected?'spent':'unknown',tx)); } catch { /* recovery retains the submission hold */ }
+    if(rejected) throw error;
+    throw new OutCallProviderError('Call submission could not be confirmed. Do not repeat it.','OUTCALL_PROVIDER_OUTCOME_UNKNOWN');
+  }
 }
 
 export function canonicalOutCallWebhookUrl(rawUrl: string): string {

@@ -1,16 +1,18 @@
 # OutCall Go-Live Checklist
 
-Current classification: **active source/local release candidate; deployment
-acceptance open**. Catalog and launch activation are implemented in the current
-candidate. Do not call OutCall production-ready until every unchecked target
-gate below is evidenced on the exact deployed revision.
+Current classification: **implemented source/local candidate; coming soon;
+production and provider acceptance open**. Canonical catalog and launch remain
+closed. Older active-candidate wording below is superseded by the current
+[readiness ledger](../PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
+Do not call OutCall production-ready until every unchecked target gate is
+evidenced on the exact deployed revision.
 
 ## Completed in the candidate
 
 - [x] OperatorOS owns identity, host sessions, tenant selection, roles,
       entitlements, add-on billing, registry, navigation, audit, jobs, and usage.
-- [x] OutCall is active in the catalog, deployment registry, SSO matrix,
-      launcher, production verifier, and add-on readiness checks.
+- [ ] Activate catalog, registry, SSO, launcher and commercial enrollment only
+      after approved provider/configuration/security and deployed acceptance.
 - [x] Calls can target only the server-recovered verified-self number.
 - [x] Phone and trigger values are independently encrypted/fingerprinted;
       projections are masked and private phrases are never returned.
@@ -21,8 +23,19 @@ gate below is evidenced on the exact deployed revision.
       and trigger management, password-confirmed export, and deletion exist.
 - [x] Twilio Verify, voice, DTMF, status, and inbound SMS paths verify the exact
       canonical public signature and use replay-safe shared receipts.
-- [x] Tenant/user-scoped persistent rate limits, job idempotency, provider-ID
-      uniqueness, one-attempt live submission, and exactly-once usage are wired.
+- [x] Tenant/user-scoped rate limits, job idempotency, provider-ID uniqueness,
+      one-attempt submission, permission rechecks, monotonic terminal state,
+      uncertain outcome preservation and replay-safe usage are wired locally.
+- [x] Validate configured destination countries, including US-only versus
+      Canada and other NANP regions, before Verify and voice using pinned metadata.
+- [x] Enforce account-wide atomic monetary ceilings, daily quotas and held
+      concurrency across tenants; uncertainty retains money/capacity.
+- [ ] Approve verified worst-case provider costs, the exact policy/configuration
+      and expiring privileged account approval described in the
+      [v67 control ledger](RESOURCE_CONTROLS_V67_2026-10-14.md). Configuration
+      alone is insufficient; no production allowance has been set.
+- [ ] Exercise actual process death, response loss and independent carrier
+      reconciliation without duplicate calls; lease-state simulation is local evidence only.
 - [x] Release v33 is additive, ordered, idempotent, and verifies all OutCall
       product tables.
 - [x] The UI uses customer-facing safety, privacy, scheduling, history, and
@@ -48,8 +61,10 @@ gate below is evidenced on the exact deployed revision.
 ## Deployed OperatorOS acceptance
 
 - [ ] Deploy the exact reviewed commit and pin the release identity.
-- [ ] Apply release v33 only through the supported release supervisor after a
-      backup; verify health, readiness, release identity, and rollback target.
+- [ ] Reconcile source v67 with last-observed serving v65 and preserved Replit divergence.
+      Verify the approved target/backup and apply the full current ordered
+      manifest through the supported root release operation. Routine serving
+      supervisor remains verify-only. Never apply an old v33 child release.
 - [ ] Pass exact-host SSO issue/exchange, deep links, return navigation, local
       logout, global logout, suspension, role change, and entitlement removal.
 - [ ] Pass authenticated primary workflow, viewer/write denial, and second-
@@ -63,7 +78,7 @@ gate below is evidenced on the exact deployed revision.
 
 - [ ] Record final committed install, focused/full tests, typecheck, production
       build/start, health/readiness, and browser totals in the implementation
-      status (the repository has no lint/format command, so none is claimed).
+      status, including the required root zero-warning lint command.
 - [ ] Pass mobile, keyboard, focus, labels, contrast, reduced-motion, and screen-
       reader review on the deployed OutCall experience.
 - [ ] Confirm customer copy, help text, error recovery, account export/deletion,

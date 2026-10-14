@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, CalendarClock, CheckCircle2, Clock3, Download, Loader2, PhoneCall, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
@@ -13,6 +13,7 @@ type Workspace = {
   profiles: Row[];
   triggers: Row[];
   calls: Row[];
+  callsHasMore?: boolean;
   usage: Row[];
   provider: { name: 'test' | 'twilio' | 'disabled'; configured: boolean; ready: boolean; reason: string | null };
   safety: Record<string, boolean>;
@@ -50,17 +51,33 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
   const [runAt, setRunAt] = useState('');
   const [privacyPassword, setPrivacyPassword] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const pendingSchedule = useRef<{ profileId: string; idempotencyKey: string; runAt?: string } | null>(null);
+  const [scheduleUnresolved, setScheduleUnresolved] = useState(false);
+  const [olderCalls, setOlderCalls] = useState<Row[]>([]);
+  const [olderHasMore, setOlderHasMore] = useState<boolean | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setWorkspace(await moduleShellApi.outcall.workspace() as Workspace);
+      const next = await moduleShellApi.outcall.workspace() as Workspace;
+      if (recordId && !next.calls.some(call => call.id === recordId)) {
+        const record = await moduleShellApi.outcall.callRecord(recordId) as { call: Row };
+        setOlderCalls([record.call]);
+      }
+      setWorkspace(next);
       setError('');
     } catch (e) {
       setError(errorMessage(e));
     }
-  }, []);
+  }, [recordId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [load]);
 
   async function run(name: string, action: () => Promise<unknown>, success: string) {
     if (!canWrite || busy) return;
@@ -79,7 +96,7 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
   if (!workspace) {
     return <section style={{ color: semantic.text }} data-testid={`outcall-${view}-route`} aria-busy={!error}>
       {error
-        ? <div role="alert" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger }}>{error}</div>
+        ? <div role="alert" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger }}>{error}<button type="button" style={{ ...button, marginLeft: 12 }} onClick={() => void load()}>Try again</button></div>
         : <div role="status" style={{ color: semantic.textMuted, display: 'flex', alignItems: 'center', gap: 8 }}><Loader2 size={18} aria-hidden="true" /> Loading the verified exit-assistance workspace…</div>}
     </section>;
   }
@@ -87,7 +104,19 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
   const accepted = !!workspace.settings?.disclaimerAcceptedAt;
   const verified = !!workspace.settings?.phoneVerifiedAt;
   const providerReady = workspace.provider.ready;
-  const selectedCall = workspace.calls.find(item => item.id === recordId) ?? null;
+  const calls = [...workspace.calls, ...olderCalls.filter(row => !workspace.calls.some(current => current.id === row.id))];
+  const selectedCall = calls.find(item => item.id === recordId) ?? null;
+
+  async function loadOlderCalls() {
+    if (loadingOlder || !calls.length) return;
+    setLoadingOlder(true);
+    try {
+      const page = await moduleShellApi.outcall.callsPage(String(calls.at(-1)!.id)) as { calls: Row[]; hasMore: boolean };
+      setOlderCalls(previous => [...previous, ...page.calls.filter(row => !previous.some(current => current.id === row.id))]);
+      setOlderHasMore(page.hasMore);
+    } catch (e) { setError(errorMessage(e)); }
+    finally { setLoadingOlder(false); }
+  }
 
   async function exportData() {
     if (!canWrite || busy) return;
@@ -123,13 +152,13 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
         </div>
       )}
 
-      {['overview', 'delivery', 'settings'].includes(view) && <section id="outcall-readiness" tabIndex={-1} style={{ ...cardStyle, marginBottom: space.lg }}>
+      <section id="outcall-readiness" tabIndex={-1} style={{ ...cardStyle, marginBottom: space.lg }}>
         <h2 style={{ marginTop: 0, fontSize: 18 }}>Readiness and safety</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
           <Status ok={accepted} text="Safety disclaimer accepted" />
           <Status ok={verified} text={verified ? `Verified ${workspace.settings?.phoneMasked}` : 'Mobile verification required'} />
           <Status ok={workspace.profiles.length > 0} text="Rescue profile configured" />
-          <Status ok={providerReady} text={providerReady ? 'Calling ready' : 'Calling setup required'} />
+          <Status ok={providerReady} text={workspace.provider.name === 'test' ? 'Test mode: no real calls' : providerReady ? 'Calling service connected' : workspace.provider.configured ? 'Calling awaits activation' : 'Calling setup required'} />
         </div>
         {!accepted && (
           <button data-testid="button-outcall-accept-safety" style={{ ...button, marginTop: 16 }} disabled={!canWrite || !!busy}
@@ -137,8 +166,8 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
             <ShieldCheck size={16} /> I understand the safety limitations
           </button>
         )}
-        {!providerReady && <p style={{ color: '#d29922', marginBottom: 0 }}>Calling is not connected for this organization yet. You can finish your profile now; an administrator can complete phone-service setup when you are ready to place calls.</p>}
-      </section>}
+        {!providerReady && <p style={{ color: '#d29922', marginBottom: 0 }}>{workspace.provider.configured ? 'Calling is configured and awaiting controlled activation. Phone verification, calls, and SMS triggers are unavailable until activation is accepted.' : 'Phone verification and calling are not connected yet. You can prepare a profile; contact support to review service setup.'}</p>}
+      </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: space.lg }}>
         {view === 'verification' && <section id="outcall-setup" tabIndex={-1} style={cardStyle}>
@@ -227,22 +256,45 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
         {['schedules', 'calls', 'reminders', 'history'].includes(view) && <section id="outcall-schedule" tabIndex={-1} style={cardStyle}>
           <h2 style={{ marginTop: 0, fontSize: 18 }}>{view === 'history' ? 'Call delivery history' : view === 'calls' ? 'Call requests' : view === 'reminders' ? 'Exit-call reminders' : 'Schedule an exit call'}</h2>
           <p style={{ color: semantic.textMuted }}>Calls can only go to your verified number.</p>
-          {['schedules', 'reminders'].includes(view) && <><label>When to call (optional)<input type="datetime-local" style={{ ...input, marginBottom: 10 }} value={runAt} onChange={event => setRunAt(event.target.value)} disabled={!canWrite} /></label>
+          {['schedules', 'reminders'].includes(view) && <><label>When to call (optional)<input type="datetime-local" style={{ ...input, marginBottom: 10 }} value={runAt} onChange={event => setRunAt(event.target.value)} disabled={!canWrite || scheduleUnresolved} /></label>
           <button data-testid="button-outcall-schedule" style={button}
             disabled={!canWrite || !verified || !providerReady || workspace.profiles.length === 0 || !!busy}
-            onClick={() => run('call', () => moduleShellApi.outcall.schedule({
-              profileId: workspace.profiles[0].id,
-              idempotencyKey: crypto.randomUUID(),
-              ...(runAt ? { runAt: new Date(runAt).toISOString() } : {}),
-            }), 'Durable call request scheduled.')}>
-            {runAt ? <CalendarClock size={16} /> : <PhoneCall size={16} />} {runAt ? 'Schedule call' : 'Call me now'}
+            onClick={() => run('call', async () => {
+              const retry = pendingSchedule.current !== null;
+              pendingSchedule.current ??= {
+                profileId: workspace.profiles[0].id,
+                idempotencyKey: crypto.randomUUID(),
+                ...(runAt ? { runAt: new Date(runAt).toISOString() } : {}),
+              };
+              setScheduleUnresolved(true);
+              try {
+                await moduleShellApi.outcall.schedule(pendingSchedule.current);
+              } catch (failure) {
+                const status = (failure as { status?: number }).status;
+                // An initial, definitive rejection permits correcting the
+                // form. Once an earlier response was lost, retain that key
+                // even if a later retry is denied after access changes.
+                if (!retry && (status != null && [400, 401, 403, 404, 422, 429].includes(status))) {
+                  pendingSchedule.current = null;
+                  setScheduleUnresolved(false);
+                }
+                throw failure;
+              }
+              pendingSchedule.current = null;
+              setScheduleUnresolved(false);
+            }, 'Durable call request scheduled.')}>
+            {runAt ? <CalendarClock size={16} /> : <PhoneCall size={16} />} {scheduleUnresolved ? 'Retry same call request' : runAt ? 'Schedule call' : 'Call me now'}
           </button></>}
-          {selectedCall && <article data-testid="outcall-call-record" style={{ ...cardStyle, marginTop: 12 }}><strong>{selectedCall.destinationMasked}</strong><p style={{ color: semantic.textMuted }}>{selectedCall.status} · scheduled {new Date(selectedCall.scheduledAt).toLocaleString()}</p><small>Delivery status: {String(selectedCall.providerStatus || selectedCall.status).replaceAll('_', ' ')}. A call appears as completed only after the calling service confirms it.</small></article>}
-          <ActionList rows={workspace.calls} empty="No call requests yet." render={row => `${row.destinationMasked} · ${row.status} · ${new Date(row.scheduledAt).toLocaleString()}`}
+          {selectedCall && <article data-testid="outcall-call-record" style={{ ...cardStyle, marginTop: 12 }}><strong>{selectedCall.destinationMasked}</strong><p style={{ color: semantic.textMuted }}>{callStatus(selectedCall)} · scheduled {new Date(selectedCall.scheduledAt).toLocaleString()}</p><small>Delivery status: {callStatus(selectedCall)}. A call appears as completed only after the calling service confirms it.</small></article>}
+          <ActionList rows={calls} empty="No call requests yet." render={row => `${row.destinationMasked} · ${callStatus(row)} · ${new Date(row.scheduledAt).toLocaleString()}`}
             secondaryActionLabel="Open call record" onSecondaryAction={row => router.push(hrefFor(`/calls/${row.id}`))}
             actionLabel="Cancel call" actionWhen={row => row.status === 'scheduled'}
             actionEnabled={canWrite}
-            onAction={row => run(`call-${row.id}`, () => moduleShellApi.outcall.cancel(row.id), 'Scheduled call canceled.')} />
+            onAction={row => run(`call-${row.id}`, async () => {
+              await moduleShellApi.outcall.cancel(row.id);
+              setOlderCalls(previous => previous.map(call => call.id === row.id ? { ...call, status: 'canceled' } : call));
+            }, 'Scheduled call canceled.')} />
+          {(olderHasMore ?? workspace.callsHasMore) && <button type="button" style={{ ...button, marginTop: 12 }} disabled={loadingOlder} onClick={() => void loadOlderCalls()}>{loadingOlder ? 'Loading older calls…' : 'Load older calls'}</button>}
         </section>}
       </div>
 
@@ -270,6 +322,12 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
       </section>}
     </section>
   );
+}
+
+function callStatus(call: Row): string {
+  return call.failureCode === 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN'
+    ? 'Outcome unconfirmed — do not place a replacement call; contact support'
+    : String(call.providerStatus || call.status).replaceAll('_', ' ');
 }
 
 function Status({ ok, text }: { ok: boolean; text: string }) {
@@ -303,7 +361,7 @@ function ActionList({
   secondaryActionEnabled?: boolean;
 }) {
   if (!rows.length) return <p style={{ color: semantic.textMuted }}>{empty}</p>;
-  return <ul style={{ paddingLeft: 20, color: semantic.textMuted }}>{rows.slice(0, 5).map(row => <li key={row.id} style={{ marginTop: 8 }}>
+  return <ul style={{ paddingLeft: 20, color: semantic.textMuted }}>{rows.map(row => <li key={row.id} style={{ marginTop: 8 }}>
     <Clock3 size={12} /> {render(row)}{' '}
     {secondaryActionLabel && onSecondaryAction && <button type="button" aria-label={secondaryActionLabel} disabled={!secondaryActionEnabled} onClick={() => onSecondaryAction(row)}
       style={{ border: 0, background: 'transparent', color: outCallLink, cursor: 'pointer', fontWeight: 700 }}>

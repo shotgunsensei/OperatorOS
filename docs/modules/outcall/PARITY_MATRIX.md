@@ -1,5 +1,14 @@
 # OutCall parity matrix
 
+## Production-readiness repair (2026-10-14, local only)
+
+Parity counts and `coming_soon` classification remain unchanged. The scoped
+candidate rechecks delayed calling and signed SMS write authority, preserves
+terminal and uncertain carrier outcomes, suppresses SMS after STOP, repairs
+request retries, and pages owner-bound call history/cancellation. Focused API
+and desktop/mobile component evidence does not prove production SSO, billing,
+provider spending controls or real calling. See the [current ledger](../../PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
+
 ## Current owner-authorized reconstruction truth (2026-08-26)
 
 The historical source-recovery blocker below is superseded for source/local

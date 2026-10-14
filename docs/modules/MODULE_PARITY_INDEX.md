@@ -1,13 +1,21 @@
 # OperatorOS module parity index
 
-## CallCommand lifecycle evidence overlay (2026-10-14, 19:05 UTC)
+## OutCall v67 resource-control continuation (2026-10-14, local only)
 
-Parity remains unchanged. Three new synthetic heartbeat/sideband-loss/expired-
-owner replay checks, strict changed-test types and scoped lint pass. No new
-application or schema behavior is introduced. Real process death, autonomous
-recovery, live answer, delivered RMM intake and human transfer remain open.
-Production remains identified at v65; the coordinated OutCall candidate is v67.
-See [the preflight and exact pending actions](../callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
+Parity counts and coming-soon state are unchanged. Exact configured-country
+validation and account-wide atomic approval/budget/quota/capacity controls pass
+37 focused API/schema/isolation checks; CallCommand compatibility remains 39/39.
+Additive v67 rehearsal creates no approval. No remote merge, production apply,
+provider activation or live acceptance occurred. [Requirements and evidence](../outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+
+## OutCall production-readiness repair (2026-10-14, local only)
+
+Parity counts and coming-soon launch state are unchanged. Focused authority,
+SMS suppression, callback/uncertainty, retry, older-call cancellation and
+readiness repairs pass 23 API, 45 platform and 5 component browser checks;
+39 CallCommand compatibility checks preserve the reviewed parent work.
+No remote merge, deployment, production migration, provider activation or
+live customer acceptance occurred. [Current status and gates](../PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
 
 ## CallCommand inbound outcome overlay (2026-10-14)
 

@@ -2954,6 +2954,8 @@ export const moduleShellApi = {
   },
   outcall: {
     workspace: () => apiFetch('/modules/outcall/workspace'),
+    callsPage: (before: string) => apiFetch(`/modules/outcall/calls?before=${encodeURIComponent(before)}`),
+    callRecord: (id: string) => apiFetch(`/modules/outcall/calls/${encodeURIComponent(id)}`),
     acceptSafety: () => apiFetch('/modules/outcall/onboarding/accept-safety', {
       method: 'POST',
       body: JSON.stringify({ accepted: true }),
