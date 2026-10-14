@@ -814,6 +814,7 @@ export interface OpenAiSipDialTwimlInput {
   openAiProjectId: string;
   timeoutSeconds?: number;
   statusCallbackUrl?: string;
+  referUrl?: string;
   allowedWebhookOrigins?: readonly string[];
   callId?: string;
   routeToken?: string;
@@ -831,6 +832,12 @@ export function buildOpenAiSipDialTwiml(input: OpenAiSipDialTwimlInput): string 
     const callback = validateWebhookUrl(input.statusCallbackUrl, origins);
     callbackAttributes = ` statusCallback="${escapeTwiml(callback)}" statusCallbackMethod="POST" statusCallbackEvent="initiated ringing answered completed"`;
   }
+  let referAttributes = '';
+  if (input.referUrl !== undefined) {
+    if (!input.allowedWebhookOrigins?.length) invalid('Allowed webhook origins are required for SIP transfer');
+    const origins = new Set(input.allowedWebhookOrigins.map(normalizeOrigin));
+    referAttributes = ` referUrl="${escapeTwiml(validateWebhookUrl(input.referUrl, origins))}" referMethod="POST"`;
+  }
   if ((input.callId === undefined) !== (input.routeToken === undefined)) {
     invalid('Call ID and SIP route token must be provided together');
   }
@@ -841,7 +848,7 @@ export function buildOpenAiSipDialTwiml(input: OpenAiSipDialTwimlInput): string 
     routeHeaders = `?x-callcommand-call-id=${encodeURIComponent(input.callId)}&x-callcommand-route-token=${input.routeToken}`;
   }
   const sipUri = `sip:${input.openAiProjectId}@sip.api.openai.com;transport=tls${routeHeaders}`;
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial answerOnBridge="true" timeout="${timeout}"><Sip${callbackAttributes}>${escapeTwiml(sipUri)}</Sip></Dial></Response>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial answerOnBridge="true" timeout="${timeout}"${referAttributes}><Sip${callbackAttributes}>${escapeTwiml(sipUri)}</Sip></Dial></Response>`;
 }
 
 type JsonPrimitive = string | number | boolean | null;

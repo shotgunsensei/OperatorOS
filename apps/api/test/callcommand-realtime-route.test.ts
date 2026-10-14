@@ -5,12 +5,13 @@ process.env.APP_ENV = 'test';
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { after, before, test } from 'node:test';
-import Fastify from 'fastify';
+import Fastify, { type FastifyRequest } from 'fastify';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { modules, tenantModules } from '../src/schema.js';
 import {
   __setCallCommandRealtimeAdapterFactoryForTests,
+  finalizeCallCommandRealtimeNotifications,
   registerCallCommandRealtimeRoutes,
 } from '../src/routes/callcommand-realtime-routes.js';
 import type {
@@ -19,6 +20,7 @@ import type {
   VerifiedOpenAiIncomingCall,
 } from '../src/lib/callcommand-realtime.js';
 import { closeCallCommandRealtimeSideband } from '../src/lib/callcommand-realtime-session-registry.js';
+import { processOutboxBatch, setOutboundAdapterResolverForTests } from '../src/lib/shared-notification-outbox.js';
 import {
   cleanupModule,
   cleanupUser,
@@ -56,6 +58,8 @@ let createdModule = false;
 const accepted: Array<{ openAiCallId: string; input: RealtimeAcceptInput }> = [];
 const rejected: Array<{ openAiCallId: string; statusCode: number }> = [];
 const hungUp: string[] = [];
+const transferFailures = new Set<string>();
+const referred: string[] = [];
 const sidebandOpenFailures = new Set<string>();
 const verifiedRoutes: Array<{ internalCallId: string; sid: string; token: string }> = [];
 const unwrappedCalls: VerifiedOpenAiIncomingCall[] = [];
@@ -149,6 +153,7 @@ async function cleanupTenant(tenantId: string) {
     await tx.execute(sql.raw(`SET LOCAL operatoros.allow_callcommand_usage_delete='on'`));
     await tx.execute(sql`UPDATE callcommand_calls SET capacity_lease_id=NULL WHERE tenant_id=${tenantId}`);
     for (const table of [
+      'shared_delivery_attempts','shared_outbox_messages',
       'callcommand_usage_events', 'callcommand_transfer_logs', 'callcommand_reports', 'callcommand_flow_traces',
       'callcommand_tickets', 'callcommand_leads', 'callcommand_tasks', 'callcommand_action_runs',
       'callcommand_ingestion_events', 'callcommand_live_sessions', 'callcommand_lane_leases',
@@ -210,7 +215,7 @@ before(async () => {
       tenant_id,flow_id,version,graph_json,validation_json,published_by_user_id
     ) VALUES (
       ${owner.currentTenantId},${flowId},1,
-      ${JSON.stringify({ nodes: [{ key: 'start', type: 'prompt', config: {} }], edges: [] })}::jsonb,
+      ${JSON.stringify({ start:'start', nodes: [{ key: 'start', type: 'route', config: {} }] })}::jsonb,
       '{"valid":true}'::jsonb,${owner.id}
     )
   `);
@@ -348,6 +353,8 @@ before(async () => {
       return { ok: true as const, action: 'reject' as const, openAiCallId: callId };
     },
     async refer(callId: string) {
+      if (transferFailures.has(callId)) throw Object.assign(new Error('Synthetic refer failure'),{code:'CALLCOMMAND_REALTIME_REFER_FAILED'});
+      referred.push(callId);
       return { ok: true as const, action: 'refer' as const, openAiCallId: callId };
     },
     async hangup(callId: string) {
@@ -377,7 +384,7 @@ before(async () => {
 
   app = Fastify();
   app.removeContentTypeParser('application/json');
-  app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (request, body, done) => {
+  app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (request: FastifyRequest, body: string | Buffer, done: (error: Error | null, result?: unknown) => void) => {
     (request as typeof request & { rawBody?: Buffer }).rawBody = body as Buffer;
     try {
       done(null, JSON.parse((body as Buffer).toString('utf8')));
@@ -387,15 +394,6 @@ before(async () => {
   });
   await registerCallCommandRealtimeRoutes(app);
   await app.ready();
-});
-
-after(async () => {
-  __setCallCommandRealtimeAdapterFactoryForTests(null);
-  if (app) await app.close();
-  if (owner) await cleanupTenant(owner.currentTenantId);
-  if (owner) await db.delete(tenantModules).where(eq(tenantModules.tenantId, owner.currentTenantId));
-  if (owner) await cleanupUser(owner.id);
-  if (createdModule && moduleRow) await cleanupModule(moduleRow.id);
 });
 
 test('signed incoming call accepts once, replay is idempotent, conflict is fail-closed, and server tools hide destinations', async () => {
@@ -510,6 +508,9 @@ test('signed incoming call accepts once, replay is idempotent, conflict is fail-
   assert.equal(facts.rows.filter(row => row.source === 'openai_realtime_usage').length, 1);
 
   assert.equal(closeCallCommandRealtimeSideband(primaryCallId), true);
+  const foreignReplicaReplay=await injectSigned(envelope);
+  assert.equal(foreignReplicaReplay.json().duplicate,true,'a missing process-local controller cannot steal a live database lease');
+  await db.execute(sql`UPDATE callcommand_ingestion_events SET processing_lease_expires_at=NOW()-INTERVAL '1 second' WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${envelope.eventId}`);
   const recovered = await injectSigned(envelope);
   assert.equal(recovered.statusCode, 200, recovered.body);
   assert.deepEqual(recovered.json(), { ok: true, duplicate: false, providerActionConfirmed: true });
@@ -593,8 +594,8 @@ test('stale claims recover without duplicate provider actions and sideband-open 
   `)).rows[0] as Row;
   assert.equal(recoveredEvent.status, 'sideband_connected');
   assert.equal(Number(recoveredEvent.attempts), 2);
-  assert.equal(recoveredEvent.processing_owner, null);
-  assert.equal(recoveredEvent.processing_lease_expires_at, null);
+  assert.match(String(recoveredEvent.processing_owner),/^[0-9a-f-]{36}$/);
+  assert.ok(new Date(recoveredEvent.processing_lease_expires_at).getTime()>Date.now());
   assert.equal(closeCallCommandRealtimeSideband(recoveredCallId), true);
 
   const failingCallId = await createCall({ channelId: activeChannelId, marker: 'socket-failure', withLease: true });
@@ -640,4 +641,183 @@ test('disabled transcript policy exposes no persistence callback', async () => {
     UPDATE callcommand_profiles SET transcription_policy='consent_required'
     WHERE tenant_id=${owner.currentTenantId} AND id=${profileId}
   `);
+});
+
+test('concurrent repeated summary tools and call end enqueue exactly one durable summary before terminating', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'summary-end',withLease:true});
+  const providerCall=openAiCallId('summary-end');
+  const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_summary_end`,openAiCallId:providerCall,internalCallId:callId}));
+  assert.equal(response.statusCode,200,response.body);
+  const callbacks=sidebands.at(-1)!.callbacks;
+  const summary='SYNTHETIC TEST: appliance support requested; arrange a callback.';
+  const invoke=(name:string,id:string)=>callbacks.executeTool({openAiCallId:providerCall,toolCallId:id,name,arguments:{summary,...(name==='end_call'?{reason:'Caller agreed to finish'}:{})}}) as Promise<Row>;
+  const results=await Promise.all([invoke('send_email','tool_summary_one'),invoke('send_email','tool_summary_two'),invoke('end_call','tool_finish_one')]);
+  assert.ok(results.every(result=>result.ok));
+  assert.equal(results[0].externalDelivery,false);
+  assert.equal(results[0].receiptConfirmed,false);
+  assert.deepEqual(results[0].outcomes,['queued']);
+  const queued=await db.execute(sql`SELECT id,status,body,correlation_id,max_attempts FROM shared_outbox_messages WHERE tenant_id=${owner.currentTenantId} AND context_json->>'callId'=${callId}`);
+  assert.equal(queued.rows.length,1);
+  assert.equal(queued.rows[0].status,'pending');
+  assert.match(String(queued.rows[0].body),/SYNTHETIC TEST/);
+  assert.match(String(queued.rows[0].body),new RegExp(callId));
+  assert.equal(queued.rows[0].correlation_id,`realtime:${callId}`);
+  assert.equal(Number(queued.rows[0].max_attempts),5);
+  const durable=(await db.execute(sql`SELECT c.status,c.summary,c.ended_at,lease.status AS lease_status FROM callcommand_calls c JOIN callcommand_lane_leases lease ON lease.tenant_id=c.tenant_id AND lease.call_id=c.id WHERE c.tenant_id=${owner.currentTenantId} AND c.id=${callId}`)).rows[0];
+  assert.equal(durable.status,'completed');assert.equal(durable.summary,summary);assert.ok(durable.ended_at);assert.equal(durable.lease_status,'released');
+  assert.equal(hungUp.filter(id=>id===providerCall).length,1);
+  await finalizeCallCommandRealtimeNotifications(callId);
+  const afterFinalization=await db.execute(sql`SELECT id FROM shared_outbox_messages WHERE tenant_id=${owner.currentTenantId} AND context_json->>'callId'=${callId}`);
+  assert.equal(afterFinalization.rows.length,1,'post-call finalization must share the same summary purpose');
+  setOutboundAdapterResolverForTests(async () => ({status:{kind:'email',name:'synthetic-failure',state:'configured'},async send(){throw Object.assign(new Error('Synthetic email timeout'),{code:'EMAIL_PROVIDER_TIMEOUT'});}}));
+  try {
+    await processOutboxBatch({workerId:'callcommand-failure-test',limit:20});
+    const retry=(await db.execute(sql`SELECT status,attempt_count,last_error_code FROM shared_outbox_messages WHERE id=${queued.rows[0].id} AND tenant_id=${owner.currentTenantId}`)).rows[0];
+    assert.equal(retry.status,'retry');assert.equal(Number(retry.attempt_count),1);assert.equal(retry.last_error_code,'EMAIL_PROVIDER_TIMEOUT');
+    await db.execute(sql`UPDATE shared_outbox_messages SET available_at=NOW() WHERE tenant_id=${owner.currentTenantId} AND id=${queued.rows[0].id}`);
+    setOutboundAdapterResolverForTests(async () => ({status:{kind:'email',name:'synthetic-recovery',state:'test'},async send(input){return {providerMessageId:`test:${input.idempotencyKey}`,externalDelivery:false};}}));
+    await processOutboxBatch({workerId:'callcommand-recovery-test',limit:20});
+    const recorded=(await db.execute(sql`SELECT status,attempt_count FROM shared_outbox_messages WHERE id=${queued.rows[0].id} AND tenant_id=${owner.currentTenantId}`)).rows[0];
+    assert.equal(recorded.status,'recorded');assert.equal(Number(recorded.attempt_count),2);
+  } finally {setOutboundAdapterResolverForTests(null);}
+  closeCallCommandRealtimeSideband(callId);
+});
+
+test('published flow branch conditions cannot expose a denied notification action', async () => {
+  const saved=(await db.execute(sql`SELECT graph_json FROM callcommand_flow_versions WHERE tenant_id=${owner.currentTenantId} AND flow_id=${flowId} AND version=1`)).rows[0].graph_json;
+  const graph={start:'check',nodes:[{key:'check',type:'condition',config:{field:'intent',operator:'equals',value:'authorized-branch'},yes:'email',no:'end'},
+    {key:'email',type:'action',config:{actionType:'email',destination:'denied-branch@example.test'},next:'end'},
+    {key:'end',type:'route',config:{}}]};
+  await db.execute(sql`UPDATE callcommand_flow_versions SET graph_json=${JSON.stringify(graph)}::jsonb WHERE tenant_id=${owner.currentTenantId} AND flow_id=${flowId} AND version=1`);
+  await db.execute(sql`UPDATE callcommand_automation_rules SET enabled=FALSE WHERE tenant_id=${owner.currentTenantId} AND name='Server-owned email route'`);
+  const callId=await createCall({channelId:activeChannelId,marker:'branch-denied',withLease:true});
+  try {
+    const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_branch_denied`,openAiCallId:openAiCallId('branch-denied'),internalCallId:callId}));
+    assert.equal(response.statusCode,200,response.body);
+    assert.ok(!sidebands.at(-1)!.allowedToolNames.includes('send_email'));
+  } finally {
+    await db.execute(sql`UPDATE callcommand_flow_versions SET graph_json=${JSON.stringify(saved)}::jsonb WHERE tenant_id=${owner.currentTenantId} AND flow_id=${flowId} AND version=1`);
+    await db.execute(sql`UPDATE callcommand_automation_rules SET enabled=TRUE WHERE tenant_id=${owner.currentTenantId} AND name='Server-owned email route'`);
+    closeCallCommandRealtimeSideband(callId);
+  }
+});
+
+test('notification rejection does not prevent a polite end and is retained as a failed action', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'summary-rejected',withLease:true});
+  const providerCall=openAiCallId('summary-rejected');
+  await db.execute(sql`UPDATE callcommand_automation_rules SET actions_json='[{"actionType":"email","destination":"invalid"}]'::jsonb WHERE tenant_id=${owner.currentTenantId} AND name='Server-owned email route'`);
+  try {
+    const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_summary_rejected`,openAiCallId:providerCall,internalCallId:callId}));
+    assert.equal(response.statusCode,200,response.body);
+    const result=await sidebands.at(-1)!.callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_end_rejected',name:'end_call',arguments:{summary:'Synthetic incomplete intake',reason:'Caller agreed to end'}}) as Row;
+    assert.equal(result.ok,true);assert.deepEqual(result.notification.outcomes,['failed']);assert.equal(result.notification.receiptConfirmed,false);
+    assert.ok(hungUp.includes(providerCall));
+    const failure=await db.execute(sql`SELECT error_code FROM callcommand_action_runs WHERE tenant_id=${owner.currentTenantId} AND call_id=${callId} AND action_type='email'`);
+    assert.equal(failure.rows[0].error_code,'CALLCOMMAND_EMAIL_DESTINATION_INVALID');
+  } finally {
+    await db.execute(sql`UPDATE callcommand_automation_rules SET actions_json=${JSON.stringify([{actionType:'email',destination:'private-client@example.test'}])}::jsonb WHERE tenant_id=${owner.currentTenantId} AND name='Server-owned email route'`);
+    closeCallCommandRealtimeSideband(callId);
+  }
+});
+
+test('rule disable after connection denies notification, and a failed transfer leaves callback/end fallback', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'transfer-failed',withLease:true});
+  const providerCall=openAiCallId('transfer-failed');
+  const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_transfer_failed`,openAiCallId:providerCall,internalCallId:callId}));
+  assert.equal(response.statusCode,200,response.body);
+  const callbacks=sidebands.at(-1)!.callbacks;
+  await db.execute(sql`UPDATE callcommand_automation_rules SET enabled=FALSE WHERE tenant_id=${owner.currentTenantId} AND name='Server-owned email route'`);
+  try {
+    await assert.rejects(callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_disabled_notification',name:'send_email',arguments:{summary:'Synthetic test'}}));
+  } finally { await db.execute(sql`UPDATE callcommand_automation_rules SET enabled=TRUE WHERE tenant_id=${owner.currentTenantId} AND name='Server-owned email route'`); }
+  transferFailures.add(providerCall);
+  const failure=await callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_transfer_failed',name:'transfer_call',arguments:{target:'target_1',summary:'Synthetic callback request',reason:'Caller asked for a person'}}) as Row;
+  assert.equal(failure.ok,false);assert.equal(failure.callerStillActive,true);assert.match(failure.fallback,/callback/);
+  const result=await callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_end_after_failure',name:'end_call',arguments:{summary:'Synthetic callback request',reason:'Caller agreed to a callback'}}) as Row;
+  assert.equal(result.ok,true);assert.ok(hungUp.includes(providerCall));
+  closeCallCommandRealtimeSideband(callId);
+});
+
+test('provider-confirmed hangup followed by persistence failure remains outcome-unknown and cannot be resent', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'hangup-persist-failed',withLease:true});
+  const providerCall=openAiCallId('hangup-persist-failed');
+  const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_hangup_persist_failed`,openAiCallId:providerCall,internalCallId:callId}));
+  assert.equal(response.statusCode,200,response.body);
+  const callbacks=sidebands.at(-1)!.callbacks;
+  const originalTransaction=db.transaction;
+  db.transaction=(async ()=>{throw new Error('Synthetic post-provider persistence failure');}) as typeof db.transaction;
+  try {
+    const result=await callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_hangup_persistence_failed',name:'end_call',arguments:{summary:'Synthetic callback captured',reason:'Caller agreed to finish'}}) as Row;
+    assert.equal(result.ok,false);assert.equal(result.providerActionConfirmed,true);assert.equal(result.outcomeUnknown,true);
+  } finally {db.transaction=originalTransaction;}
+  const duplicate=await callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_hangup_persistence_retry',name:'end_call',arguments:{summary:'Synthetic callback captured',reason:'Caller agreed to finish'}}) as Row;
+  assert.equal(duplicate.duplicate,true);assert.equal(hungUp.filter(id=>id===providerCall).length,1);
+  const saved=(await db.execute(sql`SELECT safe_result FROM callcommand_action_runs WHERE tenant_id=${owner.currentTenantId} AND call_id=${callId} AND action_type='end_call'`)).rows[0];
+  assert.deepEqual(saved.safe_result,{providerActionConfirmed:true,outcomeUnknown:true});
+  closeCallCommandRealtimeSideband(callId);
+});
+
+test('long call renews the same sideband owner beyond the initial thirty-second lease', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'long-heartbeat',withLease:true});
+  const providerCall=openAiCallId('long-heartbeat');
+  const eventId=`evt_${PHONE_SEED}_long_heartbeat`;
+  const response=await injectSigned(signedEnvelope({eventId,openAiCallId:providerCall,internalCallId:callId}));
+  assert.equal(response.statusCode,200,response.body);
+  const initial=(await db.execute(sql`SELECT processing_owner,processing_lease_expires_at FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0] as Row;
+  await new Promise(resolve=>setTimeout(resolve,35_000));
+  const renewed=(await db.execute(sql`SELECT processing_owner,processing_lease_expires_at FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0] as Row;
+  assert.equal(renewed.processing_owner,initial.processing_owner);
+  assert.ok(new Date(initial.processing_lease_expires_at).getTime()<Date.now(),'the original owner lease has elapsed');
+  assert.ok(new Date(renewed.processing_lease_expires_at).getTime()>Date.now(),'heartbeat retains current ownership');
+  const result=await sidebands.at(-1)!.callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_long_call_end',name:'end_call',arguments:{summary:'Synthetic long-call request captured',reason:'Caller agreed to finish'}}) as Row;
+  assert.equal(result.ok,true);
+  closeCallCommandRealtimeSideband(callId);
+});
+
+test('sideband loss hangs up once, releases its lane and queues one incomplete-intake notification', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'sideband-loss',withLease:true});
+  const providerCall=openAiCallId('sideband-loss');
+  const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_sideband_loss`,openAiCallId:providerCall,internalCallId:callId}));
+  assert.equal(response.statusCode,200,response.body);
+  const callbacks=sidebands.at(-1)!.callbacks;
+  await callbacks.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
+  await callbacks.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
+  assert.equal(hungUp.filter(id=>id===providerCall).length,1);
+  const saved=(await db.execute(sql`SELECT c.realtime_status,c.summary,lease.status AS lease_status FROM callcommand_calls c JOIN callcommand_lane_leases lease ON lease.tenant_id=c.tenant_id AND lease.call_id=c.id WHERE c.tenant_id=${owner.currentTenantId} AND c.id=${callId}`)).rows[0];
+  assert.equal(saved.realtime_status,'failed');assert.equal(saved.lease_status,'released');
+  assert.match(String(saved.summary),/disconnected before a summary/);
+  const messages=await db.execute(sql`SELECT id FROM shared_outbox_messages WHERE tenant_id=${owner.currentTenantId} AND context_json->>'callId'=${callId}`);
+  assert.equal(messages.rows.length,1);
+});
+
+test('expired owner stops tools and replay reattaches without accepting or letting the former controller hang up', async () => {
+  const callId=await createCall({channelId:activeChannelId,marker:'owner-expiry',withLease:true});
+  const providerCall=openAiCallId('owner-expiry');
+  const eventId=`evt_${PHONE_SEED}_owner_expiry`;
+  const envelope=signedEnvelope({eventId,openAiCallId:providerCall,internalCallId:callId});
+  const acceptedBefore=accepted.length;
+  assert.equal((await injectSigned(envelope)).statusCode,200);
+  const previous=sidebands.at(-1)!.callbacks;
+  const initialOwner=(await db.execute(sql`SELECT processing_owner FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0].processing_owner;
+  closeCallCommandRealtimeSideband(callId);
+  await db.execute(sql`UPDATE callcommand_ingestion_events SET processing_lease_expires_at=NOW()-INTERVAL '1 second' WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`);
+  await assert.rejects(previous.executeTool({openAiCallId:providerCall,toolCallId:'tool_expired_owner',name:'send_email',arguments:{summary:'Synthetic stale operation'}}),{code:'CALLCOMMAND_REALTIME_OWNER_EXPIRED'});
+  const recovered=await injectSigned(envelope);assert.equal(recovered.statusCode,200,recovered.body);
+  assert.equal(recovered.json().duplicate,false);assert.equal(accepted.length,acceptedBefore+1);
+  const nextOwner=(await db.execute(sql`SELECT processing_owner FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0].processing_owner;
+  assert.notEqual(nextOwner,initialOwner);
+  await previous.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
+  assert.equal(hungUp.filter(id=>id===providerCall).length,0,'a stale callback cannot terminate the successor owner');
+  const result=await sidebands.at(-1)!.callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_recovered_owner_end',name:'end_call',arguments:{summary:'Synthetic recovered call captured',reason:'Caller agreed to finish'}}) as Row;
+  assert.equal(result.ok,true);assert.equal(hungUp.filter(id=>id===providerCall).length,1);
+  closeCallCommandRealtimeSideband(callId);
+});
+
+after(async () => {
+  __setCallCommandRealtimeAdapterFactoryForTests(null);
+  if (app) await app.close();
+  if (owner) await cleanupTenant(owner.currentTenantId);
+  if (owner) await db.delete(tenantModules).where(eq(tenantModules.tenantId, owner.currentTenantId));
+  if (owner) await cleanupUser(owner.id);
+  if (createdModule && moduleRow) await cleanupModule(moduleRow.id);
 });

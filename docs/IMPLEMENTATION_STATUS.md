@@ -1,5 +1,33 @@
 # OperatorOS implementation status
 
+## CallCommand post-reboot lifecycle preflight (2026-10-14, 19:05 UTC)
+
+Application patch `31b00596` remains intact and is already in the separate
+OutCall v67 candidate. Three additional synthetic lifecycle checks pass:
+heartbeat renewal beyond the initial lease, one sideband-loss fallback and
+notification, and expired-owner fencing with replay reattachment. Changed-test
+strict types and scoped zero-warning lint pass. No application/schema/provider
+change or full-gate rerun occurred. Actual process death and autonomous recovery
+remain open. Fresh public probes still identify healthy `7c212305`, v65/65.
+The native host passes read-only diagnostics, but this task has no callable
+browser runtime; private credit, routing and rotation evidence remain unverified.
+See [the post-reboot evidence and next actions](callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
+
+## CallCommand inbound call outcome repair (2026-10-14)
+
+Scoped candidate from merged PR121 preserves all existing work. Realtime
+summary/control sequencing, current-rule and flow-branch authorization,
+stable per-call retrying email delivery, durable end state, signed Twilio REFER
+handoff/fallback, renewable sideband ownership and post-terminal recording
+processing are implemented. All 187 CallCommand API checks, four workspace
+typechecks, zero-warning lint, strict changed-test typing and SDK/API compilation
+pass locally. Production acceptance and source publication remain open.
+Fresh public probes identify healthy production commit
+`7c212305` and v65/65, while source main carries v66. Browser initialization
+still fails. Real answer, mailbox/RMM receipt, human transfer, provider credit,
+secret-rotation evidence, release reconciliation and autonomous process-death
+recovery remain gates. See [the evidence](callcommand/INBOUND_OUTCOME_2026-10-14.md).
+
 ## Generic checkout expiration acknowledgment (2026-10-12)
 
 **IMPLEMENTED / ISOLATED DATABASE VERIFIED / PRODUCTION ACCEPTANCE OPEN**.

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
@@ -50,6 +50,7 @@ import {
 } from '../lib/callcommand-capacity.js';
 import { createAttachment } from '../lib/shared-attachments.js';
 import { getOutboundProviderAdapter, getSharedProviderStatuses } from '../lib/shared-provider-adapters.js';
+import { enqueueOutboxMessage } from '../lib/shared-notification-outbox.js';
 import { enqueueOutboundWebhook, listOutboundWebhookEndpoints } from '../lib/shared-outbound-webhooks.js';
 import { validateCallCommandAutomationActions } from '../lib/callcommand-automation-policy.js';
 import { appendActivityEvent, recordUsageEvent, summarizeUsage } from '../lib/shared-usage-activity.js';
@@ -339,6 +340,7 @@ async function buildRealtimeSipForCall(configuration: Row, call: Row, providerCa
   return buildOpenAiSipDialTwiml({
     openAiProjectId:String(process.env.OPENAI_PROJECT_ID),callId:String(call.id),routeToken,
     timeoutSeconds:30,statusCallbackUrl,allowedWebhookOrigins:[publicOrigin.origin],
+    referUrl:new URL(`/v1/modules/callcommand-ai/twilio/voice/refer?call_id=${encodeURIComponent(String(call.id))}`,publicOrigin.origin).toString(),
   });
 }
 
@@ -456,6 +458,7 @@ export async function dispatchCallCommandActions(input: {
   ruleId?: string | null;
   correlationId?: string | null;
   idempotencyNamespace?: string | null;
+  durableNotifications?: boolean;
 }) {
   const modId = await moduleId();
   const results: Row[] = [];
@@ -517,13 +520,28 @@ export async function dispatchCallCommandActions(input: {
         await db.execute(sql`UPDATE callcommand_calls SET priority=${priority},updated_at=NOW() WHERE tenant_id=${input.tenantId} AND id=${input.call.id}`);
         safeResult = { priority };
       } else if (actionType === 'email') {
-        const adapter = await getOutboundProviderAdapter('email');
-        const result = await adapter.send({ destination: cleanText(action.destination, 'email destination', 320)!, subject: String(action.subject ?? 'CallCommand follow-up').slice(0, 200), body: String(action.body ?? input.call.summary ?? '').slice(0, 8_000), idempotencyKey: key });
-        provider = adapter.status.name; reference = result.providerMessageId; status = result.externalDelivery ? 'delivered' : 'test_recorded'; safeResult = { externalDelivery: result.externalDelivery };
+        const destination = cleanText(action.destination, 'email destination', 320)!;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination)) {
+          throw new CallCommandPhase35Error('Email destination is invalid', 'CALLCOMMAND_EMAIL_DESTINATION_INVALID');
+        }
+        const subject = String(action.subject ?? 'CallCommand follow-up').slice(0, 200);
+        const body = String(action.body ?? input.call.summary ?? '').slice(0, 8_000);
+        if (input.durableNotifications) {
+          const queued = await enqueueOutboxMessage({tenantId:input.tenantId,moduleId:modId,
+            requestedByUserId:input.userId,channel:'email',destination,subject,body,
+            idempotencyKey:key,correlationId:input.correlationId,context:{callId:input.call.id},maxAttempts:5});
+          provider = 'shared-notification-outbox'; reference = String(queued.message.id);
+          status = queued.message.status === 'cancelled' ? 'failed' : 'queued';
+          safeResult = {externalDelivery:false,receiptConfirmed:false,outboxMessageId:reference};
+        } else {
+          const adapter = await getOutboundProviderAdapter('email');
+          const result = await adapter.send({destination,subject,body,idempotencyKey:key});
+          provider = adapter.status.name; reference = result.providerMessageId; status = result.externalDelivery ? 'delivered' : 'test_recorded'; safeResult = { externalDelivery: result.externalDelivery };
+        }
       } else if (actionType === 'webhook' || actionType === 'slack') {
         const endpointId = optionalId(action.endpointId, 'endpointId');
         if (!endpointId) throw new CallCommandPhase35Error(`${actionType} action requires endpointId`);
-        const queued = await enqueueOutboundWebhook({ tenantId: input.tenantId, moduleId: modId, endpointId, eventType: actionType === 'slack' ? 'callcommand.slack' : 'callcommand.call.processed', payload: { callId: input.call.id, priority: input.call.priority, intent: input.call.intent }, idempotencyKey: key, correlationId: input.correlationId });
+        const queued = await enqueueOutboundWebhook({ tenantId: input.tenantId, moduleId: modId, endpointId, eventType: actionType === 'slack' ? 'callcommand.slack' : 'callcommand.call.processed', payload: { callId: input.call.id, priority: input.call.priority, intent: input.call.intent, summary: String(input.call.summary ?? '').slice(0, 1_500) }, idempotencyKey: key, correlationId: input.correlationId });
         provider = 'shared-webhook'; reference = String((queued.delivery as Row).id); status = 'queued'; safeResult = { duplicate: queued.duplicate };
       }
     } catch (error) {
@@ -560,7 +578,9 @@ async function processCall(input: { tenantId: string; userId: string; callId: st
   });
   const rules = await db.execute(sql`SELECT * FROM callcommand_automation_rules WHERE tenant_id=${input.tenantId} AND enabled=TRUE AND deleted_at IS NULL ORDER BY priority,id`);
   const actionResults: Row[] = [];
-  for (const rule of rules.rows as Row[]) if (callCommandAutomationRuleMatches(rule.conditions_json as Row, updated)) actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: rule.actions_json as Row[], ruleId: String(rule.id), correlationId: input.correlationId }));
+  const postCallActions = (actions: Row[]) => original.openai_realtime_call_id
+    ? actions.filter(action => !['email','slack','webhook'].includes(String(action.actionType ?? action.type))) : actions;
+  for (const rule of rules.rows as Row[]) if (callCommandAutomationRuleMatches(rule.conditions_json as Row, updated)) actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: postCallActions(rule.actions_json as Row[]), ruleId: String(rule.id), correlationId: input.correlationId }));
   if (!rules.rows.length) {
     const fallbackAction = analysis.callType === 'sales' ? 'lead' : analysis.actionItems.length ? 'task' : 'ticket';
     actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: [{ actionType: fallbackAction }], correlationId: input.correlationId }));
@@ -577,9 +597,13 @@ async function processCall(input: { tenantId: string; userId: string; callId: st
         VALUES (${input.tenantId},${input.callId},${row.id},${row.active_version},${trace.sequence},${trace.nodeKey},${trace.nodeType},${trace.outcome},${JSON.stringify(trace.safeInput)}::jsonb,${JSON.stringify(trace.safeOutput)}::jsonb)
         ON CONFLICT (tenant_id,call_id,flow_id,flow_version,sequence) DO NOTHING
       `);
-      actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: flowResult.actions, correlationId: input.correlationId }));
+      actionResults.push(...await dispatchCallCommandActions({ tenantId: input.tenantId, userId: input.userId, call: updated, actions: postCallActions(flowResult.actions), correlationId: input.correlationId }));
       await db.execute(sql`UPDATE callcommand_calls SET flow_id=${row.id},flow_version=${row.active_version} WHERE tenant_id=${input.tenantId} AND id=${input.callId}`);
     }
+  }
+  if (original.openai_realtime_call_id) {
+    const {finalizeCallCommandRealtimeNotifications} = await import('./callcommand-realtime-routes.js');
+    await finalizeCallCommandRealtimeNotifications(input.callId);
   }
   const modId = await moduleId();
   await recordUsageEvent({ tenantId: input.tenantId, moduleId: modId, userId: input.userId, operation: 'call_analysis', units: 1, unitKind: 'call', idempotencyKey: `call-analysis:${input.callId}`, externalReference: input.callId, metadata: { provider: resolved.provider, provenance: resolved.provenance } });
@@ -1349,14 +1373,28 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
 
   app.post('/v1/modules/callcommand-ai/twilio/voice/recording', async (request, reply) => {
     let callForFailure: Row | null = null;
+    let recordingEventId: string | null = null;
+    const processingOwner = randomUUID();
     try {
       const value = await signedTwilio(request); const sid = parseTwilioCallSid(value.CallSid); const call = await loadProviderCall(sid,String((request.query as Row)?.call_id ?? '')); if (!call) throw new CallCommandPhase35Error('Call not found','CALLCOMMAND_CALL_NOT_FOUND',404);
       callForFailure = call;
       if (call.recording_status === 'disabled') throw new CallCommandPhase35Error('Recording was not consented','CALLCOMMAND_RECORDING_NOT_CONSENTED',409);
       const recordingSid = String(value.RecordingSid ?? ''); if (!/^RE[A-Za-z0-9]{20,62}$/.test(recordingSid)) throw new CallCommandPhase35Error('Recording identifier is invalid');
-      const replay = await recordIngestion({ tenantId:String(call.tenant_id),source:'twilio',eventId:`${sid}:recording:${recordingSid}`,payloadHash:providerPayloadHash(value),callId:String(call.id) }); if (replay.duplicate) { callForFailure = null; return { ok:true,duplicate:true }; }
-      const activeLease = await db.execute(sql`SELECT id FROM callcommand_lane_leases WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND status='active' AND expires_at>NOW() LIMIT 1`);
-      if (!activeLease.rows[0]) throw new CallCommandPhase35Error('Call capacity is no longer active','CALLCOMMAND_LANE_NOT_ACTIVE',409);
+      recordingEventId = `${sid}:recording:${recordingSid}`;
+      const claim = await db.transaction(async tx => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-recording:${call.id}:${recordingSid}`},0))`);
+        const receipt = await recordIngestion({tenantId:String(call.tenant_id),source:'twilio',eventId:recordingEventId!,payloadHash:providerPayloadHash(value),callId:String(call.id),status:'processing'},tx);
+        if (receipt.duplicate && receipt.event.status === 'processed') return false;
+        if (receipt.duplicate && receipt.event.status === 'processing' && receipt.event.processing_lease_expires_at
+          && new Date(receipt.event.processing_lease_expires_at).getTime()>Date.now()) {
+          throw new CallCommandPhase35Error('Recording processing is already active','CALLCOMMAND_RECORDING_PROCESSING',409);
+        }
+        await tx.execute(sql`UPDATE callcommand_ingestion_events SET status='processing',processing_owner=${processingOwner},processing_lease_expires_at=NOW()+INTERVAL '2 minutes',error_code=NULL WHERE id=${receipt.event.id}`);
+        return true;
+      });
+      if (!claim) {callForFailure=null;return {ok:true,duplicate:true};}
+      // Post-call recording processing is authorized by the signed provider
+      // callback and consent. An ended call no longer holds voice capacity.
       const content = await fetchTwilioRecording(recordingSid); if (!content) throw Object.assign(new Error('Twilio recording download was unavailable'),{code:'CALLCOMMAND_RECORDING_PROVIDER_UNAVAILABLE'});
       const creator = await tenantCallCustodian(String(call.tenant_id),call.created_by_user_id ? String(call.created_by_user_id) : null);
       const attachment = await createAttachment({ tenantId:String(call.tenant_id),moduleId:await moduleId(),objectType:'call_recording',objectId:String(call.id),originalName:`twilio-${recordingSid}.mp3`,declaredMimeType:'audio/mpeg',content,createdByUserId:creator,correlationId:request.id });
@@ -1364,12 +1402,106 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
       if (!transcript) { const result = await transcribeCallAudio(content,`twilio-${recordingSid}.mp3`); transcript=result.transcript; transcriptionProvider=result.provider; }
       await db.execute(sql`UPDATE callcommand_calls SET recording_sid=${recordingSid},recording_attachment_id=${String((attachment as Row).id)},recording_status='pending',transcript=${transcript},updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
       await processCall({ tenantId:String(call.tenant_id),userId:creator,callId:String(call.id),transcript,mode:'auto',correlationId:request.id });
+      await db.execute(sql`UPDATE callcommand_ingestion_events SET status='processed',processed_at=NOW(),processing_owner=NULL,processing_lease_expires_at=NULL WHERE tenant_id=${call.tenant_id} AND source='twilio' AND provider_event_id=${recordingEventId} AND processing_owner=${processingOwner}`);
       await releaseCallCommandLane({ tenantId:String(call.tenant_id), callId:String(call.id), reason:'recording_processed' });
       callForFailure = null;
       return reply.code(202).send({ ok:true,duplicate:false,recording:{ attachmentId:String((attachment as Row).id),scanStatus:(attachment as Row).scan_status ?? 'pending' },transcription:{ provider:transcriptionProvider,status:'completed' } });
     } catch (error) {
+      if (callForFailure && recordingEventId) await db.execute(sql`UPDATE callcommand_ingestion_events SET status='failed',error_code=${safeFailureCode(error,'CALLCOMMAND_RECORDING_FAILED')},processing_owner=NULL,processing_lease_expires_at=NULL WHERE tenant_id=${callForFailure.tenant_id} AND source='twilio' AND provider_event_id=${recordingEventId} AND processing_owner=${processingOwner}`);
       if (callForFailure) await releaseCallCommandLane({ tenantId:String(callForFailure.tenant_id), callId:String(callForFailure.id), reason:'recording_failed' });
       if ((error as any)?.statusCode === 403) return reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'}); const code=String((error as any)?.code ?? 'CALLCOMMAND_RECORDING_FAILED'); return reply.code(code.includes('UNAVAILABLE') ? 503 : 400).send({error:(error as Error).message,code,providerActionConfirmed:false});
+    }
+  });
+
+  app.post('/v1/modules/callcommand-ai/twilio/voice/refer', async (request, reply) => {
+    try {
+      const value = await signedTwilio(request);
+      const sid = parseTwilioCallSid(value.ParentCallSid || value.CallSid);
+      const call = await loadProviderCall(sid, String((request.query as Row)?.call_id ?? ''));
+      if (!call || !call.openai_realtime_call_id || !['in_progress','answered','connected'].includes(String(call.status))) {
+        throw new CallCommandPhase35Error('Active call was not found','CALLCOMMAND_CALL_NOT_FOUND',404);
+      }
+      // The carrier's Refer-To is never destination authority. Match it to the
+      // already-reserved server transfer and revalidate its tenant target.
+      const targetPhone = /^tel:\+[1-9][0-9]{7,14}$/.test(value.ReferTransferTarget ?? '')
+        ? value.ReferTransferTarget.slice(4) : null;
+      const pending = await db.execute(sql`
+        SELECT log.id,target.phone_e164 FROM callcommand_transfer_logs log
+        JOIN callcommand_transfer_targets target ON target.tenant_id=log.tenant_id AND target.id=log.target_id
+          AND target.kind='external' AND target.status='active' AND target.verified_at IS NOT NULL AND target.deleted_at IS NULL
+        JOIN callcommand_channels channel ON channel.tenant_id=log.tenant_id AND channel.id=${call.channel_id}
+          AND channel.status='active' AND channel.deleted_at IS NULL
+        JOIN modules module ON module.slug='callcommand-ai' AND module.status='live'
+        JOIN tenant_modules access ON access.tenant_id=log.tenant_id AND access.module_id=module.id AND access.status='enabled'
+        WHERE log.tenant_id=${call.tenant_id} AND log.call_id=${call.id} AND log.provider='openai'
+          AND log.status IN ('requested','provider_accepted','dialing') AND target.phone_e164=${targetPhone}
+        ORDER BY log.created_at DESC,log.id DESC LIMIT 1
+      `);
+      const transfer = pending.rows[0] as Row | undefined;
+      if (!transfer) throw new CallCommandPhase35Error('Transfer is not authorized','TARGET_NOT_SERVER_VERIFIED',403);
+      await db.transaction(async tx => {
+        const receipt = await recordIngestion({tenantId:String(call.tenant_id),source:'twilio_refer',
+          eventId:`${sid}:refer:${transfer.id}`,payloadHash:providerPayloadHash(value),callId:String(call.id)},tx);
+        if (!receipt.duplicate) await tx.execute(sql`
+          UPDATE callcommand_transfer_logs SET status='dialing' WHERE tenant_id=${call.tenant_id} AND id=${transfer.id}
+        `);
+      });
+      const resultPath = `/v1/modules/callcommand-ai/twilio/voice/transfer-result?call_id=${encodeURIComponent(String(call.id))}&transfer_id=${encodeURIComponent(String(transfer.id))}`;
+      // Bounded carrier dialing; a failed/no-answer leg always reaches the
+      // signed result callback, speaks a fallback, and hangs up cleanly.
+      return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Dial answerOnBridge="true" timeout="20" action="${xml(resultPath)}" method="POST"><Number>${xml(String(transfer.phone_e164))}</Number></Dial></Response>`);
+    } catch (error) {
+      if ((error as any)?.code === 'CALLCOMMAND_SIGNATURE_INVALID') return reply.code(403).send({code:'CALLCOMMAND_SIGNATURE_INVALID'});
+      return reply.code(Number((error as any)?.statusCode) || 503).send({code:safeFailureCode(error,'CALLCOMMAND_TRANSFER_FAILED')});
+    }
+  });
+
+  app.post('/v1/modules/callcommand-ai/twilio/voice/transfer-result', async (request, reply) => {
+    try {
+      const value = await signedTwilio(request);
+      const sid = parseTwilioCallSid(value.CallSid);
+      const call = await loadProviderCall(sid,String((request.query as Row)?.call_id ?? ''));
+      if (!call) throw new CallCommandPhase35Error('Call was not found','CALLCOMMAND_CALL_NOT_FOUND',404);
+      const transferId = String((request.query as Row)?.transfer_id ?? '');
+      const transfer = (await db.execute(sql`
+        SELECT id,status FROM callcommand_transfer_logs WHERE tenant_id=${call.tenant_id} AND call_id=${call.id}
+          AND id=${transferId} AND provider='openai' AND status IN ('dialing','completed','failed') LIMIT 1
+      `)).rows[0] as Row | undefined;
+      if (!transfer) throw new CallCommandPhase35Error('Transfer was not found','CALLCOMMAND_TRANSFER_NOT_FOUND',404);
+      const outcome = String(value.DialCallStatus ?? '');
+      if (!['completed','busy','no-answer','failed','canceled'].includes(outcome)) {
+        throw new CallCommandPhase35Error('Transfer outcome is invalid','CALLCOMMAND_TRANSFER_OUTCOME_INVALID');
+      }
+      const connected = outcome === 'completed';
+      await db.transaction(async tx => {
+        const receipt = await recordIngestion({tenantId:String(call.tenant_id),source:'twilio_transfer_result',
+          eventId:`${sid}:transfer:${transferId}`,payloadHash:providerPayloadHash(value),callId:String(call.id)},tx);
+        if (receipt.duplicate) return;
+        await tx.execute(sql`
+          UPDATE callcommand_transfer_logs SET status=${connected ? 'completed' : 'failed'},completed_at=NOW()
+          WHERE tenant_id=${call.tenant_id} AND id=${transferId}
+        `);
+        await tx.execute(sql`
+          INSERT INTO callcommand_events(tenant_id,call_id,event_type,safe_payload)
+          VALUES (${call.tenant_id},${call.id},'provider.twilio.transfer_result',
+            ${JSON.stringify({carrierConnectionConfirmed:connected,humanConnectionConfirmed:false,outcome})}::jsonb)
+        `);
+        await tx.execute(sql`
+          UPDATE callcommand_calls SET status='completed',disposition=${connected ? 'transferred' : 'follow_up_required'},realtime_status='completed',
+            completed_at=COALESCE(completed_at,NOW()),ended_at=COALESCE(ended_at,NOW()),updated_at=NOW()
+          WHERE tenant_id=${call.tenant_id} AND id=${call.id}
+        `);
+        await tx.execute(sql`
+          UPDATE callcommand_live_sessions SET state='completed',ended_at=COALESCE(ended_at,NOW()),sequence=sequence+1,updated_at=NOW()
+          WHERE tenant_id=${call.tenant_id} AND call_id=${call.id} AND ended_at IS NULL
+        `);
+      });
+      closeCallCommandRealtimeSideband(String(call.id));
+      await releaseCallCommandLane({tenantId:String(call.tenant_id),callId:String(call.id),reason:'realtime_transfer_finished'});
+      return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response>${connected ? '' : '<Say>The person you requested is unavailable. Your call details have been saved for follow-up. Goodbye.</Say>'}<Hangup/></Response>`);
+    } catch (error) {
+      if ((error as any)?.code === 'CALLCOMMAND_SIGNATURE_INVALID') return reply.code(403).send({code:'CALLCOMMAND_SIGNATURE_INVALID'});
+      return reply.code(Number((error as any)?.statusCode) || 503).send({code:safeFailureCode(error,'CALLCOMMAND_TRANSFER_FAILED')});
     }
   });
 
@@ -1382,7 +1514,13 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
       const sequence=providerSequence(value.SequenceNumber,Number(call.provider_sequence ?? 0));
       const eventId=`${sid}:status:${value.SequenceNumber || providerPayloadHash(value).slice(0,16)}`;
       const replay=await recordIngestion({tenantId:String(call.tenant_id),source:'twilio',eventId,payloadHash:providerPayloadHash(value),callId:String(call.id)});
-      if(replay.duplicate)return {ok:true,duplicate:true};
+      if(replay.duplicate){
+        if(terminal && call.openai_realtime_call_id){
+          const {finalizeCallCommandRealtimeNotifications}=await import('./callcommand-realtime-routes.js');
+          await finalizeCallCommandRealtimeNotifications(String(call.id));
+        }
+        return {ok:true,duplicate:true};
+      }
       if(sequence<Number(call.provider_sequence ?? 0))throw new CallCommandPhase35Error('Provider event sequence is stale','CALLCOMMAND_PROVIDER_EVENT_STALE',409);
       if(terminal){
         closeCallCommandRealtimeSideband(String(call.id));
@@ -1409,6 +1547,10 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
           },
         });
         await db.execute(sql`UPDATE callcommand_live_sessions SET state=${state},sequence=sequence+1,updated_at=${endedAt},ended_at=COALESCE(ended_at,${endedAt}) WHERE tenant_id=${call.tenant_id} AND call_id=${call.id}`);
+        if (call.openai_realtime_call_id) {
+          const {finalizeCallCommandRealtimeNotifications} = await import('./callcommand-realtime-routes.js');
+          await finalizeCallCommandRealtimeNotifications(String(call.id));
+        }
         return {ok:true,duplicate:reconciled.duplicate,reconciled:true};
       }
       const updated=await db.execute(sql`
