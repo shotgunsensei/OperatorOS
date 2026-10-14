@@ -1,6 +1,60 @@
 # OperatorOS implementation status
 
+## Combined v67 source delivery preparation (2026-10-14)
 
+Preserved OutCall `24e15d2b` and reviewed test-only CallCommand `bda93ac` are
+reconciled on a separate combined branch. Application/SDK/lockfile contents are
+unchanged from v67. New lifecycle checks pass 3/3 and corrected v67 identity
+fixtures 12/12; strict changed-test typing and scoped lint pass. Connector
+delivery is authorized, but transfer/PR/required checks/merge and production
+remain separate recorded stages. No exposed shell credential is used. See
+[source evidence and delivery gates](COMBINED_SOURCE_DELIVERY_2026-10-14.md).
+
+## OutCall country and account resource controls (2026-10-14, local only)
+
+Continuation of preserved `2f943eed...` implements metadata-based country/type
+validation before Verify and voice, account-wide atomic budget/quota/capacity
+reservations, exact configuration-bound privileged approval, bounded duration,
+unsent cancellation/expiry, retained unknown holds, callback settlement and
+privacy accounting cleanup. Additive v67 follows immutable v66; no approval or
+spend allowance is seeded. Focused OutCall/schema/isolation checks pass 37/37,
+CallCommand compatibility 39/39, four workspace typechecks, expanded strict test
+typing, zero-warning lint and production build. Disposable clean and populated
+v66 upgrade/reapply/verify pass with zero approvals. The committed build/supervisor
+receipt is recorded in the handoff. Historical platform/UI evidence remains on
+the earlier candidate. No remote merge, deployed v67, activation, calls or live
+acceptance occurred. Exact commands, corrected fixture failures, ceilings,
+operator gates and migration/rollback: [v67 resource control ledger](outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+
+## OperatorOS / OutCall readiness repairs (2026-10-14, local only)
+
+Candidate preserves CallCommand `31b00596` and merged PR121. Queued calls now
+recheck current write authority and verified-self settings; signed SMS obeys
+viewer grants and STOP; terminal/uncertain outcomes, carrier deadline, stable
+request retries, callback usage recovery and owner-bound call pagination are
+repaired. Unavailable OutCall hosts show their state before login; readiness,
+mobile cancellation and recovery copy are honest. Parity and coming-soon
+status remain unchanged. Focused checks pass: OutCall 23, platform 45,
+CallCommand compatibility 39, component browser 5; zero-warning lint,
+four-workspace typing/build stages, local supervisor smoke 5/5 and disposable v66 apply/reapply/verify pass.
+Production remains identified healthy v65, not reconciled with candidate v66.
+Credential hold, Stripe recovery, geography/aggregate spend controls, provider
+configuration and deployed customer acceptance remain gates. No calls,
+production data, publication or hosted CI occurred. See [the complete ledger,
+commands and blockers](PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
+
+## CallCommand post-reboot lifecycle preflight (2026-10-14, 19:05 UTC)
+
+Application patch `31b00596` remains intact and is already in the separate
+OutCall v67 candidate. Three additional synthetic lifecycle checks pass:
+heartbeat renewal beyond the initial lease, one sideband-loss fallback and
+notification, and expired-owner fencing with replay reattachment. Changed-test
+strict types and scoped zero-warning lint pass. No application/schema/provider
+change or full-gate rerun occurred. Actual process death and autonomous recovery
+remain open. Fresh public probes still identify healthy `7c212305`, v65/65.
+The native host passes read-only diagnostics, but this task has no callable
+browser runtime; private credit, routing and rotation evidence remain unverified.
+See [the post-reboot evidence and next actions](callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
 
 ## CallCommand inbound call outcome repair (2026-10-14)
 

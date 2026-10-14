@@ -83,9 +83,9 @@ test('release identity validator requires the intended commit, database release,
     lockfileSha256: 'c'.repeat(64),
     databaseRelease: {
       contractVersion: 1,
-      releaseVersion: 66,
-      stepCount: 66,
-      lastStep: 'shared_ai_budget_tables',
+      releaseVersion: 67,
+      stepCount: 67,
+      lastStep: 'outcall_resource_tables',
     },
   };
   assert.deepEqual(verifier.validateReleaseIdentity(valid, commit), []);
