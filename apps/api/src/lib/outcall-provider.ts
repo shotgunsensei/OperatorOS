@@ -38,6 +38,7 @@ function enabled(value: string | undefined): boolean {
 
 function testAdapterEnabled(): boolean {
   return process.env.APP_ENV === 'test'
+    && process.env.NODE_ENV === 'test'
     && process.env.OUTCALL_TEST_ADAPTER === 'enabled';
 }
 
@@ -117,7 +118,7 @@ function authHeader(config: OutCallTwilioConfig): string {
   return `Basic ${Buffer.from(`${config.restUsername}:${config.restSecret}`).toString('base64')}`;
 }
 
-async function twilioFormRequest<T>(url: string, form: URLSearchParams): Promise<T> {
+async function twilioFormRequest<T>(url: string, form: URLSearchParams, voiceSubmission = false): Promise<T> {
   const config = requireTwilioConfig();
   let response: Response;
   try {
@@ -128,18 +129,27 @@ async function twilioFormRequest<T>(url: string, form: URLSearchParams): Promise
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: form.toString(),
+      signal: AbortSignal.timeout(15_000),
     });
   } catch {
-    throw new OutCallProviderError('The phone provider could not be reached', 'OUTCALL_PROVIDER_UNAVAILABLE', true);
+    throw new OutCallProviderError(
+      voiceSubmission ? 'Call submission could not be confirmed. Do not repeat it.' : 'The phone provider could not be reached',
+      voiceSubmission ? 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN' : 'OUTCALL_PROVIDER_UNAVAILABLE',
+      !voiceSubmission,
+    );
   }
   if (!response.ok) {
     throw new OutCallProviderError(
       'The phone provider rejected the request',
-      `OUTCALL_PROVIDER_HTTP_${response.status}`,
-      response.status === 429 || response.status >= 500,
+      voiceSubmission && response.status >= 500 ? 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN' : `OUTCALL_PROVIDER_HTTP_${response.status}`,
+      !voiceSubmission && (response.status === 429 || response.status >= 500),
     );
   }
-  return await response.json() as T;
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new OutCallProviderError('The phone provider response could not be confirmed', voiceSubmission ? 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN' : 'OUTCALL_PROVIDER_RESPONSE_INVALID');
+  }
 }
 
 export function assertOutCallDestinationAllowed(phone: string): void {
@@ -230,9 +240,10 @@ export async function placeOutCallVoice(input: {
   const result = await twilioFormRequest<{ sid?: string; status?: string }>(
     `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.accountSid)}/Calls.json`,
     form,
+    true,
   );
   if (!result.sid || !/^CA[a-zA-Z0-9]{8,}$/.test(result.sid)) {
-    throw new OutCallProviderError('The phone provider returned an invalid call identifier', 'OUTCALL_PROVIDER_RESPONSE_INVALID');
+    throw new OutCallProviderError('Call submission could not be confirmed. Do not repeat it.', 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN');
   }
   return { sid: result.sid, status: result.status ?? 'queued' };
 }

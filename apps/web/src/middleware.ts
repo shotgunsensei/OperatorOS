@@ -500,6 +500,11 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isOperationalExempt(pathname)) return withAuthSecurityHeaders(NextResponse.next());
+  // Unavailable applications must not start an authentication transaction
+  // that central authority will necessarily reject after sign-in.
+  if (context.surface === 'module' && context.module && !context.module.enabled) {
+    return withAuthSecurityHeaders(rewriteTo(`/modules/${context.module.slug}`, req));
+  }
   if (context.module?.slug === 'tradeflowkit') {
     const publicDocument = tradeFlowKitPublicDestination(pathname);
     if (publicDocument) {

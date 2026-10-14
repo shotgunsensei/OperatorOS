@@ -1,9 +1,9 @@
 # OutCall Architecture
 
-Status: active source/local release candidate. OutCall is registered as a live
-OperatorOS add-on and uses the same exact-host SSO, launcher, entitlement, and
-billing authority as every other active module. The candidate is not a claim
-that Replit or Twilio production acceptance has passed.
+Status: implemented source/local candidate; globally coming soon. OutCall uses
+OperatorOS exact-host SSO, launcher, entitlement, and billing authority, but its
+catalog and production launch remain closed. Configuration is not provider or
+customer acceptance. See the current [readiness ledger](../PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
 
 ## Product boundary
 
@@ -51,8 +51,12 @@ timer, request continuation, workspace uptime, or filesystem state is
 authoritative.
 
 The live worker uses one provider submission attempt. If the provider outcome
-is uncertain, OperatorOS records a failure for reconciliation rather than
-risking a duplicate safety call. Test mode remains available only when all of
+is uncertain, OperatorOS keeps the call processing with
+`OUTCALL_PROVIDER_OUTCOME_UNKNOWN` for reconciliation and never submits again.
+An expired lease after process death marks the same uncertainty. A matching
+signed callback can recover final state and exactly-once acceptance usage.
+This does not prove process termination or autonomous carrier reconciliation.
+Test mode remains available only when all of
 `APP_ENV=test`, `NODE_ENV=test`, and `OUTCALL_TEST_ADAPTER=enabled` are true.
 
 ## Twilio boundary
@@ -73,6 +77,11 @@ numbers are not copied into activity, usage, or callback metadata.
 Production provider calls require complete configuration plus the explicit
 `OUTCALL_LIVE_PROVIDER=enabled` gate. Missing or invalid configuration leaves
 calling unavailable while the rest of the module remains safely readable.
+Current permission, phone ownership, safety acknowledgement, destination
+integrity and SMS suppression are rechecked at execution. SMS STOP suppresses
+SMS replies/triggers; it does not revoke a separately requested self voice call.
+Country-level validation and aggregate spending/concurrency controls remain
+launch blockers; the existing +1 prefix check is not a country determination.
 
 ## Privacy and lifecycle
 

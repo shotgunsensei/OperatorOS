@@ -54,6 +54,26 @@ test('OutCall live provider requires complete configuration and an explicit acti
   });
 });
 
+test('OutCall test adapter requires both test environment signals', () => {
+  const keys = ['APP_ENV', 'NODE_ENV', 'OUTCALL_TEST_ADAPTER'] as const;
+  const before = keys.map(key => process.env[key]);
+  try {
+    process.env.OUTCALL_TEST_ADAPTER = 'enabled';
+    process.env.APP_ENV = 'test';
+    process.env.NODE_ENV = 'production';
+    assert.equal(outCallProviderState().ready, false);
+    process.env.NODE_ENV = 'test';
+    assert.equal(outCallProviderState().name, 'test');
+    process.env.APP_ENV = 'production';
+    assert.equal(outCallProviderState().ready, false);
+  } finally {
+    keys.forEach((key, index) => {
+      if (before[index] === undefined) delete process.env[key];
+      else process.env[key] = before[index];
+    });
+  }
+});
+
 test('OutCall uses Twilio Verify without retaining or returning OTP values', async () => {
   await withLiveEnv(async () => {
     const requests: Array<{ url: string; body: string; authorization: string }> = [];
@@ -121,5 +141,23 @@ test('OutCall verifies Twilio callbacks against the exact canonical URL', async 
     );
     assert.equal(verifyOutCallTwilioSignature(`${path}&tampered=1`, params, signature), false);
     assert.equal(verifyOutCallTwilioSignature(path, params, 'forged'), false);
+  });
+});
+
+test('OutCall bounds voice requests and preserves uncertain responses without retrying', async () => {
+  await withLiveEnv(async () => {
+    const payload = { requestId: crypto.randomUUID(), destination: '+15551234567', message: 'Your requested callback is ready.', voice: 'alice', language: 'en-US' };
+    for (const outcome of ['lost-response', 'malformed-response', 'provider-error']) {
+      let count = 0;
+      globalThis.fetch = (async (_url, init) => {
+        count++;
+        assert.ok(init?.signal, 'provider request needs a bounded deadline');
+        if (outcome === 'lost-response') throw new Error('synthetic response lost after acceptance');
+        if (outcome === 'malformed-response') return new Response('invalid-json', { status: 200 });
+        return new Response('{}', { status: 500 });
+      }) as typeof fetch;
+      await assert.rejects(() => placeOutCallVoice(payload), (error: any) => error.code === 'OUTCALL_PROVIDER_OUTCOME_UNKNOWN' && error.retryable === false);
+      assert.equal(count, 1, outcome);
+    }
   });
 });

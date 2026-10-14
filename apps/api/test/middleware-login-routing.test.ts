@@ -87,3 +87,22 @@ test('cross-host and recursive login destinations collapse to the host fallback'
   const recursive = await middleware(loginRequest('operatoros.net', '?next=%2Flogin'));
   assertAuthorizationRedirect(recursive, 'operatoros.net', 'https://operatoros.net/app');
 });
+
+test('unavailable OutCall deep links show their state before starting sign-in', async () => {
+  const previous = process.env.OUTCALL_TEST_ADAPTER;
+  delete process.env.OUTCALL_TEST_ADAPTER;
+  try {
+    for (const path of ['/', '/schedules', '/verification']) {
+      const response = await middleware(new NextRequest(`https://outcall.operatoros.net${path}`, {
+        headers: { host: 'outcall.operatoros.net', 'x-forwarded-proto': 'https' },
+      }));
+      assert.equal(response.headers.get('location'), null);
+      assert.equal(response.headers.get('x-middleware-rewrite'), 'https://outcall.operatoros.net/modules/outcall');
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      assert.equal(response.headers.getSetCookie().length, 0);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.OUTCALL_TEST_ADAPTER;
+    else process.env.OUTCALL_TEST_ADAPTER = previous;
+  }
+});

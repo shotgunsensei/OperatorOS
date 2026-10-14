@@ -1,6 +1,6 @@
 # OutCall Module
 
-OutCall is an active OperatorOS add-on for discreet, verified-self
+OutCall is an implemented, coming-soon OperatorOS add-on for discreet, verified-self
 exit-assistance calls. The shared Next/Fastify runtime provides the customer
 workspace and persistent product API; the imported `source/` tree remains
 read-only migration evidence and is never started or migrated independently.
@@ -12,7 +12,7 @@ read-only migration evidence and is never started or migrated independently.
 - Customer shell: `apps/web/src/components/module-shells/OutCallShell.tsx`
 - Product API: `apps/api/src/routes/outcall-routes.ts`
 - Ordered database release: v33 step `outcall_product_operations`
-- Lifecycle status: active source/local state 4
+- Lifecycle status: source/local state 4; globally coming soon; live acceptance open
 - Authentication, tenant, entitlement, billing, and launch authority:
   OperatorOS
 

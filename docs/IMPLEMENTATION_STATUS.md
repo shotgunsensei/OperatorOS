@@ -1,5 +1,22 @@
 # OperatorOS implementation status
 
+## OperatorOS / OutCall readiness repairs (2026-10-14, local only)
+
+Candidate preserves CallCommand `31b00596` and merged PR121. Queued calls now
+recheck current write authority and verified-self settings; signed SMS obeys
+viewer grants and STOP; terminal/uncertain outcomes, carrier deadline, stable
+request retries, callback usage recovery and owner-bound call pagination are
+repaired. Unavailable OutCall hosts show their state before login; readiness,
+mobile cancellation and recovery copy are honest. Parity and coming-soon
+status remain unchanged. Focused checks pass: OutCall 23, platform 45,
+CallCommand compatibility 39, component browser 5; zero-warning lint,
+four-workspace typing/build stages, local supervisor smoke 5/5 and disposable v66 apply/reapply/verify pass.
+Production remains identified healthy v65, not reconciled with candidate v66.
+Credential hold, Stripe recovery, geography/aggregate spend controls, provider
+configuration and deployed customer acceptance remain gates. No calls,
+production data, publication or hosted CI occurred. See [the complete ledger,
+commands and blockers](PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
+
 ## CallCommand inbound call outcome repair (2026-10-14)
 
 Scoped candidate from merged PR121 preserves all existing work. Realtime
