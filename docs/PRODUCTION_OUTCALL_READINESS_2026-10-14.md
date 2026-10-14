@@ -1,5 +1,12 @@
 # OperatorOS and OutCall readiness candidate — 2026-10-14
 
+Historical first-pass evidence for `2f943eed...` and v66 is preserved below.
+The bounded continuation adds exact country validation, account resource controls
+and additive v67 storage. Its current requirements, verification and remaining
+gates are in [the v67 control ledger](outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+The original geography/aggregate source blockers below are addressed locally;
+operator approval, publication, migration and live acceptance remain open.
+
 Verdict: bounded source/local repairs verified; production launch remains
 blocked. OutCall is still coming soon. No new module is live accepted.
 

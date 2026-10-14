@@ -119,6 +119,8 @@ export async function ensureSchemaReady() {
   const { ensureOutCallTables, ensureOutCallProductTables } = await import('../src/lib/outcall-db-init.js');
   await ensureOutCallTables();
   await ensureOutCallProductTables();
+  const { ensureOutCallResourceTables } = await import('../src/lib/outcall-resource-db-init.js');
+  await ensureOutCallResourceTables();
   const { ensureOperatorOsMessagingComplianceTables } = await import('../src/lib/operatoros-messaging-compliance-db-init.js');
   await ensureOperatorOsMessagingComplianceTables();
   const { ensureSnapProofOsTables } = await import('../src/lib/snapproofos-db-init.js');

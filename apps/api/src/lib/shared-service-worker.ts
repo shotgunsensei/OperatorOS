@@ -7,6 +7,7 @@ import { processWebhookBatch } from './shared-webhooks.js';
 import { purgeExpiredAttachmentBlobs } from './shared-attachments.js';
 import { processOutboundWebhookBatch } from './shared-outbound-webhooks.js';
 import { enqueueDueSchedules } from './shared-schedules-exports.js';
+import { recoverOutCallResources } from './outcall-resources.js';
 
 const workerId = `operatoros-${process.pid}-${randomUUID().slice(0, 8)}`;
 let interval: ReturnType<typeof setInterval> | null = null;
@@ -88,6 +89,7 @@ export async function runSharedServiceCycle(): Promise<{
   running = true;
   lastStartedAt = new Date();
   try {
+    await recoverOutCallResources();
     const [outbox, jobs, webhooks, outboundWebhooks, schedules, purgedAttachments] = await Promise.all([
       processOutboxBatch({ workerId: `${workerId}:outbox`, limit: 20 }),
       processSharedJobBatch({ workerId: `${workerId}:jobs`, limit: 20 }),

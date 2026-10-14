@@ -25,8 +25,9 @@ the final framework's public prefix and appear in the explicit safe list only.
 API key credentials should be preferred for supported outbound operations while
 the auth token remains necessary for webhook validation. Validate SID formats,
 E.164 number, exact HTTPS URLs, and a non-empty country allowlist at startup.
-The controlled release supports North American `+1` numbers and requires `US`
-or `CA` in the allowlist. Twilio console callbacks must use:
+The controlled release requires an allowlist containing only `US`, `CA`, or both.
+Pinned numbering metadata requires an exact valid country/type match; a `+1`
+prefix alone never grants permission. Twilio console callbacks must use:
 
 - `https://outcall.operatoros.net/api/modules/outcall/webhooks/twilio/sms`
 - the voice status and gather URLs generated for each call by OperatorOS.
@@ -43,6 +44,11 @@ The active shared-runtime implementation requires independent, versioned
 `OUTCALL_PUBLIC_URL`, Twilio account/auth/Verify configuration, and the
 OutCall-owned E.164 number. `OUTCALL_LIVE_PROVIDER=enabled` is an explicit
 post-acceptance activation switch. `OUTCALL_TEST_ADAPTER` must be absent in production.
+Release v67 also requires a complete positive integer
+`OUTCALL_RESOURCE_POLICY_JSON` and an exact configuration-bound, unexpired
+account approval by an active platform super-admin. No default allowance is
+provided; configuration and static preflight do not approve spend. See the
+[exact policy fields, limits, approval and migration requirements](RESOURCE_CONTROLS_V67_2026-10-14.md).
 Production routes fail closed for absent protection values. Document old key
 versions during rotation; never overwrite ciphertext keys without a migration.
 

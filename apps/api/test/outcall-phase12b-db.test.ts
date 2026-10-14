@@ -19,6 +19,8 @@ import { db } from '../src/db.js';
 import { modules, tenantModules, tenantUserModuleAccess, tenantUsers, users } from '../src/schema.js';
 import { ensureOutCallTables } from '../src/lib/outcall-db-init.js';
 import { processSharedJobBatch } from '../src/lib/shared-background-jobs.js';
+import {createOutCallResourceFixture,SYNTHETIC_OUTCALL_POLICY} from './outcall-resource-fixture.js';
+import {beginOutCallSubmission,reserveOutCallResource} from '../src/lib/outcall-resources.js';
 import {
   cleanupModule,
   cleanupUser,
@@ -36,6 +38,7 @@ let signToken: typeof import('../src/lib/auth.js').signToken;
 let profileId = '';
 let callId = '';
 let triggerId = '';
+let resourceFixture:Awaited<ReturnType<typeof createOutCallResourceFixture>>;
 
 function signWebhook(path: string, body: Record<string, string>) {
   let data = `https://outcall.operatoros.net${path.replace('/v1/', '/api/')}`;
@@ -76,7 +79,13 @@ async function cleanTenant(tenantId: string) {
 
 before(async () => {
   await ensureSchemaReady();
+  // Remove only deterministic synthetic consent fixtures from earlier failed
+  // runs. This suite must not begin with a leftover STOP from its own tests.
+  await db.execute(sql`DELETE FROM operatoros_sms_consent_events WHERE consent_record_id IN
+    (SELECT id FROM operatoros_sms_consent_records WHERE phone_e164 IN ('+12025550101','+12025550102'))`);
+  await db.execute(sql`DELETE FROM operatoros_sms_consent_records WHERE phone_e164 IN ('+12025550101','+12025550102')`);
   await ensureOutCallTables();
+  resourceFixture=await createOutCallResourceFixture();
   ({ signToken } = await import('../src/lib/auth.js'));
   ownerA = await createTestUser();
   ownerB = await createTestUser();
@@ -104,6 +113,7 @@ before(async () => {
 
 after(async () => {
   if (app) await app.close();
+  await resourceFixture?.cleanup();
   if (ownerA && moduleRow) await cleanTenant(ownerA.currentTenantId);
   if (ownerB && moduleRow) await cleanTenant(ownerB.currentTenantId);
   if (moduleRow) {
@@ -137,7 +147,7 @@ test('OutCall enforces OperatorOS auth, entitlement, write access, and trusted t
     headers: headers(ownerA, ownerA.currentTenantId),
     payload: {
       tenantId: ownerB.currentTenantId,
-      destination: '+15551234567',
+      destination: '+12025550101',
       profileId: 'not-used',
       idempotencyKey: crypto.randomUUID(),
     },
@@ -179,15 +189,15 @@ test('OutCall persists encrypted onboarding, profile and private trigger without
   const verified = await app.inject({
     method: 'POST', url: '/v1/modules/outcall/phone-verification',
     headers: headers(ownerA, ownerA.currentTenantId),
-    payload: { phone: '+15551234567', verificationCode: '000000' },
+    payload: { phone: '+12025550101', verificationCode: '000000' },
   });
   assert.equal(verified.statusCode, 200, verified.body);
-  assert.equal(verified.json().phoneMasked, '+15••••4567');
+  assert.equal(verified.json().phoneMasked, '+12\u2022\u2022\u2022\u20220101');
 
   const foreignOwnership = await app.inject({
     method: 'POST', url: '/v1/modules/outcall/phone-verification',
     headers: headers(ownerB, ownerB.currentTenantId),
-    payload: { phone: '+15551234567', verificationCode: '000000' },
+    payload: { phone: '+12025550101', verificationCode: '000000' },
   });
   assert.equal(foreignOwnership.statusCode, 409, foreignOwnership.body);
   assert.equal(foreignOwnership.json().code, 'OUTCALL_PHONE_OWNERSHIP_CONFLICT');
@@ -195,7 +205,7 @@ test('OutCall persists encrypted onboarding, profile and private trigger without
   const replaced = await app.inject({
     method: 'POST', url: '/v1/modules/outcall/phone-verification',
     headers: headers(ownerA, ownerA.currentTenantId),
-    payload: { phone: '+15557654321', verificationCode: '000000' },
+    payload: { phone: '+12025550102', verificationCode: '000000' },
   });
   assert.equal(replaced.statusCode, 200, replaced.body);
   const ownerRows = await db.execute(sql`
@@ -206,7 +216,7 @@ test('OutCall persists encrypted onboarding, profile and private trigger without
   const releasedOwnership = await app.inject({
     method: 'POST', url: '/v1/modules/outcall/phone-verification',
     headers: headers(ownerB, ownerB.currentTenantId),
-    payload: { phone: '+15551234567', verificationCode: '000000' },
+    payload: { phone: '+12025550101', verificationCode: '000000' },
   });
   assert.equal(releasedOwnership.statusCode, 200, releasedOwnership.body);
 
@@ -284,7 +294,7 @@ test('OutCall schedules only the server-verified destination and records exactly
   ]);
   assert.equal(call.rows[0].status, 'completed');
   assert.equal(call.rows[0].provider, 'test');
-  assert.equal(call.rows[0].destination_masked, '+15••••4321');
+  assert.equal(call.rows[0].destination_masked, '+12\u2022\u2022\u2022\u20220102');
   assert.equal(Number(usage.rows[0].count), 1);
   assert.equal(Number(jobs.rows[0].count), 1);
 
@@ -341,7 +351,7 @@ test('OutCall accepts only signed, replay-safe voice and exact-trigger SMS callb
   const smsPath = '/v1/modules/outcall/webhooks/twilio/sms';
   const smsBody = {
     MessageSid: `SM${'d'.repeat(32)}`,
-    From: '+15557654321',
+    From: '+12025550102',
     To: process.env.TWILIO_PHONE_NUMBER!,
     Body: 'Did you feed the cat?',
   };
@@ -441,7 +451,7 @@ test('OutCall terminal callbacks survive late, conflicting and unknown statuses'
 test('OutCall signed SMS cannot schedule through a viewer grant or revoked SMS consent', async () => {
   const path = '/v1/modules/outcall/webhooks/twilio/sms';
   const send = (body: Record<string, string>) => app.inject({ method: 'POST', url: path, headers: { 'x-twilio-signature': signWebhook(path, body) }, payload: body });
-  const base = { From: '+15557654321', To: process.env.TWILIO_PHONE_NUMBER!, Body: 'Did you feed the cat?' };
+  const base = { From: '+12025550102', To: process.env.TWILIO_PHONE_NUMBER!, Body: 'Did you feed the cat?' };
   await db.insert(tenantUserModuleAccess).values({ tenantId: ownerA.currentTenantId, userId: ownerA.id, moduleId: moduleRow.id, accessLevel: 'viewer' });
   try {
     const body = { ...base, MessageSid: `SM${'e'.repeat(32)}` };
@@ -491,9 +501,12 @@ test('OutCall carrier acceptance followed by lost response or database failure r
   const previousFetch = globalThis.fetch;
   const previousAdapter = process.env.OUTCALL_TEST_ADAPTER;
   const previousLive = process.env.OUTCALL_LIVE_PROVIDER;
+  const previousPolicy=process.env.OUTCALL_RESOURCE_POLICY_JSON;
   const transaction = db.transaction.bind(db);
   delete process.env.OUTCALL_TEST_ADAPTER;
   process.env.OUTCALL_LIVE_PROVIDER = 'enabled';
+  process.env.OUTCALL_RESOURCE_POLICY_JSON=JSON.stringify(SYNTHETIC_OUTCALL_POLICY);
+  await resourceFixture.approve();
   try {
     for (const outcome of ['lost-response', 'database-failure']) {
       let submissions = 0;
@@ -541,6 +554,8 @@ test('OutCall carrier acceptance followed by lost response or database failure r
     else process.env.OUTCALL_TEST_ADAPTER = previousAdapter;
     if (previousLive === undefined) delete process.env.OUTCALL_LIVE_PROVIDER;
     else process.env.OUTCALL_LIVE_PROVIDER = previousLive;
+    if(previousPolicy===undefined)delete process.env.OUTCALL_RESOURCE_POLICY_JSON;
+    else process.env.OUTCALL_RESOURCE_POLICY_JSON=previousPolicy;
   }
 });
 
@@ -594,16 +609,27 @@ test('OutCall reauthenticates private export and deletes only the current user t
     headers: headers(ownerA, ownerA.currentTenantId), payload: { password },
   });
   assert.equal(exported.statusCode, 200, exported.body);
-  assert.equal(exported.json().export.phone, '+15557654321');
+  assert.equal(exported.json().export.phone, '+12025550102');
   assert.equal(exported.json().export.triggers[0].phrase, 'did you feed the cat?');
   assert.doesNotMatch(exported.body, /phoneCiphertext|phraseCiphertext|passwordHash/i);
 
+  const previousPolicy=process.env.OUTCALL_RESOURCE_POLICY_JSON;
+  process.env.OUTCALL_RESOURCE_POLICY_JSON=JSON.stringify(SYNTHETIC_OUTCALL_POLICY);
+  await resourceFixture.approve();
+  const queuedReservation=await db.transaction(tx=>reserveOutCallResource({tenantId:ownerA.currentTenantId,userId:ownerA.id,operation:'verify_start',idempotencyKey:crypto.randomUUID()},tx));
+  const heldReservation=await db.transaction(tx=>reserveOutCallResource({tenantId:ownerA.currentTenantId,userId:ownerA.id,operation:'verify_check',idempotencyKey:crypto.randomUUID()},tx));
+  await beginOutCallSubmission(heldReservation,ownerA.currentTenantId,ownerA.id,'verify_check');
   const deleted = await app.inject({
     method: 'POST', url: '/v1/modules/outcall/data-deletion',
     headers: headers(ownerA, ownerA.currentTenantId),
     payload: { password, confirmation: 'DELETE OUTCALL' },
   });
   assert.equal(deleted.statusCode, 200, deleted.body);
+  const resources=await db.execute(sql`SELECT id,state,user_id FROM outcall_resource_reservations WHERE id IN (${queuedReservation},${heldReservation})`);
+  assert.deepEqual(resources.rows.find(row=>row.id===queuedReservation),{id:queuedReservation,state:'released',user_id:null});
+  assert.deepEqual(resources.rows.find(row=>row.id===heldReservation),{id:heldReservation,state:'submitting',user_id:null});
+  if(previousPolicy===undefined)delete process.env.OUTCALL_RESOURCE_POLICY_JSON;
+  else process.env.OUTCALL_RESOURCE_POLICY_JSON=previousPolicy;
   const remaining = await db.execute(sql`
     SELECT
       (SELECT COUNT(*) FROM outcall_settings WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id})::integer AS settings,

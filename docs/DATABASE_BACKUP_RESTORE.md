@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints the current 66 ordered step identifiers without secrets
+`db:plan` is read-only and prints the current 67 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -45,7 +45,25 @@ The release is idempotent and additive. Do not run imported child migrations,
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
 
-### Release v66 shared AI budgets (current candidate)
+### Release v67 OutCall resource accounting (current local candidate)
+
+The manifest appends `outcall_resource_tables` after unchanged v66. Two additive
+tables store account approvals and tenant/actor/call reservations with constraints
+and indexes. No approval, allowance, provider credential or migration backfill is
+seeded. Clean apply/reapply/verify and populated v66 upgrade/reapply/verify pass
+only on task-owned disposable loopback PostgreSQL; selected synthetic authority,
+profile and call snapshots remain unchanged and approval count is zero.
+
+Production target reconciliation, recoverable whole-platform backup/restore and
+specific apply approval remain required. Use the root ordered apply and independent
+verification to require v67/67 on each selected deployment database. Keep automatic
+database copy/apply off and routine serving verify-only. Preserve reservations and
+unknown monetary holds during rollback; v65/v66 application compatibility cannot
+be assumed. Restore into a new database and authorize traffic switching separately.
+Exact configuration, operator approval, accounting limits and rehearsal evidence:
+[OutCall v67 ledger](outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+
+### Release v66 shared AI budgets (preserved preceding candidate)
 
 The manifest appends only `shared_ai_budget_tables` after the existing v65 steps.
 Tenant/module budget policies and actor-bound request reservations are additive.

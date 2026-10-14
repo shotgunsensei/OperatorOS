@@ -1,5 +1,21 @@
 # OperatorOS implementation status
 
+## OutCall country and account resource controls (2026-10-14, local only)
+
+Continuation of preserved `2f943eed...` implements metadata-based country/type
+validation before Verify and voice, account-wide atomic budget/quota/capacity
+reservations, exact configuration-bound privileged approval, bounded duration,
+unsent cancellation/expiry, retained unknown holds, callback settlement and
+privacy accounting cleanup. Additive v67 follows immutable v66; no approval or
+spend allowance is seeded. Focused OutCall/schema/isolation checks pass 37/37,
+CallCommand compatibility 39/39, four workspace typechecks, expanded strict test
+typing, zero-warning lint and production build. Disposable clean and populated
+v66 upgrade/reapply/verify pass with zero approvals. The committed build/supervisor
+receipt is recorded in the handoff. Historical platform/UI evidence remains on
+the earlier candidate. No remote merge, deployed v67, activation, calls or live
+acceptance occurred. Exact commands, corrected fixture failures, ceilings,
+operator gates and migration/rollback: [v67 resource control ledger](outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+
 ## OperatorOS / OutCall readiness repairs (2026-10-14, local only)
 
 Candidate preserves CallCommand `31b00596` and merged PR121. Queued calls now

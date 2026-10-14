@@ -26,10 +26,14 @@ evidenced on the exact deployed revision.
 - [x] Tenant/user-scoped rate limits, job idempotency, provider-ID uniqueness,
       one-attempt submission, permission rechecks, monotonic terminal state,
       uncertain outcome preservation and replay-safe usage are wired locally.
-- [ ] Validate real destination countries, including US-only versus Canada and
-      other NANP regions, before Verify and voice requests.
-- [ ] Approve and enforce tenant/account monetary limits, daily quotas and
-      aggregate concurrency; existing per-user request rates are insufficient.
+- [x] Validate configured destination countries, including US-only versus
+      Canada and other NANP regions, before Verify and voice using pinned metadata.
+- [x] Enforce account-wide atomic monetary ceilings, daily quotas and held
+      concurrency across tenants; uncertainty retains money/capacity.
+- [ ] Approve verified worst-case provider costs, the exact policy/configuration
+      and expiring privileged account approval described in the
+      [v67 control ledger](RESOURCE_CONTROLS_V67_2026-10-14.md). Configuration
+      alone is insufficient; no production allowance has been set.
 - [ ] Exercise actual process death, response loss and independent carrier
       reconciliation without duplicate calls; lease-state simulation is local evidence only.
 - [x] Release v33 is additive, ordered, idempotent, and verifies all OutCall
@@ -57,7 +61,7 @@ evidenced on the exact deployed revision.
 ## Deployed OperatorOS acceptance
 
 - [ ] Deploy the exact reviewed commit and pin the release identity.
-- [ ] Reconcile source v66 with serving v65 and preserved Replit divergence.
+- [ ] Reconcile source v67 with last-observed serving v65 and preserved Replit divergence.
       Verify the approved target/backup and apply the full current ordered
       manifest through the supported root release operation. Routine serving
       supervisor remains verify-only. Never apply an old v33 child release.
