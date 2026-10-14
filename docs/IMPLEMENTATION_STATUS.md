@@ -1,5 +1,18 @@
 # OperatorOS implementation status
 
+## CallCommand post-reboot lifecycle preflight (2026-10-14, 19:05 UTC)
+
+Application patch `31b00596` remains intact and is already in the separate
+OutCall v67 candidate. Three additional synthetic lifecycle checks pass:
+heartbeat renewal beyond the initial lease, one sideband-loss fallback and
+notification, and expired-owner fencing with replay reattachment. Changed-test
+strict types and scoped zero-warning lint pass. No application/schema/provider
+change or full-gate rerun occurred. Actual process death and autonomous recovery
+remain open. Fresh public probes still identify healthy `7c212305`, v65/65.
+The native host passes read-only diagnostics, but this task has no callable
+browser runtime; private credit, routing and rotation evidence remain unverified.
+See [the post-reboot evidence and next actions](callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
+
 ## CallCommand inbound call outcome repair (2026-10-14)
 
 Scoped candidate from merged PR121 preserves all existing work. Realtime

@@ -1,5 +1,14 @@
 # OperatorOS module parity index
 
+## CallCommand lifecycle evidence overlay (2026-10-14, 19:05 UTC)
+
+Parity remains unchanged. Three new synthetic heartbeat/sideband-loss/expired-
+owner replay checks, strict changed-test types and scoped lint pass. No new
+application or schema behavior is introduced. Real process death, autonomous
+recovery, live answer, delivered RMM intake and human transfer remain open.
+Production remains identified at v65; the coordinated OutCall candidate is v67.
+See [the preflight and exact pending actions](../callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
+
 ## CallCommand inbound outcome overlay (2026-10-14)
 
 Parity remains unchanged. The scoped source candidate repairs summary/control
