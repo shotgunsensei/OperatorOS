@@ -38,7 +38,9 @@ async function tenantSigningAuthority(input: {
   try {
     if (input.params.To) to = normalizeE164(input.params.To, 'To');
   } catch {
-    return null;
+    // SIP-side callbacks can have a SIP URI in To. A known server call
+    // still identifies its tenant signing credential below.
+    to = null;
   }
 
   const callId = input.callId && UUID.test(input.callId) ? input.callId : null;
@@ -59,8 +61,9 @@ async function tenantSigningAuthority(input: {
       )
     WHERE c.deleted_at IS NULL
       AND (
-        (${to}::text IS NOT NULL AND c.phone_e164=${to})
-        OR ((${callId}::text IS NOT NULL OR ${providerCallSid}::text IS NOT NULL) AND cc.id IS NOT NULL)
+        (${callId}::text IS NOT NULL AND cc.id=${callId})
+        OR (${callId}::text IS NULL AND ${to}::text IS NOT NULL AND c.phone_e164=${to})
+        OR (${callId}::text IS NULL AND ${to}::text IS NULL AND ${providerCallSid}::text IS NOT NULL AND cc.id IS NOT NULL)
       )
     ORDER BY CASE WHEN ${to}::text IS NOT NULL AND c.phone_e164=${to} THEN 0 ELSE 1 END
     LIMIT 1

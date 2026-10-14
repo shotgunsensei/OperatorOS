@@ -1,5 +1,16 @@
 # OperatorOS module parity index
 
+## CallCommand inbound outcome overlay (2026-10-14)
+
+Parity remains unchanged. The scoped source candidate repairs summary/control
+sequencing, retrying external notification work, published-flow authorization,
+carrier REFER handoff/fallback, call termination state, sideband ownership and
+post-call recording order. All 187 CallCommand API checks, four workspace
+typechecks, zero-warning lint, strict changed-test typing and SDK/API compilation
+pass locally. Live answer,
+mailbox/RMM intake, human transfer, serving-runtime recovery and production
+release/configuration acceptance remain open. See [the evidence and limits](../callcommand/INBOUND_OUTCOME_2026-10-14.md).
+
 ## Generic checkout expiry safety (2026-10-12)
 
 Parity remains unchanged. A canonical-dispatch generic unpaid-expiry acknowledgment

@@ -1,5 +1,20 @@
 # OperatorOS implementation status
 
+## CallCommand inbound call outcome repair (2026-10-14)
+
+Scoped candidate from merged PR121 preserves all existing work. Realtime
+summary/control sequencing, current-rule and flow-branch authorization,
+stable per-call retrying email delivery, durable end state, signed Twilio REFER
+handoff/fallback, renewable sideband ownership and post-terminal recording
+processing are implemented. All 187 CallCommand API checks, four workspace
+typechecks, zero-warning lint, strict changed-test typing and SDK/API compilation
+pass locally. Production acceptance and source publication remain open.
+Fresh public probes identify healthy production commit
+`7c212305` and v65/65, while source main carries v66. Browser initialization
+still fails. Real answer, mailbox/RMM receipt, human transfer, provider credit,
+secret-rotation evidence, release reconciliation and autonomous process-death
+recovery remain gates. See [the evidence](callcommand/INBOUND_OUTCOME_2026-10-14.md).
+
 ## Generic checkout expiration acknowledgment (2026-10-12)
 
 **IMPLEMENTED / ISOLATED DATABASE VERIFIED / PRODUCTION ACCEPTANCE OPEN**.
