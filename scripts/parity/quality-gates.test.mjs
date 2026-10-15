@@ -251,6 +251,8 @@ test('browser runtime strips inherited live-provider credentials and activation 
     RESEND_API_KEY: 're_must_be_removed',
     EMAIL_FROM: 'live@example.test',
     STRIPE_SECRET_KEY: 'sk_live_must_be_removed',
+    OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET: 'whsec_synthetic_must_be_removed',
+    OperatorOS_Billing_Webhook_Signing_Secret: 'whsec_synthetic_mixed_must_be_removed',
     Stripe_Price_Pro_Monthly: 'mixed-case-price-must-be-removed',
     STRIPE_PRICE_PRO_MONTHLY: 'price_live_must_be_removed',
     TWILIO_AUTH_TOKEN: 'must-be-removed',

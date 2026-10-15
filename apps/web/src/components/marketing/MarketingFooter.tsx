@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { readPricingSelection, pricingAccountPath, pricingSelectionPath } from '@/lib/pricing-selection';
+import { campaignQuery, withCampaign, type PublicQuery } from '@/lib/campaign-query';
 import Link from '@/components/marketing/MarketingLink';
 import OperatorLogo from '../brand/OperatorLogo';
 import { brand } from '@/lib/design-tokens';
@@ -38,7 +41,15 @@ const COL_LEGAL = [
  * MarketingFooter — closes the public layout with brand identity,
  * link columns, and the "Powered by Shotgun Ninjas Productions" attribution.
  */
-export default function MarketingFooter() {
+export default function MarketingFooter({ conversion }: { conversion?: { pricingPath: string; signInPath: string } }) {
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const query: PublicQuery = {};
+  params.forEach((_value, key) => { const values = params.getAll(key); query[key] = values.length === 1 ? values[0] : values; });
+  const selection = pathname === '/pricing' ? readPricingSelection(query) : null;
+  const campaign = campaignQuery(query);
+  const signInPath = conversion?.signInPath ?? (selection ? pricingAccountPath(selection, 'login', campaign) : '/login');
+  const pricingPath = conversion?.pricingPath ?? (selection ? withCampaign(pricingSelectionPath(selection), campaign) : '/pricing');
   const year = new Date().getFullYear();
   return (
     <footer
@@ -75,9 +86,9 @@ export default function MarketingFooter() {
           </p>
         </div>
 
-        <FooterColumn title="Product" links={COL_PRODUCT} />
+        <FooterColumn title="Product" links={COL_PRODUCT.map(link => link.href === '/pricing' ? {...link, href:pricingPath} : link)} />
         <FooterColumn title="Applications" links={COL_MODULES} />
-        <FooterColumn title="Actions" links={COL_ACTIONS} />
+        <FooterColumn title="Actions" links={COL_ACTIONS.map(link => link.href === '/login' ? {...link, href:signInPath} : link)} />
         <FooterColumn title="Legal" links={COL_LEGAL} />
       </div>
 

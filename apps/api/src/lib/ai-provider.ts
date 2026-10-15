@@ -8,6 +8,7 @@ export interface AiCompletionRequest {
   temperature?: number;
   responseFormat?: 'text' | 'json';
   timeoutMs?: number;
+  jsonSchema?: { name: string; schema: Record<string, unknown> };
 }
 
 export interface AiCompletionResponse {
@@ -17,6 +18,8 @@ export interface AiCompletionResponse {
   provider: string;
   model: string;
   version: string;
+  /** Provider measured usage; absent means unknown, never free. */
+  usage?: import('./ai-cost-control.js').AiMeasuredUsage;
 }
 
 export interface AiProvider {

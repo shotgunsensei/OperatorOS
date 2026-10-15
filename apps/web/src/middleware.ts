@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { findAudienceLane } from './lib/audience-lanes';
 import {
   getModuleById,
   resolveModuleContext,
@@ -454,6 +455,16 @@ export async function middleware(req: NextRequest) {
   const canonicalRedirect = canonicalizeNoncanonicalHost(req, context);
   if (canonicalRedirect) return canonicalRedirect;
 
+  // Dynamic catalog rendering streams the page. Reject unknown audience routes
+  // before that stream starts so they retain a real 404 rather than a soft 200.
+  if ((context.surface === 'root' || isLocalHost(context.host)) && pathname.startsWith('/for/')) {
+    const audience = /^\/for\/([^/]+)\/?$/.exec(pathname)?.[1];
+    if (!audience || !findAudienceLane(audience)) return new NextResponse(
+      '<!doctype html><html lang="en"><head><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Page not found | OperatorOS</title></head><body><main><h1>Page not found</h1><p>Choose the OperatorOS application that fits your team.</p><a href="/">Find your fit</a></main></body></html>',
+      {status:404,headers:{'Content-Type':'text/html; charset=utf-8','X-Robots-Tag':'noindex'}},
+    );
+  }
+
   const legacyModuleRedirect = canonicalizeLegacyModuleHost(req, context);
   if (legacyModuleRedirect) return legacyModuleRedirect;
 
@@ -489,6 +500,11 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isOperationalExempt(pathname)) return withAuthSecurityHeaders(NextResponse.next());
+  // Unavailable applications must not start an authentication transaction
+  // that central authority will necessarily reject after sign-in.
+  if (context.surface === 'module' && context.module && !context.module.enabled) {
+    return withAuthSecurityHeaders(rewriteTo(`/modules/${context.module.slug}`, req));
+  }
   if (context.module?.slug === 'tradeflowkit') {
     const publicDocument = tradeFlowKitPublicDestination(pathname);
     if (publicDocument) {

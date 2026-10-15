@@ -73,7 +73,7 @@ test('real handler differentiates failure stages and preserves responses and ide
     httpClient: { getClientName: () => 'blocked-offline', makeRequest() { httpCalls++; throw new Error('Networking prohibited'); }, async makeRequestAsync() { httpCalls++; throw new Error('Networking prohibited'); } } as unknown as Stripe.HttpClient,
   });
   const secret = 'whsec_synthetic_diagnostic_only';
-  const payload = ' {\n"id":"evt_synthetic_diagnostic","type":"checkout.session.expired","data":{"object":{"fixture":"Unicode ✓"}}\n}\n';
+  const payload = ' {\n"id":"evt_synthetic_diagnostic","type":"checkout.session.completed","data":{"object":{"fixture":"Unicode ✓"}}\n}\n';
   const signature = stripe.webhooks.generateTestHeaderString({ payload, secret });
   let configured = true, torque = false, fault: string | null = null, duplicate: string | null = null, handled = true;
   let failure: unknown = new Error(privateFixture);

@@ -1,6 +1,7 @@
 import {
   CORE_PRODUCTS,
   isEligibleCompanionModuleKey,
+  normalizeStackSelection,
   type CoreProductKey,
   type StackSelection,
 } from '@operatoros/sdk';
@@ -21,10 +22,14 @@ export function pendingStackSelection(value: unknown): StackSelection | null {
       || typeof row.additionalSeats !== 'number'
       || !Number.isSafeInteger(row.additionalSeats)
       || row.additionalSeats < 0) return null;
-  return {
-    coreProduct: row.coreProduct as CoreProductKey,
-    freeCompanionModule: row.includedCompanionKey,
-    additionalModules: row.additionalModuleKeys.filter(isEligibleCompanionModuleKey),
-    additionalSeats: row.additionalSeats,
-  };
+  try {
+    return normalizeStackSelection({
+      coreProduct: row.coreProduct as CoreProductKey,
+      freeCompanionModule: row.includedCompanionKey,
+      additionalModules: row.additionalModuleKeys.filter(isEligibleCompanionModuleKey),
+      additionalSeats: row.additionalSeats,
+    });
+  } catch {
+    return null;
+  }
 }

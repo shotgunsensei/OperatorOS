@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarClock, Download, FileArchive, KeyRound, RadioTower, RefreshCw, ShieldCheck, Webhook } from 'lucide-react';
 import { moduleShellApi, type TechDeckLiteralWorkspaceResponse } from '@/lib/auth';
 
@@ -18,6 +18,12 @@ function errorMessage(error: unknown): string {
 
 function values(form: HTMLFormElement): Record<string, string> {
   return Object.fromEntries(Array.from(new FormData(form).entries()).map(([key, value]) => [key, String(value).trim()]));
+}
+
+function guidanceErrorMessage(error: unknown): string {
+  const reference = error && typeof error === 'object' && 'requestId' in error ? error.requestId : null;
+  return errorMessage(error) + (typeof reference === 'string' && /^[A-Za-z0-9._:-]{1,200}$/.test(reference)
+    ? ` Reference: ${reference}` : '');
 }
 
 function saveBlob(blob: Blob, filename: string) {
@@ -50,6 +56,10 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [oneTimeSecret, setOneTimeSecret] = useState<string | null>(null);
+  const [guidance, setGuidance] = useState<{ tenantKey: string; summary: string; checks: string[] } | null>(null);
+  const guidanceRequest = useRef<{ query: string; key: string } | null>(null);
+  const guidanceTenant = useRef(tenantKey);
+  guidanceTenant.current = tenantKey;
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -58,7 +68,11 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void load(); }, [load, tenantKey]);
+  useEffect(() => {
+    setGuidance(null); setNotice(null); guidanceRequest.current = null;
+    setBusy(current => current === 'itops' ? null : current);
+    void load();
+  }, [load, tenantKey]);
 
   const act = async (key: string, path: string, input: Record<string, unknown>, options?: ActionOptions) => {
     if (!canWrite) return null;
@@ -90,6 +104,25 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
       setNotice('Compliance package downloaded.');
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(null); }
+  };
+
+  const requestGuidance = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canWrite || busy === 'itops') return;
+    const query = values(event.currentTarget).query;
+    const requestTenant = tenantKey;
+    if (guidanceRequest.current?.query !== query) guidanceRequest.current = { query, key: crypto.randomUUID() };
+    setBusy('itops'); setError(null); setNotice(null); setGuidance(null);
+    try {
+      const result = await moduleShellApi.techdeck.literalAction('itops/query', { query }, {
+        idempotencyKey: guidanceRequest.current.key,
+      });
+      if (guidanceTenant.current === requestTenant) {
+        setGuidance({ ...result.guidance, tenantKey: requestTenant });
+        setNotice('Guidance is ready for your review. No commands were run.');
+      }
+    } catch (err) { if (guidanceTenant.current === requestTenant) setError(guidanceErrorMessage(err)); }
+    finally { if (guidanceTenant.current === requestTenant) setBusy(null); }
   };
 
   return (
@@ -163,7 +196,8 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
           <h3><FileArchive size={17} />Compliance packages and IT guidance</h3>
           <RowList rows={workspace?.exports ?? []} empty="No compliance packages have been created yet." label={row => <><strong>Compliance package</strong><span>{packageStatus(row.status, row.attachment_scan_status)} · requested {new Date(row.created_at).toLocaleString()}</span>{row.status === 'completed' && ['clean', 'unavailable'].includes(row.attachment_scan_status) && row.result_attachment_id && <button type="button" disabled={busy === `packet-download-${row.id}`} onClick={() => void downloadCompliancePacket(row.id)}><Download size={14} />Download package</button>}</>} />
           {canWrite && <button type="button" className="tdl-wide" disabled={busy === 'packet'} onClick={() => void act('packet', 'compliance-packets', { filters: {} }, { idempotencyKey: crypto.randomUUID() })}>Build compliance package</button>}
-          {canWrite && <form onSubmit={submit('itops', 'itops/query')}><textarea name="query" required aria-label="IT operations guidance request" placeholder="Ask for documentation-only diagnostic guidance. TechDeck never claims execution." /><button disabled={busy === 'itops'}>Generate reviewed guidance</button></form>}
+          {canWrite && <form onSubmit={requestGuidance} aria-busy={busy === 'itops'}><textarea name="query" required maxLength={4000} aria-label="IT operations guidance request" placeholder="Ask for documentation-only diagnostic guidance without passwords, client records, or medical information." /><button disabled={busy === 'itops'}>{busy === 'itops' ? 'Generating guidance…' : 'Generate guidance'}</button></form>}
+          {guidance?.tenantKey === tenantKey && <section aria-label="IT operations guidance" aria-live="polite"><h4>Review before taking action</h4><p>{guidance.summary}</p><ul>{guidance.checks.map((check, index) => <li key={index}>{check}</li>)}</ul><p className="tdl-note">These are suggested checks. No commands were run.</p></section>}
           <p className="tdl-note">The package includes an index, recorded file checks, and activity history for review. AI output is guidance only—TechDeck does not run scripts automatically.</p>
         </article>}
       </div>}

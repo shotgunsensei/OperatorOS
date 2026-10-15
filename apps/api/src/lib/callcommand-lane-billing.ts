@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { assertBillingWebhookBindingReady, assertBillingWebhookBindingOrSubscriptionReduction } from './billing-webhook-binding.js';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { modules, subscriptions, tenantUsers, users } from '../schema.js';
@@ -195,7 +196,6 @@ export async function createOrUpdateCallCommandLaneCheckout(
       409,
     );
   }
-  const stripe = getStripeFeatureBillingClient();
   return db.transaction(async tx => {
     await tx.execute(sql`
       SELECT pg_advisory_xact_lock(
@@ -213,6 +213,27 @@ export async function createOrUpdateCallCommandLaneCheckout(
         503,
       );
     }
+
+    const existing = await tx.execute(sql`
+      SELECT * FROM callcommand_capacity_entitlements
+      WHERE tenant_id = ${input.tenantId}
+      LIMIT 1
+      FOR UPDATE
+    `);
+    const current = existing.rows[0] as Row | undefined;
+    const subscriptionId = String(current?.stripe_subscription_id ?? '');
+    const subscriptionItemId = String(current?.stripe_subscription_item_id ?? '');
+    const hasSubscription = Boolean(subscriptionId && subscriptionItemId);
+    // Hold the existing entitlement lock before deciding whether this opens
+    // or increases a sale. Cancellation and reductions remain available.
+    if (quantity > 0 && (!hasSubscription || quantity > Number(current?.additional_lanes ?? 0))) {
+      assertBillingWebhookBindingReady();
+    }
+    const stripe = getStripeFeatureBillingClient();
+    await assertBillingWebhookBindingOrSubscriptionReduction(
+      subscriptionId, [{ itemId: subscriptionItemId || null, quantity }],
+      () => stripe.subscriptions.retrieve(subscriptionId, {}, { timeout: 5000, maxNetworkRetries: 0 }),
+    );
 
     const idempotency = await beginIdempotentOperation({
       tenantId: input.tenantId,
@@ -269,22 +290,12 @@ export async function createOrUpdateCallCommandLaneCheckout(
       }
     }
 
-    const existing = await tx.execute(sql`
-      SELECT * FROM callcommand_capacity_entitlements
-      WHERE tenant_id = ${input.tenantId}
-      LIMIT 1
-      FOR UPDATE
-    `);
-    const current = existing.rows[0] as Row | undefined;
     const [baseSubscription] = await tx.select().from(subscriptions)
       .where(and(
         eq(subscriptions.userId, input.userId),
         eq(subscriptions.tenantId, input.tenantId),
       ))
       .limit(1);
-    const subscriptionId = String(current?.stripe_subscription_id ?? '');
-    const subscriptionItemId = String(current?.stripe_subscription_item_id ?? '');
-    const hasSubscription = Boolean(subscriptionId && subscriptionItemId);
     if (Boolean(subscriptionId) !== Boolean(subscriptionItemId)) {
       throw new CallCommandLaneBillingError(
         'The existing lane subscription state is incomplete',

@@ -46,6 +46,8 @@ const allUserIds: string[] = [];
 let catalogModulesBefore = new Map<string, typeof modules.$inferSelect>();
 let planModuleIdsBefore = new Set<string>();
 let insertedCatalogModuleIds: string[] = [];
+let restoredCatalogPlanLinks: typeof planModules.$inferSelect[] = [];
+let restoredCatalogPlanTimestamps = new Map<string, string>();
 
 before(async () => {
   await ensureSchemaReady();
@@ -72,14 +74,31 @@ before(async () => {
 
   // Wire plan_modules so the default-enabled fallback (subscriptions ->
   // plan_modules join) can resolve each catalog module to the right tier.
-  // Idempotent — only insert links that aren't already present.
+  // Preserve unrelated bindings while defining this fixture's tier matrix.
   const allMods = await db.select().from(modules)
     .where(inArray(modules.slug, LIVE_CATALOG.map(c => c.slug)));
   const slugToId = new Map(allMods.map(m => [m.slug, m.id]));
   const existingLinks = await db.select().from(planModules)
     .where(inArray(planModules.planId, [starterPlanId, elitePlanId]));
+  // Earlier suites may deliberately retain admin-edited plan inclusions. This
+  // test defines a catalog-tier fixture, rather than asserting against those
+  // legitimate explicit grants. Rebuild only these two plans' live-catalog
+  // links, and restore their original IDs/values after the assertions.
+  const catalogIds = new Set(allMods.map(module => module.id));
+  const fixtureLinks = existingLinks.filter(link => catalogIds.has(link.moduleId));
+  restoredCatalogPlanLinks = fixtureLinks.filter(link => planModuleIdsBefore.has(link.id));
+  if (fixtureLinks.length) {
+    const timestamps = await db.execute(sql`
+      SELECT id, created_at::text AS created_at FROM plan_modules
+      WHERE id IN (${sql.join(fixtureLinks.map(link => sql`${link.id}`), sql`, `)})
+    `);
+    restoredCatalogPlanTimestamps = new Map(timestamps.rows.map(row =>
+      [String(row.id), String(row.created_at)]));
+    await db.delete(planModules).where(inArray(planModules.id, fixtureLinks.map(link => link.id)));
+  }
   const linkKey = (pid: string, mid: string) => `${pid}:${mid}`;
-  const have = new Set(existingLinks.map(l => linkKey(l.planId, l.moduleId)));
+  const have = new Set(existingLinks.filter(link => !catalogIds.has(link.moduleId))
+    .map(link => linkKey(link.planId, link.moduleId)));
   const toInsert: Array<{ planId: string; moduleId: string }> = [];
   for (const cat of LIVE_CATALOG) {
     const mid = slugToId.get(cat.slug); if (!mid) continue;
@@ -119,6 +138,13 @@ after(async () => {
     .map(row => row.id);
   if (insertedPlanModuleIds.length > 0) {
     await db.delete(planModules).where(inArray(planModules.id, insertedPlanModuleIds));
+  }
+  if (restoredCatalogPlanLinks.length) {
+    await db.insert(planModules).values(restoredCatalogPlanLinks.map(link => ({
+      ...link,
+      // Keep PostgreSQL microseconds; converting through Date would truncate them.
+      createdAt: sql`${restoredCatalogPlanTimestamps.get(link.id)!}::timestamp`,
+    })));
   }
 
   for (const row of catalogModulesBefore.values()) {

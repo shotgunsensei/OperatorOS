@@ -1,6 +1,164 @@
 # OperatorOS implementation status
 
-## Stripe webhook bounded failure diagnostics (2026-10-10)
+## Combined v67 source delivery preparation (2026-10-14)
+
+Preserved OutCall `24e15d2b` and reviewed test-only CallCommand `bda93ac` are
+reconciled on a separate combined branch. Application/SDK/lockfile contents are
+unchanged from v67. New lifecycle checks pass 3/3 and corrected v67 identity
+fixtures 12/12; strict changed-test typing and scoped lint pass. Connector
+delivery is authorized, but transfer/PR/required checks/merge and production
+remain separate recorded stages. No exposed shell credential is used. See
+[source evidence and delivery gates](COMBINED_SOURCE_DELIVERY_2026-10-14.md).
+
+## OutCall country and account resource controls (2026-10-14, local only)
+
+Continuation of preserved `2f943eed...` implements metadata-based country/type
+validation before Verify and voice, account-wide atomic budget/quota/capacity
+reservations, exact configuration-bound privileged approval, bounded duration,
+unsent cancellation/expiry, retained unknown holds, callback settlement and
+privacy accounting cleanup. Additive v67 follows immutable v66; no approval or
+spend allowance is seeded. Focused OutCall/schema/isolation checks pass 37/37,
+CallCommand compatibility 39/39, four workspace typechecks, expanded strict test
+typing, zero-warning lint and production build. Disposable clean and populated
+v66 upgrade/reapply/verify pass with zero approvals. The committed build/supervisor
+receipt is recorded in the handoff. Historical platform/UI evidence remains on
+the earlier candidate. No remote merge, deployed v67, activation, calls or live
+acceptance occurred. Exact commands, corrected fixture failures, ceilings,
+operator gates and migration/rollback: [v67 resource control ledger](outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+
+## OperatorOS / OutCall readiness repairs (2026-10-14, local only)
+
+Candidate preserves CallCommand `31b00596` and merged PR121. Queued calls now
+recheck current write authority and verified-self settings; signed SMS obeys
+viewer grants and STOP; terminal/uncertain outcomes, carrier deadline, stable
+request retries, callback usage recovery and owner-bound call pagination are
+repaired. Unavailable OutCall hosts show their state before login; readiness,
+mobile cancellation and recovery copy are honest. Parity and coming-soon
+status remain unchanged. Focused checks pass: OutCall 23, platform 45,
+CallCommand compatibility 39, component browser 5; zero-warning lint,
+four-workspace typing/build stages, local supervisor smoke 5/5 and disposable v66 apply/reapply/verify pass.
+Production remains identified healthy v65, not reconciled with candidate v66.
+Credential hold, Stripe recovery, geography/aggregate spend controls, provider
+configuration and deployed customer acceptance remain gates. No calls,
+production data, publication or hosted CI occurred. See [the complete ledger,
+commands and blockers](PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
+
+## CallCommand post-reboot lifecycle preflight (2026-10-14, 19:05 UTC)
+
+Application patch `31b00596` remains intact and is already in the separate
+OutCall v67 candidate. Three additional synthetic lifecycle checks pass:
+heartbeat renewal beyond the initial lease, one sideband-loss fallback and
+notification, and expired-owner fencing with replay reattachment. Changed-test
+strict types and scoped zero-warning lint pass. No application/schema/provider
+change or full-gate rerun occurred. Actual process death and autonomous recovery
+remain open. Fresh public probes still identify healthy `7c212305`, v65/65.
+The native host passes read-only diagnostics, but this task has no callable
+browser runtime; private credit, routing and rotation evidence remain unverified.
+See [the post-reboot evidence and next actions](callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
+
+## CallCommand inbound call outcome repair (2026-10-14)
+
+Scoped candidate from merged PR121 preserves all existing work. Realtime
+summary/control sequencing, current-rule and flow-branch authorization,
+stable per-call retrying email delivery, durable end state, signed Twilio REFER
+handoff/fallback, renewable sideband ownership and post-terminal recording
+processing are implemented. All 187 CallCommand API checks, four workspace
+typechecks, zero-warning lint, strict changed-test typing and SDK/API compilation
+pass locally. Production acceptance and source publication remain open.
+Fresh public probes identify healthy production commit
+`7c212305` and v65/65, while source main carries v66. Browser initialization
+still fails. Real answer, mailbox/RMM receipt, human transfer, provider credit,
+secret-rotation evidence, release reconciliation and autonomous process-death
+recovery remain gates. See [the evidence](callcommand/INBOUND_OUTCOME_2026-10-14.md).
+
+## Generic checkout expiration acknowledgment (2026-10-12)
+
+**IMPLEMENTED / ISOLATED DATABASE VERIFIED / PRODUCTION ACCEPTANCE OPEN**.
+The clean `codex/checkout-expired-oct12` worktree starts from verified main
+`210482a380b4cf663315c3cece17c3787dd86682`. A generic signed unpaid
+`checkout.session.expired` previously returned `handled=false` and a retryable
+503. The canonical verified dispatch acknowledges it without changing cart,
+subscription, entitlement, or credit authority. Torque keeps its earlier shared
+receipt dispatcher; unsupported generic and separate add-on events retain their
+existing retry behavior. Signature verification, leases and claims are unchanged.
+
+Actual Fastify/Stripe SDK/PostgreSQL regressions reproduce four failures on
+unchanged main and pass after the correction. Final focused verification is
+**42/42**, zero failures/cancellations/skips/todos, including twelve new expiration
+tests and existing Stack, add-on DLQ, Torque, CallCommand and diagnostics tests.
+All four workspace typechecks, strict typechecking of the new test, and root
+zero-warning lint pass. The isolated environment excludes inherited provider
+credentials and confines database traffic to the task-owned loopback PostgreSQL
+container. No production, replay, credential or account-setting action occurred.
+
+The full exact-candidate release contract and independent review follow this
+checkpoint; no module is promoted to deployed customer acceptance. This code
+does not repair the existing production signature rejection. The owner reports
+he almost certainly did not submit the last outer Republish; current masked
+binding/source/generation inspection and owner-only credential submission remain
+necessary. Browser runtime, migration, recovery and interruption gates are open.
+Commands, retained harness failures and scope are in
+[the regression evidence](billing/CHECKOUT_EXPIRATION_2026-10-12.md).
+
+## Reviewed Stripe diagnostics integrated into current main (2026-10-10)
+
+**LOCAL PASS / NORMAL PR CHECKS AND MERGE PENDING / NO MAIN PUBLICATION**.
+Branch `codex/stripe-webhook-diag-main-oct10` is based on freshly fetched
+remote main `6db8dacc45cd197b85f5853bda9e3fc936813140`. Only the independently
+reviewed diagnostic helper, webhook logging and tests from v65 commit
+`9f485444e34ce214982ea61e456c4a4c1ca3ecb7` are integrated. Both main's AI/
+checkout changes and manifest v66 remain intact. No source from main is reset
+or replaced with the older v65 tree; all unrelated tracked files are retained.
+
+The existing outer failure log emits fixed `code=WEBHOOK_REJECTED` and bounded
+stage/category values. HTTP, raw signature verification, claims, retries,
+idempotency, auth and tenant authority are unchanged. No payload, signature,
+credential, identifier, raw exception/SQL text or SQLSTATE is added to that
+diagnostic. Root cause and real customer acceptance remain open.
+
+Fresh local validation uses Node 24.16.0 and pinned pnpm 10.34.5, an offline
+frozen install (zero downloads), private-variable exclusion and a network
+blocker for validation children. **40 tests pass / 0 fail / 0 skip**:
+
+```powershell
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/stripe-webhook-diagnostics.test.ts test/callcommand-commercial-security-contract.test.ts test/stripe-mode-disabled.test.ts test/stripe-test-mode-enable.test.ts
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/ai-provider-legacy-compatibility.test.ts test/openai-responses-budget.test.ts
+corepack pnpm exec node --test scripts/phase39/security-scan.test.mjs scripts/phase39/image-size-regression.test.mjs scripts/phase39/launch-dependency-regression.test.mjs
+corepack pnpm --dir apps/api exec tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --skipLibCheck test/stripe-webhook-diagnostics.test.ts
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm --dir apps/api build
+```
+
+Four workspace typechecks, the diagnostic test's own typecheck, zero-warning
+lint and SDK/API compilation pass. AI tests retain legacy request/response
+compatibility, measured usage/refusal/incomplete/error handling and closed new
+spend defaults. This does not create a global monetary cap for retained legacy
+provider paths. The four inherited patched advisory exceptions remain
+disclosed and covered by fresh installed-package regressions:
+`GHSA-5p2g-fcmc-qvqq`, `GHSA-w3rx-r6r6-pgpr`, `GHSA-86w9-cpqp-85rv` and
+`GHSA-vfj7-8cjw-p6xm`. Lockfile, dependencies, patches and security policy stay
+unchanged. No new registry advisory audit or full local release-harness pass
+is claimed; normal exact-source PR gates remain required before merge.
+
+The coordinator reports the separately vetted v65 diagnostic deployment Live
+at 20:29:54 UTC, Replit build `dc29f272-1a7a-4684-bca5-1284e5961fab`; clean local
+checkpoint `55f7959aeea84a21418ac89048c109b795410433` has the same reviewed tree
+as `9f485444`. This source task did not observe runtime or publish main. Main/
+v66 production migration and publication remain outside scope, with the
+existing private target, recovery and current write-pause gates preserved.
+Module parity and product acceptance have not changed. Local commands, logs
+and code-equivalence receipts are under
+`C:\Users\John Xodus\Documents\Codex\2026-10-07\task\stripe-diag-main-oct10`.
+See [natural-retry examples and conditional next fixes](billing/STRIPE_WEBHOOK_DIAGNOSTIC_GUIDANCE_2026-10-10.md).
+
+## Historical v65 Stripe webhook bounded failure diagnostics (2026-10-10)
+
+Historical pre-deployment checkpoint: the local-pass status, blockers,
+command results and no-publication statement below describe the original
+isolated v65 diagnostic work on 2026-10-10. They do not supersede the later
+reviewed-main, deployment or combined-v67 entries above. This is not a
+current production or v67 acceptance receipt.
 
 **LOCAL PASS / INDEPENDENT REVIEW AND RELEASE GATES OPEN**. Isolated branch
 `codex/stripe-webhook-diag-oct10` is based on the observed deployed source
@@ -52,6 +210,162 @@ does not change module parity or acceptance evidence.
 See [the diagnostic review and deployment options](STRIPE_WEBHOOK_DIAGNOSTICS_2026-10-10.md).
 Local raw logs, sanitized check receipts and the immutable patch package are
 under `C:\Users\John Xodus\Documents\Codex\2026-10-07\task\billing-webhook-2026-10-10`.
+
+## PR118 checkout boundary review (2026-10-09)
+
+Independent review identified an oversized-seat preference that the URL/UI
+and shared checkout normalizer accepted. The real disposable database rejects
+it under the existing `additional_seats BETWEEN 0 AND 10000` constraint before
+an intent/session can persist; the claimed persisted-cart poisoning did not
+reproduce. The remaining defect did reproduce: provider price/customer stub
+calls precede the constraint error, whose SQL details reach the caller.
+
+The shared SDK now enforces that existing 10,000-seat limit and a conservative
+USD total ceiling before provider requests or pending-intent writes. Public
+preferences and pending-cart presentation use the same bounds. Invalid stored
+selections fail closed without rewriting or discarding a valid authoritative
+cart. Current healthy v60+ constraints prevent oversized carts from existing;
+no speculative data cleanup or migration is added.
+
+Stripe's current [currency documentation](https://docs.stripe.com/currencies)
+distinguishes most-card, AmEx and non-card limits. The chosen USD non-card
+ceiling is 99,999,999 cents; payment methods can be stricter, so this does not
+certify provider acceptance. Tests include the exact seat boundary, total
+overflow, zero stub provider calls/no persisted intent for invalid input,
+subsequent valid checkout, and unchanged valid-cart retry authority.
+
+Fresh focused command: `corepack pnpm --dir apps/api exec tsx --test
+--test-concurrency=1 test/pricing-selection.test.ts
+test/commerce-forward-model-db.test.ts
+test/application-stack-checkout-recovery.test.ts`: **23/23**, zero failures,
+skips or cancellations, using disposable loopback PostgreSQL and provider
+stubs without credentials. Initial red, dependency-link and test-harness
+failures remain in the external receipt. Original PR head `44e9eccc` passed
+both required workflows, including all 14 release scopes; this runtime repair
+requires its own exact-head checks and independent review before merge.
+
+Local production-build attempts exited zero while Next reported the new SDK
+export missing. An ordered SDK build did not fix the warning. The copied
+cached Next launcher injected canonical `NODE_PATH`, selecting the old SDK;
+the isolated local launcher is corrected and the unnecessary build-order
+change is reverted. Fresh web output must pass with the actual SDK export.
+The required browser regression now exercises 10,000, 10,001 and the crafted
+oversized URL. Dependency versions, lockfile and release checks stay unchanged.
+
+## TradeFlowKit payment cancellation and current release (2026-10-09)
+
+Current live main is `74dc1e3b`, build `a8b41fff98705abb62132f29`,
+health/readiness 200 and v65/65, verified read-only October 9 at 15:51 UTC.
+Exact-main release run `37820669355` is green; the parent log audit records
+14/14 scopes, 1,611 API, 108 integration, 52 unit, 34 browser and four visual
+passes. Historical PR117 corrected-CI/publication-pending statements below
+are superseded for main. Local combined `aa6b5ea4` remains preserved separately.
+
+The payment-reference Cancel bug is reproduced against the preserved production
+artifact and corrected with PR112's explicit null guard. Focused API passes
+8/8, desktop/mobile browser passes 2/2 with no retries, production build/all
+four typechecks and zero-warning lint pass. The new required browser journey
+proves zero writes on repeated Cancel, accepted empty/filled references,
+in-flight disablement, durable single-payment/job consistency, rejected repeated
+writes and a server-enforced read-only teammate. See
+[the evidence and boundaries](modules/tradeflowkit/PAYMENT_CANCEL_ACCEPTANCE_2026-10-09.md)
+for exact commands, retained failure, preview/final identity distinction,
+publication authority, existing zero-cost/browsing gate, and missing customer
+outcomes. No candidate-wide new 14-stage or deployed acceptance is claimed.
+
+The new TechDeck monetary cap does not cover retained legacy AI/provider paths.
+No paid API, live payment, production migration or account-setting change is
+used in this local acceptance slice.
+
+The dedicated supported browser task verifies the existing account-wide
+Product Actions $0 stopping budget, including artifact storage; the parent
+clears source push/PR/required CI/merge. Native focus remains prohibited.
+Remote marker `58cab0cf` has main's identical tree and is reconciled locally.
+Clean payment-fix build `0b7e8878516111e313c8c520` and final browser **2/2**,
+zero skips/retries, identify `ef4ba9b7`; subsequent release documentation and
+source-identical ancestry reconciliation require their own exact-source CI.
+Replit publication remains with the browser operator and requires independently
+approved backup and v66/66 apply/verify on both selected databases.
+[Release handoff](RELEASE_HANDOFF_2026-10-09.md).
+
+## Coordinated integration checkpoint (2026-10-07)
+
+**LOCAL INTEGRATION / FOCUSED MERGED-SOURCE PASS / COMBINED GATE PENDING**.
+Remote main first `5b50b2ca`, then `12ac4446`, and PR117 `47d32d71` were verified
+read-only. The new main is an empty deployment marker with the identical source
+tree; its ancestry is preserved without importing another feature. AI `2a388cdf`
+is integrated with PR117 and the complete preserved landing commit `5aedd03d`
+in an isolated branch. Fresh AI, legacy, host/session, workflow and landing checks
+pass **167/167**, zero fail/cancel/skip/todo; production build/typechecks pass.
+Saved-cart authority and catalog-failure checkout closure pass in **5/5** focused
+production-browser journeys. The separate landing production fixture passes
+**13/13**, including loading/error recovery and responsive handoffs. The pricing
+conflict preserves both authoritative pending carts and campaign/selection handoff;
+authenticated checkout revalidates the bounded catalog read. Earlier build/browser
+and harness failures are disclosed in the integration record. These pre-commit
+results do not accept the exact combined release; populated upgrade, all 14 stages,
+clean build and exact-identity supervisor smoke follow the candidate commit.
+No push, hosted CI, production apply, settings/secret change, paid API or
+publication occurred. [Source inventory and migration gates](COORDINATED_RELEASE_2026-10-07.md).
+
+## Auth fixture rate isolation follow-up (2026-10-07)
+
+**LOCAL REGRESSION FIXED / FINAL GATE PENDING**. The new host fixture consumed the default loopback login allowance, causing two later invitation tests to receive correct 429 denials in the `fd8129e8` API run (1,625/1,627). The fixture now has its own client address and verifies unchanged loopback counter snapshots; production limits remain intact. Combined auth-host/invitation checks pass **11/11**. The task-owned failed gate was deliberately stopped with 11 stages passed, API failed, browser incomplete and preflight not run; its evidence is retained. Commit this repair and rerun the complete exact-candidate gate. [Evidence procedure](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## Canonical-host checkout fixture completion (2026-10-07)
+
+**LOCAL FIXTURE VERIFIED / FINAL GATE PENDING / PARITY UNCHANGED**. The `78701290` AI candidate completed 13/14 release stages, with one checkout helper host denial. Reused only PR117's compatible browser fixture: canonical auth registration with matching Origin, real browser login, loopback TLS fixture reads retaining Host, and isolated client IP. The corrected journey passes **1/1**, and auth-boundary regressions pass **7/7** including production loopback/module/lookalike and untrusted-forwarded-host denial. Production guards, commerce/provider/data-fabric code and account configuration are unchanged. Commit this verified follow-up, then run the full local gate and clean exact-identity smoke. Parent coordinates merge/publication; no hosted CI or paid API is authorized here. [Procedure and history](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## Final local guidance candidate continuation (2026-10-07)
+
+**LOCAL FIXTURES VERIFIED / FINAL CANDIDATE GATE PENDING**. Corrected the button to "Generate guidance" and added actor-bound replay and enabled-zero-budget concurrency checks; focused checks pass **45/45**. The complete `325b6108` local gate finished **12/14** stages, with API 1,623/1,626, integration 108/108, browser 32/33 and visual 4/4. Three API fixture corrections now pass **15/15** with original binding snapshots preserved; runtime entitlement rules are unchanged. A separate checkout test helper hits the correct production auth-host denial. Commit these verified fixture repairs before rerunning all 14 stages and the clean exact-commit build/supervisor smoke. No parallel checkout/provider source, push, spending or deployment occurred. [Candidate procedure and gates](ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## Local review of budgeted TechDeck guidance (2026-10-07)
+
+**REVIEWED AND FIXED / LOCAL ONLY / PARITY UNCHANGED**. Review of `bfd9bf0d`
+preserves safe measured usage counts in shared telemetry without weakening secret
+filtering, distinguishes settled failures from uncertain retries, and displays
+bounded error references and a generating state. Inherited static checks now
+follow the extracted service and documentation-only copy remains visible.
+Legacy Chat Completions and Torque Assist compatibility pass; no global provider
+selection or credit/billing behavior changed. The selected gate passes **43/43**,
+actual populated v65 upgrade/reapply **1/1**, provider isolation/preflight **13/13**,
+offline/security regressions **13/13**, production build and all four typechecks.
+The compiled supervisor smoke passes on separate public/web ports with its local
+build identity checked, providers off and a disposable populated v66 database.
+Complete synthetic authority/billing/work/usage snapshots are unchanged after
+both v66 applications, and migration grants no AI spending. Four patched high
+exceptions remain disclosed; no critical/unresolved advisory or lockfile change.
+No push, paid API, account setting, production migration or publication occurred.
+Commands, corrected failures and artifacts: [review evidence](ai/LOCAL-REVIEW-2026-10-07.md).
+
+## Budgeted TechDeck Responses slice (2026-10-07, local only)
+
+**IMPLEMENTED / OFFLINE VERIFIED / NOT PUSHED OR DEPLOYED / PARITY UNCHANGED**.
+Isolated branch `codex/openai-responses-budget-oct7` extends the existing AI
+interface and TechDeck guidance form with stateless Responses, reviewed structured
+output, server-owned tenant budgets, durable reservations and measured cache-aware
+cost telemetry. Defaults allow no spending; unknown usage retains holds. Release
+step 66 is additive, with the first 65 steps integrity-tested unchanged. Existing
+AI/voice paths remain outside this new workflow's cap.
+
+Final focused API/browser checks pass **21/21**, offline environment **1/1**,
+parity quality gates **20/20**, provider isolation/preflight **13/13** and patched
+security regressions **12/12**, all zero fail/cancel/skip/todo. Production build,
+four workspace typechecks, current root lint, clean/idempotent disposable v66/66
+apply/verify and actual compiled Replit supervisor smoke pass. Four inherited
+patched high advisory exceptions remain disclosed and integrity-tested; zero
+critical/unresolved findings. No full release matrix, hosted CI, live model or
+deployed customer acceptance is inferred. Exact commands, environment, corrected
+fixture failures, artifacts and gates: [implementation evidence](ai/IMPLEMENTATION-EVIDENCE.md).
+
+Read-only current health reports serving `5b50b2ca`, build
+`224589f065463d1b7a8db358`, database v65/65; the October 6 acceptance below is
+historical. Landing commit `5aedd03da26f54fe4bf54dcce698ee04eb7d21b5` and its
+existing local SBOM modification remain preserved in their separate worktree.
+Push/CI/publication remain gated on GitHub's exhausted included minutes and
+unverified enforced $0 spending cap. Live provider/budget enablement and production
+migration need separate human decisions. [Revised stages and cost inventory](ai/OPENAI-FIRST-REVISED-PLAN.md).
 
 ## Exact-head CI static contract correction (2026-10-07)
 
@@ -134,6 +448,26 @@ schema/copy or real charge occurred. See
 
 This supersedes the extension-overlay blocker and current candidate CI status
 in the October 6 checkpoint; its prior deployed evidence remains historical.
+
+## Flagship landing/pricing current-main integration (2026-10-06 UTC)
+
+Status: **LOCAL INTEGRATION VERIFIED / NOT PUSHED OR DEPLOYED**.
+Branch `codex/flagship-landings-current-main` starts from verified documentation
+main `e62c89356f11d50940134790c8dad7e3eee268ab` and integrates preserved original
+landing/pricing commit `5e4c8c435405436eeef6fe33e27b13692c718a04`. Source applies
+without conflict; the two documentation overlays retain current-main publication
+history. The three audience pages, server-loaded catalog, failure/retry states
+and selection-preserving auth handoff do not change API authority or prices.
+The PR #115 dependency fixes and four existing advisory exceptions are retained
+unchanged. Fresh checks pass: 53 affected regressions, 15 mocked-provider/static
+commerce tests, 18 installed-package/security-policy tests and 18 compiled local
+Chromium cases, zero failures/skips/browser retries. Root lint, four-app typechecks
+and production build pass. The unchanged security gate now passes with zero
+unresolved IDs and four disclosed high advisories under the tested inherited
+exceptions; this is not a zero-vulnerability claim.
+No hosted CI, push or publication is authorized for this continuation; included
+Actions minutes are exhausted and additional cost protection is unverified.
+Fresh evidence is recorded in [the integration report](FLAGSHIP_LANDINGS_MAIN_INTEGRATION_2026-10-06.md).
 
 ## Final exact-commit commercial release gate (2026-10-06)
 
@@ -5876,3 +6210,28 @@ Release decision:
   reviewed owner waivers with reasons and scope. The release gate must not be
   made green by silently relabeling blocked work, adding skips, weakening
   assertions, or treating current partial module restoration as complete.
+
+
+## Dedicated billing binding candidate (2026-10-12, main)
+
+Isolated source base daf78578267ff929f049c0d7dc18619f03f28a82. John approved the specific namespace and owner-only private setup at2026-10-12T20:46:18Z; the transcript is retained unchanged in the local billing-binding-oct12 artifact folder.
+
+Canonical verification now requires OPERATOROS_BILLING_WEBHOOK_SIGNING_SECRET with no inherited generic-key fallback. One contract owns full-value format validation; one server snapshot drives SDK/adapter/health, while preflight and audit use the same policy. New Stack and credit Checkout initiation fail before provider/intent access when binding is missing/invalid. isStripeEnabled, cancellation/reactivation, refund/settlement, raw bytes, SDK arguments/default tolerance and receipt idempotency are preserved. Next and the DB verification child do not inherit this new credential. No schema/migration, API key, signing-key generation or provider activation change.
+
+Fresh local focused44/44 and security12/12 pass, zero fail/cancel/skip/todo. Workspace typechecks, dedicated test typecheck, zero-warning lint and SDK/API compilation pass. Two compiled-process smoke cases pass and prove the JSON contract is packaged; tests use synthetic values, an allowlisted environment and blocked networking. Frozen offline installations download zero packages. Initial check-helper PATH and an SDK declaration-only test issue were corrected; their failure logs remain. Required full aggregate release/vector CI and independent review are still pending at this checkpoint, and will be bound to immutable heads in the final receipt. Earlier main/v65 CI is not substituted for the new change.
+
+[Policy, owner setup and rollback](billing/DEDICATED_WEBHOOK_BINDING_2026-10-12.md). Account/workspace name absence and provider persistence/provenance remain owner checks. No agent has seen or set a real credential, pushed production config, published, migrated or replayed. New persistent binding entry is owner-only after the parent handoff; live signing acceptance and resumed checkout intake remain separate gates. Main integration preserves PR120/AI/v66; v65 gains no unrelated v66 work. Four patched advisory exceptions remain unchanged, disclosed and integrity-tested; no release gate is weakened.
+
+
+### Independent-review corrections and refreshed local verification
+
+The initial independent review identified unguarded CallCommand lane/number purchases, missing synthetic commerce fixture initialization, and omitted dedicated-key sanitation in the disposable release harness. All four are corrected. CallCommand checks locked existing entitlement before idempotency/provider access; cancellation, included-only numbers and reductions of existing subscriptions remain available. Its bounded503 error explicitly reports providerActionConfirmed:false. Shared API-key enablement remains unchanged. Synthetic signing-only side-effect fixtures preserve the existing Stripe mode, and mixed-case isolation regression proves the new key is stripped.
+
+Fresh corrected-source checks pass on both candidates: focused54/54, isolation20/20, security12/12, zero fail/cancel/skip/todo; root types, dedicated test types, zero-warning lint and SDK/API build pass. Compiled policy packaging smoke2/2 passes, without asserting full API startup. Receipt input lists bind all changed non-documentation source even after commits. Corrected-head independent review and full aggregate/vector CI remain required and are not inferred from these local checks. No provider calls, private values, production writes, migration, settings change, publication or replay occurred.
+
+
+### Final quantity-safety correction and local checkpoint
+
+Independent re-review caught restoration of stale settled quantity after an unsettled reduction. New/increasing local quantities still fail before SDK. With signing unavailable, an otherwise eligible existing positive reduction now performs one bounded read-only subscription lookup (5s, no SDK retry) before any idempotency or DB write. Exact subscription/item identity, complete provider item list, known nonincreasing quantities and no pending update are required. Unknown/read failure returns the fixed503. Zero cancellation remains available without this extra read; configured signing adds no lookup. This also rejects stale local quantities after a provider update followed by local rollback. It does not attest arbitrary concurrent out-of-band provider changes or live storage provenance.
+
+Fresh final-source local verification per target: focused71/71, isolation20/20, security12/12, zero fail/cancel/skip/todo; types, dedicated test types, zero-warning lint and SDK/API build pass. Compiled policy packaging smoke2/2 passes. All seven receipt source hashes were checked against final files. Synthetic tests include stale/pending/rollback quantities, bounded lookup options, wrong/missing/duplicate item identity, incomplete lists, unknown quantities, upstream-detail suppression and valid-binding no-read behavior. No real provider was queried. The narrow SDK retrieve type was extended for existing supported RequestOptions after an initial type failure. Superseded source CI is recorded as canceled/old vector success and is not release evidence. Full replacement-head CI and final independent review remain separate gates.

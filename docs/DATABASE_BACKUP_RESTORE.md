@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints the current 65 ordered step identifiers without secrets
+`db:plan` is read-only and prints the current 67 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -45,7 +45,45 @@ The release is idempotent and additive. Do not run imported child migrations,
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
 
-### Release v65 optional semantic search storage
+### Release v67 OutCall resource accounting (current local candidate)
+
+The manifest appends `outcall_resource_tables` after unchanged v66. Two additive
+tables store account approvals and tenant/actor/call reservations with constraints
+and indexes. No approval, allowance, provider credential or migration backfill is
+seeded. Clean apply/reapply/verify and populated v66 upgrade/reapply/verify pass
+only on task-owned disposable loopback PostgreSQL; selected synthetic authority,
+profile and call snapshots remain unchanged and approval count is zero.
+
+Production target reconciliation, recoverable whole-platform backup/restore and
+specific apply approval remain required. Use the root ordered apply and independent
+verification to require v67/67 on each selected deployment database. Keep automatic
+database copy/apply off and routine serving verify-only. Preserve reservations and
+unknown monetary holds during rollback; v65/v66 application compatibility cannot
+be assumed. Restore into a new database and authorize traffic switching separately.
+Exact configuration, operator approval, accounting limits and rehearsal evidence:
+[OutCall v67 ledger](outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+
+### Release v66 shared AI budgets (preserved preceding candidate)
+
+The manifest appends only `shared_ai_budget_tables` after the existing v65 steps.
+Tenant/module budget policies and actor-bound request reservations are additive.
+Policies default disabled with zero monetary limits; the release inserts no
+positive policy, request, customer backfill or provider credentials. PR117 and
+landing/pricing add no migration. The conflicting PR114 research v66 is excluded.
+Rehearse real populated v65 apply, v66 upgrade and repeat apply on a fresh
+disposable database, checking unchanged authority/billing/work/usage snapshots.
+
+Before publication, verify an approved recoverable backup and independently
+apply/verify v66/66 on each explicitly selected development and production
+database through the supported root operation. Keep automatic Replit database
+copy/apply off, reject destructive diffs, and leave apply authority unset in the
+serving environment. A v65-only app rejects a v66 ledger, so keep a reviewed
+compatible v66 app/forward repair for application rollback. Data rollback uses
+the separately authorized full restore into a new database; never drop budget
+tables to force old application readiness. AI spending stays disabled through
+publication. See [the coordinated sequence](COORDINATED_RELEASE_2026-10-07.md).
+
+### Release v65 optional semantic search storage (previous candidate)
 
 The candidate appends `techdeck_resolution_semantic_tables` after v64. It adds
 tenant settings and revision-bound embeddings with portable PostgreSQL arrays.

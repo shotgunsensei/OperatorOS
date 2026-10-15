@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { BillingWebhookBindingError } from '../lib/billing-webhook-binding.js';
 import { db } from '../db.js';
 import { subscriptions, subscriptionPlans, billingEvents, modules, tenantEntitlements, tenants, tenantApplicationSubscriptions, addonSubscriptions } from '../schema.js';
 import { eq, desc, isNull, asc, and, inArray, sql } from 'drizzle-orm';
@@ -186,6 +187,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }, request);
       return result;
     } catch (error) {
+      if (error instanceof BillingWebhookBindingError) {
+        return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+      }
       const policy = error instanceof CommercePolicyError || error instanceof ProductEntitlementConflictError;
       return reply.code(policy ? error.httpStatus : 400).send({
         error: error instanceof Error ? error.message : 'Could not create checkout',
@@ -622,12 +626,13 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         }
         console.log(`[billing webhook] ${event.type} (${kind}): duplicate event, no-op`);
         return { received: true, kind, handled: true, action: 'duplicate_ignored' };
-      }
-
-      let result: { handled: boolean; action?: string; error?: string };
       failureStage = 'event_processing';
       try {
-        result = classification.isFeatureAddon
+        // Only this verified dispatch has excluded Torque credit events. Keep
+        // saved-event admin retry on its existing separate processing path.
+        result = event.type === 'checkout.session.expired' && !classification.isAddon
+          ? { handled: true, action: 'checkout_expired_ignored', shouldPropagate: false }
+          : classification.isFeatureAddon
           ? classification.featureKey === CALLCOMMAND_NUMBER_FEATURE_KEY
             ? await processCallCommandNumberWebhookEvent(event)
             : await processCallCommandLaneWebhookEvent(event)

@@ -61,7 +61,7 @@ test('runtime identity binds the build to deployment time and database release v
   });
   assert.deepEqual(
     createRuntimeReleaseIdentity(
-      { status: 'identified', ...metadata },
+      { status: 'identified', ...metadata, contractVersion: metadata.contractVersion as 1 },
       '2026-07-29T20:05:00.000Z',
     ),
     {
@@ -70,15 +70,15 @@ test('runtime identity binds the build to deployment time and database release v
       deployedAt: '2026-07-29T20:05:00.000Z',
       databaseRelease: {
         contractVersion: 1,
-        releaseVersion: 65,
-        stepCount: 65,
-        lastStep: 'techdeck_resolution_semantic_tables',
+        releaseVersion: 67,
+        stepCount: 67,
+        lastStep: 'outcall_resource_tables',
       },
     },
   );
   assert.deepEqual(
     createRuntimeReleaseIdentity(
-      { status: 'identified', ...metadata },
+      { status: 'identified', ...metadata, contractVersion: metadata.contractVersion as 1 },
       'not-a-timestamp',
     ),
     { status: 'unavailable' },

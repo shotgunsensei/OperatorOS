@@ -6,6 +6,27 @@
 .root p { line-height: 1.65; color: #b9c4d3; }
 .root a { text-decoration: none; }
 .root a:focus-visible, .root summary:focus-visible { outline: 3px solid var(--lane-accent); outline-offset: 6px; border-radius: 4px; }
+.root button:focus-visible { outline: 3px solid var(--lane-accent); outline-offset: 4px; }
+.purchaseNote { font-size: 12px; max-width: 48ch; }
+.pricePanel { display: grid; grid-template-columns: .8fr 1.2fr; gap: 35px; border: 1px solid #344b5d; border-radius: 16px; padding: 30px; margin-bottom: 30px; background: linear-gradient(120deg, #14222e, #0c1723); }
+.pricePanel .eyebrow { margin-bottom: 10px; }
+.pricePanel p { margin: 8px 0; font-size: 12px; }
+.pricePanel .price { font-size: 39px; letter-spacing: -.045em; color: #f5f7fb; font-weight: 750; line-height: 1.2; }
+.price span { font-size: 15px; letter-spacing: 0; font-weight: 500; color: #b9c4d3; }
+.pricePanel ul { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 10px; }
+.pricePanel li { display: flex; gap: 9px; align-items: center; font-size: 14px; }
+.pricePanel li svg { flex-shrink: 0; color: var(--lane-accent); }
+.retryButton { background: #14222e; border: 1px solid #8cabbc; color: #f5f7fb; border-radius: 6px; min-height: 44px; padding: 10px 16px; cursor: pointer; }
+.scenario { display: grid; grid-template-columns: 1fr 1.1fr; gap: 65px; padding-block: 45px 65px; border-top: 1px solid #263344; }
+.scenario p, .scenario li { font-size: 14px; }
+.scenario ol { display: grid; gap: 18px; padding-left: 22px; margin-top: 0; line-height: 1.6; color: #dae4ef; }
+.scenarioResult { padding: 20px; border-left: 2px solid var(--lane-accent); background: #12212b; }
+.root[data-lane="tradeflowkit"] .pricePanel { background: linear-gradient(120deg, #123128, #102333); }
+.root[data-lane="techdeck"] .scenario { background: #0b1420; }
+.root[data-lane="pulsedesk"] .fitSection { background: #f2f9fc; color: #142c40; border-radius: 16px; --lane-accent: #216e79; }
+.root[data-lane="pulsedesk"] .fitSection p { color: #3b5265; }
+.root[data-lane="pulsedesk"] .fitSection .eyebrow { color: #216e79 !important; }
+@media (max-width: 700px) { .pricePanel, .scenario { grid-template-columns: 1fr; gap: 20px; }.pricePanel { padding: 24px; }.scenario { padding-block: 35px; } }
 .eyebrow { color: var(--lane-accent) !important; font-size: 11px; font-weight: 750; letter-spacing: .17em; margin: 0 0 18px; }
 .homeHero { padding-top: 32px; padding-bottom: 28px; }
 .homeIntro { text-align: center; margin-bottom: 26px; }

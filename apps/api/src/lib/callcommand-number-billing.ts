@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { assertBillingWebhookBindingReady, assertBillingWebhookBindingOrSubscriptionReduction } from './billing-webhook-binding.js';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { modules, subscriptions, tenantUsers, users } from '../schema.js';
@@ -212,12 +213,30 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
   }
   const localPriceId = local > 0 ? configuredPriceId('local') : null;
   const tollFreePriceId = tollFree > 0 ? configuredPriceId('toll_free') : null;
-  const stripe = getStripeFeatureBillingClient();
-
   return db.transaction(async tx => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-number-billing:${input.tenantId}`},0))`);
     const [module] = await tx.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'callcommand-ai')).limit(1);
     if (!module) throw new CallCommandNumberBillingError('CallCommand is unavailable.', 'CALLCOMMAND_MODULE_UNAVAILABLE');
+    const loaded = await tx.execute(sql`
+      SELECT * FROM callcommand_number_billing_entitlements
+      WHERE tenant_id=${input.tenantId} LIMIT 1 FOR UPDATE
+    `);
+    const current = loaded.rows[0] as Row | undefined;
+    // Reducing an existing subscription is management, including number
+    // release reconciliation. Every new or increasing sale needs settlement.
+    if ((local > 0 || tollFree > 0) && (
+      !current?.stripe_subscription_id
+      || local > Number(current.licensed_billable_local_quantity ?? 0)
+      || tollFree > Number(current.licensed_billable_toll_free_quantity ?? 0)
+    )) {
+      assertBillingWebhookBindingReady();
+    }
+    const stripe = getStripeFeatureBillingClient();
+    const existingSubscriptionId = String(current?.stripe_subscription_id ?? '');
+    await assertBillingWebhookBindingOrSubscriptionReduction(existingSubscriptionId, [
+      { itemId: current?.stripe_local_subscription_item_id ?? null, quantity: local },
+      { itemId: current?.stripe_toll_free_subscription_item_id ?? null, quantity: tollFree },
+    ], () => stripe.subscriptions.retrieve(existingSubscriptionId, {}, { timeout: 5000, maxNetworkRetries: 0 }));
     const operation = await beginIdempotentOperation({ tenantId: input.tenantId, moduleId: module.id,
       scope: 'callcommand-number-billing', idempotencyKey: key,
       request: { userId: input.userId, local, tollFree, localPriceId, tollFreePriceId }, leaseMs: 300000 }, tx);
@@ -235,11 +254,6 @@ export async function requestCallCommandNumberBilling(input: CallCommandNumberBi
     if (!user || user.status !== 'active') {
       throw new CallCommandNumberBillingError('User was not found', 'USER_NOT_FOUND', 404);
     }
-    const loaded = await tx.execute(sql`
-      SELECT * FROM callcommand_number_billing_entitlements
-      WHERE tenant_id=${input.tenantId} LIMIT 1 FOR UPDATE
-    `);
-    const current = loaded.rows[0] as Row | undefined;
     if (current?.billing_status === 'pending' && !current.stripe_subscription_id) {
       const recent = (await tx.execute(sql`SELECT response_json FROM shared_idempotency_keys
         WHERE tenant_id=${input.tenantId} AND module_id=${module.id} AND scope='callcommand-number-billing' AND status='completed'

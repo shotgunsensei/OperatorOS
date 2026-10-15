@@ -94,9 +94,10 @@ corepack pnpm preflight:production -- --core
 corepack pnpm db:plan
 ```
 
-There is currently no repository-defined lint or formatting script. Do not
-claim either check passed. Add a reviewed command before making it a release
-gate.
+The root package defines `corepack pnpm lint` (ESLint with zero warnings), and
+the local release gate runs it as a required stage. There is no repository-wide
+formatting script. Report a check as passed only when that exact command has
+completed successfully on the candidate.
 
 Production artifacts must be exercised through the same readiness-gated
 supervisor used by Replit:

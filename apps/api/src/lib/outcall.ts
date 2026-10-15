@@ -122,10 +122,16 @@ export function parseTrigger(input: unknown) {
   };
 }
 
-export function parseSchedule(input: unknown) {
+export function parseScheduleIdentity(input: unknown) {
   const value = body(input);
   const profileId = text(value.profileId, 'profileId', 36);
   const idempotencyKey = text(value.idempotencyKey, 'idempotencyKey', 120);
+  return { profileId, idempotencyKey };
+}
+
+export function parseSchedule(input: unknown) {
+  const value = body(input);
+  const { profileId, idempotencyKey } = parseScheduleIdentity(input);
   const runAt = value.runAt == null ? new Date() : new Date(String(value.runAt));
   if (Number.isNaN(runAt.getTime()) || runAt.getTime() < Date.now() - 5_000 || runAt.getTime() > Date.now() + 31 * 86_400_000) {
     throw new OutCallValidationError('runAt must be between now and 31 days from now', 'OUTCALL_RUN_AT_INVALID', 'runAt');

@@ -33,6 +33,7 @@ type User = Awaited<ReturnType<typeof createTestUser>>;
 type Row = Record<string, any>;
 
 const PUBLIC_BASE = process.env.TWILIO_PUBLIC_BASE_URL!;
+const TENANT_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN!;
 const INCOMING_PATH = '/v1/modules/callcommand-ai/twilio/voice/incoming';
 const PHONE_SEED = randomInt(100_000, 899_990);
 const phone = (offset: number) => `+1555${String(PHONE_SEED + offset).padStart(7, '0')}`;
@@ -55,7 +56,7 @@ let telephonyAccountId = '';
 function sign(path: string, payload: Record<string, string>) {
   let signed = `${PUBLIC_BASE}${path}`;
   for (const key of Object.keys(payload).sort()) signed += key + payload[key];
-  return createHmac('sha1', process.env.TWILIO_AUTH_TOKEN!).update(signed).digest('base64');
+  return createHmac('sha1', TENANT_AUTH_TOKEN).update(signed).digest('base64');
 }
 
 async function injectSigned(path: string, payload: Record<string, string>) {
@@ -226,6 +227,32 @@ before(async () => {
   await app.ready();
 });
 
+test('recording callbacks after terminal status reach post-call processing and failed processing remains retryable', async () => {
+  const sid=callSid('f');
+  const incoming=await injectSigned(INCOMING_PATH,{CallSid:sid,From:phone(71),To:phone(1)});
+  assert.equal(incoming.statusCode,200,incoming.body);
+  const call=await callBySid(sid);
+  await db.execute(sql`UPDATE callcommand_calls SET recording_status='pending' WHERE tenant_id=${owner.currentTenantId} AND id=${call.id}`);
+  const statusPath=`/v1/modules/callcommand-ai/twilio/voice/status?call_id=${call.id}`;
+  const ended=await injectSigned(statusPath,{CallSid:sid,CallStatus:'completed',SequenceNumber:'1',CallDuration:'5'});
+  assert.equal(ended.statusCode,200,ended.body);
+  assert.equal((await db.execute(sql`SELECT status FROM callcommand_lane_leases WHERE tenant_id=${owner.currentTenantId} AND call_id=${call.id}`)).rows[0].status,'released');
+  const originalFetch=globalThis.fetch;
+  let recordingReads=0;
+  globalThis.fetch=async ()=>{recordingReads+=1;return new Response('',{status:503});};
+  try {
+    const recordingPath=`/v1/modules/callcommand-ai/twilio/voice/recording?call_id=${call.id}`;
+    const recordingPayload={CallSid:sid,RecordingSid:`RE${'8'.repeat(32)}`};
+    const first=await injectSigned(recordingPath,recordingPayload);
+    assert.equal(first.statusCode,503,first.body);assert.equal(first.json().code,'CALLCOMMAND_RECORDING_PROVIDER_UNAVAILABLE');
+    const retry=await injectSigned(recordingPath,recordingPayload);
+    assert.equal(retry.statusCode,503,retry.body);assert.equal(retry.json().duplicate,undefined);
+    assert.equal(recordingReads,2,'failed post-call processing must not be poisoned as a completed duplicate');
+    const receipt=(await db.execute(sql`SELECT status,error_code FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND provider_event_id=${`${sid}:recording:${recordingPayload.RecordingSid}`}`)).rows[0];
+    assert.equal(receipt.status,'failed');assert.equal(receipt.error_code,'CALLCOMMAND_RECORDING_PROVIDER_UNAVAILABLE');
+  } finally {globalThis.fetch=originalFetch;}
+});
+
 after(async () => {
   if (app) await app.close();
   if (owner) await cleanupTenant(owner.currentTenantId);
@@ -251,6 +278,7 @@ test('consent-required eligible Realtime call gathers consent before SIP and DTM
   const consent = await injectSigned(consentPath, { CallSid: sid, Digits: '1' });
   assert.equal(consent.statusCode, 200, consent.body);
   assert.match(consent.body, new RegExp(SIP_DESTINATION.replaceAll('.', '\\.')));
+  assert.match(consent.body,/referUrl="https:\/\/voice\.operatoros\.test\/v1\/modules\/callcommand-ai\/twilio\/voice\/refer\?call_id=/);
   assert.doesNotMatch(consent.body, /<Gather input="speech"/);
 
   const persisted = await db.execute(sql`
@@ -267,6 +295,39 @@ test('consent-required eligible Realtime call gathers consent before SIP and DTM
   assert.equal(persisted.rows[0].recording_status, 'disabled');
   assert.equal(persisted.rows[0].realtime_status, 'pending');
   assert.equal(persisted.rows[0].phone_e164, phone(50));
+});
+
+test('signed REFER dials only the preauthorized tenant target and no-answer records fallback without connection claims', async () => {
+  const sid=callSid('e');
+  const incoming=await injectSigned(INCOMING_PATH,{CallSid:sid,From:phone(70),To:phone(1)});
+  assert.equal(incoming.statusCode,200,incoming.body);
+  const call=await callBySid(sid);
+  await db.execute(sql`UPDATE callcommand_calls SET status='in_progress',openai_realtime_call_id='call_carrier_transfer_fixture' WHERE tenant_id=${owner.currentTenantId} AND id=${call.id}`);
+  const target=(await db.execute(sql`INSERT INTO callcommand_transfer_targets(tenant_id,created_by_user_id,label,kind,phone_e164,verified_at,status) VALUES (${owner.currentTenantId},${owner.id},'Synthetic test target','external',${phone(90)},NOW(),'active') RETURNING id`)).rows[0];
+  const transfer=(await db.execute(sql`INSERT INTO callcommand_transfer_logs(tenant_id,call_id,target_id,requested_by_user_id,provider,status,reason) VALUES (${owner.currentTenantId},${call.id},${target.id},${owner.id},'openai','requested','Synthetic reserved transfer') RETURNING id`)).rows[0];
+  const referPath=`/v1/modules/callcommand-ai/twilio/voice/refer?call_id=${call.id}`;
+  const forged=await app.inject({method:'POST',url:referPath,payload:{CallSid:sid,ReferTransferTarget:`tel:${phone(90)}`}});
+  assert.equal(forged.statusCode,403);
+  const wrong=await injectSigned(referPath,{CallSid:sid,ReferTransferTarget:`tel:${phone(91)}`});
+  assert.equal(wrong.statusCode,403);assert.doesNotMatch(wrong.body,/<Dial/);
+  const payload={CallSid:sid,To:SIP_DESTINATION,ReferTransferTarget:`tel:${phone(90)}`};
+  const platformToken=process.env.TWILIO_AUTH_TOKEN;
+  process.env.TWILIO_AUTH_TOKEN='differentSyntheticPlatformTokenForIsolation';clearTelephonyCache();
+  const redirected=await injectSigned(referPath,payload);
+  process.env.TWILIO_AUTH_TOKEN=platformToken;clearTelephonyCache();
+  assert.equal(redirected.statusCode,200,redirected.body);
+  assert.match(redirected.body,/<Dial answerOnBridge="true" timeout="20"/);
+  assert.ok(redirected.body.includes(`<Number>${phone(90)}</Number>`));
+  assert.equal((await injectSigned(referPath,payload)).body,redirected.body);
+  const resultPath=`/v1/modules/callcommand-ai/twilio/voice/transfer-result?call_id=${call.id}&transfer_id=${transfer.id}`;
+  const resultPayload={CallSid:sid,DialCallStatus:'no-answer'};
+  const fallback=await injectSigned(resultPath,resultPayload);
+  assert.equal(fallback.statusCode,200,fallback.body);assert.match(fallback.body,/unavailable/);assert.match(fallback.body,/<Hangup\/>/);
+  assert.equal((await injectSigned(resultPath,resultPayload)).statusCode,200);
+  const saved=(await db.execute(sql`SELECT c.status,c.disposition,log.status AS transfer_status,lease.status AS lease_status FROM callcommand_calls c JOIN callcommand_transfer_logs log ON log.tenant_id=c.tenant_id AND log.call_id=c.id JOIN callcommand_lane_leases lease ON lease.tenant_id=c.tenant_id AND lease.call_id=c.id WHERE c.tenant_id=${owner.currentTenantId} AND c.id=${call.id}`)).rows[0];
+  assert.equal(saved.status,'completed');assert.equal(saved.disposition,'follow_up_required');assert.equal(saved.transfer_status,'failed');assert.equal(saved.lease_status,'released');
+  const fact=(await db.execute(sql`SELECT safe_payload FROM callcommand_events WHERE tenant_id=${owner.currentTenantId} AND call_id=${call.id} AND event_type='provider.twilio.transfer_result'`)).rows[0];
+  assert.deepEqual(fact.safe_payload,{carrierConnectionConfirmed:false,humanConnectionConfirmed:false,outcome:'no-answer'});
 });
 
 test('flowless and incompatible live or after-hours configurations never emit OpenAI SIP and recording-disabled calls remain disabled', async () => {

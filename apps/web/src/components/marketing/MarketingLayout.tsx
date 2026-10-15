@@ -9,6 +9,7 @@ import { brand } from '@/lib/design-tokens';
 interface MarketingLayoutProps {
   children: React.ReactNode;
   testId?: string;
+  conversion?: { label: string; pricingPath: string; signInPath: string };
 }
 
 /**
@@ -28,6 +29,7 @@ interface MarketingLayoutProps {
 export default function MarketingLayout({
   children,
   testId = 'marketing-shell',
+  conversion,
 }: MarketingLayoutProps) {
   return (
     <AuthProvider>
@@ -45,7 +47,7 @@ export default function MarketingLayout({
         <a className="ops-skip-link" href="#marketing-main-content">
           Skip to main content
         </a>
-        <MarketingNavbar />
+        <React.Suspense fallback={<nav aria-label="Site navigation" style={{ minHeight: 72 }} />}><MarketingNavbar conversion={conversion} /></React.Suspense>
         <main
           id="marketing-main-content"
           tabIndex={-1}
@@ -58,7 +60,7 @@ export default function MarketingLayout({
         >
           {children}
         </main>
-        <MarketingFooter />
+        <React.Suspense fallback={<footer style={{ minHeight: 80 }} />}><MarketingFooter conversion={conversion} /></React.Suspense>
       </div>
     </AuthProvider>
   );

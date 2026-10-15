@@ -384,7 +384,9 @@ test('marketing shell · /login route exposes the full auth state machine', () =
   );
   // MarketingNavbar CTAs must point at /login, never directly at /app.
   const nav = read('src/components/marketing/MarketingNavbar.tsx');
-  assert.match(nav, /href="\/login"/, 'Sign-in CTA should link to /login');
+  assert.match(nav, /href=\{signInPath\}/, 'Sign-in CTA should use the selection-preserving login destination');
+  assert.match(nav, /pricingAccountPath\(pricingSelection, 'login', campaign\)/, 'A selected Stack must pass through the shared login helper');
+  assert.match(nav, /signInPath = conversion\?\.signInPath[^;]*'\/login'/, 'Visitors without a selected Stack still use /login');
 });
 
 test('marketing shell · PWA icon set is rebranded to the Operator mark', () => {
@@ -636,11 +638,14 @@ test('marketing audience entry · plan choice and shared-customer scope remain e
   assert.match(detail, /lane\.connectionNote/);
 });
 
-test('marketing phase 3 · /pricing renders the pricing + trust sections inside the marketing shell', () => {
+test('marketing phase 3 · /pricing renders authoritative prices and FAQs inside the marketing shell', () => {
   const src = read('src/app/pricing/page.tsx');
   assert.match(src, /MarketingLayout/, '/pricing must stay inside the marketing shell');
   assert.match(src, /PricingSection/, '/pricing must render the shared PricingSection');
-  assert.match(src, /TrustSection/,   '/pricing should surface the trust section alongside tiers');
+  assert.match(src, /getPublicBillingCatalog\(\)/, '/pricing must load the public authoritative catalog');
+  assert.match(src, /initialCatalog=\{catalog\}/, '/pricing must pass server prices to the configurator');
+  assert.match(src, /<PricingFaq\s*\/>/, '/pricing must retain the billing FAQs');
+  assert.doesNotMatch(src, /<TrustSection\b/, '/pricing must not present unsupported customer trust claims');
 });
 
 test('marketing phase 3 · pricing teaser links to /pricing with the required CTA test-id', () => {

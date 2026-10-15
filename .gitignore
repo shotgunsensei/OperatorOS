@@ -18,6 +18,8 @@ apps/web/android/local.properties
 *.jks
 test-results/
 playwright-report/
+/output/playwright/
+/output/tool-shims/
 build/
 !apps/torqueshed-native/src/app/build/
 !apps/torqueshed-native/src/app/build/**

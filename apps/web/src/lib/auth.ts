@@ -183,7 +183,7 @@ export const billingApi = {
   getSubscription: () => apiFetch('/billing/subscription'),
   getUsage: () => apiFetch('/billing/usage'),
   getPlans: () => apiFetch('/billing/plans'),
-  getCatalog: () => apiFetch('/billing/catalog'),
+  getCatalog: (signal?: AbortSignal) => apiFetch('/billing/catalog', { signal }),
   getStack: () => apiFetch('/billing/stack'),
   getMode: () => apiFetch('/billing/mode'),
   checkDowngrade: (planSlug: string) =>
@@ -2954,6 +2954,8 @@ export const moduleShellApi = {
   },
   outcall: {
     workspace: () => apiFetch('/modules/outcall/workspace'),
+    callsPage: (before: string) => apiFetch(`/modules/outcall/calls?before=${encodeURIComponent(before)}`),
+    callRecord: (id: string) => apiFetch(`/modules/outcall/calls/${encodeURIComponent(id)}`),
     acceptSafety: () => apiFetch('/modules/outcall/onboarding/accept-safety', {
       method: 'POST',
       body: JSON.stringify({ accepted: true }),

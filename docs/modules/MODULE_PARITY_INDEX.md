@@ -1,5 +1,125 @@
 # OperatorOS module parity index
 
+## OutCall v67 resource-control continuation (2026-10-14, local only)
+
+Parity counts and coming-soon state are unchanged. Exact configured-country
+validation and account-wide atomic approval/budget/quota/capacity controls pass
+37 focused API/schema/isolation checks; CallCommand compatibility remains 39/39.
+Additive v67 rehearsal creates no approval. No remote merge, production apply,
+provider activation or live acceptance occurred. [Requirements and evidence](../outcall/RESOURCE_CONTROLS_V67_2026-10-14.md).
+
+## OutCall production-readiness repair (2026-10-14, local only)
+
+Parity counts and coming-soon launch state are unchanged. Focused authority,
+SMS suppression, callback/uncertainty, retry, older-call cancellation and
+readiness repairs pass 23 API, 45 platform and 5 component browser checks;
+39 CallCommand compatibility checks preserve the reviewed parent work.
+No remote merge, deployment, production migration, provider activation or
+live customer acceptance occurred. [Current status and gates](../PRODUCTION_OUTCALL_READINESS_2026-10-14.md).
+
+## CallCommand lifecycle evidence overlay (2026-10-14, 19:05 UTC)
+
+Parity remains unchanged. Three new synthetic heartbeat/sideband-loss/expired-
+owner replay checks, strict changed-test types and scoped lint pass. No new
+application or schema behavior is introduced. Real process death, autonomous
+recovery, live answer, delivered RMM intake and human transfer remain open.
+Production remains identified at v65; the coordinated OutCall candidate is v67.
+See [the preflight and exact pending actions](../callcommand/POST_REBOOT_PREFLIGHT_2026-10-14.md).
+
+## CallCommand inbound outcome overlay (2026-10-14)
+
+Parity remains unchanged. The scoped source candidate repairs summary/control
+sequencing, retrying external notification work, published-flow authorization,
+carrier REFER handoff/fallback, call termination state, sideband ownership and
+post-call recording order. All 187 CallCommand API checks, four workspace
+typechecks, zero-warning lint, strict changed-test typing and SDK/API compilation
+pass locally. Live answer,
+mailbox/RMM intake, human transfer, serving-runtime recovery and production
+release/configuration acceptance remain open. See [the evidence and limits](../callcommand/INBOUND_OUTCOME_2026-10-14.md).
+
+## Generic checkout expiry safety (2026-10-12)
+
+Parity remains unchanged. A canonical-dispatch generic unpaid-expiry acknowledgment
+passes actual route/SDK/database coverage, including concurrent claims,
+immutable receipts, active/expired leases, no authority changes, strict signature
+rejection and retained Torque settlement. The focused set passes 42/42; workspace
+types, strict new-test types and zero-warning lint pass. Full candidate checks,
+independent review, publication and deployed customer acceptance remain separate
+gates. The production signing-binding incident is not fixed by this code.
+See [the evidence and limits](../billing/CHECKOUT_EXPIRATION_2026-10-12.md).
+
+## Current main and TradeFlowKit payment safety (2026-10-09)
+
+Live main `74dc1e3b` is identified by health/readiness 200, build
+`a8b41fff98705abb62132f29`, database v65/65. Exact-main release CI is green;
+the original combined AI/landing tree remains local at `aa6b5ea4`.
+
+| Outcome | Fresh local evidence | Remaining acceptance |
+| --- | --- | --- |
+| TradeFlowKit canceled manual payment | Reproduced accidental POST; reused PR112 null guard; 8 focused API and 2 desktop/mobile browser cases pass, no skips/retries; clean ef4ba9b7 build and browser identity; repeated Cancel preserves invoice/payment/job/audit, accepted empty/filled reference works, duplicates are rejected, viewer write is forbidden | Exact release CI after reconciliation, approved v66 backup/apply/verify, supported-browser publication, deployed entitled non-admin tenant workflow |
+| Existing paid acquisition and business payments | Current-main CI/public health; synthetic manual-payment journey is provider-free | Stack purchase and signed settlement; separate Stripe Connect customer-payment configuration/settlement; actual delivery and approved legacy-data cutover |
+| TechDeck monetary control | Preserved default-disabled tenant Responses budget | Separate activation/acceptance; legacy AI/voice/provider routes remain outside this new workflow-specific cap |
+
+See [payment cancellation evidence](tradeflowkit/PAYMENT_CANCEL_ACCEPTANCE_2026-10-09.md).
+This overlay supersedes stale main CI/publication statements below without
+promoting any module to deployed customer acceptance.
+The dedicated browser task has verified the existing account-wide Actions $0
+stopping budget including artifact storage. Parent source-release clearance
+does not waive the [database/publication runbook](../RELEASE_HANDOFF_2026-10-09.md).
+
+## Coordinated integration checkpoint (2026-10-07)
+
+AI `2a388cdf` and PR117 `47d32d71` retain sealed module outcomes, legacy Assist
+and default-disabled TechDeck guidance alongside preserved landing `5aedd03d`.
+Fresh merged-source checks pass **167/167** with zero fail/cancel/skip/todo;
+production build/typechecks, focused production browser **5/5**, and separate
+landing production fixture **13/13** pass. Saved-cart authority, scoped outcomes,
+catalog read failures, loading/retry and campaign handoffs are covered. The exact
+combined release gate, populated upgrade and clean identity smoke remain pending. No
+deployed parity or live provider/customer acceptance is promoted by this checkpoint.
+[Integration inventory and gates](../COORDINATED_RELEASE_2026-10-07.md).
+
+## Auth fixture rate isolation follow-up (2026-10-07)
+
+**PARITY UNCHANGED / FINAL GATE PENDING**. The new auth-host fixture now uses its own client address and asserts that default loopback rate counters remain unchanged. Combined host/invitation checks pass **11/11** after the earlier cross-suite 429 failure. Production rate limits and auth guards are unchanged. The stopped `fd8129e8` attempt is preserved as incomplete; a new clean-candidate full gate follows the repair commit.
+
+## Canonical-host checkout fixture completion (2026-10-07)
+
+**PARITY UNCHANGED / LOCAL FIXTURE VERIFIED / FINAL GATE PENDING**. The only failed `78701290` release stage is addressed by the inspected PR117 browser fixture correction. Real central login, canonical host/origin and local proxy reads now pass the checkout journey **1/1**; auth-boundary checks pass **7/7** with forbidden hosts still rejected. No runtime guard or parallel provider/data-fabric source was imported. New clean-candidate full gate and identity smoke follow the commit; deployment, paid-provider and customer acceptance remain unverified. [Procedure](../ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## Final local guidance candidate continuation (2026-10-07)
+
+**PARITY UNCHANGED / LOCAL FIXTURES VERIFIED / FINAL GATE PENDING**. Guidance wording and actor-bound/zero-budget checks pass with legacy/workflow/browser checks **45/45**. The complete `325b6108` gate passed 12/14 stages; three API fixture repairs pass **15/15** without changing runtime entitlement rules. A separate checkout browser helper still triggers the correct production auth-host denial. Final candidate release results and exact artifact identity follow its clean commit; deployment and real customer acceptance remain unverified. [Candidate procedure](../ai/FINAL-LOCAL-CANDIDATE-2026-10-07.md).
+
+## TechDeck guidance review overlay (2026-10-07)
+
+**PARITY UNCHANGED / REVIEW VERIFIED / LIVE ACCEPTANCE OPEN**. Review of
+`bfd9bf0d` fixes shared usage metadata, settled-failure retry reporting and visible
+support references/busy state. Selected compatibility/API/browser checks pass
+43/43, including legacy Torque Assist and TechDeck literal workflows; actual
+populated v65-to-v66 migration/reapply preserves complete snapshots. No AI
+spending authority is seeded and no device command executes. Exact release CI,
+approved live model/budgets, publication and customer acceptance remain gates.
+See [review commands and evidence](../ai/LOCAL-REVIEW-2026-10-07.md).
+
+## TechDeck AI guidance overlay (2026-10-07, local only)
+
+**PARITY COUNTS UNCHANGED / LOCAL SLICE VERIFIED / LIVE ACCEPTANCE OPEN**.
+TechDeck's existing reviewed guidance form now displays structured Responses
+output under its tenant/member/entitlement/write guards. New server-owned monetary
+reservations and measured cache-aware cost telemetry default to no spending;
+unknown usage keeps holds and no scripts/devices execute. This cap covers only
+the selected TechDeck flow. Focused API/browser checks pass 21/21, including actual
+console desktop/mobile rendering and in-flight tenant switching. Production build,
+typechecks, additive disposable v66/66 rehearsal and compiled Replit supervisor
+smoke pass; inherited security exceptions remain intact. No module is promoted
+to deployed/customer acceptance. Live model access/budget approval, exact release
+CI, migration/publication and non-admin customer acceptance remain gates.
+Current public health reports serving `5b50b2ca` and database v65/65; historical
+acceptance below does not describe this unpushed slice.
+See [commands and acceptance limits](../ai/IMPLEMENTATION-EVIDENCE.md) and
+[revised stages](../ai/OPENAI-FIRST-REVISED-PLAN.md).
+
 ## Module-session workflow continuation (2026-10-07)
 
 **PARITY COUNTS UNCHANGED / FOCUSED CORRECTION PASS / UPDATED CI REQUIRED**.
@@ -39,6 +159,20 @@ configuration alone. See
 | Torque Assist | Fleet $50/500,000 live Checkout and return to selected diagnostic; zero balance/no payment | Signed paid credits, provider workflow and cross-module preview acceptance |
 | CallCommand AI | Specifically approved incoming-call webhook exists in the existing OperatorOS OpenAI project; masked owner-saved webhook secret verified; project/Mini model source bindings set | Routing-secret handoff, effective API-key/project access, publication, signed event and controlled live voice/capacity/number acceptance |
 | OutCall | Coming-soon and sales gates preserved | Commercial/activation and verified-self real-provider acceptance |
+
+## Flagship public-page current-main integration (2026-10-06 UTC)
+
+**PARITY COUNTS UNCHANGED / LOCAL INTEGRATION VERIFIED / NOT DEPLOYED**.
+The preserved three-page/catalog-pricing candidate is integrated on isolated
+`codex/flagship-landings-current-main` from `e62c8935`; current publication history
+and PR #115 dependency policy remain intact. No module functionality, API
+authority, catalog price, provider setting or deployment changes. 53 affected,
+15 commerce and 18 security-policy tests plus 18 local browser cases pass;
+lint, four-app typechecks and production build pass. The inherited security gate
+passes with zero unresolved IDs and four disclosed high patched exceptions.
+Current-main hosted acceptance does not cover this candidate. Fresh evidence
+and remaining cost/exact-candidate release gates are recorded in
+[the integration report](../FLAGSHIP_LANDINGS_MAIN_INTEGRATION_2026-10-06.md).
 
 ## Final exact-commit commercial release gate (2026-10-06)
 
