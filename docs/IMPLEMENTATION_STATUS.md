@@ -15,6 +15,23 @@ Validation uses the pinned package manager, both test environment signals,
 an explicitly disposable local PostgreSQL database and synthetic configuration.
 Required full release CI must pass on the delivered source before merge.
 
+The commands below require a prepared disposable context. The complete
+reproducible PostgreSQL and synthetic configuration profile is checked in at
+[the isolated release workflow](../.github/workflows/release-gate.yml);
+[the API test runner](../scripts/parity/run-api-tests.mjs) applies the test
+environment overrides. Use that fixture profile for `DATABASE_URL` and the
+synthetic-only `SESSION_SECRET`, `SSO_CODE_ENCRYPTION_SECRET` and
+`SHARED_SECRET_ENCRYPTION_KEY` settings, together with its base-URL,
+runner and proxy settings. Do not inherit private/provider configuration or
+reuse a persistent database. Local infrastructure addresses and secret values
+are intentionally not recorded here. The exact test signals are:
+
+```powershell
+$env:APP_ENV='test'
+$env:NODE_ENV='test'
+$env:PARITY_DATABASE_IS_DISPOSABLE='1'
+```
+
 Commands:
 
 - corepack pnpm install --frozen-lockfile --offline --ignore-scripts
