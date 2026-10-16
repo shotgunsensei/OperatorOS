@@ -626,6 +626,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         }
         console.log(`[billing webhook] ${event.type} (${kind}): duplicate event, no-op`);
         return { received: true, kind, handled: true, action: 'duplicate_ignored' };
+      }
+
+      let result: { handled: boolean; action?: string; error?: string; shouldPropagate?: boolean };
       failureStage = 'event_processing';
       try {
         // Only this verified dispatch has excluded Torque credit events. Keep
