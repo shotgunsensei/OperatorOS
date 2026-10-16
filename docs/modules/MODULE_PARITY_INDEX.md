@@ -1,5 +1,17 @@
 # OperatorOS module parity index
 
+## Billing and fixture validation
+
+| Area | Source validation |
+| --- | --- |
+| Billing | Handler syntax restored; 61 focused tests pass. |
+| OutCall | Shared disposable-database guard reused; 31 fixture/provider/resource tests pass. |
+| CallCommand | 42 realtime/lifecycle compatibility tests pass. |
+
+Parity counts and launch policy are unchanged. Workspace/strict typechecks,
+lint and production build pass locally. Required full release CI and review
+must pass on the delivered source before merge.
+
 ## OutCall v67 resource-control continuation (2026-10-14, local only)
 
 Parity counts and coming-soon state are unchanged. Exact configured-country

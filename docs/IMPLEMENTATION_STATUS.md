@@ -1,5 +1,32 @@
 # OperatorOS implementation status
 
+## Billing handler and fixture validation
+
+The candidate restores the billing webhook block boundary and result
+declaration, reuses the shared disposable-database guard for OutCall fixtures,
+and preserves diagnostic expectations while correcting assertion typing.
+
+Local checks pass: 61 billing, 31 OutCall and 42 CallCommand tests, with zero
+failures/skips; four workspace typechecks, strict fixture/diagnostic test
+typing, zero-warning lint and the production build. A separate diagnostic
+rerun passes four tests already included in the billing total.
+
+Validation uses the pinned package manager, both test environment signals,
+an explicitly disposable local PostgreSQL database and synthetic configuration.
+Required full release CI must pass on the delivered source before merge.
+
+Commands:
+
+- corepack pnpm install --frozen-lockfile --offline --ignore-scripts
+- corepack pnpm typecheck
+- corepack pnpm lint
+- corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/stripe-webhook-diagnostics.test.ts test/billing-webhook-binding.test.ts test/checkout-expiration-webhook-db.test.ts
+- corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/outcall-phase12b-db.test.ts test/outcall-provider.test.ts test/outcall-resources.test.ts test/outcall-resource-fixture-guard.test.ts
+- corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 test/callcommand-realtime-route.test.ts test/callcommand-realtime.test.ts test/callcommand-phase35-realtime-handoff.test.ts test/callcommand-phase35-lifecycle.test.ts
+- corepack pnpm --dir apps/api exec tsc --noEmit --strict --allowJs --resolveJsonModule --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --skipLibCheck test/outcall-resource-fixture.ts test/outcall-resource-fixture-guard.ts test/outcall-resource-fixture-guard.test.ts test/stripe-webhook-diagnostics.test.ts
+- corepack pnpm --dir apps/api exec eslint src/routes/billing-routes.ts test/stripe-webhook-diagnostics.test.ts test/outcall-resource-fixture.ts test/outcall-resource-fixture-guard.ts test/outcall-resource-fixture-guard.test.ts --max-warnings=0
+- corepack pnpm build:production
+
 ## Combined v67 source delivery preparation (2026-10-14)
 
 Preserved OutCall `24e15d2b` and reviewed test-only CallCommand `bda93ac` are

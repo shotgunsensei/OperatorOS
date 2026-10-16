@@ -2,13 +2,13 @@ import { sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { outCallAccountKey, outCallPolicyHash, reserveOutCallResource, type OutCallResourcePolicy } from '../src/lib/outcall-resources.js';
 import { createTestUser, ensureSchemaReady, cleanupUser } from './_setup.js';
+import { assertOutCallResourceFixtureEnvironment } from './outcall-resource-fixture-guard.js';
 
 // Synthetic ceilings only: this file cannot grant an allowance outside the
 // explicit disposable loopback database and never ships with production code.
 export const SYNTHETIC_OUTCALL_POLICY:OutCallResourcePolicy={currency:'USD',dailyMicros:10_000_000,monthlyMicros:100_000_000,voiceCeilingMicros:10_000,verificationCeilingMicros:5_000,smsCeilingMicros:1_000,dailyVoiceRequests:100,dailyVerificationRequests:100,dailySmsReplies:100,maxOutstanding:200,maxCallSeconds:120,maxQueueLatenessSeconds:300};
 export async function createOutCallResourceFixture() {
-  const url=new URL(process.env.DATABASE_URL ?? '');
-  if(process.env.PARITY_DATABASE_IS_DISPOSABLE!=='1' || !['127.0.0.1','localhost','::1'].includes(url.hostname) || !url.pathname.endsWith('_test'))throw new Error('Disposable loopback test database required');
+  assertOutCallResourceFixtureEnvironment(process.env);
   await ensureSchemaReady();
   const user=await createTestUser();
   await db.execute(sql`UPDATE users SET platform_role='super_admin' WHERE id=${user.id}`);

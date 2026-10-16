@@ -124,8 +124,8 @@ test('real handler differentiates failure stages and preserves responses and ide
     response=await request();assert.equal(response.statusCode,400);assert.deepEqual(response.json(),rejected);
     assert.deepEqual(errors[0]?.[1],{code:'WEBHOOK_REJECTED',stage:'event_status_update',category:'database'});
 
-    reset();configured=false;response=await request();assert.equal(response.statusCode,503);assert.equal(response.json().code,'STRIPE_NOT_CONFIGURED');assert.deepEqual(calls,[]);
-    reset();response=await request(payload,null);assert.equal(response.statusCode,400);assert.deepEqual(response.json(),{error:'Missing stripe-signature header'});assert.deepEqual(calls,[]);
+    reset();configured=false;response=await request();assert.equal(response.statusCode,503);assert.equal(response.json().code,'STRIPE_NOT_CONFIGURED');assert.deepEqual([...calls],[]);
+    reset();response=await request(payload,null);assert.equal(response.statusCode,400);assert.deepEqual(response.json(),{error:'Missing stripe-signature header'});assert.deepEqual([...calls],[]);
     reset();response=await request(JSON.stringify(JSON.parse(payload)));assert.equal(response.statusCode,400);assert.deepEqual(calls,['verify']);
     for (const [state,status,code] of [['in_flight',503,'WEBHOOK_PROCESSING_IN_PROGRESS'],['payload_mismatch',400,'STRIPE_EVENT_ID_PAYLOAD_MISMATCH'],['processed',200,null]] as const) {
       reset();duplicate=state;response=await request();assert.equal(response.statusCode,status);
