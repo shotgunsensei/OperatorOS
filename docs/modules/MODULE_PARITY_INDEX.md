@@ -1,5 +1,15 @@
 # OperatorOS module parity index
 
+## Fixture and runner integration evidence (2026-10-19)
+
+Module and launch states are unchanged. Reviewed fixture-target and runner
+changes are integrated on the merged webhook base without implementation
+changes. Fresh local proof is 33 source executions (30 unique), two compiled
+disabled-runner checks, workspace/strict types, runner build and root lint.
+Independent integration review passed; combined exact-head release CI remains
+a source-merge gate. Production
+database, publication and acceptance remain separate. [Integration evidence](../reviews/2026-10-19/SECURITY_FIXTURE_RUNNER_INTEGRATION.md).
+
 ## Shared webhook egress boundary (2026-10-19)
 
 Parity and launch states are unchanged. The shared outbound HTTPS candidate
@@ -7,6 +17,21 @@ pins validated DNS answers and rejects unsafe address representations while
 retaining deterministic recording and delivery accounting. Sixteen focused
 checks, strict changed-file types, workspace typechecks and lint pass. Full
 release and deployed acceptance remain open; [evidence and limits](../reviews/2026-10-19/WEBHOOK_EGRESS_REVIEW.md).
+
+## Shared test fixture safety (2026-10-19)
+
+Module parity and launch states are unchanged. Direct schema fixture bootstrap
+now requires a marked disposable loopback target captured by its database pool.
+Eight offline tests, strict changed-file types and root lint pass; the complete
+database-backed release gate remains unverified locally. [Evidence](../reviews/2026-10-19/SCHEMA_FIXTURE_TARGET_GUARD.md).
+
+## Standalone runner default (2026-10-19)
+
+Module states are unchanged. The standalone legacy runner now defaults to
+loopback, retaining explicit host selection and production execution denial.
+Nine focused checks, two compiled runtime controls, types/build and lint pass.
+Intentional network use and legacy container manifests remain unaccepted.
+[Evidence](../reviews/2026-10-19/RUNNER_DEFAULT_LOOPBACK.md).
 
 
 ## Billing and fixture validation
