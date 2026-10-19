@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
-import { db } from '../src/db.js';
+import { db, databasePool } from '../src/db.js';
+import { assertDisposableDatabaseEnvironment } from '../../../scripts/parity/lib/database.mjs';
 import {
   users, modules, subscriptionPlans, addonSubscriptions, billingEvents, ssoHandoffTokens, revokedSessionTokens,
   tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
@@ -61,6 +62,13 @@ async function ensureTestPlans() {
 }
 
 export async function ensureSchemaReady() {
+  // Direct file runs must have the same destructive-fixture target gate as
+  // the release runner. Validate the pool's captured URL, not a later env
+  // replacement that cannot retarget an already-created pg.Pool.
+  assertDisposableDatabaseEnvironment({
+    ...process.env,
+    DATABASE_URL: databasePool.options.connectionString,
+  });
   const { ensureBaseTables, ensureExtendedTables } = await import('../src/lib/db-init.js');
   const { ensureSaasTables, ensureTenantTables, ensureModuleShellTables } = await import('../src/lib/saas-db-init.js');
   await ensureBaseTables();

@@ -1,5 +1,17 @@
 # OperatorOS implementation status
 
+## Direct schema fixture target gate (2026-10-19)
+
+The shared direct-test schema bootstrap now reuses the release runner's
+disposable target guard before DDL and checks the URL actually captured by
+pg.Pool. Eight offline checks pass, including 15 sentinel probes proving
+rejected targets make zero connection attempts and valid disposable controls
+reach only an intercepted SQL boundary. Strict changed-file typing and
+zero-warning root lint pass. No database was connected, dependency acquired,
+production schema changed or module state promoted. Complete disposable API
+and Node 20 CI remain gates. See [the exact source and commands](reviews/2026-10-19/SCHEMA_FIXTURE_TARGET_GUARD.md).
+
+
 ## Billing handler and fixture validation
 
 The candidate restores the billing webhook block boundary and result

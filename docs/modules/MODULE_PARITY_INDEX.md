@@ -1,5 +1,13 @@
 # OperatorOS module parity index
 
+## Shared test fixture safety (2026-10-19)
+
+Module parity and launch states are unchanged. Direct schema fixture bootstrap
+now requires a marked disposable loopback target captured by its database pool.
+Eight offline tests, strict changed-file types and root lint pass; the complete
+database-backed release gate remains unverified locally. [Evidence](../reviews/2026-10-19/SCHEMA_FIXTURE_TARGET_GUARD.md).
+
+
 ## Billing and fixture validation
 
 | Area | Source validation |
