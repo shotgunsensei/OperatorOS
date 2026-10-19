@@ -160,6 +160,53 @@ test('signed generic unpaid expiry is durably acknowledged without cart, subscri
   assert.deepEqual(await authoritySnapshot(), before);
 });
 
+test('signed invoice creation is durably observed across classification paths without changing payment authority', async () => {
+  const before = await authoritySnapshot();
+  const metadataCases: Record<string, string>[] = [
+    { billing_model: 'core_product_stack', user_id: owner.id },
+    { type: 'addon', user_id: owner.id, module_slug: 'torqueshed' },
+    { type: 'feature_addon', feature: 'managed_phone_numbers', user_id: owner.id },
+    { type: 'feature_addon', feature: 'concurrent_call_lanes', user_id: owner.id },
+  ];
+  for (const [index, metadata] of metadataCases.entries()) {
+    const input = event(`invoice_created_${index}`, metadata);
+    input.type = 'invoice.created';
+    input.data.object.id = `in_synthetic_created_${index}`;
+    input.data.object.status = 'draft';
+    const response = await send(input);
+    assert.equal(response.statusCode, 200, response.body);
+    assert.equal(response.json().action, 'invoice_created_observed');
+    assert.equal(response.json().shouldPropagate, false);
+    const recorded = await rows(input.id);
+    assert.equal(recorded.length, 1);
+    assert.ok(recorded[0].processedAt); assert.equal(recorded[0].errorMessage, null);
+    assert.equal((recorded[0].metadata as any).lastAction, 'invoice_created_observed');
+    assert.equal(recorded[0].payloadHash, createHash('sha256').update(JSON.stringify(input)).digest('hex'));
+    assert.equal((await send(input)).json().action, 'duplicate_ignored');
+    assert.deepEqual(await rows(input.id), recorded);
+  }
+  assert.deepEqual(await authoritySnapshot(), before);
+  assert.equal(providerHttpCalls, 0);
+});
+
+test('a saved failed invoice-created receipt is recoverable through admin retry exactly once', async () => {
+  const input = event('invoice_created_retry', { type: 'feature_addon', feature: 'managed_phone_numbers', user_id: owner.id });
+  input.type = 'invoice.created'; input.data.object.id = 'in_synthetic_saved'; input.data.object.status = 'draft';
+  const before = await authoritySnapshot();
+  const claim = await billing.claimStripeEvent(input, billing.classifyWebhookEvent(input));
+  assert.ok(claim.claimedRowId);
+  await billing.markStripeEventFailed(claim.claimedRowId!, 'synthetic_pre_fix_unhandled_invoice');
+  const recovered = await billing.retryBillingEvent(claim.claimedRowId!);
+  assert.equal(recovered.ok, true); assert.equal(recovered.replayed, true);
+  assert.equal(recovered.replayResult.action, 'invoice_created_observed');
+  const recorded = await rows(input.id);
+  assert.equal(recorded.length, 1); assert.ok(recorded[0].processedAt);
+  assert.equal(recorded[0].errorMessage, null); assert.equal(recorded[0].retryCount, 1);
+  assert.equal((await billing.retryBillingEvent(claim.claimedRowId!)).replayed, false);
+  assert.deepEqual(await rows(input.id), recorded);
+  assert.deepEqual(await authoritySnapshot(), before);
+});
+
 test('concurrent deliveries claim exactly one persistent receipt; later duplicates do not rewrite it', async () => {
   const input = event('concurrent', { user_id: owner.id });
   const before = await authoritySnapshot();

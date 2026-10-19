@@ -1,5 +1,73 @@
 # OperatorOS completion plan
 
+## Reviewed account-response and diagnostic follow-up (2026-10-19)
+
+The source candidate now also includes the independently approved Auth/Tenant
+component `0f2b845f845de5d150e9c72519422ee0cf1d3692` and diagnostic fixture
+component `3458e5e284151420ec59fd7ec3e8f239fd18221c`. Their eight committed
+blobs are preserved alongside the original nine invoice/number component blobs;
+four root status/review documents describe the final 21-path scope.
+
+A held authentication read can replace a newly signed-in account through the
+actual Invite screen. Client transitions and reads now own their completion,
+and tenant work is bound to the synchronous accepted identity lifetime, even
+for a fresh login with the same user ID. Prior memberships are masked while
+identity changes; normal successful tenant-switch reload and failed global
+logout behavior remain intact. Server sessions, cookies and tenant/module
+authorization are unchanged. Owner and independent suites each passed 44 actual
+provider/UI browser cases; an independent 390px Invite control also passed.
+The same durable Invite regression fails on the unchanged base, with 3 controls
+passing. This is client state/header ownership, not a server authorization bypass.
+
+Original PR132 head `acbeb7ddcef90f7587046aad244fa8c6522cd14f` had terminal
+release run 39323364782 FAILURE: 13/14 scopes passed, API 1937/1938. Its one failure
+was a real-route VM diagnostic fixture missing the actual observation-helper
+binding: ReferenceError returned 503 before the intended database diagnostic 400.
+The test-only correction compiles the actual helper declaration into that VM;
+all original assertions remain. Owner and independent 49-case focused suites,
+strict changed-test typing and lint pass. The old failed run remains failed.
+Its two new disposable-SQL observation cases, unit 52, integration 108,
+browser 65 first attempts, visual 4 and vector 32 passed; they do not waive failure.
+
+Fresh combined local execution passes 232 selected native cases (228 prior
+selected cases plus four diagnostic tests), zero failed/skipped. Root lint
+passes with zero warnings and all four workspace typechecks pass. The changed
+component blobs match their independently tested/reviewed commits. Existing
+task dependency junctions and cached Chromium were reused; no acquisition.
+
+Fresh combined exact-head full release/vector CI remains required before source
+merge. Paid Stack asynchronous failure and its shared transaction-generation
+fence are separate work, not part of this candidate. Pricing/catalog, schema67,
+dependencies, provider configuration, module parity and launch states remain
+unchanged. No real account, DB, provider, recipient, payment, replay or deployment
+action occurred. Controlled deployed tenant/provider/recovery/support acceptance
+remains separate. [Client evidence](docs/reviews/2026-10-19/AUTH_TENANT_ASYNC_OWNERSHIP.md)
+and [fixture evidence](docs/reviews/2026-10-19/WEBHOOK_DIAGNOSTIC_FIXTURE_BINDING.md).
+
+## Verified invoice observations and number references (2026-10-19)
+
+PR131 merged as `7c077cce8ba6c6471014ffe264b85ab95ddd3735` after
+independent review and terminal successful release/vector checks; its merged
+tree equals the reviewed/tested tree. A first-attempt pricing hydration error
+recovered under the existing CI retry policy and remains unexplained; the
+examined pricing/init/config/test chain is unchanged and local SSR controls pass.
+
+The next bounded source candidate receipts `invoice.created` as an observation
+in verified live dispatch and acquired saved-receipt retry, with no settlement
+or propagation. Managed-number invoice references reuse the shared normalizer,
+including expanded modern references and fail-closed conflicts, while keeping
+legacy forms and all existing provider/binding/quantity/grace guards. Other
+financial-event failures still retry. Lane metadata support is not broadened;
+its weaker settlement authority needs separate repair. Module/launch states,
+pricing, dependencies, schema67 and provider configuration remain unchanged.
+
+Independent component reviews and fresh combined 228 focused tests, zero-warning
+lint and four workspace typechecks pass. Full combined exact-tree release CI,
+including two new guarded SQL receipt/retry cases, remains required before
+source merge. No local disposable PostgreSQL fixture was confirmed. Protected
+provider/target/recovery and controlled deployed acceptance remain launch gates.
+[Follow-up scope and evidence](docs/reviews/2026-10-19/INVOICE_EVENT_FOLLOWUP_INTEGRATION.md).
+
 ## October 23 launch decision (2026-10-19)
 
 Prioritize OperatorOS account/organization/access and the bounded TradeFlowKit

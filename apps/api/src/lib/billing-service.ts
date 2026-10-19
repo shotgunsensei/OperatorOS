@@ -1758,6 +1758,16 @@ export async function markStripeEventFailed(claimedRowId: string, errorMessage: 
   }).where(and(eq(billingEvents.id, claimedRowId), sql`${billingEvents.processedAt} IS NULL`));
 }
 
+/** Only use after signature verification/claim or from a persisted verified receipt. */
+export function billingObservationResult(eventType: string): WebhookProcessResult | null {
+  // Creation is not payment or subscription authority. This integration does
+  // not edit draft invoices, and retrying this selected event can delay Stripe
+  // automatic invoice finalization. Keep it receipted without settling access.
+  return eventType === 'invoice.created'
+    ? { handled: true, action: 'invoice_created_observed', shouldPropagate: false }
+    : null;
+}
+
 export async function processWebhookEvent(event: { type: string; data: { object: any } }): Promise<WebhookProcessResult> {
   const { type, data } = event;
   const obj = data.object;
@@ -3133,7 +3143,10 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
 
   let replayResult: WebhookProcessResult;
   try {
-    if (replayClassification.isFeatureAddon) {
+    const observation = billingObservationResult(rawEvent.type);
+    if (observation) {
+      replayResult = observation;
+    } else if (replayClassification.isFeatureAddon) {
       const numberBilling = await import('./callcommand-number-billing.js');
       replayResult = replayClassification.featureKey === numberBilling.CALLCOMMAND_NUMBER_FEATURE_KEY
         ? await numberBilling.processCallCommandNumberWebhookEvent(rawEvent)

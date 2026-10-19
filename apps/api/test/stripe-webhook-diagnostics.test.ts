@@ -59,6 +59,10 @@ test('provider and transport errors map to bounded categories without original c
 
 const index = readFileSync(fileURLToPath(new URL('../src/index.ts', import.meta.url)), 'utf8').replace(/\r\n/g,'\n');
 const routes = readFileSync(fileURLToPath(new URL('../src/routes/billing-routes.ts', import.meta.url)), 'utf8').replace(/\r\n/g,'\n');
+const service = readFileSync(new URL('../src/lib/billing-service.ts', import.meta.url), 'utf8');
+const serviceTree = ts.createSourceFile('billing-service.ts', service, ts.ScriptTarget.Latest, true);
+const observation = serviceTree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'billingObservationResult');
+assert.ok(observation, 'actual billing observation helper must exist');
 const parserStart = index.indexOf("app.addContentTypeParser('application/json'");
 const routeStart = routes.indexOf("app.post('/v1/billing/webhook'");
 assert.ok(parserStart>0 && routeStart>0);
@@ -82,8 +86,9 @@ test('real handler differentiates failure stages and preserves responses and ide
   const step = (name: string) => { calls.push(name); if (fault===name) throw failure; };
   const app = Fastify({ logger: false });
   runInNewContext(compile(parser), { app, Buffer });
-  runInNewContext(compile(handler), {
-    app, Buffer, stripeWebhookFailureDiagnostic,
+  // Bind the real pure helper without importing billing-service's DB/env setup.
+  runInNewContext(compile(observation.getText(serviceTree) + '\n' + handler), {
+    app, Buffer, stripeWebhookFailureDiagnostic, exports: {},
     console: { log() {}, error(...args: unknown[]) { errors.push(args); } },
     getPaymentProviderAdapter: () => ({ status: { state: configured?'configured':'disabled' }, verifyWebhook: async (raw: Buffer, sig: string) => { step('verify'); return stripe.webhooks.constructEvent(raw,sig,secret); } }),
     isTorqueTokenStripeEvent: async () => { step('credit_classification'); return torque; },
@@ -98,6 +103,10 @@ test('real handler differentiates failure stages and preserves responses and ide
   });
   const reset = () => { configured=true;torque=false;fault=duplicate=null;handled=true;calls.length=errors.length=0;failure=new Error(privateFixture); };
   const request = (body=payload,sig: string | null=signature) => app.inject({ method:'POST',url:'/v1/billing/webhook',headers:{'content-type':'application/json',...(sig?{'stripe-signature':sig}:{})},payload:body });
+  const requestType = (type: string) => {
+    const body = JSON.stringify({ ...JSON.parse(payload), type });
+    return request(body, stripe.webhooks.generateTestHeaderString({ payload: body, secret }));
+  };
   const rejected = { error:'Webhook verification or processing failed',code:'WEBHOOK_REJECTED' };
   try {
     reset();let response=await request(payload,'INVALID_PRIVATE_SIGNATURE_FIXTURE');
@@ -123,6 +132,14 @@ test('real handler differentiates failure stages and preserves responses and ide
     reset();fault='mark_processed';failure={code:'42501',message:privateFixture};
     response=await request();assert.equal(response.statusCode,400);assert.deepEqual(response.json(),rejected);
     assert.deepEqual(errors[0]?.[1],{code:'WEBHOOK_REJECTED',stage:'event_status_update',category:'database'});
+
+    reset();fault='process';response=await requestType('invoice.created');
+    assert.equal(response.statusCode,200);assert.equal(response.json().action,'invoice_created_observed');
+    assert.deepEqual(calls,['verify','credit_classification','event_classification','event_claim','mark_processed']);assert.equal(errors.length,0);
+    reset();fault='mark_processed';failure={code:'42501',message:privateFixture};
+    response=await requestType('invoice.created');assert.equal(response.statusCode,400);assert.deepEqual(response.json(),rejected);
+    assert.deepEqual(errors[0]?.[1],{code:'WEBHOOK_REJECTED',stage:'event_status_update',category:'database'});
+    assert.equal(calls.includes('process'),false);assert.doesNotMatch(JSON.stringify(errors),new RegExp(privateFixture+'|42501|evt_synthetic|whsec_|sk_test_'));
 
     reset();configured=false;response=await request();assert.equal(response.statusCode,503);assert.equal(response.json().code,'STRIPE_NOT_CONFIGURED');assert.deepEqual([...calls],[]);
     reset();response=await request(payload,null);assert.equal(response.statusCode,400);assert.deepEqual(response.json(),{error:'Missing stripe-signature header'});assert.deepEqual([...calls],[]);
