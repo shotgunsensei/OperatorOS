@@ -291,3 +291,86 @@ test('PostgreSQL: paid helper owns Stack lock before grants; stale terminal cont
     assert.deepEqual(await projection(), current);
   } finally { resume.resolve(); await bounded(paid); if (old) await bounded(old); }
 });
+
+test('PostgreSQL: actual pending catalog quarantine stays ineligible through normal subscription/invoice unpaid→active', async () => {
+  for (const type of ['customer.subscription.updated', 'invoice.paid', 'invoice.payment_succeeded', 'invoice.payment_failed']) {
+    const row = await reset(); provider = providerFor(row, 'active'); const states: string[] = [];
+    try {
+      process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_changed';
+      const quarantined = await event('customer.subscription.updated', provider);
+      assert.equal(quarantined.statusCode, 200, quarantined.body);
+      assert.equal(quarantined.json().action, 'core_product_stack_provider_drift_deactivated');
+      const [failed] = await db.select().from(tenantApplicationSubscriptions).where(eq(tenantApplicationSubscriptions.id, row.id));
+      assert.equal(failed.status, 'checkout_failed'); assert.equal(failed.stripeSubscriptionId, provider.id);
+      assert.match(String((failed.metadata as any).providerValidationReason), /STACK_PRICE_CONFIGURATION_CHANGED/);
+      states.push(failed.status);
+      process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_core';
+      for (const status of ['unpaid', 'active']) {
+        provider = providerFor(row, status);
+        const object = type.startsWith('invoice.') ? { id: `in_${randomUUID()}`, parent: {
+          type: 'subscription_details', subscription_details: { subscription: { id: provider.id } } } } : provider;
+        const response = await event(type, object);
+        assert.equal(response.statusCode, 200, response.body);
+        assert.equal(response.json().action, 'core_product_stack_terminal_update_ignored');
+        const [current] = await db.select().from(tenantApplicationSubscriptions).where(eq(tenantApplicationSubscriptions.id, row.id));
+        states.push(current.status);
+      }
+      const grants = await db.select().from(tenantEntitlements).where(eq(tenantEntitlements.tenantId, row.tenantId));
+      const seats = await databasePool.query('SELECT seat_limit FROM tenants WHERE id=$1', [row.tenantId]);
+      assert.deepEqual({ states, activeCore: grants.some(grant => grant.active && grant.entitlementType === 'core_product'),
+        seatLimit: seats.rows[0].seat_limit },
+      { states: ['checkout_failed', 'checkout_failed', 'checkout_failed'], activeCore: false, seatLimit: 0 });
+      const activations = await db.execute(sql`SELECT id FROM billing_events WHERE tenant_id=${row.tenantId} AND event_type='core_product_stack_activated'`);
+      assert.equal(activations.rows.length, 0, 'no initial paid Checkout was processed');
+    } finally { process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_core'; }
+  }
+});
+
+test('PostgreSQL: actually paid active/past_due Stack can still recover catalog quarantine', async () => {
+  for (const initialStatus of ['active', 'past_due']) {
+    const row = await reset();
+    const activated = await event('checkout.session.async_payment_succeeded', sessionFor(row, 'paid'));
+    assert.equal(activated.statusCode, 200, activated.body); assert.equal(activated.json().action, 'core_product_stack_activated');
+    if (initialStatus === 'past_due') {
+      provider = providerFor(row, 'past_due');
+      assert.equal((await event('customer.subscription.updated', provider)).statusCode, 200);
+    }
+    try {
+      process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_changed'; provider = providerFor(row, 'unpaid');
+      const quarantined = await event('customer.subscription.updated', provider);
+      assert.equal(quarantined.statusCode, 200, quarantined.body);
+      const [failed] = await db.select().from(tenantApplicationSubscriptions).where(eq(tenantApplicationSubscriptions.id, row.id));
+      assert.equal(failed.status, 'past_due', 'previous activation remains eligible after quarantine');
+      assert.equal((await db.select().from(tenantEntitlements).where(eq(tenantEntitlements.tenantId, row.tenantId))).some(grant => grant.active), false);
+      process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_core';
+      for (const status of ['unpaid', 'active']) {
+        provider = providerFor(row, status);
+        const response = await event('invoice.paid', { id: `in_${randomUUID()}`, subscription: provider.id });
+        assert.equal(response.statusCode, 200, response.body);
+      }
+      const [recovered] = await db.select().from(tenantApplicationSubscriptions).where(eq(tenantApplicationSubscriptions.id, row.id));
+      assert.equal(recovered.status, 'active');
+      const grants = await db.select().from(tenantEntitlements).where(eq(tenantEntitlements.tenantId, row.tenantId));
+      assert.equal(grants.filter(grant => grant.active && grant.entitlementType === 'core_product').length, 1);
+      const seats = await databasePool.query('SELECT seat_limit FROM tenants WHERE id=$1', [row.tenantId]);
+      assert.ok(seats.rows[0].seat_limit > 0);
+    } finally { process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_core'; }
+  }
+});
+
+test('PostgreSQL: initial quarantine still records genuine mapped provider terminal states', async () => {
+  for (const status of ['canceled', 'incomplete_expired', 'paused']) {
+    const row = await reset(); provider = providerFor(row, 'active');
+    try {
+      process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_changed';
+      const quarantined = await event('customer.subscription.updated', provider);
+      assert.equal(quarantined.statusCode, 200, quarantined.body);
+      process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_core'; provider = providerFor(row, status);
+      const terminal = await event('customer.subscription.updated', provider);
+      assert.equal(terminal.statusCode, 200, terminal.body); assert.equal(terminal.json().action, 'core_product_stack_updated');
+      const [current] = await db.select().from(tenantApplicationSubscriptions).where(eq(tenantApplicationSubscriptions.id, row.id));
+      assert.equal(current.status, status === 'incomplete_expired' ? 'expired' : 'canceled');
+      assert.equal((await db.select().from(tenantEntitlements).where(eq(tenantEntitlements.tenantId, row.tenantId))).some(grant => grant.active), false);
+    } finally { process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_core'; }
+  }
+});

@@ -28,6 +28,7 @@ const fenceNames = ['StackMutationConflictError', 'stableValue', 'captureStackMu
 const productNames = ['ProductEntitlementConflictError', 'grantStackEntitlements',
   'changeFreeCompanionModule', 'deactivateSubscriptionEntitlements'];
 const billingNames = ['CommercePolicyError', 'withStackMutation', 'stripeResourceId', 'stripePeriodDate',
+  'configuredStackPriceIds', 'selectionPriceExpectations',
   'retrieveAuthoritativeSubscription', 'validateExactSubscriptionItems', 'validateAuthoritativeStackSubscription',
   'findStackSubscriptionCandidate', 'stackCheckoutAttemptId', 'isStaleStackCheckoutGeneration',
   'validateStackSubscriptionBinding', 'guardStackFailureReconciliation', 'handleStackCheckoutPaymentFailed',
@@ -191,17 +192,16 @@ export function stackFixture(initial = intent()) {
   let createHook: (() => Promise<void>) | undefined;
   let sessionHook: (() => Promise<void>) | undefined;
   let sessionStatus = 'complete';
+  const priceConfiguration = { STRIPE_PRICE_TECHDECK_MONTHLY: 'price_core_fixture',
+    STRIPE_PRICE_COMPANION_MODULE_MONTHLY: 'price_companion_fixture' };
   const globals = { ...sdk, ...tables, db, stripeInvoiceSubscriptionId,
     eq: (column: any, value: any) => ({ kind: 'eq', column, value }), and: (...parts: any[]) => ({ kind: 'and', parts }),
     sql: (strings: TemplateStringsArray, ...values: any[]) => ({ kind: 'sql', strings: [...strings], values }),
-    crypto: { randomUUID }, process: { env: { STRIPE_PRICE_TECHDECK_MONTHLY: 'price_core_fixture', STRIPE_PRICE_COMPANION_MODULE_MONTHLY: 'price_companion_fixture' } },
+    crypto: { randomUUID }, process: { env: priceConfiguration },
     isCoreProductKey: (key: string) => Object.hasOwn(sdk.CORE_PRODUCTS_BY_KEY, key),
     isStripeEnabled: () => true, assertBillingWebhookBindingReady() {}, resolveAppBaseUrl: () => 'https://app.example.invalid',
     stripeCustomerHasForeignTenant: async () => false, findGrandfatheredLegacyByStripeSubscriptionId: async () => null,
     findGrandfatheredLegacySubscription: async () => null,
-    selectionPriceExpectations: (_core: any, modules: number, seats: number, row: any) => [
-      { priceId: row.corePriceId, quantity: 1 }, ...(modules ? [{ priceId: row.companionPriceId, quantity: modules }] : []),
-      ...(seats ? [{ priceId: row.additionalSeatPriceId, quantity: seats }] : [])],
     async validatePriceExpectations() { assert.equal(context.getStore(), undefined, 'catalog must be outside DB lock'); await catalogHook?.(); },
     getStripe: () => ({ subscriptions: {
       async retrieve(id: string) { assert.equal(context.getStore(), undefined); providerCalls.push(`retrieve:${id}`);
@@ -218,6 +218,7 @@ export function stackFixture(initial = intent()) {
   const product = load(compiled.product, { ...globals, ...fence });
   const billing = load(compiled.billing, { ...globals, ...product, ...fence, runStackMutation: fence.withStackMutation });
   return { billing, product, fence, db, tables, operations, propagations, providerCalls,
+    setCorePrice(id: string) { priceConfiguration.STRIPE_PRICE_TECHDECK_MONTHLY = id; },
     get state() { return state; }, setProvider(value: any) { provider = structuredClone(value); },
     setProviderHook(value?: () => Promise<void>) { providerHook = value; },
     setCatalogHook(value?: () => Promise<void>) { catalogHook = value; },

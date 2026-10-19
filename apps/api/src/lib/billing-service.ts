@@ -2482,11 +2482,14 @@ async function handleSubscriptionUpdated(subscription: any, expectedStack?: Stac
         : providerStatus;
       const providerCarriesAccess = ['active', 'trialing', 'past_due'].includes(providerSubscription.status);
       const recoveryEligible = ['active', 'trialing', 'past_due', 'canceling'].includes(current.status);
-      if (providerCarriesAccess && !recoveryEligible) {
+      const providerIsTerminal = ['canceled', 'expired'].includes(providerStatus);
+      if (!recoveryEligible && !providerIsTerminal) {
         // Only checkout completion may establish a new paid grant. Provider
         // updates can repair an already-activated/quarantined stack, but cannot
         // revive canceled/expired contracts or bypass checkout after a failed
-        // pre-checkout reconciliation.
+        // pre-checkout reconciliation. Non-access provider states such as
+        // unpaid/incomplete also map to past_due; they must not promote a failed
+        // initial checkout into eligibility for a later active recovery grant.
         await deactivateSubscriptionEntitlements(stripeSubId, { executor: tx, tenantId: current.tenantId });
         return {
           handled: true,
