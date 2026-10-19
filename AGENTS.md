@@ -86,6 +86,7 @@ corepack pnpm typecheck
 
 # Requires an isolated PostgreSQL URL and non-production test secrets.
 $env:APP_ENV='test'; $env:NODE_ENV='test'
+$env:PARITY_DATABASE_IS_DISPOSABLE='1'
 corepack pnpm --dir apps/api test
 
 $env:INTERNAL_API_URL='http://localhost:5001'
@@ -93,6 +94,10 @@ corepack pnpm build:production
 corepack pnpm preflight:production -- --core
 corepack pnpm db:plan
 ```
+
+Set the disposable `DATABASE_URL` before starting the test process. The shared
+schema fixture validates the URL captured by its database pool and refuses
+missing, remote, persistent-name or query-retargeted targets before any DDL.
 
 The root package defines `corepack pnpm lint` (ESLint with zero warnings), and
 the local release gate runs it as a required stage. There is no repository-wide

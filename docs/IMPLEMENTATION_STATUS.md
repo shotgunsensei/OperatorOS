@@ -1,5 +1,21 @@
 # OperatorOS implementation status
 
+## Fixture and runner integration verification (2026-10-19)
+
+The reviewed fixture-target and standalone-runner changes from draft PRs 128
+and 129 are combined on merged-webhook main `09897e223be28a18e2c52d40b36cdf180275de33`.
+Their implementation and test Git blobs are unchanged; only their overlapping
+documentation insertions required reconciliation. Fresh local verification
+passes 33 source-check executions across three groups (30 unique tests), two
+compiled disabled-runner checks, four workspace typechecks, strict changed-file
+typing, zero-warning root lint and runner compilation. No new dependencies or
+database connections were used. Independent integration review passed, including
+30 unique source tests together and two compiled fixtures. One combined
+exact-head hosted release gate remains required before source merge.
+Implementation verified; deployment unverified. Existing production v67 versus
+historical live v65 and backup/write-pause/approval gates remain unchanged.
+See [the integration receipt and commands](reviews/2026-10-19/SECURITY_FIXTURE_RUNNER_INTEGRATION.md).
+
 ## Outbound webhook egress candidate (2026-10-19)
 
 The isolated source candidate pins each HTTPS connection to its validated DNS
@@ -12,6 +28,28 @@ v67 plan and the 38-page production build pass.
 Initial sandbox/database failures are retained, not converted to skips.
 Full release/deployment/database acceptance remains unverified. No production
 or module-state change is claimed. See the [scope, commands and open gates](reviews/2026-10-19/WEBHOOK_EGRESS_REVIEW.md).
+
+## Direct schema fixture target gate (2026-10-19)
+
+The shared direct-test schema bootstrap now reuses the release runner's
+disposable target guard before DDL and checks the URL actually captured by
+pg.Pool. Eight offline checks pass, including 15 sentinel probes proving
+rejected targets make zero connection attempts and valid disposable controls
+reach only an intercepted SQL boundary. Strict changed-file typing and
+zero-warning root lint pass. No database was connected, dependency acquired,
+production schema changed or module state promoted. Complete disposable API
+and Node 20 CI remain gates. See [the exact source and commands](reviews/2026-10-19/SCHEMA_FIXTURE_TARGET_GUARD.md).
+
+## Standalone runner private default (2026-10-19)
+
+The standalone legacy runner listener defaults to 127.0.0.1 and retains explicit
+host overrides. Canonical production remains runner-disabled and does not
+launch this standalone surface. Nine focused source checks and two compiled
+runtime checks, owning-package types/build, strict changed-test typing and
+zero-warning root lint pass using existing dependencies. The runtime fixtures
+use disabled execution and task-local loopback only. No service deployment,
+host setting, authentication scheme, package, database or module state changes.
+See [evidence and legacy deployment limits](reviews/2026-10-19/RUNNER_DEFAULT_LOOPBACK.md).
 
 
 ## Billing handler and fixture validation
