@@ -1,5 +1,22 @@
 # OperatorOS module parity index
 
+## Invoice observation and managed-number compatibility (2026-10-19)
+
+Module parity and launch states remain unchanged, including OutCall's
+coming-soon state. PR131's canonical invoice/truthful-read integration is
+source-merged with terminal required exact-tree CI. The next source candidate
+acknowledges only verified/receipted `invoice.created` observations, including
+saved-event retry, without entitlements or propagation. Managed-number invoice
+reference compatibility is repaired without changing provider-current-invoice,
+tenant/customer/subscription, quantity or grace policy. Lane metadata support
+remains deferred because its settlement authority needs separate review.
+
+Independent source reviews pass, and combined 228 selected native regressions,
+zero-warning lint and four workspace typechecks pass; full combined exact-head
+hosted SQL/release evidence is still required. These isolated source tests do
+not establish provider delivery, paid-feature acceptance or production launch.
+[Scope, commands and remaining gates](../reviews/2026-10-19/INVOICE_EVENT_FOLLOWUP_INTEGRATION.md).
+
 ## October 23 billing integrity and launch evidence (2026-10-19)
 
 Module parity, catalog/launch policy and OutCall coming-soon state are unchanged.

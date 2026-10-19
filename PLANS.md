@@ -1,5 +1,29 @@
 # OperatorOS completion plan
 
+## Verified invoice observations and number references (2026-10-19)
+
+PR131 merged as `7c077cce8ba6c6471014ffe264b85ab95ddd3735` after
+independent review and terminal successful release/vector checks; its merged
+tree equals the reviewed/tested tree. A first-attempt pricing hydration error
+recovered under the existing CI retry policy and remains unexplained; the
+examined pricing/init/config/test chain is unchanged and local SSR controls pass.
+
+The next bounded source candidate receipts `invoice.created` as an observation
+in verified live dispatch and acquired saved-receipt retry, with no settlement
+or propagation. Managed-number invoice references reuse the shared normalizer,
+including expanded modern references and fail-closed conflicts, while keeping
+legacy forms and all existing provider/binding/quantity/grace guards. Other
+financial-event failures still retry. Lane metadata support is not broadened;
+its weaker settlement authority needs separate repair. Module/launch states,
+pricing, dependencies, schema67 and provider configuration remain unchanged.
+
+Independent component reviews and fresh combined 228 focused tests, zero-warning
+lint and four workspace typechecks pass. Full combined exact-tree release CI,
+including two new guarded SQL receipt/retry cases, remains required before
+source merge. No local disposable PostgreSQL fixture was confirmed. Protected
+provider/target/recovery and controlled deployed acceptance remain launch gates.
+[Follow-up scope and evidence](docs/reviews/2026-10-19/INVOICE_EVENT_FOLLOWUP_INTEGRATION.md).
+
 ## October 23 launch decision (2026-10-19)
 
 Prioritize OperatorOS account/organization/access and the bounded TradeFlowKit

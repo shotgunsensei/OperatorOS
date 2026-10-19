@@ -1,5 +1,29 @@
 # OperatorOS implementation status
 
+## Invoice event follow-up integration (2026-10-19)
+
+PR131 is source-merged as `7c077cce8ba6c6471014ffe264b85ab95ddd3735`;
+required release 14 scopes and vector 32 completed successfully at the exact
+reviewed tree. This supersedes its pending CI/merge statements below. The
+existing pricing test's first-attempt React418 recovered by the unchanged
+automatic retry remains disclosed and unexplained; no speculative patch or
+error waiver was made.
+
+The follow-up adds an explicit no-settlement `invoice.created` observation
+shared by verified/claimed dispatch and leased saved-receipt retry. The five
+other unsupported plain financial events and actual paid/feature handler
+failures keep their retry behavior. Managed-number invoices normalize current
+expanded/string references once, preserving legacy inputs and provider-current
+invoice, stored tenant/customer/subscription, quantity and grace controls.
+All nine component blobs are preserved. Independent component suites passed
+166 and 183 respectively (overlapping); fresh combined selected 228 pass with
+zero-warning lint and four workspace types. API/SDK compilation and the full
+exact-head isolated SQL/release gate are tracked in the integration receipt.
+No local SQL persistence or deployed payment acceptance is claimed. No module
+state is promoted, lane metadata support widened, dependency/schema changed,
+provider enabled, recipient contacted or production operation performed.
+[Integration evidence](reviews/2026-10-19/INVOICE_EVENT_FOLLOWUP_INTEGRATION.md).
+
 ## October 23 launch billing integration (2026-10-19)
 
 The launch candidate combines canonical Stripe invoice subscription compatibility
