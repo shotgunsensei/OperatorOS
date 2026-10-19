@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { meApi, tenantApi, getActiveTenantId, setActiveTenantId } from '@/lib/auth';
 import { useAuth } from './AuthProvider';
 
@@ -46,20 +46,28 @@ export function useTenant() {
 }
 
 export default function TenantProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, captureIdentity } = useAuth();
   const [tenants, setTenants] = useState<TenantSummary[]>([]);
   const [allTenants, setAllTenants] = useState<TenantSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ownsState, setOwnsState] = useState<() => boolean>(() => () => false);
+  const mounted = useRef(true);
+  const requestVersion = useRef(0);
 
   const isSuperAdmin = (user as any)?.platformRole === 'super_admin';
 
   const refresh = useCallback(async () => {
+    const identityCurrent = captureIdentity(user);
+    if (!mounted.current || !identityCurrent()) return;
+    const version = ++requestVersion.current;
+    const current = () => mounted.current && requestVersion.current === version && identityCurrent();
     if (!user) {
       setTenants([]);
       setAllTenants([]);
       setActiveId(null);
       setActiveTenantId(null);
+      setOwnsState(() => identityCurrent);
       setLoading(false);
       return;
     }
@@ -73,10 +81,12 @@ export default function TenantProvider({ children }: { children: React.ReactNode
         meApi.tenants(),
         isSuperAdmin ? meApi.allTenants().catch(() => ({ tenants: [] })) : Promise.resolve({ tenants: [] }),
       ]);
+      if (!current()) return;
       const list: TenantSummary[] = me?.tenants ?? [];
       const all: TenantSummary[] = allRes?.tenants ?? [];
       setTenants(list);
       setAllTenants(isSuperAdmin ? all : []);
+      setOwnsState(() => identityCurrent);
 
       // Visible to *this* user — members for everyone, members ∪ all for super-admins.
       const visibleIds = new Set<string>(list.map((t) => t.id));
@@ -92,33 +102,46 @@ export default function TenantProvider({ children }: { children: React.ReactNode
       setActiveId(candidate);
       setActiveTenantId(candidate);
     } catch {
+      if (!current()) return;
       setTenants([]);
       setAllTenants([]);
       setActiveId(null);
       setActiveTenantId(null);
+      setOwnsState(() => identityCurrent);
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [user, isSuperAdmin]);
+  }, [user, isSuperAdmin, captureIdentity]);
 
   useEffect(() => {
+    mounted.current = true;
     refresh();
+    return () => { mounted.current = false; requestVersion.current++; };
   }, [refresh]);
 
   const switchTenant = useCallback(async (tenantId: string) => {
+    const identityCurrent = captureIdentity(user);
+    if (!mounted.current || !identityCurrent()) return;
     await tenantApi.switch(tenantId);
+    if (!mounted.current || !identityCurrent()) return;
+    requestVersion.current++;
     setActiveTenantId(tenantId);
     setActiveId(tenantId);
     // Hard reload so every cached query/panel re-fetches with the new
     // X-Tenant-Id header. Simpler and safer than threading invalidation
     // through every consumer.
     if (typeof window !== 'undefined') window.location.reload();
-  }, []);
+  }, [user, captureIdentity]);
 
+  // Never present another accepted identity's cached memberships while its
+  // replacement request is pending, including a fresh login with the same ID.
+  const stateCurrent = ownsState();
+  const memberTenants = stateCurrent ? tenants : [];
+  const adminTenants = stateCurrent ? allTenants : [];
   // Merge: members list is authoritative for role; super-admin sees all.
   const visibleTenants = isSuperAdmin
-    ? mergeTenantLists(tenants, allTenants)
-    : tenants;
+    ? mergeTenantLists(memberTenants, adminTenants)
+    : memberTenants;
 
   const activeTenant =
     visibleTenants.find((t) => t.id === activeId) ?? null;
@@ -126,11 +149,11 @@ export default function TenantProvider({ children }: { children: React.ReactNode
 
   return (
     <TenantContext.Provider value={{
-      tenants,
-      allTenants,
+      tenants: memberTenants,
+      allTenants: adminTenants,
       activeTenant,
       activeRole,
-      loading,
+      loading: stateCurrent ? loading : Boolean(user),
       switchTenant,
       refresh,
     }}>

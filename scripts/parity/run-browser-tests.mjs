@@ -117,6 +117,7 @@ try {
       'e2e/audience-lanes.spec.ts',
       'e2e/pricing-selection.spec.ts',
       'e2e/billing-read-truth.spec.ts',
+      'e2e/auth-tenant-lifetimes.spec.ts',
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);
