@@ -2037,12 +2037,16 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     if (!current) return reply.code(404).send({ error: 'Invoice not found', code: 'INVOICE_NOT_FOUND' });
     const allowed = current.status === 'draft' ? ['sent', 'void'] : current.status === 'sent' ? ['processing', 'void'] : current.status === 'processing' ? ['void'] : [];
     if (!allowed.includes(input.status)) return reply.code(409).send({ error: 'Invalid invoice transition', code: 'INVOICE_TRANSITION_INVALID' });
-    const [updated] = await db.update(tradeflowkitInvoices).set({
-      status: input.status, ...(input.status === 'sent' ? { sentAt: new Date() } : {}),
-      version: sql`${tradeflowkitInvoices.version} + 1`, updatedAt: new Date(),
-    }).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), eq(tradeflowkitInvoices.version, input.expectedVersion), eq(tradeflowkitInvoices.status, current.status), isNull(tradeflowkitInvoices.deletedAt))).returning();
+    const [updated] = await db.transaction(async (tx) => {
+      const rows = await tx.update(tradeflowkitInvoices).set({
+        status: input.status, ...(input.status === 'sent' ? { sentAt: new Date() } : {}),
+        version: sql`${tradeflowkitInvoices.version} + 1`, updatedAt: new Date(),
+      }).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), eq(tradeflowkitInvoices.version, input.expectedVersion), eq(tradeflowkitInvoices.status, current.status), isNull(tradeflowkitInvoices.deletedAt))).returning();
+      if (!rows[0]) return [];
+      await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'status_changed', entityType: 'tradeflowkit_invoice', entityId: id, metadata: { fromStatus: current.status, toStatus: rows[0].status } });
+      return rows;
+    });
     if (!updated) return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
-    await db.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'status_changed', entityType: 'tradeflowkit_invoice', entityId: id, metadata: { fromStatus: current.status, toStatus: updated.status } });
     return updated;
   });
 

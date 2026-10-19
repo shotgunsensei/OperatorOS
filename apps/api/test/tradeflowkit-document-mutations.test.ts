@@ -2,7 +2,8 @@ process.env.SESSION_SECRET ||= 'operatoros-tradeflowkit-document-mutations-test-
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { and, eq } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+import { and, eq, sql } from 'drizzle-orm';
 import { Pool } from 'pg';
 import { db } from '../src/db.js';
 import {
@@ -312,6 +313,86 @@ test('direct invoices support safe draft mutation and refuse unauthorized or his
   });
   assert.equal(archivePaid.statusCode, 409, archivePaid.body);
   assert.equal(archivePaid.json().code, 'INVOICE_NOT_ARCHIVABLE');
+});
+
+test('invoice transition rolls back a scoped activity fault and permits the identical retry', async () => {
+  // Revalidate the pool captured by db.ts before installing any temporary DDL.
+  // The shared fixture refuses remote, persistent or query-retargeted targets.
+  await ensureSchemaReady();
+  const [customer] = await db.select().from(tradeflowkitCustomers).where(eq(
+    tradeflowkitCustomers.tenantId, ownerA.currentTenantId,
+  )).limit(1);
+  assert.ok(customer);
+  const create = async () => {
+    const response = await app.inject({
+      method: 'POST', url: '/v1/modules/tradeflowkit/invoices',
+      headers: headers(ownerA, ownerA.currentTenantId),
+      payload: { customerId: customer.id, lineItems: [{ description: 'Synthetic atomic transition', quantity: 1, unitPriceCents: 25000 }] },
+    });
+    assert.equal(response.statusCode, 201, response.body);
+    return response.json();
+  };
+  const invoice = await create();
+  const other = await create();
+  const scope = randomUUID().replaceAll('-', '');
+  const functionName = `tfk_transition_fault_${scope}`;
+  const triggerName = `tfk_transition_trigger_${scope}`;
+  assert.match(invoice.id, /^[0-9a-f-]{36}$/i);
+  assert.match(ownerA.currentTenantId, /^[0-9a-f-]{36}$/i);
+  // Only UUIDs from isolated fixtures and generated identifier-safe names are
+  // interpolated into DDL. PostgreSQL utility statements cannot bind these
+  // identifiers. The trigger affects exactly this synthetic invoice/tenant.
+  let functionCreated = false;
+  let triggerCreated = false;
+  const snapshot = async () => ({
+    invoice: await db.select().from(tradeflowkitInvoices).where(and(
+      eq(tradeflowkitInvoices.id, invoice.id), eq(tradeflowkitInvoices.tenantId, ownerA.currentTenantId),
+    )),
+    activity: await db.select().from(activityFeed).where(and(
+      eq(activityFeed.entityId, invoice.id), eq(activityFeed.tenantId, ownerA.currentTenantId),
+    )),
+  });
+  const transition = (document: any, user = ownerA) => app.inject({
+    method: 'POST', url: `/v1/modules/tradeflowkit/invoices/${document.id}/transition`,
+    headers: headers(user, user.currentTenantId), payload: { expectedVersion: document.version, status: 'sent' },
+  });
+  try {
+    await db.execute(sql.raw(`CREATE FUNCTION public.${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'SYNTHETIC_TFK_TRANSITION_ACTIVITY_FAULT'; END; $$`));
+    functionCreated = true;
+    await db.execute(sql.raw(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON activity_feed FOR EACH ROW
+      WHEN (NEW.tenant_id = '${ownerA.currentTenantId}' AND NEW.entity_id = '${invoice.id}'
+        AND NEW.entity_type = 'tradeflowkit_invoice' AND NEW.action = 'status_changed')
+      EXECUTE FUNCTION public.${functionName}()`));
+    triggerCreated = true;
+    const before = await snapshot();
+    const foreign = await transition(invoice, ownerB);
+    assert.equal(foreign.statusCode, 404, foreign.body);
+    assert.deepEqual(await snapshot(), before);
+    // A different owned document proves the injected failure is narrowly scoped.
+    const unaffected = await transition(other);
+    assert.equal(unaffected.statusCode, 200, unaffected.body);
+    const failed = await transition(invoice);
+    assert.equal(failed.statusCode, 500, failed.body);
+    assert.deepEqual(await snapshot(), before, 'an activity failure must roll back invoice status, timestamps and version');
+    await db.execute(sql.raw(`DROP TRIGGER ${triggerName} ON activity_feed`));
+    triggerCreated = false;
+    const retry = await transition(invoice);
+    assert.equal(retry.statusCode, 200, retry.body);
+    assert.equal(retry.json().status, 'sent');
+    assert.equal(retry.json().version, invoice.version + 1);
+    const afterRetry = await snapshot();
+    const transitions = afterRetry.activity.filter(entry => entry.action === 'status_changed');
+    assert.equal(transitions.length, 1);
+    assert.deepEqual(transitions[0].metadata, { fromStatus: 'draft', toStatus: 'sent' });
+    const duplicate = await transition(invoice);
+    assert.equal(duplicate.statusCode, 409, duplicate.body);
+    assert.equal(duplicate.json().code, 'INVOICE_TRANSITION_INVALID');
+    assert.deepEqual(await snapshot(), afterRetry);
+  } finally {
+    if (triggerCreated) await db.execute(sql.raw(`DROP TRIGGER IF EXISTS ${triggerName} ON activity_feed`));
+    if (functionCreated) await db.execute(sql.raw(`DROP FUNCTION IF EXISTS public.${functionName}()`));
+  }
 });
 
 test('quote and converted job survive API shutdown and remain visible through a fresh database connection', async () => {

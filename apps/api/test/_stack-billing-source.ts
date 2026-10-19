@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import ts from 'typescript';
 import * as sdk from '@operatoros/sdk';
 import { stripeInvoiceSubscriptionId } from '../src/lib/stripe-invoice-subscription.js';
+import { resolveBoundStackFailedPayment, type FailedPaymentReadClient } from '../src/lib/stripe-failed-payment-correlation.js';
 
 // Actual source bodies, with only the DB/provider/catalog boundary substituted.
 // No production module, environment, HTTP client or database pool is imported.
@@ -35,7 +36,7 @@ const billingNames = ['CommercePolicyError', 'withStackMutation', 'stripeResourc
   'quarantineStackSubscription', 'reconcileStackSubscriptionBeforeCheckout', 'mapStripeStatus',
   'handleSubscriptionUpdated', 'handleSubscriptionDeleted', 'handleSubscriptionCreated',
   'handleCheckoutCompleted', 'handleStackCheckoutCompleted', 'handlePaymentFailed', 'handleInvoicePaid',
-  'processWebhookEvent', 'createStackCheckoutSession', 'cancelSubscription', 'reactivateSubscription',
+  'processWebhookEvent', 'handleBoundStackPaymentIntentFailed', 'createStackCheckoutSession', 'cancelSubscription', 'reactivateSubscription',
   'changeStackFreeCompanion'];
 const compiled = { fence: compile('stack-mutation-fence', fenceNames),
   product: compile('product-entitlements', productNames), billing: compile('billing-service', billingNames) };
@@ -89,12 +90,16 @@ const tables = { tenantApplicationSubscriptions: table('stacks'), tenantEntitlem
   tenants: table('tenants'), users: table('users'), subscriptions: table('legacy'),
   billingEvents: table('events'), activityFeed: table('activity') };
 
-export function stackFixture(initial = intent()) {
+export function stackFixture(initial = intent(), options: {
+  readClient?: Pick<FailedPaymentReadClient, 'paymentIntents' | 'invoicePayments' | 'invoices'>;
+  stripeMode?: string;
+} = {}) {
   let state: Record<string, any[]> = { stacks: initial ? [structuredClone(initial)] : [], entitlements: [],
     tenants: [{ id: tenantId, seatLimit: 0, metadata: {} }], users: [{ id: userId, email: 'owner@example.invalid', name: 'Synthetic owner' }],
     legacy: [], events: [], activity: [] };
   const operations: Array<{ tx: number; kind: string; table?: string; selectedTenants?: string[] }> = [];
   const propagations: string[] = [];
+  const propagationSubjects: Array<{ tenantId?: string; userId?: string; actorUserId: string | null }> = [];
   const providerCalls: string[] = [];
   const context = new AsyncLocalStorage<number>();
   let txSequence = 0;
@@ -194,7 +199,8 @@ export function stackFixture(initial = intent()) {
   let sessionStatus = 'complete';
   const priceConfiguration = { STRIPE_PRICE_TECHDECK_MONTHLY: 'price_core_fixture',
     STRIPE_PRICE_COMPANION_MODULE_MONTHLY: 'price_companion_fixture' };
-  const globals = { ...sdk, ...tables, db, stripeInvoiceSubscriptionId,
+  const globals = { ...sdk, ...tables, db, stripeInvoiceSubscriptionId, resolveBoundStackFailedPayment,
+    STRIPE_MODE: options.stripeMode ?? 'test',
     eq: (column: any, value: any) => ({ kind: 'eq', column, value }), and: (...parts: any[]) => ({ kind: 'and', parts }),
     sql: (strings: TemplateStringsArray, ...values: any[]) => ({ kind: 'sql', strings: [...strings], values }),
     crypto: { randomUUID }, process: { env: priceConfiguration },
@@ -203,7 +209,7 @@ export function stackFixture(initial = intent()) {
     stripeCustomerHasForeignTenant: async () => false, findGrandfatheredLegacyByStripeSubscriptionId: async () => null,
     findGrandfatheredLegacySubscription: async () => null,
     async validatePriceExpectations() { assert.equal(context.getStore(), undefined, 'catalog must be outside DB lock'); await catalogHook?.(); },
-    getStripe: () => ({ subscriptions: {
+    getStripe: () => ({ ...options.readClient, subscriptions: {
       async retrieve(id: string) { assert.equal(context.getStore(), undefined); providerCalls.push(`retrieve:${id}`);
         const snapshot = structuredClone(provider); await providerHook?.(); return snapshot; },
       async update(id: string, input: any) { assert.equal(context.getStore(), undefined); providerCalls.push(`update:${id}`);
@@ -212,12 +218,16 @@ export function stackFixture(initial = intent()) {
       async create() { assert.equal(context.getStore(), undefined); providerCalls.push('create'); await createHook?.();
         return { id: 'cs_new_fixture', url: 'https://checkout.example.invalid/new' }; } } } }),
     writeAudit: async (_entry: any, _request: any, tx: any) => { assert.ok(tx); await tx.insert(tables.activityFeed).values({ audit: true }); },
-    require: () => ({ schedulePropagation: (id: string) => propagations.push(id), schedulePropagationForUser: (id: string) => propagations.push(id) }),
+    require: () => ({ schedulePropagation: (id: string, options: { actorUserId: string | null }) => {
+      propagations.push(id); propagationSubjects.push({ tenantId: id, actorUserId: options.actorUserId });
+    }, schedulePropagationForUser: (id: string) => {
+      propagations.push(id); propagationSubjects.push({ userId: id, actorUserId: id });
+    } }),
   };
   const fence = load(compiled.fence, globals);
   const product = load(compiled.product, { ...globals, ...fence });
   const billing = load(compiled.billing, { ...globals, ...product, ...fence, runStackMutation: fence.withStackMutation });
-  return { billing, product, fence, db, tables, operations, propagations, providerCalls,
+  return { billing, product, fence, db, tables, operations, propagations, propagationSubjects, providerCalls,
     setCorePrice(id: string) { priceConfiguration.STRIPE_PRICE_TECHDECK_MONTHLY = id; },
     get state() { return state; }, setProvider(value: any) { provider = structuredClone(value); },
     setProviderHook(value?: () => Promise<void>) { providerHook = value; },
