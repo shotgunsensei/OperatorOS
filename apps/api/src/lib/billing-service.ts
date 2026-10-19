@@ -34,6 +34,7 @@ import {
 import { writeAudit } from './audit.js';
 import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 import { recurringStripePriceError } from './stripe-price-contract.js';
+import { stripeInvoiceSubscriptionId } from './stripe-invoice-subscription.js';
 
 // Task #66: `apps/api/package.json` is `"type":"module"`, so the previous
 // `require('stripe')` inside `getStripe()` was undefined and every checkout
@@ -1803,7 +1804,9 @@ export async function processWebhookEvent(event: { type: string; data: { object:
       ?? obj?.metadata?.user_id
       ?? null;
     let exactTenantId: string | null = null;
-    const stripeSubId = obj?.subscription ?? obj?.id ?? null;
+    const stripeSubId = type.startsWith('invoice.')
+      ? stripeInvoiceSubscriptionId(obj)
+      : obj?.subscription ?? obj?.id ?? null;
     if (stripeSubId && typeof stripeSubId === 'string') {
       const [stackRow] = await db.select({
         tenantId: tenantApplicationSubscriptions.tenantId,
@@ -2466,7 +2469,7 @@ async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProc
 }
 
 async function handlePaymentFailed(invoice: any): Promise<WebhookProcessResult> {
-  const stripeSubId = stripeResourceId(invoice.subscription);
+  const stripeSubId = stripeInvoiceSubscriptionId(invoice);
   if (!stripeSubId) return { handled: false, error: 'No subscription on invoice' };
 
   const [stackSub] = await db.select().from(tenantApplicationSubscriptions)
@@ -2489,7 +2492,7 @@ async function handlePaymentFailed(invoice: any): Promise<WebhookProcessResult> 
 }
 
 async function handleInvoicePaid(invoice: any): Promise<WebhookProcessResult> {
-  const stripeSubId = stripeResourceId(invoice.subscription);
+  const stripeSubId = stripeInvoiceSubscriptionId(invoice);
   if (!stripeSubId) return { handled: false, error: 'No subscription on invoice' };
 
   const [stackSub] = await db.select().from(tenantApplicationSubscriptions)

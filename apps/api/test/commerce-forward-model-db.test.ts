@@ -1189,6 +1189,94 @@ test('provider item drift deactivates access, exact correction recovers it, and 
   assert.equal(reactivated.cancelAtPeriodEnd, false);
 });
 
+test('invoice webhooks accept current and legacy references without granting invoice-authoritative access', async () => {
+  const [stack] = await db.select().from(tenantApplicationSubscriptions)
+    .where(eq(tenantApplicationSubscriptions.tenantId, owner.currentTenantId!));
+  const checkout = stackCheckoutEvent({
+    id: 'evt_invoice_provider_fixture',
+    applicationSubscriptionId: stack.id,
+    checkoutAttemptId: String((stack.metadata as any)?.checkout_attempt_id),
+  });
+  const authoritative = providerSubscriptionForCheckout(checkout);
+  const parent = (subscription: unknown) => ({
+    type: 'subscription_details', subscription_details: { subscription },
+  });
+  const shapes = [
+    { subscription: authoritative.id },
+    { subscription: { id: authoritative.id } },
+    { parent: parent(authoritative.id) },
+    { parent: parent({ id: authoritative.id }) },
+    { subscription: authoritative.id, parent: parent({ id: authoritative.id }) },
+  ];
+  let sequence = 0;
+  for (const type of ['invoice.paid', 'invoice.payment_succeeded', 'invoice.payment_failed']) {
+    for (const reference of shapes) {
+      sequence++;
+      // Even a failed invoice must follow the latest bound provider state,
+      // while paid invoices cannot grant from their own untrusted metadata.
+      providerSubscriptions.set(authoritative.id, authoritative);
+      const event = {
+        id: `evt_invoice_compat_${sequence}`, type,
+        data: { object: {
+          id: `in_contract_${sequence}`, customer: 'cus_untrusted_invoice_hint',
+          metadata: { tenantId: tenantAdmin.currentTenantId!, userId: tenantAdmin.id },
+          ...reference,
+        } },
+      };
+      const response = await sendStackWebhook(event);
+      assert.equal(response.statusCode, 200, response.body);
+      assert.equal(response.json().action, 'core_product_stack_updated');
+      const [receipt] = await db.select().from(billingEvents)
+        .where(eq(billingEvents.stripeEventId, event.id));
+      assert.ok(receipt.processedAt, 'successful current/legacy invoice receives a processed receipt');
+      const replay = await sendStackWebhook(event);
+      assert.equal(replay.statusCode, 200, replay.body);
+      assert.equal(replay.json().action, 'duplicate_ignored');
+      const [current] = await db.select().from(tenantApplicationSubscriptions)
+        .where(eq(tenantApplicationSubscriptions.id, stack.id));
+      assert.equal(current.status, 'active');
+      assert.equal(current.tenantId, owner.currentTenantId!);
+      assert.equal(current.stripeCustomerId, authoritative.customer);
+    }
+  }
+  for (const [label, reference] of [
+    ['conflict', { subscription: 'sub_foreign', parent: parent(authoritative.id) }],
+    ['non_subscription', { parent: { ...parent(authoritative.id), type: 'quote_details' } }],
+  ] as const) {
+    const eventId = `evt_invoice_rejected_${label}`;
+    const response = await sendStackWebhook({
+      id: eventId, type: 'invoice.paid',
+      data: { object: { id: 'in_rejected', ...reference } },
+    });
+    assert.equal(response.statusCode, 503, response.body);
+    const [receipt] = await db.select().from(billingEvents)
+      .where(eq(billingEvents.stripeEventId, eventId));
+    assert.equal(receipt.processedAt, null, 'ambiguous/invalid invoice remains retryable rather than acknowledged');
+    assert.equal((receipt.metadata as any)?.processingState, 'failed');
+  }
+  const invalidProvider = providerSubscriptionForCheckout(checkout, { seatQuantity: 12 });
+  providerSubscriptions.set(authoritative.id, invalidProvider);
+  const drift = await sendStackWebhook({
+    id: 'evt_invoice_modern_provider_drift', type: 'invoice.paid',
+    data: { object: { id: 'in_drift', parent: parent(authoritative.id) } },
+  });
+  assert.equal(drift.statusCode, 200, drift.body);
+  assert.equal(drift.json().action, 'core_product_stack_provider_drift_deactivated');
+  assert.equal((await db.select().from(tenantEntitlements).where(and(
+    eq(tenantEntitlements.tenantId, owner.currentTenantId!), eq(tenantEntitlements.active, true),
+  ))).length, 0, 'a current-shaped paid invoice cannot bypass exact provider-item validation');
+  providerSubscriptions.set(authoritative.id, authoritative);
+  const recovery = await sendStackWebhook({
+    id: 'evt_invoice_modern_provider_corrected', type: 'invoice.payment_failed',
+    data: { object: { id: 'in_recovery', parent: parent({ id: authoritative.id }) } },
+  });
+  assert.equal(recovery.statusCode, 200, recovery.body);
+  assert.equal(recovery.json().action, 'core_product_stack_updated');
+  assert.equal((await db.select().from(tenantEntitlements).where(and(
+    eq(tenantEntitlements.tenantId, owner.currentTenantId!), eq(tenantEntitlements.active, true),
+  ))).length, 7, 'a failed invoice cannot regress the freshly revalidated active provider subscription');
+});
+
 test('legacy plan and per-module purchase APIs are closed while existing grants remain readable', async () => {
   for (const url of ['/v1/billing/subscribe', '/v1/billing/create-checkout-session']) {
     const response = await app.inject({
