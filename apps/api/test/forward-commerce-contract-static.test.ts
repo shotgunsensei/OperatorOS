@@ -70,7 +70,9 @@ test('stack billing is crash-recoverable, provider-backed, and strictly webhook-
   assert.match(billing, /checkout_attempt_id:\s*crypto\.randomUUID\(\)/);
   assert.match(billing, /operatoros-stack-checkout-\$\{checkoutAttemptId\}/);
   assert.match(billing, /retryPendingWithoutSession/);
-  assert.match(billing, /eq\(tenantApplicationSubscriptions\.status, existingStatusForClaim!\)/);
+  // The old ID/status-only claim allowed an awaiting continuation to target a
+  // replacement attempt. Behavioral interleavings live in stack-mutation-fence.
+  assert.match(billing, /withStackMutation\(existingSnapshot!, async \(tx, current\)/);
   assert.match(billing, /STRIPE_CHECKOUT_INVALID_RESPONSE/);
   assert.match(billing, /STRIPE_CHECKOUT_UNAVAILABLE/);
   assert.match(billing, /STACK_PROVIDER_MANAGEMENT_REQUIRED/);

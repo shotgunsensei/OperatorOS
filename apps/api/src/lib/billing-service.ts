@@ -35,6 +35,11 @@ import { writeAudit } from './audit.js';
 import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 import { recurringStripePriceError } from './stripe-price-contract.js';
 import { stripeInvoiceSubscriptionId } from './stripe-invoice-subscription.js';
+import {
+  captureStackMutationSnapshot, StackMutationConflictError,
+  withStackMutation as runStackMutation,
+  type StackMutationSnapshot, type StackRow, type StackTransaction,
+} from './stack-mutation-fence.js';
 
 // Task #66: `apps/api/package.json` is `"type":"module"`, so the previous
 // `require('stripe')` inside `getStripe()` was undefined and every checkout
@@ -215,6 +220,21 @@ export class CommercePolicyError extends Error {
   ) {
     super(message);
     this.name = 'CommercePolicyError';
+  }
+}
+
+async function withStackMutation<T>(
+  expected: StackMutationSnapshot,
+  action: (tx: StackTransaction, current: StackRow) => Promise<T>,
+  executor?: StackTransaction,
+): Promise<T> {
+  try {
+    return await runStackMutation(expected, action, executor);
+  } catch (error) {
+    if (error instanceof StackMutationConflictError) {
+      throw new CommercePolicyError('STACK_CHECKOUT_IN_PROGRESS', error.message, 409);
+    }
+    throw error;
   }
 }
 
@@ -550,6 +570,7 @@ export async function cancelSubscription(userId: string, tenantId: string): Prom
   const [stack] = await db.select().from(tenantApplicationSubscriptions)
     .where(eq(tenantApplicationSubscriptions.tenantId, tenantId)).limit(1);
   if (stack && ['active', 'trialing', 'past_due', 'canceling'].includes(stack.status)) {
+    const snapshot = captureStackMutationSnapshot(stack);
     if (!isStripeEnabled() || !stack.stripeSubscriptionId) {
       throw new CommercePolicyError(
         'STACK_PROVIDER_MANAGEMENT_REQUIRED',
@@ -558,12 +579,14 @@ export async function cancelSubscription(userId: string, tenantId: string): Prom
       );
     }
     await getStripe().subscriptions.update(stack.stripeSubscriptionId, { cancel_at_period_end: true });
-    await db.update(tenantApplicationSubscriptions).set({
-      status: 'canceling', cancelAtPeriodEnd: true, updatedAt: new Date(),
-    }).where(eq(tenantApplicationSubscriptions.id, stack.id));
-    await db.insert(billingEvents).values({
-      userId, tenantId, eventType: 'application_stack_cancel_scheduled',
-      metadata: { stripeSubscriptionId: stack.stripeSubscriptionId },
+    await withStackMutation(snapshot, async tx => {
+      await tx.update(tenantApplicationSubscriptions).set({
+        status: 'canceling', cancelAtPeriodEnd: true, updatedAt: new Date(),
+      }).where(eq(tenantApplicationSubscriptions.id, stack.id));
+      await tx.insert(billingEvents).values({
+        userId, tenantId, eventType: 'application_stack_cancel_scheduled',
+        metadata: { stripeSubscriptionId: stack.stripeSubscriptionId },
+      });
     });
     return { ok: true, message: 'Application stack will cancel at end of billing period' };
   }
@@ -596,6 +619,7 @@ export async function reactivateSubscription(userId: string, tenantId: string): 
   const [stack] = await db.select().from(tenantApplicationSubscriptions)
     .where(eq(tenantApplicationSubscriptions.tenantId, tenantId)).limit(1);
   if (stack?.status === 'canceling') {
+    const snapshot = captureStackMutationSnapshot(stack);
     if (!isStripeEnabled() || !stack.stripeSubscriptionId) {
       throw new CommercePolicyError(
         'STACK_PROVIDER_MANAGEMENT_REQUIRED',
@@ -607,7 +631,7 @@ export async function reactivateSubscription(userId: string, tenantId: string): 
     const providerSubscription = await retrieveAuthoritativeSubscription(stack.stripeSubscriptionId);
     const providerBinding = await validateAuthoritativeStackSubscription(providerSubscription, stack);
     if (!providerBinding.valid) {
-      await quarantineStackSubscription(stack, stack.stripeSubscriptionId, providerBinding.error);
+      await quarantineStackSubscription(stack, stack.stripeSubscriptionId, providerBinding.error, snapshot);
       throw new CommercePolicyError(
         'STACK_SUBSCRIPTION_PROVIDER_MISMATCH',
         'The application stack no longer matches its server-authoritative Stripe catalog and was deactivated.',
@@ -617,32 +641,36 @@ export async function reactivateSubscription(userId: string, tenantId: string): 
     if (providerSubscription.cancel_at_period_end
         || !['active', 'trialing', 'past_due'].includes(providerSubscription.status)) {
       const providerStatus = mapStripeStatus(providerSubscription.status);
-      if (!['active', 'trialing', 'past_due'].includes(providerSubscription.status)) {
-        await deactivateSubscriptionEntitlements(stack.stripeSubscriptionId);
-      }
-      await db.update(tenantApplicationSubscriptions).set({
-        status: providerSubscription.cancel_at_period_end ? 'canceling' : providerStatus,
-        cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
-        currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stack.currentPeriodStart,
-        currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stack.currentPeriodEnd,
-        updatedAt: new Date(),
-      }).where(eq(tenantApplicationSubscriptions.id, stack.id));
+      await withStackMutation(snapshot, async tx => {
+        if (!['active', 'trialing', 'past_due'].includes(providerSubscription.status)) {
+          await deactivateSubscriptionEntitlements(stack.stripeSubscriptionId!, { executor: tx, tenantId: stack.tenantId });
+        }
+        await tx.update(tenantApplicationSubscriptions).set({
+          status: providerSubscription.cancel_at_period_end ? 'canceling' : providerStatus,
+          cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
+          currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stack.currentPeriodStart,
+          currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stack.currentPeriodEnd,
+          updatedAt: new Date(),
+        }).where(eq(tenantApplicationSubscriptions.id, stack.id));
+      });
       throw new CommercePolicyError(
         'STACK_REACTIVATION_NOT_CONFIRMED',
         'Stripe did not confirm an uncancelled, access-bearing application stack.',
         409,
       );
     }
-    await db.update(tenantApplicationSubscriptions).set({
-      status: providerSubscription.status,
-      cancelAtPeriodEnd: false,
-      currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stack.currentPeriodStart,
-      currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stack.currentPeriodEnd,
-      updatedAt: new Date(),
-    }).where(eq(tenantApplicationSubscriptions.id, stack.id));
-    await db.insert(billingEvents).values({
-      userId, tenantId, eventType: 'application_stack_reactivated',
-      metadata: { stripeSubscriptionId: stack.stripeSubscriptionId },
+    await withStackMutation(snapshot, async tx => {
+      await tx.update(tenantApplicationSubscriptions).set({
+        status: providerSubscription.status,
+        cancelAtPeriodEnd: false,
+        currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stack.currentPeriodStart,
+        currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stack.currentPeriodEnd,
+        updatedAt: new Date(),
+      }).where(eq(tenantApplicationSubscriptions.id, stack.id));
+      await tx.insert(billingEvents).values({
+        userId, tenantId, eventType: 'application_stack_reactivated',
+        metadata: { stripeSubscriptionId: stack.stripeSubscriptionId },
+      });
     });
     return { ok: true };
   }
@@ -786,12 +814,12 @@ export async function createStackCheckoutSession(
   if (!user) throw new Error('User not found');
 
   let normalized = normalizeStackSelection(input);
-  const [existingStack] = await db.select().from(tenantApplicationSubscriptions)
+  let [existingStack] = await db.select().from(tenantApplicationSubscriptions)
     .where(eq(tenantApplicationSubscriptions.tenantId, input.tenantId))
     .limit(1);
   const stripe = getStripe();
   let retryPendingWithoutSession = false;
-  let existingStatusForClaim = existingStack?.status;
+  let existingSnapshot = existingStack ? captureStackMutationSnapshot(existingStack) : undefined;
   if (existingStack?.status === 'incomplete') {
     if (!existingStack.stripeCheckoutSessionId) {
       if (!isCoreProductKey(existingStack.coreProduct)
@@ -832,6 +860,7 @@ export async function createStackCheckoutSession(
             existingStack.coreProduct, existingStack.additionalModuleKeys.length,
             existingStack.additionalSeats, existingStack,
           ));
+          await withStackMutation(existingSnapshot!, async () => undefined);
           return { url: prior.url, sessionId: prior.id };
         }
         if (prior.status === 'open') {
@@ -842,21 +871,24 @@ export async function createStackCheckoutSession(
           );
         }
         if (prior.status === 'expired') {
-          const [expired] = await db.update(tenantApplicationSubscriptions)
-            .set({ status: 'checkout_failed', updatedAt: new Date() })
-            .where(and(
-              eq(tenantApplicationSubscriptions.id, existingStack.id),
-              eq(tenantApplicationSubscriptions.status, 'incomplete'),
-            ))
-            .returning({ id: tenantApplicationSubscriptions.id });
-          if (!expired) {
-            throw new CommercePolicyError(
-              'STACK_CHECKOUT_IN_PROGRESS',
-              'Another checkout request already reconciled this application stack intent.',
-              409,
-            );
-          }
-          existingStatusForClaim = 'checkout_failed';
+          existingStack = await withStackMutation(existingSnapshot!, async tx => {
+            const [expired] = await tx.update(tenantApplicationSubscriptions)
+              .set({ status: 'checkout_failed', updatedAt: new Date() })
+              .where(and(
+                eq(tenantApplicationSubscriptions.id, existingStack.id),
+                eq(tenantApplicationSubscriptions.status, 'incomplete'),
+              ))
+              .returning();
+            if (!expired) {
+              throw new CommercePolicyError(
+                'STACK_CHECKOUT_IN_PROGRESS',
+                'Another checkout request already reconciled this application stack intent.',
+                409,
+              );
+            }
+            return expired;
+          });
+          existingSnapshot = captureStackMutationSnapshot(existingStack);
         } else {
           throw new CommercePolicyError(
             'STACK_FLAGSHIP_LIMIT',
@@ -1009,20 +1041,21 @@ export async function createStackCheckoutSession(
     },
     updatedAt: new Date(),
   };
-  const [pending] = retryPendingWithoutSession
-      ? [existingStack!]
-    : existingStack
-      ? await db.update(tenantApplicationSubscriptions)
-          .set(pendingValues)
-          .where(and(
-            eq(tenantApplicationSubscriptions.id, existingStack.id),
-            eq(tenantApplicationSubscriptions.status, existingStatusForClaim!),
-          ))
-          .returning()
-      : await db.insert(tenantApplicationSubscriptions)
+  const pending = existingStack
+    ? await withStackMutation(existingSnapshot!, async (tx, current) => {
+        const [currentCore] = await tx.select({ id: tenantEntitlements.id }).from(tenantEntitlements)
+          .where(and(eq(tenantEntitlements.tenantId, input.tenantId),
+            eq(tenantEntitlements.entitlementType, 'core_product'), eq(tenantEntitlements.active, true))).limit(1);
+        if (currentCore) throw new CommercePolicyError('STACK_FLAGSHIP_LIMIT', 'This tenant already has its release flagship application.', 409);
+        if (retryPendingWithoutSession) return current;
+        const [claimed] = await tx.update(tenantApplicationSubscriptions).set(pendingValues)
+          .where(eq(tenantApplicationSubscriptions.id, current.id)).returning();
+        return claimed;
+      })
+    : (await db.insert(tenantApplicationSubscriptions)
           .values({ tenantId: input.tenantId, ...pendingValues })
           .onConflictDoNothing({ target: tenantApplicationSubscriptions.tenantId })
-          .returning();
+          .returning())[0];
   if (!pending) {
     throw new CommercePolicyError(
       'STACK_FLAGSHIP_LIMIT',
@@ -1030,6 +1063,7 @@ export async function createStackCheckoutSession(
       409,
     );
   }
+  const pendingSnapshot = captureStackMutationSnapshot(pending);
 
   const lineItems: Array<{ price: string; quantity: number }> = [
     { price: corePriceId, quantity: 1 },
@@ -1077,9 +1111,9 @@ export async function createStackCheckoutSession(
   }
 
   if (!session || typeof session.id !== 'string' || session.id.length === 0) {
-    await db.update(tenantApplicationSubscriptions)
+    await withStackMutation(pendingSnapshot, async tx => { await tx.update(tenantApplicationSubscriptions)
       .set({ status: 'checkout_failed', updatedAt: new Date() })
-      .where(eq(tenantApplicationSubscriptions.id, pending.id));
+      .where(eq(tenantApplicationSubscriptions.id, pending.id)); });
     throw new CommercePolicyError(
       'STRIPE_CHECKOUT_INVALID_RESPONSE',
       'Stripe did not return a valid Checkout Session.',
@@ -1087,9 +1121,9 @@ export async function createStackCheckoutSession(
     );
   }
 
-  await db.update(tenantApplicationSubscriptions)
+  await withStackMutation(pendingSnapshot, async tx => { await tx.update(tenantApplicationSubscriptions)
     .set({ stripeCheckoutSessionId: session.id, updatedAt: new Date() })
-    .where(eq(tenantApplicationSubscriptions.id, pending.id));
+    .where(eq(tenantApplicationSubscriptions.id, pending.id)); });
 
   if (typeof session.url !== 'string' || session.url.length === 0) {
     throw new CommercePolicyError(
@@ -1117,6 +1151,7 @@ export async function changeStackFreeCompanion(
       409,
     );
   }
+  const snapshot = captureStackMutationSnapshot(stack);
   if (!isStripeEnabled()) {
     throw new CommercePolicyError('STRIPE_NOT_CONFIGURED', 'Stripe is required to update this application stack.', 409);
   }
@@ -1129,7 +1164,7 @@ export async function changeStackFreeCompanion(
   const currentProviderSubscription = await retrieveAuthoritativeSubscription(stack.stripeSubscriptionId);
   const currentProviderBinding = await validateAuthoritativeStackSubscription(currentProviderSubscription, stack);
   if (!currentProviderBinding.valid) {
-    await quarantineStackSubscription(stack, stack.stripeSubscriptionId, currentProviderBinding.error);
+    await quarantineStackSubscription(stack, stack.stripeSubscriptionId, currentProviderBinding.error, snapshot);
     throw new CommercePolicyError(
       'STACK_SUBSCRIPTION_PROVIDER_MISMATCH',
       'The application stack no longer matches its server-authoritative Stripe catalog and was deactivated.',
@@ -1165,6 +1200,7 @@ export async function changeStackFreeCompanion(
       updatedProviderBinding.valid
         ? 'Application Stack provider did not confirm the requested companion selection'
         : updatedProviderBinding.error,
+      snapshot,
     );
     throw new CommercePolicyError(
       'STACK_SUBSCRIPTION_PROVIDER_MISMATCH',
@@ -1172,7 +1208,9 @@ export async function changeStackFreeCompanion(
       409,
     );
   }
-  await changeFreeCompanionModule(tenantId, moduleKey, nextAdditionalModules);
+  await withStackMutation(snapshot, async tx => {
+    await changeFreeCompanionModule(tenantId, moduleKey, nextAdditionalModules, { executor: tx });
+  });
 }
 
 export interface UsageCreditCheckoutInput {
@@ -1779,6 +1817,8 @@ export async function processWebhookEvent(event: { type: string; data: { object:
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded':
       result = await handleCheckoutCompleted(obj); break;
+    case 'checkout.session.async_payment_failed':
+      result = await handleStackCheckoutPaymentFailed(obj); break;
     case 'customer.subscription.created':
       result = await handleSubscriptionCreated(obj); break;
     case 'customer.subscription.updated':
@@ -1816,7 +1856,9 @@ export async function processWebhookEvent(event: { type: string; data: { object:
     let exactTenantId: string | null = null;
     const stripeSubId = type.startsWith('invoice.')
       ? stripeInvoiceSubscriptionId(obj)
-      : obj?.subscription ?? obj?.id ?? null;
+      : type === 'checkout.session.async_payment_failed'
+        ? stripeResourceId(obj?.subscription)
+        : obj?.subscription ?? obj?.id ?? null;
     if (stripeSubId && typeof stripeSubId === 'string') {
       const [stackRow] = await db.select({
         tenantId: tenantApplicationSubscriptions.tenantId,
@@ -2011,6 +2053,7 @@ async function handleStackCheckoutCompleted(session: any): Promise<WebhookProces
   const [pending] = await db.select().from(tenantApplicationSubscriptions)
     .where(eq(tenantApplicationSubscriptions.id, internalSubscriptionId))
     .limit(1);
+  const snapshot = pending ? captureStackMutationSnapshot(pending) : undefined;
   if (pending && isStaleStackCheckoutGeneration(session, pending)) {
     return { handled: true, action: 'core_product_stack_stale_checkout_generation_ignored', shouldPropagate: false };
   }
@@ -2059,50 +2102,127 @@ async function handleStackCheckoutCompleted(session: any): Promise<WebhookProces
     };
   }
 
-  await grantStackEntitlements({
-    tenantId,
-    coreProduct,
-    freeCompanionModule,
-    additionalModules: additionalModules as CompanionModuleKey[],
-    additionalSeats,
-    stripeSubscriptionId,
-    corePriceId: pending.corePriceId,
-    companionPriceId: pending.companionPriceId,
-    additionalSeatPriceId: pending.additionalSeatPriceId,
-    applicationSubscriptionId: pending.id,
-    applicationSubscriptionStatus: providerSubscription.cancel_at_period_end
-      ? 'canceling'
-      : providerSubscription.status,
-    cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
-    currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start),
-    currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end),
-  });
-
-  await db.insert(billingEvents).values({
-    userId,
-    tenantId,
-    eventType: 'core_product_stack_activated',
-    amount:
-      product.monthlyPriceCents +
-      additionalModules.length * COMPANION_MODULE_PRICE_CENTS +
-      additionalSeats * DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
-    metadata: {
+  await withStackMutation(snapshot!, async (tx, current) => {
+    if (current.status !== 'incomplete') throw new CommercePolicyError('STACK_CHECKOUT_IN_PROGRESS', 'The checkout intent was already settled.', 409);
+    await grantStackEntitlements({
+      tenantId,
       coreProduct,
       freeCompanionModule,
-      additionalModules,
+      additionalModules: additionalModules as CompanionModuleKey[],
       additionalSeats,
       stripeSubscriptionId,
-    },
-  });
-  await writeAudit({
-    actorUserId: userId,
-    tenantId,
-    targetType: 'tenant_entitlements',
-    targetId: stripeSubscriptionId,
-    action: 'core_product_stack_activated',
-    after: { coreProduct, freeCompanionModule, additionalModules, additionalSeats },
+      corePriceId: pending.corePriceId,
+      companionPriceId: pending.companionPriceId,
+      additionalSeatPriceId: pending.additionalSeatPriceId,
+      applicationSubscriptionId: pending.id,
+      applicationSubscriptionStatus: providerSubscription.cancel_at_period_end
+        ? 'canceling'
+        : providerSubscription.status,
+      cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
+      currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start),
+      currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end),
+    }, { executor: tx });
+
+    await tx.insert(billingEvents).values({
+      userId,
+      tenantId,
+      eventType: 'core_product_stack_activated',
+      amount:
+        product.monthlyPriceCents +
+        additionalModules.length * COMPANION_MODULE_PRICE_CENTS +
+        additionalSeats * DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
+      metadata: {
+        coreProduct,
+        freeCompanionModule,
+        additionalModules,
+        additionalSeats,
+        stripeSubscriptionId,
+      },
+    });
+    await writeAudit({
+      actorUserId: userId,
+      tenantId,
+      targetType: 'tenant_entitlements',
+      targetId: stripeSubscriptionId,
+      action: 'core_product_stack_activated',
+      after: { coreProduct, freeCompanionModule, additionalModules, additionalSeats },
+    }, undefined, tx);
   });
   return { handled: true, action: 'core_product_stack_activated', shouldPropagate: true };
+}
+
+type StackFailureReconciliationScope = {
+  id: string; tenantId: string; checkoutAttemptId: string; snapshot: StackMutationSnapshot;
+};
+
+function guardStackFailureReconciliation(
+  stackSub: TenantApplicationSubscriptionRow | null,
+  expected?: StackFailureReconciliationScope,
+): WebhookProcessResult | null {
+  if (!expected) return null;
+  if (!stackSub || stackSub.id !== expected.id || stackSub.tenantId !== expected.tenantId) {
+    return { handled: false, error: 'Payment failure subscription does not match its tenant-owned checkout' };
+  }
+  if (stackCheckoutAttemptId(stackSub) !== expected.checkoutAttemptId) {
+    return { handled: true, action: 'core_product_stack_newer_checkout_failure_ignored', shouldPropagate: false };
+  }
+  if (captureStackMutationSnapshot(stackSub).fingerprint !== expected.snapshot.fingerprint) {
+    return { handled: false, error: 'The Application Stack changed during payment failure reconciliation; retry' };
+  }
+  if (['checkout_failed', 'canceled', 'expired'].includes(stackSub.status)) {
+    return { handled: true, action: 'core_product_stack_terminal_payment_failure_observed', shouldPropagate: false };
+  }
+  return null;
+}
+
+async function handleStackCheckoutPaymentFailed(session: any): Promise<WebhookProcessResult> {
+  const md = session?.metadata ?? {};
+  const customerId = stripeResourceId(session?.customer);
+  const subscriptionId = stripeResourceId(session?.subscription);
+  if (md.billing_model !== 'core_product_stack' || session?.mode !== 'subscription'
+      || session?.status !== 'complete' || session?.payment_status !== 'unpaid'
+      || typeof session?.id !== 'string' || !session.id
+      || typeof md.internal_application_subscription_id !== 'string' || !md.internal_application_subscription_id
+      || typeof md.tenant_id !== 'string' || !md.tenant_id
+      || typeof md.user_id !== 'string' || !md.user_id
+      || typeof md.checkout_attempt_id !== 'string' || !md.checkout_attempt_id
+      || !customerId || !subscriptionId || !isCoreProductKey(md.selected_core_product)) {
+    return { handled: false, error: 'Invalid Application Stack asynchronous payment failure' };
+  }
+  const moduleText = String(md.additional_module_keys ?? '');
+  const additionalModules = moduleText === '' ? [] : moduleText.split(',').map((value: string) => value.trim());
+  const seatsText = String(md.additional_seats ?? '');
+  const seats = /^\d+$/.test(seatsText) ? Number.parseInt(seatsText, 10) : Number.NaN;
+  if (!isEligibleCompanionModuleKey(md.selected_free_companion_module)
+      || !additionalModules.every(isEligibleCompanionModuleKey)
+      || new Set(additionalModules).size !== additionalModules.length
+      || additionalModules.includes(md.selected_free_companion_module)
+      || !Number.isSafeInteger(seats)) {
+    return { handled: false, error: 'Invalid Application Stack failure selection metadata' };
+  }
+  const [stackSub] = await db.select().from(tenantApplicationSubscriptions)
+    .where(and(
+      eq(tenantApplicationSubscriptions.id, md.internal_application_subscription_id),
+      eq(tenantApplicationSubscriptions.tenantId, md.tenant_id),
+    )).limit(1);
+  const rowModules = Array.isArray(stackSub?.additionalModuleKeys) ? [...stackSub.additionalModuleKeys].sort() : [];
+  if (!stackSub || stackSub.tenantId !== md.tenant_id || stackSub.initiatedByUserId !== md.user_id
+      || stackSub.stripeCustomerId !== customerId || stackSub.stripeCheckoutSessionId !== session.id
+      || stackCheckoutAttemptId(stackSub) !== md.checkout_attempt_id
+      || stackSub.coreProduct !== md.selected_core_product || stackSub.includedCompanionKey !== md.selected_free_companion_module
+      || stackSub.additionalSeats !== seats || md.billing_interval !== 'month'
+      || JSON.stringify(rowModules) !== JSON.stringify([...additionalModules].sort())
+      || (stackSub.stripeSubscriptionId && stackSub.stripeSubscriptionId !== subscriptionId)) {
+    return { handled: false, error: 'Payment failure does not match its tenant-owned Application Stack checkout' };
+  }
+  const scope = { id: stackSub.id, tenantId: stackSub.tenantId,
+    checkoutAttemptId: md.checkout_attempt_id, snapshot: captureStackMutationSnapshot(stackSub) };
+  const guarded = guardStackFailureReconciliation(stackSub, scope);
+  if (guarded) return guarded;
+  // This is an exact owned routing hint, not subscription lifecycle authority.
+  // The existing reconciliation reads and validates the latest provider object;
+  // an immutable failed attempt must neither terminalize nor grant the checkout.
+  return handleSubscriptionUpdated({ id: subscriptionId, metadata: md }, scope);
 }
 
 async function handleSubscriptionCreated(subscription: any): Promise<WebhookProcessResult> {
@@ -2186,33 +2306,41 @@ async function quarantineStackSubscription(
   stackSub: TenantApplicationSubscriptionRow,
   stripeSubscriptionId: string,
   reason: string,
+  snapshot: StackMutationSnapshot,
+  executor?: StackTransaction,
 ): Promise<void> {
-  await deactivateSubscriptionEntitlements(stripeSubscriptionId);
-  const quarantineStatus = stackSub.status === 'incomplete'
-    ? 'checkout_failed'
-    : ['checkout_failed', 'canceled', 'expired'].includes(stackSub.status)
-      ? stackSub.status
-      : 'past_due';
-  await db.update(tenantApplicationSubscriptions).set({
-    status: quarantineStatus,
-    stripeSubscriptionId,
-    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
-      providerValidation: 'failed',
-      providerValidationReason: reason,
-      providerValidationFailedAt: new Date().toISOString(),
-    })}::jsonb`,
-    updatedAt: new Date(),
-  }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
+  await withStackMutation(snapshot, async (tx, current) => {
+    await deactivateSubscriptionEntitlements(stripeSubscriptionId, { executor: tx, tenantId: current.tenantId });
+    const quarantineStatus = current.status === 'incomplete'
+      ? 'checkout_failed'
+      : ['checkout_failed', 'canceled', 'expired'].includes(current.status)
+        ? current.status
+        : 'past_due';
+    await tx.update(tenantApplicationSubscriptions).set({
+      status: quarantineStatus,
+      stripeSubscriptionId,
+      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+        providerValidation: 'failed',
+        providerValidationReason: reason,
+        providerValidationFailedAt: new Date().toISOString(),
+      })}::jsonb`,
+      updatedAt: new Date(),
+    }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
+  }, executor);
 }
 
 async function reconcileStackSubscriptionBeforeCheckout(
   eventSubscription: any,
   eventKind: 'created' | 'updated',
+  expectedStack?: StackFailureReconciliationScope,
 ): Promise<WebhookProcessResult> {
   const stripeSubscriptionId = stripeResourceId(eventSubscription?.id);
   if (!stripeSubscriptionId) return { handled: false, error: 'Stripe subscription id is missing' };
   const stackSub = await findStackSubscriptionCandidate(eventSubscription);
+  const guarded = guardStackFailureReconciliation(stackSub, expectedStack);
+  if (guarded) return guarded;
   if (!stackSub) return { handled: false, error: 'No matching Application Stack purchase intent' };
+  const snapshot = captureStackMutationSnapshot(stackSub);
   if (stackSub.status !== 'incomplete') {
     return { handled: true, action: `core_product_stack_${eventKind}_terminal_ignored`, shouldPropagate: false };
   }
@@ -2227,27 +2355,30 @@ async function reconcileStackSubscriptionBeforeCheckout(
   }
   const binding = await validateAuthoritativeStackSubscription(providerSubscription, stackSub, true);
   if (!binding.valid) {
-    await quarantineStackSubscription(stackSub, stripeSubscriptionId, binding.error);
+    await quarantineStackSubscription(stackSub, stripeSubscriptionId, binding.error, snapshot);
     return { handled: true, action: 'core_product_stack_provider_drift_deactivated', shouldPropagate: true };
   }
   const providerStatus = mapStripeStatus(providerSubscription.status);
   const terminal = providerStatus === 'canceled' || providerStatus === 'expired';
-  await db.update(tenantApplicationSubscriptions).set({
-    stripeSubscriptionId,
-    status: terminal ? providerStatus : 'incomplete',
-    cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
-    currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stackSub.currentPeriodStart,
-    currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stackSub.currentPeriodEnd,
-    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
-      providerObservedStatus: providerStatus,
-      providerObservedBeforeCheckoutAt: new Date().toISOString(),
-    })}::jsonb`,
-    updatedAt: new Date(),
-  }).where(and(
-    eq(tenantApplicationSubscriptions.id, stackSub.id),
-    eq(tenantApplicationSubscriptions.status, 'incomplete'),
-  ));
-  if (terminal) await deactivateSubscriptionEntitlements(stripeSubscriptionId);
+  await withStackMutation(snapshot, async (tx, current) => {
+    if (current.status !== 'incomplete') throw new CommercePolicyError('STACK_CHECKOUT_IN_PROGRESS', 'The checkout intent was already settled.', 409);
+    await tx.update(tenantApplicationSubscriptions).set({
+      stripeSubscriptionId,
+      status: terminal ? providerStatus : 'incomplete',
+      cancelAtPeriodEnd: !!providerSubscription.cancel_at_period_end,
+      currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stackSub.currentPeriodStart,
+      currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stackSub.currentPeriodEnd,
+      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+        providerObservedStatus: providerStatus,
+        providerObservedBeforeCheckoutAt: new Date().toISOString(),
+      })}::jsonb`,
+      updatedAt: new Date(),
+    }).where(and(
+      eq(tenantApplicationSubscriptions.id, stackSub.id),
+      eq(tenantApplicationSubscriptions.status, 'incomplete'),
+    ));
+    if (terminal) await deactivateSubscriptionEntitlements(stripeSubscriptionId, { executor: tx, tenantId: current.tenantId });
+  });
   return {
     handled: true,
     action: terminal
@@ -2323,88 +2454,94 @@ function validateStackSubscriptionBinding(
   };
 }
 
-async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProcessResult> {
+async function handleSubscriptionUpdated(subscription: any, expectedStack?: StackFailureReconciliationScope): Promise<WebhookProcessResult> {
   const stripeSubId = stripeResourceId(subscription?.id);
   if (!stripeSubId) return { handled: false, error: 'Stripe subscription id is missing' };
   const stackSub = await findStackSubscriptionCandidate(subscription);
+  const guarded = guardStackFailureReconciliation(stackSub, expectedStack);
+  if (guarded) return guarded;
   if (stackSub) {
+    const snapshot = captureStackMutationSnapshot(stackSub);
     if (stackSub.stripeSubscriptionId && stackSub.stripeSubscriptionId !== stripeSubId) {
       return { handled: true, action: 'core_product_stack_stale_update_binding_ignored', shouldPropagate: false };
     }
     if (stackSub.status === 'incomplete') {
-      return reconcileStackSubscriptionBeforeCheckout(subscription, 'updated');
+      return reconcileStackSubscriptionBeforeCheckout(subscription, 'updated', expectedStack);
     }
     const providerSubscription = await retrieveAuthoritativeSubscription(stripeSubId);
     const binding = await validateAuthoritativeStackSubscription(providerSubscription, stackSub);
     if (!binding.valid) {
-      await quarantineStackSubscription(stackSub, stripeSubId, binding.error);
+      await quarantineStackSubscription(stackSub, stripeSubId, binding.error, snapshot);
       return { handled: true, action: 'core_product_stack_provider_drift_deactivated', shouldPropagate: true };
     }
-    const providerStatus = mapStripeStatus(providerSubscription.status);
-    const cancelAtEnd = !!providerSubscription.cancel_at_period_end;
-    const status = cancelAtEnd && ['active', 'trialing', 'past_due'].includes(providerStatus)
-      ? 'canceling'
-      : providerStatus;
-    const providerCarriesAccess = ['active', 'trialing', 'past_due'].includes(providerSubscription.status);
-    const recoveryEligible = ['active', 'trialing', 'past_due', 'canceling'].includes(stackSub.status);
-    if (providerCarriesAccess && !recoveryEligible) {
-      // Only checkout completion may establish a new paid grant. Provider
-      // updates can repair an already-activated/quarantined stack, but cannot
-      // revive canceled/expired contracts or bypass checkout after a failed
-      // pre-checkout reconciliation.
-      await deactivateSubscriptionEntitlements(stripeSubId);
-      return {
-        handled: true,
-        action: 'core_product_stack_terminal_update_ignored',
-        shouldPropagate: true,
-      };
-    }
-    const [activeCoreGrant] = await db.select({ id: tenantEntitlements.id })
-      .from(tenantEntitlements)
-      .where(and(
-        eq(tenantEntitlements.tenantId, stackSub.tenantId),
-        eq(tenantEntitlements.entitlementType, 'core_product'),
-        eq(tenantEntitlements.stripeSubscriptionId, stripeSubId),
-        eq(tenantEntitlements.active, true),
-      ))
-      .limit(1);
-    if (providerCarriesAccess && !activeCoreGrant) {
-      // A corrected provider subscription can recover a stack that a prior
-      // mismatch quarantined, but only after passing the same exact catalog,
-      // item, quantity, tenant, and metadata validation used at checkout.
-      await grantStackEntitlements({
-        tenantId: stackSub.tenantId,
-        coreProduct: stackSub.coreProduct,
-        freeCompanionModule: binding.includedCompanion,
-        additionalModules: binding.additionalModules,
-        additionalSeats: stackSub.additionalSeats,
-        stripeSubscriptionId: stripeSubId,
-        corePriceId: stackSub.corePriceId,
-        companionPriceId: stackSub.companionPriceId,
-        additionalSeatPriceId: stackSub.additionalSeatPriceId,
-      });
-    } else if (providerCarriesAccess && binding.includedCompanion !== stackSub.includedCompanionKey) {
-      await changeFreeCompanionModule(
-        stackSub.tenantId,
-        binding.includedCompanion,
-        binding.additionalModules,
-      );
-    }
-    await db.update(tenantApplicationSubscriptions).set({
-      status,
-      cancelAtPeriodEnd: cancelAtEnd,
-      currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stackSub.currentPeriodStart,
-      currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stackSub.currentPeriodEnd,
-      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
-        providerValidation: 'validated',
-        providerValidatedAt: new Date().toISOString(),
-      })}::jsonb`,
-      updatedAt: new Date(),
-    }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
-    if (!providerCarriesAccess) {
-      await deactivateSubscriptionEntitlements(stripeSubId);
-    }
-    return { handled: true, action: 'core_product_stack_updated', shouldPropagate: true };
+    return withStackMutation(snapshot, async (tx, current): Promise<WebhookProcessResult> => {
+      const providerStatus = mapStripeStatus(providerSubscription.status);
+      const cancelAtEnd = !!providerSubscription.cancel_at_period_end;
+      const status = cancelAtEnd && ['active', 'trialing', 'past_due'].includes(providerStatus)
+        ? 'canceling'
+        : providerStatus;
+      const providerCarriesAccess = ['active', 'trialing', 'past_due'].includes(providerSubscription.status);
+      const recoveryEligible = ['active', 'trialing', 'past_due', 'canceling'].includes(current.status);
+      if (providerCarriesAccess && !recoveryEligible) {
+        // Only checkout completion may establish a new paid grant. Provider
+        // updates can repair an already-activated/quarantined stack, but cannot
+        // revive canceled/expired contracts or bypass checkout after a failed
+        // pre-checkout reconciliation.
+        await deactivateSubscriptionEntitlements(stripeSubId, { executor: tx, tenantId: current.tenantId });
+        return {
+          handled: true,
+          action: 'core_product_stack_terminal_update_ignored',
+          shouldPropagate: true,
+        };
+      }
+      const [activeCoreGrant] = await tx.select({ id: tenantEntitlements.id })
+        .from(tenantEntitlements)
+        .where(and(
+          eq(tenantEntitlements.tenantId, stackSub.tenantId),
+          eq(tenantEntitlements.entitlementType, 'core_product'),
+          eq(tenantEntitlements.stripeSubscriptionId, stripeSubId),
+          eq(tenantEntitlements.active, true),
+        ))
+        .limit(1);
+      if (providerCarriesAccess && !activeCoreGrant) {
+        // A corrected provider subscription can recover a stack that a prior
+        // mismatch quarantined, but only after passing the same exact catalog,
+        // item, quantity, tenant, and metadata validation used at checkout.
+        await grantStackEntitlements({
+          tenantId: stackSub.tenantId,
+          coreProduct: stackSub.coreProduct,
+          freeCompanionModule: binding.includedCompanion,
+          additionalModules: binding.additionalModules,
+          additionalSeats: stackSub.additionalSeats,
+          stripeSubscriptionId: stripeSubId,
+          corePriceId: stackSub.corePriceId,
+          companionPriceId: stackSub.companionPriceId,
+          additionalSeatPriceId: stackSub.additionalSeatPriceId,
+        }, { executor: tx });
+      } else if (providerCarriesAccess && binding.includedCompanion !== stackSub.includedCompanionKey) {
+        await changeFreeCompanionModule(
+          stackSub.tenantId,
+          binding.includedCompanion,
+          binding.additionalModules,
+          { executor: tx },
+        );
+      }
+      await tx.update(tenantApplicationSubscriptions).set({
+        status,
+        cancelAtPeriodEnd: cancelAtEnd,
+        currentPeriodStart: stripePeriodDate(providerSubscription.current_period_start) ?? stackSub.currentPeriodStart,
+        currentPeriodEnd: stripePeriodDate(providerSubscription.current_period_end) ?? stackSub.currentPeriodEnd,
+        metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+          providerValidation: 'validated',
+          providerValidatedAt: new Date().toISOString(),
+        })}::jsonb`,
+        updatedAt: new Date(),
+      }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
+      if (!providerCarriesAccess) {
+        await deactivateSubscriptionEntitlements(stripeSubId, { executor: tx, tenantId: current.tenantId });
+      }
+      return { handled: true, action: 'core_product_stack_updated', shouldPropagate: true };
+    });
   }
 
   const existingSub = await findGrandfatheredLegacyByStripeSubscriptionId(stripeSubId);
@@ -2435,6 +2572,7 @@ async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProc
   const stackSub = await findStackSubscriptionCandidate(subscription);
 
   if (stackSub) {
+    const snapshot = captureStackMutationSnapshot(stackSub);
     if (stackSub.stripeSubscriptionId && stackSub.stripeSubscriptionId !== stripeSubId) {
       return { handled: true, action: 'core_product_stack_stale_delete_binding_ignored', shouldPropagate: false };
     }
@@ -2444,18 +2582,20 @@ async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProc
     const binding = validateStackSubscriptionBinding(subscription, stackSub, true);
     const alreadyBound = stackSub.stripeSubscriptionId === stripeSubId;
     if (!binding.valid && !alreadyBound) return { handled: false, error: binding.error };
-    await deactivateSubscriptionEntitlements(stripeSubId);
-    await db.update(tenantApplicationSubscriptions).set({
-      status: 'canceled',
-      stripeSubscriptionId: stripeSubId,
-      cancelAtPeriodEnd: false,
-      metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
-        providerTerminalEvent: 'customer.subscription.deleted',
-        providerTerminalAt: new Date().toISOString(),
-        ...(binding.valid ? {} : { providerValidationReason: binding.error }),
-      })}::jsonb`,
-      updatedAt: new Date(),
-    }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
+    await withStackMutation(snapshot, async tx => {
+      await deactivateSubscriptionEntitlements(stripeSubId, { executor: tx, tenantId: stackSub.tenantId });
+      await tx.update(tenantApplicationSubscriptions).set({
+        status: 'canceled',
+        stripeSubscriptionId: stripeSubId,
+        cancelAtPeriodEnd: false,
+        metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+          providerTerminalEvent: 'customer.subscription.deleted',
+          providerTerminalAt: new Date().toISOString(),
+          ...(binding.valid ? {} : { providerValidationReason: binding.error }),
+        })}::jsonb`,
+        updatedAt: new Date(),
+      }).where(eq(tenantApplicationSubscriptions.id, stackSub.id));
+    });
     return { handled: true, action: 'core_product_stack_deactivated', shouldPropagate: true };
   }
 
