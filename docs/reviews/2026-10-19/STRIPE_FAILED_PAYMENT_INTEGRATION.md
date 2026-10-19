@@ -1,87 +1,127 @@
-# Bound Stack failed-payment integration checkpoint
+# Selected failed-payment and invoice transaction source integration
 
-This provisional local branch normally merges immutable independently reviewed
-PI component `b05db31befebc83e9e09666d2b3d4467a5ca76cf` with corrected PR133
-head `1eb0115b68c8ad99d66231db68f33148d459316d`. The merge commit is
-`2e4f06caa0dc7dc24386e8776181f71b7f327372`, tree
-`8121cacaf3607e506d72930732c5c15f30ae57ef`, with those exact two parents.
-Original component worktrees/branches remain intact; no history was rewritten.
-All ten component Git blobs and raw frozen SHA256s are unchanged. The checkout
-restores the original frozen newline representation where Windows checkout had
-converted it; this produces no Git content delta.
+The final selected scope is eighteen paths: ten from independently approved PI
+component `b05db31befebc83e9e09666d2b3d4467a5ca76cf`, four from approved
+invoice component `884acffaba7e3a3b80aa9101897b2aab4e519354`, and these four
+shared checkpoint documents. All fourteen component Git blobs and raw frozen
+SHA256s remain exact. Original component worktrees/branches are preserved.
 
-This is not approved main. Corrected PR133 full hosted CI is still pending at
-this checkpoint. Root must normally merge the actual verified PR133 main commit
-later, review any resulting delta, and run a fresh complete combined-head gate
-before publication or source merge. Four checkpoint documents are the only new
-authored paths beyond the ten PI component paths relative to corrected PR133.
+## History and verified baseline
 
-## Scope and preserved authority
+The PI component's direct base was original PR133 head 7a. Local normal merge
+`2e4f06caa0dc7dc24386e8776181f71b7f327372` joined immutable b05 with corrected
+PR133 head `1eb0115b68c8ad99d66231db68f33148d459316d`. The four provisional
+checkpoint documents were committed as c0fb6e76 after 450 local cases, strict
+typing, lint, full build and parent 13 SQL passes; Office approved the exact
+fourteen-path tree. These original receipts remain preserved.
 
-The component repairs the actual generic dispatcher's unhandled
-`payment_intent.payment_failed` case only for an already-bound current canonical
-Application Stack. The pure read-only resolver follows exact PI -> complete
-bounded InvoicePayment allocation pages -> one distinct invoice -> current
-Subscription. Central scope/mode/customer/tenant/Stack/generation validation and
-the shared locked mutation fence remain mandatory. A new PI or invoice status,
-amount, optional metadata or latest-invoice hint cannot establish payment or
-entitlement authority. Ambiguous/incomplete, initial/unbound, legacy/feature,
-Connect/context and customer-account cases retain failure/retry behavior.
+After PR133 completed its release gates and merged, `origin/main` was guarded
+against exact `e31805c10c2b394f437a03ae11fdaa4a74a9a933`, fetched, and normally
+merged as `be1fadb6d70609bb2ba5e1bc6a0ebd257859011f`, parents c0fb6e76 and
+e31805c1. The tree stayed exactly 5250c50d. The selected invoice component was
+then guarded against its exact tree 77110ff4 and parent 1eb and cherry-picked as
+`e1f2fada3c4ae25970c4f10427022ef0abdcfc49`, tree
+`19ab66cdf92915b13dda95e334c4fad771a661e0`, direct parent be1fadb6.
+All fourteen component identities were verified before combined checks. Only
+the four shared documents change after that tested runtime checkpoint.
 
-Each new correlation read has its own completion timer (at most3 seconds,
-clamped to the remaining10-second resolver budget), cleared in finally. Late
-SDK outcomes are observed/discarded and cannot continue to DB/propagation; the
-underlying read is not canceled. Existing Torque pre-classification and later
-subscription/catalog requests keep their existing lifetime; this is not an
-end-to-end webhook deadline or a claim of zero actual SDK edge retries.
+PR133's source-only merge has tree
+`eab88cc20626467ba0be604cf96523aaa35a1e6b`, parents b9e5e155 and 1eb0115b,
+equal to both reviewed and actual tested trees. Corrected full release
+run 39337281819 passed all 14 scopes: 52 unit, 2065/2065 API with 0 skips,
+108 integration, 109 browser first attempts/no observed retry, 4 visual and the
+ten new SQL cases. Vector run 39337281781 passed 32. Actual checkout was
+`e769fb407b6d6d43aca3d4aef933aedf174e5448`, build
+`0ad0042a3d68e1902801078e`. Parent terminal/postmerge receipts bind those
+results; none establishes production publication or this additional candidate's
+complete hosted acceptance.
 
-Only a private validated subscription/tenant/nullable-actor subject reaches
-post-processing, including saved receipt retry. No pi_ID or metadata/customer
-fallback becomes tenant propagation authority. Torque stays first; raw HMAC,
-immutable event receipt, lease/duplicate/retry and financial/grace policies stay
-intact. There is no schema, dependency, provider configuration, credential,
-historical data repair, module availability or new-grant change.
+Original PR133 run 39332436621 remains failed 13/14, API 2047/2056. Its nine
+new SQL HTTP failures selected the deterministic adapter in test/test mode
+while signing SDK HMAC. Exactly one of the original ten
+cases passed and nine failed; the independently reviewed test-only fixture
+correction then passed all ten. It selects configured HMAC only after captured
+disposable-target validation and blocked egress; original SQL bodies/assertions
+remain. The original browser phase recorded108 first-attempt passes and one
+automatic-retry success. Retained trace evidence strongly supports speculative
+console-chunk cancellation while the crawler replaces an intentionally
+unavailable OutCall card with PulseDesk; exact abort-event time/retry trace and
+baseline runtime reproduction are absent. No assertions/retries were changed.
 
-## Historical and new execution evidence
+## Two bounded demonstrated problems
 
-Component baseline actually exercised the unchanged7a dispatcher: one valid
-invoice-failure control passed and the bound-PI desired reconciliation failed,
-with zero skips. The durable Git-object replay retains that source gap.
-Owner v2 passed418 selected native cases and strict changed-test checking,
-zero-warning lint and full production build. Office independently passed78
-focused cases, strict checking and exact ten-file identity review. Office
-attested immutable commit/tree equality after commit. Root then actually ran
-the component's three guarded SQL cases:3/3 pass, zero failures/skips,
-6592.8753ms. The immutable component document's earlier NOT_RUN statement is
-historical freeze evidence and is intentionally not rewritten.
+**Already-bound Stack failed PI.** The actual generic dispatcher selected
+`payment_intent.payment_failed` but had no handler, so an already-bound canonical
+Stack failure could remain unhandled/retryable. The actual unchanged7a baseline
+passed its invoice-failure control and failed the desired bound-PI reconciliation
+case. The resolver follows exact central PI -> complete bounded InvoicePayment
+pages -> one distinct invoice -> current authoritative subscription. It retains
+mode, scope, customer, tenant, Stack, generation, catalog/items and shared locked
+mutation authority. No PI/invoice status, amount, optional metadata or
+latest-invoice hint becomes financial or entitlement authority. Initial/unbound,
+legacy/feature, Connect/context/customer-account and ambiguous/incomplete graphs
+remain retryable. The private validated propagation subject prevents pi_ID and
+metadata/customer hints from becoming tenant authority, including saved retry.
+Torque stays first; raw HMAC, immutable receipts, lease/duplicate/retry and
+financial/grace contracts remain. Each new read has a cleared completion timer
+of at most 3 seconds, clamped to the remaining 10-second resolver budget. Late
+SDK results cannot resume the graph; underlying reads are not canceled and no
+end-to-end webhook deadline or zero actual SDK edge retries is claimed.
 
-On the new exact local merge2e4f06ca, this worker actually ran:
+**Invoice status/activity partial commit.** An authorized invoice transition
+updated its tenant/version/status/deleted-at conditional row outside the later
+activity insert. An activity failure returned 500 while status/timestamp/version
+remained changed; an identical retry returned 409. Actual-source native baseline
+had 7 controls pass and one desired rollback failure. Parent ran the same frozen
+SQL test against unchanged 1eb: 3 existing cases passed and the new rollback case
+failed because the changed invoice persisted. The fix uses one existing
+`db.transaction` executor for conditional update and scoped activity insertion;
+empty updates add no activity, and an insertion failure rolls back before the
+same request is retried. Quote/linked-job rollback, validation 400, foreign 404,
+allowed status choices, stale/CAS 409, response shape and role/tenant guards
+remain. Native fixtures explicitly model transaction state and synthetic
+pre-authorized context; they do not independently prove authentication or real
+PostgreSQL MVCC. Independent review verifies the runtime AST outside this one
+handler and the three prior SQL bodies are unchanged. Parent's component SQL
+candidate passed 4/4 on isolated PostgreSQL. No invoice is delivered and no
+customer/platform payment occurs through this repair.
 
-- **450/450 selected native tests**,0failed/skipped/cancelled/todo,
-  28501.4433ms, in one17-file command. This is340 prior invoice/receipt/number/
-  Stack cases +78 PI cases +9 corrected-adapter controls +23 static contracts.
-  It is targeted coverage, not the complete API/release suite.
-- Root `pnpm lint`: exit0, zero warnings.
-- Strict NodeNext checking of nine affected test/helper files: exit0. Existing
-  `database.mjs` is included with allowJs; TypeScript strict remains enabled.
-- Full `pnpm build:production`: exit0, including all four workspace typechecks,
-  API/runner compilation and Next's38 static pages. DATABASE_URL is absent;
-  INTERNAL_API_URL is pinned to unused task loopback `http://127.0.0.1:56109`,
-  and Next telemetry is disabled. No server/database was started by this worker.
+These modules keep separate platform subscription and business-invoice
+authority. Neither repair creates a schema, financial/grace policy, provider
+setting, credential, historical repair, module availability or new grant. No
+real-account failure or live customer occurrence is established.
 
-Root separately ran both guarded SQL files against this exact2e4f06ca merge:
-**13/13 pass**,0failed/skipped/cancelled,11931.1222ms. This includes the ten
-Stack generation/terminal cases and three PI delivery/retry/tenant cases. The
-22:50:09.203Z run receipt records a sterile child, validated pool-captured
-`127.0.0.1:54796` disposable database, blocked nonselected networking, existing
-cached PostgreSQL16, zero acquisitions and no production action. This worker
-did not run SQL or infer its result from native mocks.
+## Fresh combined checks and attribution
 
-## Commands and receipts
+On exact cherry checkpoint e1f2fada/19ab66cd, this worker ran one native command:
+**458/458 pass**, 0 failed/skipped/cancelled/todo, 46958.0039ms. That is the prior
+450 selected cases (340 existing +78 PI +9 adapter +23 static) plus 8 actual
+invoice-transition cases. Root lint exits 0 with zero warnings. Strict checking
+of eleven affected test/helper files exits 0, including both invoice tests and
+the Stack/PI SQL fixtures; existing Fastify WebSocket ambient types and allowJs
+for database.mjs are included, without relaxing TypeScript strict.
 
-Existing Node24.16.0, pinned pnpm10.34.5 and eight dependency junctions were
-reused. No packages were downloaded/installed. Native commands run with
-NODE_ENV=test, APP_ENV=test, DATABASE_URL absent:
+Full `pnpm build:production` exits 0, including all four workspace typechecks,
+API/runner compilation and Next's 38 static pages. DATABASE_URL is absent,
+INTERNAL_API_URL is pinned to unused task loopback `http://127.0.0.1:56109`,
+and Next telemetry is disabled. This worker started no server or database.
+
+Root separately executed **17/17 combined SQL cases**, 0 failed/skipped/cancelled,
+41405.9587ms, against exact e1f2fada/19ab66cd. The 23:18:16.995Z run receipt
+binds ten Stack generation/terminal cases, three PI delivery/retry/tenant cases
+and four document mutation cases. It uses only captured disposable loopback
+PostgreSQL16, a sterile child and blocked nonselected network, with zero
+acquisitions/production actions. This worker did not run SQL. Component PI 418,
+independent 78, later parent SQL 3 and prior integration 450/parent SQL 13 remain
+separate historical checks. The immutable PI component document's NOT_RUN
+statement records its original freeze; later real synthetic SQL results are
+recorded here instead of rewriting its reviewed blob.
+
+## Exact local commands and evidence
+
+Existing Node 24.16.0, pinned pnpm 10.34.5 and eight dependency junctions only;
+no packages were downloaded or installed. NODE_ENV=test, APP_ENV=test and
+DATABASE_URL absent for native execution. The single command is:
 
 ```text
 node --import tsx --test --test-reporter=tap --test-concurrency=1
@@ -102,47 +142,40 @@ node --import tsx --test --test-reporter=tap --test-concurrency=1
   apps/api/test/commerce-forward-model-static.test.ts
   apps/api/test/forward-commerce-contract-static.test.ts
   apps/api/test/product-entitlement-contract.test.ts
+  apps/api/test/tradeflowkit-transition-atomicity.test.ts
 pnpm lint
 pnpm build:production
 ```
 
-The exact strict arguments, all17 file paths, process exits/durations, before/
-after ten-file hash map, merge parents/tree and logs are retained under task
-`evidence/OperatorOS/next-pass/payment-intent-integration/`. Root SQL13 log and
-receipt are `evidence/OperatorOS/launch-oct23/pi-integration-local-sql13.log`
-and `pi-integration-local-sql13-receipt.json`; component SQL3 evidence is
-`pi-v2-local-sql.log` and its receipt. Component v1/v2 freezes,418 execution and
-Office78/strict/commit identity receipts remain separately preserved.
+The strict command uses node node_modules/typescript/bin/tsc with noEmit,
+strict, target ES2022, module/moduleResolution NodeNext, esModuleInterop,
+skipLibCheck, resolveJsonModule, allowJs and types node,@fastify/websocket.
+All eleven exact paths and arguments are in the final local freeze. Commands,
+exits, all 18 component/document hash maps, merge/cherry parents/trees and logs
+are retained in task
+`evidence/OperatorOS/next-pass/payment-intent-integration/final18/`.
+Parent SQL 17 is `launch-oct23/final18-integration-sql17.log` and its receipt;
+component invoice baseline/candidate SQL and PI earlier SQL retain their own
+logs. PR133 terminal/postmerge proofs are `launch-oct23/pr133-revised-terminal-ci-receipt.json`
+and `pr133-postmerge-receipt.json`. No scripts from downloaded artifacts were
+executed; retained browser analysis is evidence-only.
 
-## Failed gate disclosure and acceptance still required
+## Remaining gate and rollback
 
-Original PR133 head7a full release run39332436621 failed13/14 scopes:
-API2047/2056 passed, with nine new SQL HTTP cases failing because ordinary
-test/test mode selected the deterministic adapter despite flag0, while the
-fixture signed real SDK HMAC. Parent reproduced the nine failures against the
-isolated cached database. The independently reviewed test-only correction
-selects configured HMAC only after the captured disposable-target guard and
-blocked egress; original ten SQL case bodies/assertions remain. Parent's
-corrected ten cases pass. Corrected PR133 full hosted release is still pending;
-its completed vector32 check does not replace that full gate.
+Final immutable18-path integration review and fresh complete combined-head
+hosted release/vector CI, including actual tested/prospective merge-tree
+equality, are required before source merge. The previous components'/PR133's
+gates cannot substitute for that combined run. Actual provider account/mode/API
+permissions and real signed PI/invoice graphs, controlled deployed protected
+tenant/payment persistence, production DB identity, current backup/restore,
+monitoring/support, rollback acceptance and publication remain separate gates.
+No parity state or module launch availability is promoted. The selected payment
+destination remains disabled.
 
-That original browser phase had108 first-attempt passes and one automatically
-recovered route-crawler flake. Retained trace evidence binds the exact unchanged
-frontend/test chain and explicit speculative console RSC/chunk prefetch from an
-intentionally unavailable OutCall card, immediately before scripted navigation
-to PulseDesk. It does not prove real OutCall workflow acceptance or a baseline
-runtime defect; precise cancellation time/passing retry trace are absent. No
-assertion, retry policy or speculative runtime patch is changed here.
-
-New-head source review, actual-main history integration and complete hosted
-release/vector CI remain required. Real provider account/mode/API permissions,
-real signed PI/invoice graphs, controlled deployed tenant/payment persistence,
-protected production DB identity, current backup/restore, support/monitoring,
-rollback acceptance and publication remain separate gates. Local synthetic SQL
-does not establish any of them. The selected payment destination stays disabled.
-
-Rollback is the ordinary reviewed source revert. There is no migration or
-provider compensation to undo; a revert restores generic PI retry behavior.
-Preserve immutable receipts for future controlled reconciliation. No provider
-or customer request, real payment, replay, production DB query/apply, settings
-change, push, PR or publication occurred in this local preparation.
+Rollback uses the ordinary reviewed source release/revert path. There is no new
+migration or provider mutation to undo. A PI revert restores generic failed-PI
+retry; preserve immutable receipts. The invoice repair neither repairs prior
+missing activity nor claims every unacknowledged DB commit is retryable. No
+production read/write, real customer/payment/provider request, replay, security/
+billing setting, credential creation, push, PR or publication was performed by
+this preparation worker. Parent owns subsequent source publication and gates.

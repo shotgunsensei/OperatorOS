@@ -1,71 +1,76 @@
 # OperatorOS module parity index
 
-## Bound Stack failed-payment correlation: provisional local integration (2026-10-19)
+## Selected failed-payment and invoice transaction source integration (2026-10-19)
 
-Local merge `2e4f06caa0dc7dc24386e8776181f71b7f327372` joins immutable PI
-component `b05db31befebc83e9e09666d2b3d4467a5ca76cf` with reviewed corrected
-PR133 head `1eb0115b68c8ad99d66231db68f33148d459316d` using normal history.
-All ten PI component blobs and frozen byte hashes remain exact. This is a
-provisional local branch, not approved main or a publication candidate yet.
+This selected 18-path candidate preserves PI component
+`b05db31befebc83e9e09666d2b3d4467a5ca76cf` (ten paths), invoice component
+`884acffaba7e3a3b80aa9101897b2aab4e519354` (four paths), and four shared
+checkpoint documents. All fourteen component Git blobs and frozen raw hashes
+remain exact. Verified PR133 main `e31805c10c2b394f437a03ae11fdaa4a74a9a933`
+was incorporated by a guarded normal-history merge; the invoice component was
+then cherry-picked as `e1f2fada3c4ae25970c4f10427022ef0abdcfc49`.
 
-| Scope | Demonstrated source/synthetic evidence | Acceptance still absent |
-| --- | --- | --- |
-| Already-bound canonical Application Stack failed PaymentIntent | Bounded exact PI/allocation/invoice/current-subscription correlation, trusted tenant/customer/generation fencing and private propagation subject;450 selected native cases and root13 combined disposable-SQL cases pass | Fresh combined hosted release; intended real provider account/mode/event graph; deployed protected tenant workflow; current backup/restore/support and publication |
+Two reproduced source defects are repaired within their existing authority:
 
-No module parity state or launch availability is promoted. Unsupported,
-ambiguous, unbound, initial, legacy, feature, Connect/context and customer-account
-cases remain retryable. Torque, signatures/receipts/leases, schema and existing
-financial/grace policy are unchanged. The final integration review links the
-exact command, file/hash and rollback evidence.
+- A signed failed PaymentIntent for an already-bound current canonical Stack
+  previously remained unhandled. Bounded read-only PI/allocation/invoice/current
+  subscription correlation now retains exact scope, customer, tenant, Stack and
+  generation checks and the existing mutation fence. Private propagation
+  ownership excludes PI IDs and metadata-only tenant hints. Unsupported or
+  ambiguous cases still retry; no initial grant or payment inference is added.
+- An authorized invoice transition could return 500 after its status/version
+  update committed but activity insertion failed; an identical retry returned 409.
+  The existing conditional update and activity now share one transaction, so
+  the demonstrated failure rolls back and the identical retry succeeds. Quote,
+  tenant/role, status-choice, version-conflict and response contracts remain.
 
-Fresh local root lint has zero warnings; nine affected test/helper files pass
-strict typing. Full production build passes, including all four workspace
-typechecks, API/runner compilation and Next's 38 static pages.
-Root's13/13 SQL passes use only a captured disposable loopback target, sterile
-child environment and blocked external network. PI owner418, independent78 and
-later component SQL3 results retain their separate attribution; the immutable
-component document's earlier NOT_RUN checkpoint is preserved.
+Fresh combined execution passes **458 selected native cases**, zero failures or
+skips, zero-warning root lint and strict checking of eleven affected test/helper
+files. Full production build passes, including all four workspace typechecks,
+API/runner compilation and Next's 38 static pages. Root
+separately executed **17/17 combined SQL cases**, zero failures/skips, on exact
+`e1f2fada` using captured disposable loopback PostgreSQL, a sterile child and
+blocked external networking. These are ten Stack, three PI and four document
+mutation cases; no real provider, production database or customer was used.
 
-Original PR133 full release remains failed13/14 (API2047/2056; nine fixture
-adapter-selection failures). The independently reviewed test correction fixes
-the reproduced cases; its fresh complete release CI is pending at this local
-checkpoint. The original browser result was108 first-attempt passes plus one
-automatically recovered crawler prefetch-cancellation flake; task trace evidence
-records its limits. This branch must normally incorporate actual verified main
-after PR133 merges, then pass fresh combined-head full release/vector CI and
-immutable review before source merge. No publication/provider/production DB
-action occurred.
+PR133 has merged source-only after all 14 release scopes and vector 32 passed;
+its original failed 13/14 run and test-fixture cause remain disclosed below.
+Those gates do not validate these additional two repairs. Final immutable
+integration review and fresh complete combined-head hosted release/vector CI,
+including actual tested/merge-tree equality, remain required before source
+merge. No module parity state, launch availability, schema, financial policy,
+provider setting or credential changes. Actual provider account/mode/event
+graphs, deployed protected tenant workflow, current backup/restore/support and
+publication remain separate gates.
 [Integration evidence](../reviews/2026-10-19/STRIPE_FAILED_PAYMENT_INTEGRATION.md).
 
-## Reviewed Stack generation and terminal eligibility source candidate (2026-10-19)
+| Selected scope | Source/synthetic acceptance | Launch acceptance |
+| --- | --- | --- |
+| Already-bound Application Stack failed PI | Exact bounded correlation and private tenant propagation; existing fence/financial policy | Fresh combined CI and controlled actual provider/tenant acceptance remain |
+| TradeFlowKit invoice transition | Conditional status plus activity commit/rollback together; quote/security/CAS controls retained | No module-state promotion or provider/customer action; target deployment/recovery remain gated |
 
-The isolated integration preserves approved components `77e6cebe` and `aa3f9ee` on
-the PR132 account/invoice review tree. Stack mutations lock and compare the
-validated checkout generation before writing entitlements and seat projections
-through one transaction. Owned delayed-payment failure cannot establish an
-initial paid grant; failed initial checkout states cannot be promoted through
-unpaid-to-active recovery. Existing activated recovery and genuine provider
-terminal reporting remain compatible. Conditional source regressions are
-reproduced; no live-account occurrence or historical data repair is claimed.
+## Reviewed Stack generation and terminal eligibility source history (2026-10-19)
 
-The original head 7a92b10a passed 363 selected native cases, root lint, four
-workspace typechecks and API/SDK compilation. Its hosted release failed 13/14:
-API 2047/2056 passed; nine SQL HTTP cases selected the deterministic test adapter
-instead of configured SDK HMAC. A test-only, independently reviewed correction
-68d30d99 follows the existing disposable-schema-before-development-mode fixture
-precedent and asserts the actual configured adapter. Original ten SQL case
-bodies and assertions remain unchanged. The same nine failures reproduced against
-cached, isolated PostgreSQL; the correction passes all ten, plus nine new native
-adapter controls. Revised integration selected native execution passes 372 cases
-across complementary batches (357 plus15), zero failures/skips; zero-warning
-root lint passes, and both changed test files pass owner/independent strict typing.
-Runtime source retains the earlier four-workspace type/build verification.
-Fresh combined-head full release/vector CI and final immutable
-integration review remain required before source merge. This changes no schema,
-price, dependency, provider setting, module launch state or financial policy.
-Production remains separate from source validation; provider account/mode,
-controlled tenant/payment acceptance, current recovery/support and publication
-are unverified. [Integration evidence](../reviews/2026-10-19/STACK_ATOMICITY_INTEGRATION.md).
+PR133 merged source-only as `e31805c10c2b394f437a03ae11fdaa4a74a9a933`;
+its tree `eab88cc20626467ba0be604cf96523aaa35a1e6b` equals the reviewed
+head and actual CI checkout tree. Corrected head `1eb0115b` passed all 14 release
+scopes in run 39337281819: 52 unit, 2065 API, 108 integration, 109 browser on first
+attempt with no observed retries, 4 visual and all 10 new SQL cases. Vector
+run 39337281781 passed 32. Actual checkout was
+`e769fb407b6d6d43aca3d4aef933aedf174e5448`, build
+`0ad0042a3d68e1902801078e`. This establishes source acceptance, not publication.
+
+The original 7a run 39332436621 remains failed 13/14: API 2047/2056, with nine
+SQL HTTP cases selecting deterministic verification despite real SDK HMAC.
+The independently reviewed test-only correction selects configured HMAC after
+the captured disposable-target guard and blocked egress, preserving all ten
+original SQL assertions. Parent reproduced the nine failures and then all ten
+passes. The original browser phase also had 108 first-attempt passes and one
+automatically recovered speculative-prefetch/crawler cancellation flake. Task
+trace evidence records its timing/source limits; no assertion or retry policy
+was waived. These historical results are distinct from the fresh complete gate
+still required for the selected PI/invoice candidate above.
+[PR133 integration evidence](../reviews/2026-10-19/STACK_ATOMICITY_INTEGRATION.md).
 
 ## Reviewed account-response and diagnostic follow-up (2026-10-19)
 
