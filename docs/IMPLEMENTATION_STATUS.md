@@ -1,5 +1,49 @@
 # OperatorOS implementation status
 
+## Reviewed account-response and diagnostic follow-up (2026-10-19)
+
+The source candidate now also includes the independently approved Auth/Tenant
+component `0f2b845f845de5d150e9c72519422ee0cf1d3692` and diagnostic fixture
+component `3458e5e284151420ec59fd7ec3e8f239fd18221c`. Their eight committed
+blobs are preserved alongside the original nine invoice/number component blobs;
+four root status/review documents describe the final 21-path scope.
+
+A held authentication read can replace a newly signed-in account through the
+actual Invite screen. Client transitions and reads now own their completion,
+and tenant work is bound to the synchronous accepted identity lifetime, even
+for a fresh login with the same user ID. Prior memberships are masked while
+identity changes; normal successful tenant-switch reload and failed global
+logout behavior remain intact. Server sessions, cookies and tenant/module
+authorization are unchanged. Owner and independent suites each passed 44 actual
+provider/UI browser cases; an independent 390px Invite control also passed.
+The same durable Invite regression fails on the unchanged base, with 3 controls
+passing. This is client state/header ownership, not a server authorization bypass.
+
+Original PR132 head `acbeb7ddcef90f7587046aad244fa8c6522cd14f` had terminal
+release run 39323364782 FAILURE: 13/14 scopes passed, API 1937/1938. Its one failure
+was a real-route VM diagnostic fixture missing the actual observation-helper
+binding: ReferenceError returned 503 before the intended database diagnostic 400.
+The test-only correction compiles the actual helper declaration into that VM;
+all original assertions remain. Owner and independent 49-case focused suites,
+strict changed-test typing and lint pass. The old failed run remains failed.
+Its two new disposable-SQL observation cases, unit 52, integration 108,
+browser 65 first attempts, visual 4 and vector 32 passed; they do not waive failure.
+
+Fresh combined local execution passes 232 selected native cases (228 prior
+selected cases plus four diagnostic tests), zero failed/skipped. Root lint
+passes with zero warnings and all four workspace typechecks pass. The changed
+component blobs match their independently tested/reviewed commits. Existing
+task dependency junctions and cached Chromium were reused; no acquisition.
+
+Fresh combined exact-head full release/vector CI remains required before source
+merge. Paid Stack asynchronous failure and its shared transaction-generation
+fence are separate work, not part of this candidate. Pricing/catalog, schema67,
+dependencies, provider configuration, module parity and launch states remain
+unchanged. No real account, DB, provider, recipient, payment, replay or deployment
+action occurred. Controlled deployed tenant/provider/recovery/support acceptance
+remains separate. [Client evidence](reviews/2026-10-19/AUTH_TENANT_ASYNC_OWNERSHIP.md)
+and [fixture evidence](reviews/2026-10-19/WEBHOOK_DIAGNOSTIC_FIXTURE_BINDING.md).
+
 ## Invoice event follow-up integration (2026-10-19)
 
 PR131 is source-merged as `7c077cce8ba6c6471014ffe264b85ab95ddd3735`;
