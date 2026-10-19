@@ -1,5 +1,26 @@
 # OperatorOS module parity index
 
+## Reviewed Stack generation and terminal eligibility source candidate (2026-10-19)
+
+The isolated integration preserves approved components `77e6cebe` and `aa3f9ee` on
+the PR132 account/invoice review tree. Stack mutations lock and compare the
+validated checkout generation before writing entitlements and seat projections
+through one transaction. Owned delayed-payment failure cannot establish an
+initial paid grant; failed initial checkout states cannot be promoted through
+unpaid-to-active recovery. Existing activated recovery and genuine provider
+terminal reporting remain compatible. Conditional source regressions are
+reproduced; no live-account occurrence or historical data repair is claimed.
+
+Combined native execution passes 363 selected tests, zero failures/skips.
+Root lint has zero warnings, all four workspace typechecks and API/SDK build pass.
+Ten authored/typed disposable-PostgreSQL cases are NOT_RUN locally; the complete
+new-head release/vector gates, actual SQL execution and independent integration
+identity review remain required before source merge. This changes no schema,
+price, dependency, provider setting, module launch state or financial policy.
+Production remains separate from source validation; provider account/mode,
+controlled tenant/payment acceptance, current recovery/support and publication
+are unverified. [Integration evidence](../reviews/2026-10-19/STACK_ATOMICITY_INTEGRATION.md).
+
 ## Reviewed account-response and diagnostic follow-up (2026-10-19)
 
 The source candidate now also includes the independently approved Auth/Tenant
