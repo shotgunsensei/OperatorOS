@@ -6,3 +6,4 @@
 - [Module route metadata scope](module-route-metadata-scope.md) — apply index-control metadata at a shared dynamic segment when sibling catch-all pages also serve private content.
 - [Replit provider scan marker](replit-provider-scan.md) — exact provider pnpm tuples may retain workspace signals; use the deployment-only marker for a bounded exception.
 - [Replit internal ports](replit-internal-ports.md) — bind API, runner, and production Next to loopback or Replit may regenerate public mappings that fail publishing.
+- [Release readiness versus schema parity](release-readiness.md) — an empty Publish diff does not prove readiness when both environments lack new release objects.
