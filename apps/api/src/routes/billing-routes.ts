@@ -17,6 +17,7 @@ import {
   isStripeEnabled, getBillingMode,
   cancelAddon, processAddonWebhookEvent,
   classifyWebhookEvent, claimStripeEvent,
+  billingObservationResult,
   markStripeEventProcessed, markStripeEventFailed,
   createStackCheckoutSession,
   changeStackFreeCompanion,
@@ -631,9 +632,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       let result: { handled: boolean; action?: string; error?: string; shouldPropagate?: boolean };
       failureStage = 'event_processing';
       try {
-        // Only this verified dispatch has excluded Torque credit events. Keep
-        // saved-event admin retry on its existing separate processing path.
-        result = event.type === 'checkout.session.expired' && !classification.isAddon
+        // Observational events share the saved verified-receipt retry policy.
+        // Only this dispatch has excluded Torque from generic expiry handling.
+        result = billingObservationResult(event.type) ?? (event.type === 'checkout.session.expired' && !classification.isAddon
           ? { handled: true, action: 'checkout_expired_ignored', shouldPropagate: false }
           : classification.isFeatureAddon
           ? classification.featureKey === CALLCOMMAND_NUMBER_FEATURE_KEY
@@ -641,7 +642,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
             : await processCallCommandLaneWebhookEvent(event)
           : classification.isAddon
             ? await processAddonWebhookEvent(event)
-            : await processWebhookEvent(event);
+            : await processWebhookEvent(event));
       } catch (err: any) {
         failureStage = 'event_status_update';
         if (claimedRowId) await markStripeEventFailed(claimedRowId, err.message ?? String(err));
