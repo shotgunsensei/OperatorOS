@@ -11,8 +11,10 @@ vector32 passed. Its actual checkout and merged tree equal the reviewed tree;
 52 unit,1938 API,108 integration,109 browser (no retry observed) and4 visual
 cases passed. Its original failed run remains disclosed.
 
-Twelve component paths and four status/review documents form
-the final integration scope. Original branches and component commits remain.
+Fourteen component paths and four status/review documents form
+the revised 18-path integration scope. The independently reviewed test-only
+fixture correction `68d30d991dcffa47c2485acacc120b6dd2df79c6` supersedes the SQL
+fixture blob and adds native adapter controls and its review document. Original branches and component commits remain.
 
 ## Demonstrated source defects and bounded repairs
 
@@ -66,14 +68,42 @@ The observation fixture also binds the actual async-failure handler and checks
 its business error, preventing a ReferenceError from accidentally satisfying
 the expected 503 assertion.
 
-Ten guarded real Fastify/SDK/disposable-PostgreSQL cases are authored and strictly
-typed: seven generation/transaction/async cases and three terminal/recovery
-cases. They are **NOT_RUN locally** because no permitted existing disposable
-PostgreSQL target is confirmed. The complete new-head hosted release contract,
-including all ten SQL cases, existing API/integration/browser/build/visual
-scopes and vector checks, is required before source merge. Local native mocks
-do not prove PostgreSQL locking or actual provider acceptance. Existing task
-dependencies are reused without acquisition or release-gate changes.
+The original hosted run 39332436621 at head `7a92b10a` failed 13/14 scopes:
+API 2047/2056 passed, with all nine new SQL HTTP cases rejected before dispatch
+because ordinary test/test mode selects the deterministic adapter despite its
+explicit flag being zero. The pure helper/shared-executor SQL case passed.
+Unit52, integration108, visual4 and vector32 passed. Browser108 passed plus one
+case recovered by the existing automatic retry: parity-route-control.spec.ts:11
+recorded a ConsolePage chunk ERR_ABORTED while advancing routes. This differs
+from the earlier pricing hydration observation. No retry policy or assertion
+was changed; the old failed head is neither waived nor rerun.
+
+The three-file test-only correction follows the existing SQL fixture precedent:
+after the disposable schema guard captures the loopback pool, select development
+mode before importing billing, then assert the actual configured Stripe adapter.
+The original ten SQL case bodies and HMAC/receipt/locking/projection/rollback
+assertions remain unchanged. Nine new native actual-source adapter controls pass;
+the old fixture produces eight passes and one desired-state failure.
+
+Revised integration native checks pass372 selected cases in complementary
+batches:357 runtime/adapter/forward cases plus15 remaining source-static
+contracts, zero failures/skips. Root lint passes with zero warnings. Both changed
+test files pass owner and independent strict typing; the unchanged runtime
+retains the prior four-workspace typecheck and API/SDK compilation evidence.
+
+All ten guarded real Fastify/SDK/PostgreSQL cases now pass locally on the frozen
+corrected fixture, versus one pass and the exact nine hosted failures on unchanged
+source. PostgreSQL16.14 uses an already cached immutable Docker image with pull
+never, loopback-only port, read-only root, tmpfs data and no host mounts. A sterile
+child environment and network guard allow only this synthetic disposable target
+and local test IPC. No packages, production data or real provider credentials
+were acquired. These synthetic SQL results do not establish production identity,
+backup or restore acceptance.
+
+The complete new-head hosted release contract, including all ten SQL cases,
+existing API/integration/browser/build/visual scopes and vector checks, remains
+required before source merge. Existing task dependencies are reused without
+release-gate changes. See [fixture correction](STACK_SQL_HMAC_FIXTURE.md).
 
 ## Preserved boundaries and remaining launch gates
 
