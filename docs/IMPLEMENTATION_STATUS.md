@@ -11,11 +11,20 @@ unpaid-to-active recovery. Existing activated recovery and genuine provider
 terminal reporting remain compatible. Conditional source regressions are
 reproduced; no live-account occurrence or historical data repair is claimed.
 
-Combined native execution passes 363 selected tests, zero failures/skips.
-Root lint has zero warnings, all four workspace typechecks and API/SDK build pass.
-Ten authored/typed disposable-PostgreSQL cases are NOT_RUN locally; the complete
-new-head release/vector gates, actual SQL execution and independent integration
-identity review remain required before source merge. This changes no schema,
+The original head 7a92b10a passed 363 selected native cases, root lint, four
+workspace typechecks and API/SDK compilation. Its hosted release failed 13/14:
+API 2047/2056 passed; nine SQL HTTP cases selected the deterministic test adapter
+instead of configured SDK HMAC. A test-only, independently reviewed correction
+68d30d99 follows the existing disposable-schema-before-development-mode fixture
+precedent and asserts the actual configured adapter. Original ten SQL case
+bodies and assertions remain unchanged. The same nine failures reproduced against
+cached, isolated PostgreSQL; the correction passes all ten, plus nine new native
+adapter controls. Revised integration selected native execution passes 372 cases
+across complementary batches (357 plus15), zero failures/skips; zero-warning
+root lint passes, and both changed test files pass owner/independent strict typing.
+Runtime source retains the earlier four-workspace type/build verification.
+Fresh combined-head full release/vector CI and final immutable
+integration review remain required before source merge. This changes no schema,
 price, dependency, provider setting, module launch state or financial policy.
 Production remains separate from source validation; provider account/mode,
 controlled tenant/payment acceptance, current recovery/support and publication
