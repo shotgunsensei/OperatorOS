@@ -32,6 +32,7 @@ function sourceFunction(name: string) {
 }
 const compiled = ts.transpileModule([
   sourceFunction('classifyWebhookEvent'), sourceFunction('processWebhookEvent'), sourceFunction('billingObservationResult'),
+  sourceFunction('stripeResourceId'), sourceFunction('handleStackCheckoutPaymentFailed'),
   `module.exports={handler:${handlerSource}};`,
 ].join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
 const secret = 'whsec_synthetic_invoice_observation_only';
@@ -46,7 +47,7 @@ type Options = { disabled?: boolean; missingRaw?: boolean; claimState?: 'in_flig
   handlerFailure?: 'return' | 'throw'; markFailure?: boolean; torque?: boolean; torquePending?: boolean };
 async function fixture(options: Options = {}) {
   const calls = { verify: 0, claim: 0, processed: 0, failed: 0, providerHttp: 0, torque: 0,
-    settlement: [] as string[] };
+    settlement: [] as string[], failureErrors: [] as string[] };
   const stripe = new Stripe('sk_test_synthetic_invoice_observation_only', {
     maxNetworkRetries: 0,
     httpClient: { getClientName: () => 'blocked-offline',
@@ -93,7 +94,7 @@ async function fixture(options: Options = {}) {
       calls.processed++;
       Object.assign(receipts.get(id)!, { processed: true, action });
     },
-    async markStripeEventFailed() { calls.failed++; },
+    async markStripeEventFailed(_id: string, error: string) { calls.failed++; calls.failureErrors.push(error); },
     handleCheckoutCompleted: settlement('checkout'), handleSubscriptionCreated: settlement('subscription_created'),
     handleSubscriptionUpdated: settlement('subscription_updated'), handleSubscriptionDeleted: settlement('subscription_deleted'),
     handleInvoicePaid: settlement('invoice_paid'), handlePaymentFailed: settlement('invoice_failed'),
@@ -178,6 +179,10 @@ for (const type of ['charge.dispute.closed', 'charge.dispute.created', 'charge.r
     const response = await f.send(type);
     assert.equal(response.statusCode, 503); assert.equal(response.json().code, 'WEBHOOK_PROCESSING_RETRY_REQUIRED');
     assert.equal(f.calls.failed, 1); assert.equal(f.calls.processed, 0);
+    if (type === 'checkout.session.async_payment_failed') {
+      // Prove the real invalid-Stack boundary, not a caught missing VM binding.
+      assert.deepEqual(f.calls.failureErrors, ['Invalid Application Stack asynchronous payment failure']);
+    }
   });
 }
 for (const type of ['invoice.paid', 'invoice.payment_succeeded', 'invoice.payment_failed']) {

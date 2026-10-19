@@ -11,6 +11,15 @@ import {
 } from '@operatoros/sdk';
 import { db } from '../db.js';
 import { tenantApplicationSubscriptions, tenantEntitlements, tenants, tenantUsers } from '../schema.js';
+import {
+  lockExpectedStack, lockTenantStack, withStackTransaction,
+  type StackMutationSnapshot, type StackTransaction,
+} from './stack-mutation-fence.js';
+
+interface StackMutationOptions {
+  executor?: StackTransaction;
+  expectedStack?: StackMutationSnapshot;
+}
 
 export interface GrantStackInput extends StackSelection {
   tenantId: string;
@@ -87,12 +96,22 @@ export async function tenantHasActiveApplicationStackCompanion(
   }
 }
 
-export async function grantStackEntitlements(input: GrantStackInput): Promise<void> {
+export async function grantStackEntitlements(input: GrantStackInput, options: StackMutationOptions = {}): Promise<void> {
   const normalized = normalizeStackSelection(input);
   const seatLimit = INCLUDED_SEATS + (normalized.additionalSeats ?? 0);
   const now = new Date();
 
-  await db.transaction(async tx => {
+  await withStackTransaction(options.executor, async tx => {
+    // Lock order is Stack -> entitlements -> tenant seats, including default
+    // callers. A paid initial activation must still own an incomplete intent.
+    if (options.expectedStack && options.expectedStack.tenantId !== input.tenantId) throw new ProductEntitlementConflictError();
+    const stack = options.expectedStack
+      ? await lockExpectedStack(tx, options.expectedStack)
+      : await lockTenantStack(tx, input.tenantId);
+    if (input.applicationSubscriptionId && (!stack
+          || stack.id !== input.applicationSubscriptionId || stack.status !== 'incomplete')) {
+      throw new ProductEntitlementConflictError('The Application Stack checkout intent is no longer activatable.');
+    }
     const [otherCore] = await tx.select({
       id: tenantEntitlements.id,
       stripeSubscriptionId: tenantEntitlements.stripeSubscriptionId,
@@ -214,22 +233,28 @@ export async function changeFreeCompanionModule(
   tenantId: string,
   moduleKey: CompanionModuleKey,
   additionalModules?: readonly CompanionModuleKey[],
+  options: StackMutationOptions = {},
 ): Promise<void> {
   if (!COMPANION_MODULE_KEYS.has(moduleKey)) throw new Error(`Unknown companion module: ${moduleKey}`);
 
-  const [core] = await db.select().from(tenantEntitlements)
-    .where(and(
-      eq(tenantEntitlements.tenantId, tenantId),
-      eq(tenantEntitlements.entitlementType, 'core_product'),
-      eq(tenantEntitlements.active, true),
-    ))
-    .limit(1);
-  if (!core) throw new Error('An active core product is required');
+  await withStackTransaction(options.executor, async tx => {
+    if (options.expectedStack && options.expectedStack.tenantId !== tenantId) throw new ProductEntitlementConflictError();
+    const stack = options.expectedStack
+      ? await lockExpectedStack(tx, options.expectedStack)
+      : await lockTenantStack(tx, tenantId);
+    if (!stack || stack.tenantId !== tenantId) throw new Error('Application stack billing record not found');
+    const [core] = await tx.select().from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.tenantId, tenantId),
+        eq(tenantEntitlements.entitlementType, 'core_product'),
+        eq(tenantEntitlements.active, true),
+      ))
+      .limit(1);
+    if (!core) throw new Error('An active core product is required');
+    if (core.stripeSubscriptionId !== stack.stripeSubscriptionId) {
+      throw new ProductEntitlementConflictError('The active core no longer belongs to this Application Stack.');
+    }
 
-  await db.transaction(async tx => {
-    const [stack] = await tx.select().from(tenantApplicationSubscriptions)
-      .where(eq(tenantApplicationSubscriptions.tenantId, tenantId)).limit(1);
-    if (!stack) throw new Error('Application stack billing record not found');
     const nextAdditionalModules = additionalModules ?? stack.additionalModuleKeys as CompanionModuleKey[];
     const oldIncluded = stack.includedCompanionKey as CompanionModuleKey;
     const paidSwap = nextAdditionalModules.includes(oldIncluded)
@@ -292,24 +317,37 @@ export async function changeFreeCompanionModule(
 
 export async function deactivateSubscriptionEntitlements(
   stripeSubscriptionId: string,
+  options: StackMutationOptions & { tenantId?: string } = {},
 ): Promise<string | null> {
-  const [row] = await db.select({ tenantId: tenantEntitlements.tenantId })
-    .from(tenantEntitlements)
-    .where(and(
-      eq(tenantEntitlements.stripeSubscriptionId, stripeSubscriptionId),
-      eq(tenantEntitlements.active, true),
-    ))
-    .limit(1);
-  if (!row) return null;
+  return withStackTransaction(options.executor, async tx => {
+    const trustedTenantId = options.tenantId ?? options.expectedStack?.tenantId;
+    if (options.executor && !trustedTenantId) throw new ProductEntitlementConflictError('A supplied Stack transaction requires its trusted tenant.');
+    // Discover without locking entitlements, then coordinate through the tenant's
+    // CURRENT Stack even when deactivating a prior subscription's grants.
+    const [row] = await tx.select({ tenantId: tenantEntitlements.tenantId })
+      .from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.stripeSubscriptionId, stripeSubscriptionId),
+        eq(tenantEntitlements.active, true),
+        ...(trustedTenantId ? [eq(tenantEntitlements.tenantId, trustedTenantId)] : []),
+      ))
+      .limit(1);
+    if (!row) return null;
+    if (options.expectedStack) {
+      if (options.expectedStack.tenantId !== row.tenantId) throw new ProductEntitlementConflictError();
+      await lockExpectedStack(tx, options.expectedStack);
+    } else {
+      await lockTenantStack(tx, row.tenantId);
+    }
 
-  const now = new Date();
-  await db.transaction(async tx => {
+    const now = new Date();
     // 1. Deactivate ONLY the cancelled subscription's rows. Entitlements
     //    belonging to any OTHER active core subscription (its included apps,
     //    companion, and seat packs) are left untouched.
     await tx.update(tenantEntitlements)
       .set({ active: false, updatedAt: now })
-      .where(eq(tenantEntitlements.stripeSubscriptionId, stripeSubscriptionId));
+      .where(and(eq(tenantEntitlements.tenantId, row.tenantId),
+        eq(tenantEntitlements.stripeSubscriptionId, stripeSubscriptionId)));
 
     // 2. Recompute the tenant seat limit from what REMAINS active. If the
     //    tenant still owns at least one active core product, the seat limit
@@ -338,8 +376,8 @@ export async function deactivateSubscriptionEntitlements(
     await tx.update(tenants)
       .set({ seatLimit, updatedAt: now })
       .where(eq(tenants.id, row.tenantId));
+    return row.tenantId;
   });
-  return row.tenantId;
 }
 
 export async function tenantHasActiveEntitlement(
