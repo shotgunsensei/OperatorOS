@@ -89,7 +89,7 @@ async function projection(connection: { query: (text: string, values: any[]) => 
 }
 
 before(async () => {
-  process.env.APP_ENV = 'test'; process.env.NODE_ENV = 'test'; process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE = '0';
+  process.env.APP_ENV = 'test'; process.env.NODE_ENV = 'test';
   process.env.STRIPE_MODE = 'test'; process.env.STRIPE_SECRET_KEY = 'sk_test_synthetic_stack_fence_only';
   process.env.STRIPE_PRICE_TECHDECK_MONTHLY = 'price_fence_core';
   await ensureSchemaReady(); // Refuses an absent/remote/persistent captured pool target.
@@ -97,6 +97,12 @@ before(async () => {
   owner = await createTestUser();
   const receivers = await db.execute(sql`SELECT COUNT(*)::int AS count FROM tenant_modules WHERE tenant_id=${owner.currentTenantId}`);
   assert.equal(receivers.rows[0].count, 0, 'the isolated tenant must have no external propagation receivers');
+  // Ordinary test/test selects the deterministic signature adapter even with
+  // its production-artifact opt-in set to 0. Select the real SDK HMAC branch
+  // only after the captured disposable pool has passed the schema guard.
+  // This child process retains synthetic credentials and blocked egress.
+  process.env.APP_ENV = 'development'; process.env.NODE_ENV = 'development';
+  process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE = '0';
   billing = await import('../src/lib/billing-service.js');
   product = await import('../src/lib/product-entitlements.js'); fence = await import('../src/lib/stack-mutation-fence.js');
   ({ signToken } = await import('../src/lib/auth.js'));
@@ -116,6 +122,9 @@ before(async () => {
       async create() { return { id: `cs_new_${randomUUID()}`, url: 'https://checkout.example.invalid/synthetic' }; },
     } },
   } });
+  const { getPaymentProviderAdapter } = await import('../src/lib/shared-provider-adapters.js');
+  assert.equal(getPaymentProviderAdapter().status.name, 'stripe', 'SQL acceptance must exercise the actual SDK HMAC adapter');
+  assert.equal(getPaymentProviderAdapter().status.state, 'configured');
   const { registerBillingRoutes } = await import('../src/routes/billing-routes.js');
   app = Fastify();
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (request, body, done) => {
