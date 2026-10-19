@@ -1,5 +1,42 @@
 # OperatorOS module parity index
 
+## Bound Stack failed-payment correlation: provisional local integration (2026-10-19)
+
+Local merge `2e4f06caa0dc7dc24386e8776181f71b7f327372` joins immutable PI
+component `b05db31befebc83e9e09666d2b3d4467a5ca76cf` with reviewed corrected
+PR133 head `1eb0115b68c8ad99d66231db68f33148d459316d` using normal history.
+All ten PI component blobs and frozen byte hashes remain exact. This is a
+provisional local branch, not approved main or a publication candidate yet.
+
+| Scope | Demonstrated source/synthetic evidence | Acceptance still absent |
+| --- | --- | --- |
+| Already-bound canonical Application Stack failed PaymentIntent | Bounded exact PI/allocation/invoice/current-subscription correlation, trusted tenant/customer/generation fencing and private propagation subject;450 selected native cases and root13 combined disposable-SQL cases pass | Fresh combined hosted release; intended real provider account/mode/event graph; deployed protected tenant workflow; current backup/restore/support and publication |
+
+No module parity state or launch availability is promoted. Unsupported,
+ambiguous, unbound, initial, legacy, feature, Connect/context and customer-account
+cases remain retryable. Torque, signatures/receipts/leases, schema and existing
+financial/grace policy are unchanged. The final integration review links the
+exact command, file/hash and rollback evidence.
+
+Fresh local root lint has zero warnings; nine affected test/helper files pass
+strict typing. Full production build passes, including all four workspace
+typechecks, API/runner compilation and Next's 38 static pages.
+Root's13/13 SQL passes use only a captured disposable loopback target, sterile
+child environment and blocked external network. PI owner418, independent78 and
+later component SQL3 results retain their separate attribution; the immutable
+component document's earlier NOT_RUN checkpoint is preserved.
+
+Original PR133 full release remains failed13/14 (API2047/2056; nine fixture
+adapter-selection failures). The independently reviewed test correction fixes
+the reproduced cases; its fresh complete release CI is pending at this local
+checkpoint. The original browser result was108 first-attempt passes plus one
+automatically recovered crawler prefetch-cancellation flake; task trace evidence
+records its limits. This branch must normally incorporate actual verified main
+after PR133 merges, then pass fresh combined-head full release/vector CI and
+immutable review before source merge. No publication/provider/production DB
+action occurred.
+[Integration evidence](../reviews/2026-10-19/STRIPE_FAILED_PAYMENT_INTEGRATION.md).
+
 ## Reviewed Stack generation and terminal eligibility source candidate (2026-10-19)
 
 The isolated integration preserves approved components `77e6cebe` and `aa3f9ee` on

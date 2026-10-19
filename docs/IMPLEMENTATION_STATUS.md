@@ -1,5 +1,44 @@
 # OperatorOS implementation status
 
+## Bound Stack failed-payment correlation: provisional local integration (2026-10-19)
+
+Local merge `2e4f06caa0dc7dc24386e8776181f71b7f327372` joins immutable PI
+component `b05db31befebc83e9e09666d2b3d4467a5ca76cf` with reviewed corrected
+PR133 head `1eb0115b68c8ad99d66231db68f33148d459316d` using normal history.
+All ten PI component blobs and frozen byte hashes remain exact. This is a
+provisional local branch, not approved main or a publication candidate yet.
+
+The bounded read-only correlation handles only an already-bound current
+canonical Stack. It follows the exact failed PI through complete, bounded,
+unique invoice-allocation mapping and current authoritative subscription truth;
+tenant/customer/Stack/generation checks and the shared mutation fence remain.
+Private propagation ownership prevents PI IDs and metadata-only hints from
+selecting a tenant. Unsupported or ambiguous cases remain retryable. Torque,
+receipt/signature/lease behavior, paid/grace policy, schema and launch states
+are unchanged. No new provider, feature or financial workflow is activated.
+
+Fresh local integration checks pass **450 selected native cases**, zero
+failures/skips, root lint with zero warnings, and strict typing of nine affected
+test/helper files. Full production build passes, including all four workspace
+typechecks, API/runner compilation and Next's 38 static pages.
+Root separately ran **13/13 combined SQL cases**, zero failures/skips, on this
+exact merge using only a captured disposable loopback PostgreSQL target, sterile
+child environment and blocked external network. The earlier PI418 owner run,
+independent78 and later component SQL3 passes remain attributed separately; the
+immutable component document's NOT_RUN statement records its earlier freeze.
+
+Original PR133 hosted release remains failed13/14 (API2047/2056; nine fixture
+adapter-selection failures). The test-only correction reproduced/fixed those
+failures; its fresh full release CI is still pending at this checkpoint. Its
+original browser run had108 first-attempt passes and one recovered crawler
+prefetch-cancellation flake, with source/trace limits retained in task evidence.
+After PR133 is verified and merged, root must normally merge actual main into
+this branch and require a fresh complete combined-head release/vector gate and
+immutable integration review before source merge. Actual provider account/mode,
+real signed payment graphs, deployed tenant acceptance, protected DB identity,
+current recoverable backup/support and publication remain separate gates.
+[Integration evidence](reviews/2026-10-19/STRIPE_FAILED_PAYMENT_INTEGRATION.md).
+
 ## Reviewed Stack generation and terminal eligibility source candidate (2026-10-19)
 
 The isolated integration preserves approved components `77e6cebe` and `aa3f9ee` on
