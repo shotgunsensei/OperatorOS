@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm';
 import Fastify, { type RouteHandlerMethod } from 'fastify';
 import Stripe from 'stripe';
 import ts from 'typescript';
+import { resolveBoundStackFailedPayment } from '../src/lib/stripe-failed-payment-correlation.js';
 
 // Exercise the actual registered route body through Fastify with the real SDK
 // HMAC verifier, without importing production environment/DB modules. Durable
@@ -33,6 +34,7 @@ function sourceFunction(name: string) {
 const compiled = ts.transpileModule([
   sourceFunction('classifyWebhookEvent'), sourceFunction('processWebhookEvent'), sourceFunction('billingObservationResult'),
   sourceFunction('stripeResourceId'), sourceFunction('handleStackCheckoutPaymentFailed'),
+  sourceFunction('handleBoundStackPaymentIntentFailed'),
   `module.exports={handler:${handlerSource}};`,
 ].join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
 const secret = 'whsec_synthetic_invoice_observation_only';
@@ -64,6 +66,7 @@ async function fixture(options: Options = {}) {
   const module = { exports: {} as { handler: RouteHandlerMethod } };
   runInNewContext(compiled, {
     module, exports: module.exports, Buffer,
+    resolveBoundStackFailedPayment, STRIPE_MODE: 'test',
     console: { log() {}, warn() {}, error() {} },
     CALLCOMMAND_NUMBER_FEATURE_KEY: 'managed_phone_numbers',
     getPaymentProviderAdapter: () => ({ status: { state: options.disabled ? 'disabled' : 'configured' },
@@ -182,6 +185,9 @@ for (const type of ['charge.dispute.closed', 'charge.dispute.created', 'charge.r
     if (type === 'checkout.session.async_payment_failed') {
       // Prove the real invalid-Stack boundary, not a caught missing VM binding.
       assert.deepEqual(f.calls.failureErrors, ['Invalid Application Stack asynchronous payment failure']);
+    }
+    if (type === 'payment_intent.payment_failed') {
+      assert.deepEqual(f.calls.failureErrors, ['FAILED_PAYMENT_EVENT_INVALID']);
     }
   });
 }

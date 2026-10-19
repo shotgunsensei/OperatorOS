@@ -35,6 +35,7 @@ import { writeAudit } from './audit.js';
 import { isOperatorOSProductionArtifactTestEnvironment } from './shared-service-safety.js';
 import { recurringStripePriceError } from './stripe-price-contract.js';
 import { stripeInvoiceSubscriptionId } from './stripe-invoice-subscription.js';
+import { resolveBoundStackFailedPayment } from './stripe-failed-payment-correlation.js';
 import {
   captureStackMutationSnapshot, StackMutationConflictError,
   withStackMutation as runStackMutation,
@@ -68,7 +69,11 @@ type StripeClient = {
     configurations: { retrieve: (id: string) => Promise<any> };
   };
   webhooks: { constructEvent: (payload: string | Buffer, sig: string, secret: string) => unknown };
-  paymentIntents: { retrieve: (id: string) => Promise<any> };
+  paymentIntents: { retrieve: (id: string, args?: unknown, options?: { timeout: number; maxNetworkRetries: number }) => Promise<any> };
+  invoicePayments: { list: (args: {
+    payment: { type: 'payment_intent'; payment_intent: string }; limit: number; starting_after?: string;
+  }, options?: { timeout: number; maxNetworkRetries: number }) => Promise<any> };
+  invoices: { retrieve: (id: string, args?: unknown, options?: { timeout: number; maxNetworkRetries: number }) => Promise<any> };
   charges: { retrieve: (id: string) => Promise<any> };
   events: { list: (args: unknown) => Promise<{ data: any[] }> };
   accounts: { retrieve: () => Promise<any> };
@@ -1813,6 +1818,7 @@ export async function processWebhookEvent(event: { type: string; data: { object:
   console.log(`[billing-service] Processing webhook: ${type}`);
 
   let result: WebhookProcessResult;
+  let paymentFailureSubject: { subscriptionId: string; tenantId: string; userId: string | null } | null = null;
   switch (type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded':
@@ -1827,6 +1833,12 @@ export async function processWebhookEvent(event: { type: string; data: { object:
       result = await handleSubscriptionDeleted(obj); break;
     case 'invoice.payment_failed':
       result = await handlePaymentFailed(obj); break;
+    case 'payment_intent.payment_failed': {
+      const failure = await handleBoundStackPaymentIntentFailed(event);
+      result = failure.result;
+      paymentFailureSubject = failure.subject ?? null;
+      break;
+    }
     // Stripe sends both `invoice.paid` and `invoice.payment_succeeded` for a
     // successful invoice. Route them to the same handler so subscribing to
     // EITHER event in the dashboard works (no silently-ignored events).
@@ -1850,16 +1862,15 @@ export async function processWebhookEvent(event: { type: string; data: { object:
   //      our metadata back)
   //   3. Local subscriptions row joined by stripe_customer_id (invoice.*)
   if (result.handled && result.shouldPropagate !== false) {
-    let userId: string | null = obj?.metadata?.userId
-      ?? obj?.metadata?.user_id
-      ?? null;
-    let exactTenantId: string | null = null;
-    const stripeSubId = type.startsWith('invoice.')
+    let userId: string | null = paymentFailureSubject ? paymentFailureSubject.userId
+      : obj?.metadata?.userId ?? obj?.metadata?.user_id ?? null;
+    let exactTenantId: string | null = paymentFailureSubject?.tenantId ?? null;
+    const stripeSubId = paymentFailureSubject?.subscriptionId ?? (type.startsWith('invoice.')
       ? stripeInvoiceSubscriptionId(obj)
       : type === 'checkout.session.async_payment_failed'
         ? stripeResourceId(obj?.subscription)
-        : obj?.subscription ?? obj?.id ?? null;
-    if (stripeSubId && typeof stripeSubId === 'string') {
+        : obj?.subscription ?? obj?.id ?? null);
+    if (!paymentFailureSubject && stripeSubId && typeof stripeSubId === 'string') {
       const [stackRow] = await db.select({
         tenantId: tenantApplicationSubscriptions.tenantId,
         initiatedByUserId: tenantApplicationSubscriptions.initiatedByUserId,
@@ -1871,7 +1882,7 @@ export async function processWebhookEvent(event: { type: string; data: { object:
         userId = stackRow.initiatedByUserId ?? userId;
       }
     }
-    if (!userId) {
+    if (!paymentFailureSubject && !userId) {
       if (stripeSubId && typeof stripeSubId === 'string') {
         const [row] = await db.select({ userId: subscriptions.userId })
           .from(subscriptions)
@@ -1880,7 +1891,7 @@ export async function processWebhookEvent(event: { type: string; data: { object:
         if (row) userId = row.userId;
       }
     }
-    if (!userId) {
+    if (!paymentFailureSubject && !userId) {
       const stripeCustomerId = obj?.customer ?? null;
       if (stripeCustomerId && typeof stripeCustomerId === 'string') {
         const [row] = await db.select({ userId: subscriptions.userId })
@@ -1908,6 +1919,32 @@ export async function processWebhookEvent(event: { type: string; data: { object:
     }
   }
   return result;
+}
+
+/** Only an already-bound canonical Stack may use this failed-attempt hint. */
+async function handleBoundStackPaymentIntentFailed(event: unknown): Promise<{
+  result: WebhookProcessResult;
+  subject?: { subscriptionId: string; tenantId: string; userId: string | null };
+}> {
+  const correlation = await resolveBoundStackFailedPayment(event, () => getStripe(), STRIPE_MODE);
+  if (!correlation.ok) return { result: { handled: false, error: correlation.error } };
+  const [stack] = await db.select().from(tenantApplicationSubscriptions).where(and(
+    eq(tenantApplicationSubscriptions.id, correlation.stackId),
+    eq(tenantApplicationSubscriptions.tenantId, correlation.tenantId),
+    eq(tenantApplicationSubscriptions.stripeSubscriptionId, correlation.subscriptionId),
+    eq(tenantApplicationSubscriptions.stripeCustomerId, correlation.customerId),
+  )).limit(1);
+  if (!stack || stack.status === 'incomplete' || stackCheckoutAttemptId(stack) !== correlation.checkoutAttemptId) {
+    return { result: { handled: false, error: 'FAILED_PAYMENT_BOUND_STACK_MISMATCH' } };
+  }
+  const snapshot = captureStackMutationSnapshot(stack);
+  const binding = await validateAuthoritativeStackSubscription(correlation.subscription, stack);
+  if (!binding.valid) return { result: { handled: false, error: 'FAILED_PAYMENT_STACK_BINDING_MISMATCH' } };
+  const result = await handleSubscriptionUpdated(correlation.subscription, {
+    id: stack.id, tenantId: stack.tenantId, checkoutAttemptId: correlation.checkoutAttemptId, snapshot,
+  });
+  return { result, subject: { subscriptionId: correlation.subscriptionId,
+    tenantId: stack.tenantId, userId: stack.initiatedByUserId } };
 }
 
 async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResult> {
