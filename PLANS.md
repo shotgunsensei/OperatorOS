@@ -1,5 +1,19 @@
 # OperatorOS completion plan
 
+## October 23 launch decision (2026-10-19)
+
+Prioritize OperatorOS account/organization/access and the bounded TradeFlowKit
+customer-to-quote-to-job/invoice-to-recorded-offline-payment outcome. Finish the
+two reproduced billing repairs, independent review and combined exact-tree
+release gate before source merge. Current public runtime is healthy/ready on
+2db76299 and expected v67/67; historical65 is superseded and is not a reason to
+migrate. No migration, dependency/provider activation or deployment is selected.
+Friday October23 is a GO/NO-GO target contingent on current protected-target and
+recovery evidence, controlled authenticated/provider acceptance, truthful
+refund/cancel policy, support/alert coverage and authorized artifact publication.
+Do not market all module mappings as accepted production features.
+[Candidate verification and gates](docs/reviews/2026-10-19/LAUNCH_BILLING_INTEGRATION.md).
+
 Status: current execution plan
 
 ## PR118 independent review repair (2026-10-09)

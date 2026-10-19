@@ -1,5 +1,28 @@
 # OperatorOS implementation status
 
+## October 23 launch billing integration (2026-10-19)
+
+The launch candidate combines canonical Stripe invoice subscription compatibility
+and truthful unavailable billing reads from current main
+`2db76299da96cdae82ddd0f596c16c1c81f73c57`. Independent API review passes
+121 selected tests plus 30 additional helper cases; independent UI review passes
+52 actual-component desktop/phone cases including legacy controls. Fresh combined
+root checks pass 124 focused native tests, zero-warning lint, read-only v67/67 plan,
+four workspace types and production build with 38/38 pages. Test counts overlap
+and are not an aggregate. The new actual Fastify/disposable-PostgreSQL commerce
+case remains unrun locally because no existing disposable fixture was confirmed;
+complete exact-tree hosted release CI is required before source merge.
+
+Current read-only production evidence at 19:49:49 UTC is healthy/ready on exact
+`2db76299`, build `91d5781465409e30c77448a5`, expected release67/67. The historical
+live65 observation is superseded; no migration is selected. Protected DB target,
+current recoverable backup, controlled authenticated and provider acceptance,
+refund/cancel policy, support/monitoring delivery and candidate publication remain
+separate gates. Prior PR130 exact-tree source CI completed successfully; its
+pending statements below are historical. Module parity and launch states are
+unchanged. Implementation verified; this candidate's deployment unverified.
+See [integration scope, executed commands and Friday decision gates](reviews/2026-10-19/LAUNCH_BILLING_INTEGRATION.md).
+
 ## Fixture and runner integration verification (2026-10-19)
 
 The reviewed fixture-target and standalone-runner changes from draft PRs 128
