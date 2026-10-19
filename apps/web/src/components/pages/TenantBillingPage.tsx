@@ -8,7 +8,7 @@ import {
 } from '@/lib/design-tokens';
 import { billingApi, meApi } from '@/lib/auth';
 import { COMPANION_MODULES, CORE_PRODUCTS_BY_KEY, FREE_WITH_ANY_ACCOUNT } from '@operatoros/sdk';
-import { LoadingState } from '../ExperiencePrimitives';
+import { ErrorState, LoadingState } from '../ExperiencePrimitives';
 
 interface ApplicationSubscriptionView {
   status?: string | null;
@@ -54,23 +54,33 @@ export default function TenantBillingPage() {
   const [usage, setUsage] = useState<any | null>(null);
   const [stack, setStack] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [companionBusy, setCompanionBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const refresh = async () => {
-    const me = await meApi.tenants();
-    const current = me.current ?? me.tenants?.[0]?.id ?? null;
-    const tenant = current ? me.tenants.find((row: any) => row.id === current) : null;
-    setTenantName(tenant?.name ?? '');
-    setTenantRole(tenant?.role ?? null);
+    try {
+      const me = await meApi.tenants();
+      const current = me.current ?? me.tenants?.[0]?.id ?? null;
+      const tenant = current ? me.tenants.find((row: any) => row.id === current) : null;
+      setTenantName(tenant?.name ?? '');
+      setTenantRole(tenant?.role ?? null);
 
-    const [stackData, usageData] = await Promise.all([
-      billingApi.getStack().catch(() => null),
-      billingApi.getUsage().catch(() => null),
-    ]);
-    setStack(stackData);
-    setUsage(usageData);
+      const [stackData, usageData] = await Promise.all([
+        billingApi.getStack(),
+        billingApi.getUsage().catch(() => null),
+      ]);
+      if (!stackData) throw new Error('Organization subscription details are unavailable');
+      setStack(stackData);
+      setUsage(usageData);
+      setLoadFailed(false);
+    } catch (error) {
+      setStack(null);
+      setUsage(null);
+      setLoadFailed(true);
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -197,6 +207,16 @@ export default function TenantBillingPage() {
 
       {loading ? (
         <div data-testid="tenant-billing-loading"><LoadingState label="Loading organization billing…" /></div>
+      ) : loadFailed ? (
+        <ErrorState
+          title="Organization billing could not be loaded"
+          description="Current subscription details are unavailable. Reload them before starting checkout or managing billing."
+          action={<button type="button" onClick={() => {
+            setLoading(true);
+            setErr(null);
+            void refresh().catch(() => {}).finally(() => setLoading(false));
+          }} style={buttonStyles.primary}>Reload billing details</button>}
+        />
       ) : (
         <>
           {err && (

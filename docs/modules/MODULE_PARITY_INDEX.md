@@ -1,5 +1,20 @@
 # OperatorOS module parity index
 
+## October 23 billing integrity and launch evidence (2026-10-19)
+
+Module parity, catalog/launch policy and OutCall coming-soon state are unchanged.
+Canonical invoice handlers/propagation now resolve current and legacy Stripe
+references; both billing views distinguish unavailable reads from verified free
+contracts. Independent API and UI review passed; combined focused124, zero-warning
+lint, workspace types, read-only v67 plan and 38-page build pass. Fifty-two
+actual-component browser fixtures pass independently; their synthetic API/session
+boundaries do not establish deployed authorization or paid settlement. Full
+combined exact-tree release CI remains required before merge. Public production
+is currently healthy/ready at main2db/release67, superseding historical65; protected
+target/current backup/provider and controlled deployed workflow acceptance remain
+unverified. TradeFlowKit's existing isolated first-outcome tests pregrant access.
+No module state is promoted. [Scope and release gates](../reviews/2026-10-19/LAUNCH_BILLING_INTEGRATION.md).
+
 ## Fixture and runner integration evidence (2026-10-19)
 
 Module and launch states are unchanged. Reviewed fixture-target and runner

@@ -63,8 +63,9 @@ export default function BillingPage() {
         billingApi.getUsage(),
         billingApi.getHistory(),
         billingApi.getMode(),
-        billingApi.getStack().catch(() => null),
+        billingApi.getStack(),
       ]);
+      if (!stack) throw new Error('Organization subscription details are unavailable');
       setUsageData(usage);
       setHistory(historyData.events ?? []);
       setBillingMode(mode);
