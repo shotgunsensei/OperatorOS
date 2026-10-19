@@ -9,6 +9,7 @@ import { recurringStripePriceError } from './stripe-price-contract.js';
 import { CALLCOMMAND_CAPACITY_PRICES } from '@operatoros/sdk';
 import { callCommandNumberBillingGraceDays } from './callcommand-managed-number.js';
 import { resolveAppBaseUrl } from './public-url.js';
+import { stripeInvoiceSubscriptionId } from './stripe-invoice-subscription.js';
 
 export const CALLCOMMAND_NUMBER_FEATURE_KEY = 'managed_phone_numbers';
 export const CALLCOMMAND_LOCAL_NUMBER_ENTITLEMENT_KEY = 'callcommand.additional_local_numbers';
@@ -422,6 +423,16 @@ function numberMetadata(object: Row): Row | null {
 
 function subscriptionId(type: string, object: Row): string | null {
   if (type.startsWith('customer.subscription.')) return typeof object.id === 'string' ? object.id : null;
+  if (type.startsWith('invoice.')) {
+    // Retain the historical direct-details and undiscriminated-parent forms.
+    // Normalize once so conflicting typed modern/legacy IDs cannot fall back
+    // to a different reference after the shared normalizer rejects them.
+    return stripeInvoiceSubscriptionId({
+      ...object,
+      subscription: object.subscription ?? object.subscription_details?.subscription
+        ?? (object.parent?.type == null ? object.parent?.subscription_details?.subscription : undefined),
+    });
+  }
   if (typeof object.subscription === 'string') return object.subscription;
   if (typeof object.subscription?.id === 'string') return object.subscription.id;
   if (typeof object.subscription_details?.subscription === 'string') return object.subscription_details.subscription;
