@@ -1,5 +1,14 @@
 # OperatorOS module parity index
 
+## Standalone runner default (2026-10-19)
+
+Module states are unchanged. The standalone legacy runner now defaults to
+loopback, retaining explicit host selection and production execution denial.
+Nine focused checks, two compiled runtime controls, types/build and lint pass.
+Intentional network use and legacy container manifests remain unaccepted.
+[Evidence](../reviews/2026-10-19/RUNNER_DEFAULT_LOOPBACK.md).
+
+
 ## Billing and fixture validation
 
 | Area | Source validation |

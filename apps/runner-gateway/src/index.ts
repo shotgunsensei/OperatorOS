@@ -192,7 +192,9 @@ app.get('/', async (_req, reply) => {
 });
 
 const port = parseInt(process.env.PORT ?? '5002', 10);
-const host = process.env.INTERNAL_SERVICE_HOST?.trim() || '0.0.0.0';
+// This standalone legacy surface has no request authentication. Keep ordinary
+// local development private unless an operator explicitly selects an interface.
+const host = process.env.INTERNAL_SERVICE_HOST?.trim() || '127.0.0.1';
 
 try {
   await app.listen({ port, host });

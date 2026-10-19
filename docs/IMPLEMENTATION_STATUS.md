@@ -1,5 +1,17 @@
 # OperatorOS implementation status
 
+## Standalone runner private default (2026-10-19)
+
+The standalone legacy runner listener defaults to 127.0.0.1 and retains explicit
+host overrides. Canonical production remains runner-disabled and does not
+launch this standalone surface. Nine focused source checks and two compiled
+runtime checks, owning-package types/build, strict changed-test typing and
+zero-warning root lint pass using existing dependencies. The runtime fixtures
+use disabled execution and task-local loopback only. No service deployment,
+host setting, authentication scheme, package, database or module state changes.
+See [evidence and legacy deployment limits](reviews/2026-10-19/RUNNER_DEFAULT_LOOPBACK.md).
+
+
 ## Billing handler and fixture validation
 
 The candidate restores the billing webhook block boundary and result

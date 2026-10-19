@@ -92,7 +92,7 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /resolve\(process\.cwd\(\), 'apps\/web'\)/);
   assert.match(source, /\['start', '-p', String\(config\.nextPort\), '-H', NEXT_INTERNAL_HOST\]/);
   assert.match(apiSource, /process\.env\.INTERNAL_SERVICE_HOST\?\.trim\(\) \|\| '0\.0\.0\.0'/);
-  assert.match(runnerSource, /process\.env\.INTERNAL_SERVICE_HOST\?\.trim\(\) \|\| '0\.0\.0\.0'/);
+  assert.match(runnerSource, /process\.env\.INTERNAL_SERVICE_HOST\?\.trim\(\) \|\| '127\.0\.0\.1'/);
   assert.doesNotMatch(source, /corepack|spawnPnpm/);
   assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
   assert.equal(
