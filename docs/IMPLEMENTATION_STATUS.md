@@ -1,5 +1,19 @@
 # OperatorOS implementation status
 
+## Outbound webhook egress candidate (2026-10-19)
+
+The isolated source candidate pins each HTTPS connection to its validated DNS
+answer set and consistently rejects non-public literal/mapped addresses. It
+preserves TLS identity, signed payloads, deterministic isolation and existing
+delivery accounting, with bounded response/upgrade/close behavior. Sixteen
+focused tests pass, including nine new offline transport regressions; strict
+changed-file typing, four workspace typechecks, zero-warning lint, read-only
+v67 plan and the 38-page production build pass.
+Initial sandbox/database failures are retained, not converted to skips.
+Full release/deployment/database acceptance remains unverified. No production
+or module-state change is claimed. See the [scope, commands and open gates](reviews/2026-10-19/WEBHOOK_EGRESS_REVIEW.md).
+
+
 ## Billing handler and fixture validation
 
 The candidate restores the billing webhook block boundary and result

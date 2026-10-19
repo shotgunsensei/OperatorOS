@@ -1,5 +1,14 @@
 # OperatorOS module parity index
 
+## Shared webhook egress boundary (2026-10-19)
+
+Parity and launch states are unchanged. The shared outbound HTTPS candidate
+pins validated DNS answers and rejects unsafe address representations while
+retaining deterministic recording and delivery accounting. Sixteen focused
+checks, strict changed-file types, workspace typechecks and lint pass. Full
+release and deployed acceptance remain open; [evidence and limits](../reviews/2026-10-19/WEBHOOK_EGRESS_REVIEW.md).
+
+
 ## Billing and fixture validation
 
 | Area | Source validation |

@@ -1,6 +1,4 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
-import { isIP } from 'node:net';
-import { lookup } from 'node:dns/promises';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
@@ -10,44 +8,10 @@ import {
   sanitizeSharedMetadata,
 } from './shared-service-safety.js';
 import { resolveEncryptedSecretReference, storeEncryptedSecretReference } from './shared-secret-vault.js';
+import { postPublicWebhook, validateOutboundWebhookUrl } from './public-webhook-http.js';
+export { validateOutboundWebhookUrl } from './public-webhook-http.js';
 
 type Executor = Pick<typeof db, 'execute'>;
-
-function isPrivateIp(address: string): boolean {
-  if (address === '::1' || address === '::' || address.startsWith('fe80:') || address.startsWith('fc') || address.startsWith('fd')) return true;
-  if (address.startsWith('::ffff:')) return isPrivateIp(address.slice(7));
-  if (isIP(address) !== 4) return false;
-  const parts = address.split('.').map(Number);
-  return parts[0] === 0 || parts[0] === 10 || parts[0] === 127 ||
-    (parts[0] === 169 && parts[1] === 254) || (parts[0] === 172 && parts[1]! >= 16 && parts[1]! <= 31) ||
-    (parts[0] === 192 && parts[1] === 168) || parts[0]! >= 224;
-}
-
-export function validateOutboundWebhookUrl(value: string): URL {
-  let url: URL;
-  try { url = new URL(value); } catch {
-    throw Object.assign(new Error('Webhook endpoint URL is invalid'), { code: 'WEBHOOK_URL_INVALID' });
-  }
-  if (url.protocol !== 'https:' || url.username || url.password || url.port && url.port !== '443') {
-    throw Object.assign(new Error('Webhook endpoints require credential-free HTTPS on the standard port'), { code: 'WEBHOOK_URL_UNSAFE' });
-  }
-  const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
-  if (!hostname || hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
-    throw Object.assign(new Error('Webhook endpoint hostname is not public'), { code: 'WEBHOOK_SSRF_BLOCKED' });
-  }
-  if (isIP(hostname) && isPrivateIp(hostname)) {
-    throw Object.assign(new Error('Webhook endpoint address is not public'), { code: 'WEBHOOK_SSRF_BLOCKED' });
-  }
-  return url;
-}
-
-async function assertPublicDns(url: URL, env: NodeJS.ProcessEnv = process.env): Promise<void> {
-  if (isOperatorOSDeterministicProviderTestEnvironment(env)) return;
-  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
-  if (addresses.length === 0 || addresses.some(entry => isPrivateIp(entry.address))) {
-    throw Object.assign(new Error('Webhook endpoint resolved to a non-public address'), { code: 'WEBHOOK_SSRF_BLOCKED' });
-  }
-}
 
 export async function createOutboundWebhookEndpoint(input: {
   tenantId: string;
@@ -200,7 +164,6 @@ export async function processOutboundWebhook(
       `);
       return { status: 'recorded', resultState: 'recorded_not_delivered', externalDelivery: false };
     }
-    await assertPublicDns(url, env);
     const secret = await resolveEncryptedSecretReference({
       tenantId: String(row.tenant_id), moduleId: String(row.module_id), id: String(endpoint.secret_reference_id),
     }, executor);
@@ -208,8 +171,8 @@ export async function processOutboundWebhook(
     const body = JSON.stringify(row.payload_json ?? {});
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const signature = createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
-    const response = await fetch(url, {
-      method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15_000), body,
+    const response = await postPublicWebhook(url, {
+      body,
       headers: {
         'content-type': 'application/json',
         'user-agent': 'OperatorOS-Webhook/1.0',
@@ -219,7 +182,7 @@ export async function processOutboundWebhook(
         'x-operatoros-signature': `sha256=${signature}`,
       },
     });
-    if (!response.ok) throw Object.assign(new Error('Webhook endpoint rejected the delivery'), { code: `WEBHOOK_HTTP_${response.status}`, status: response.status });
+    if (response.status < 200 || response.status >= 300) throw Object.assign(new Error('Webhook endpoint rejected the delivery'), { code: `WEBHOOK_HTTP_${response.status}`, status: response.status });
     await recordAttempt(row, { adapterName: 'https-hmac-sha256', externalDelivery: true, resultState: 'delivered', responseStatus: response.status }, executor);
     await executor.execute(sql`
       UPDATE shared_webhook_deliveries SET status = 'delivered', attempt_count = attempt_count + 1,
