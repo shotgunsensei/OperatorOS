@@ -36,6 +36,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   'callcommand-ai': 'callcommand-module-shell',
   ninjamation: 'ninjamation-module-shell',
   outcall: 'shell-outcall',
+  fieldnode: 'fieldnode-management-unavailable',
 };
 
 type BrowserModule = {
@@ -66,8 +67,8 @@ const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
     };
   });
 
-if (ENABLED_MODULES.length !== 12) {
-  throw new Error(`Expected 12 enabled modules while OutCall is source-recovery locked, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 13) {
+  throw new Error(`Expected 13 enabled modules while OutCall is source-recovery locked, found ${ENABLED_MODULES.length}`);
 }
 
 const PUBLIC_AUTH_HEADERS = {
@@ -535,7 +536,18 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       const collection = navigationCollector(context);
       await page.getByTestId(`button-launch-${module.slug}`).click();
       const modulePage = page;
+      if (module.slug === 'fieldnode') {
+        // The ordinary launcher intentionally opens the public introduction.
+        // Only the separate management action starts the tenant-bound SSO flow.
+        await expect(modulePage.getByTestId('fieldnode-introduction')).toBeVisible();
+        expect(new URL(modulePage.url()).pathname).toBe('/');
+        await modulePage.getByRole('link', { name: 'Manage my FieldNodes', exact: true }).first().click();
+      }
       await expect(modulePage.getByTestId(module.shellTestId)).toBeVisible({ timeout: 30_000 });
+      if (module.slug === 'fieldnode') {
+        expect(new URL(modulePage.url()).pathname).toBe('/manage');
+        await expect(modulePage.getByRole('status')).toContainText('Remote management is not connected yet');
+      }
       await modulePage.waitForLoadState('networkidle', { timeout: 10_000 });
       collection.stop();
 
@@ -571,6 +583,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
       lastModuleUrl = modulePage.url();
       await modulePage.goBack();
+      if (module.slug === 'fieldnode') {
+        await expect(modulePage.getByTestId('fieldnode-introduction')).toBeVisible();
+        await modulePage.goBack();
+      }
       await expect(modulePage.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
       expect(context.pages()).toHaveLength(initialPageCount);
     }

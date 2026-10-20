@@ -98,6 +98,33 @@ command or database change was performed in this source task.
 
 ## Verification and rollout
 
+Release run39488703971 on remote03c4a4ed (reviewed tree178845ca) completed
+FAIL:11/14 scopes passed, including52 unit,108 integration, production build,
+types and lint. API2171/2177 had six stale commerce/help/browser-matrix cases;
+browser collection rejected the missing FieldNode selector. Separate visual4/4
+passed. Follow-through corrects those finite integration contracts and exercises
+the intended public introduction, explicit Manage action, protected unavailable
+management, host-only session and back navigation in the existing SSO matrix.
+
+An independent dependency gate reported GHSA-q3jh-wrc6-jgq8 and
+GHSA-8r9p-f939-6h3c in Twilio's Axios dependency follow-redirects1.16.0. The narrow
+override/lock update selects official1.16.1 and preserves Twilio/Axios versions,
+runtime redirect policy, audit exceptions, SSO and tenant boundaries. No package
+was acquired or installed on the host. Three added installed-library regressions
+use fake native transports without sockets: array-form cross-origin credential
+stripping, literal sensitive-header names with regex metacharacters, and a
+legitimate same-origin relative redirect. On the retained local1.16.0 graph the
+first two fail and the control passes. Current Twilio callers disable redirects,
+so those dependency defects do not establish an actual production exploit.
+Corrected-lock read-only audit passes with no unresolved advisories; exact1.16.1
+installed behavior and the complete corrected release require hosted validation.
+
+Fresh follow-through checks pass154 selected cases, with six existing optional
+HTTP skips, strict15-test-file types, full four-workspace types and zero-warning
+lint. New SQL expectations were typechecked but not executed locally. Independent
+review and corrected-head full hosted results must be attached to the draft PR;
+no known failure is converted to a skip, exclusion or advisory exception.
+
 Recorded checks include22 new regressions in selected suites147pass/0fail with
 six existing optional HTTP skips, strict checking of13 changed test files, full
 four-workspace typecheck, zero-warning lint, full52/52 unit tests and a production
