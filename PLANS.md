@@ -1,5 +1,30 @@
 # OperatorOS completion plan
 
+## Independent Tool Modules foundation (2026-10-20, draft and disabled)
+
+Separate one-time tenant Tool Modules reserve OfficeExit and VendorTrust365
+outside Application Stacks, companions and seats. The authenticated readiness
+catalog uses a real current tenant membership/owner, so a free owner with zero
+Stack seats is eligible independently of a paid base subscription. Checkout,
+sales, downloads and native licensing remain unavailable. Generic legacy grants
+and revocations cannot create or erase independent purchase provenance for the
+reserved slugs. No tool is registered for hosted launch/SSO; schema release 67
+and the reviewed paid-launch candidate remain unchanged on main.
+
+Policy20/20 and disposable PostgreSQL route/entitlement18/18 pass, zero skips.
+Root lint, API types, strict new-test checking and read-only release plan pass.
+Full production build passes all four workspace typechecks, API/runner and
+Next compilation (38 static pages). Existing unit gate is 51/52 with one
+Corepack-cache/DNS environment failure, zero skips; the affected quality-gate
+file separately passes 20/20 using the existing cache with networking disabled.
+The full aggregate was not rerun or called green. Independent frozen source
+review found no substantive issue; final documentation attestation and hosted
+release/vector checks remain pending. No live provider, migration,
+deployment, scan or executable delivery was performed. This does not prove an
+actual one-time purchase or licensed free-base access. Price/currency, license
+unit/quantity, refund, edition/upgrade, support and device/offline terms remain
+decisions. [Contract and acceptance](docs/reviews/2026-10-20/INDEPENDENT_TOOL_FOUNDATION.md).
+
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 
 This selected 18-path candidate preserves PI component
