@@ -166,8 +166,8 @@ after(async () => {
   }
 });
 
-test('catalog publishes one exact HTTPS OperatorOS origin for all 13 modules', () => {
-  assert.equal(MODULE_CATALOG.length, 13);
+test('catalog publishes one exact HTTPS OperatorOS origin for all 14 modules', () => {
+  assert.equal(MODULE_CATALOG.length, 14);
   assert.equal(MODULE_SEEDS.length, MODULE_CATALOG.length);
 
   for (const entry of MODULE_CATALOG) {

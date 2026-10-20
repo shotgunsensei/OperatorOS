@@ -1,5 +1,9 @@
 # OperatorOS implementation status
 
+## FieldNode free-module source candidate — 2026-10-20
+
+FieldNode is a fourth free-account application with a public hardware introduction and a protected management entry. Remote pairing/management and hardware ordering stay explicitly unavailable until their approved integrations exist. Intended host: fieldnode.operatoros.net; no domain, database or deployment action occurred. Schema/release stays67. Source checks:21 new regressions in selected suites146pass/0fail/6 existing optional HTTP skips; strict checking of all13 changed test files, full four-workspace typecheck and zero-warning lint pass. SQL cases were not run. Full production build, browser verification and immutable independent review remain release gates; their actual results belong in the PR verification record. [Scope, ownership, activation and rollback gates](reviews/2026-10-20/FIELDNODE_FREE_MODULE.md).
+
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 
 This selected 18-path candidate preserves PI component

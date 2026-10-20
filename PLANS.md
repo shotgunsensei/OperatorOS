@@ -1,5 +1,11 @@
 # OperatorOS completion plan
 
+## First release and FieldNode source slice — 2026-10-20
+
+Recommend a focused free browser release: normal signup/login, personal tenant/My Apps, and TorqueShed manual vehicle/service-record history. Paid checkout exposure requires a deliberate owner decision; native, AI, export parity and hardware operations are outside that first promise. Deployment/customer acceptance and rollback approval remain human gates.
+
+FieldNode source adds a free-account catalog entry, public shared hardware introduction, intended exact host and protected unavailable management destination. No checkout, ownership backend, appliance code or database operation is invented. [Source and activation contract](docs/reviews/2026-10-20/FIELDNODE_FREE_MODULE.md). Final tests/review and a draft PR remain the next source gates.
+
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 
 This selected 18-path candidate preserves PI component

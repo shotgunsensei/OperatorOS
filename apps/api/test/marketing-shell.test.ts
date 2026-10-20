@@ -572,13 +572,14 @@ test('marketing phase 2 · /modules and /how-it-works reuse the shared sections'
   assert.match(how, /MarketingLayout/, '/how-it-works must stay inside the marketing shell');
 });
 
-test('marketing phase 2 · catalog mirror covers all 13 modules with outcome copy', () => {
+test('marketing phase 2 · catalog mirror covers all 14 modules with outcome copy', () => {
   const src = read('src/lib/marketing-catalog.ts');
   assert.match(src, /getModuleProductValue\(entry\.slug\)/);
   const slugs = [
     'tradeflowkit', 'torqueshed', 'techdeck', 'pulsedesk', 'faultlinelab',
     'ninja-pool-hall', 'brandforgeos', 'snapproofos', 'studyforge-ai',
     'ninja-launch-kit', 'callcommand-ai', 'ninjamation', 'outcall',
+    'fieldnode',
   ];
   for (const slug of slugs) {
     const module = MARKETING_MODULES.find(item => item.slug === slug);

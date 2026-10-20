@@ -222,8 +222,8 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry, exp
   }
   const platform = registrations.find((entry) => entry.moduleId === 'operatoros');
   const modules = registrations.filter((entry) => entry.moduleId !== 'operatoros');
-  if (!platform || modules.length !== 13) {
-    throw new Error('canonical registry must contain OperatorOS plus exactly 13 modules');
+  if (!platform || modules.length !== 14) {
+    throw new Error('canonical registry must contain OperatorOS plus exactly 14 modules');
   }
 
   const results = [];

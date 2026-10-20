@@ -85,7 +85,7 @@ test('sso/settings: returns spec shape with secret status only (never value)', a
   assert.equal(body.sessionSecretStatus, 'configured');
 
   assert.ok(Array.isArray(body.modules), 'modules is an array');
-  assert.equal(body.modules.length, 13);
+  assert.equal(body.modules.length, 14);
   for (const m of body.modules) {
     assert.equal(typeof m.slug, 'string');
     assert.equal(m.slug, m.slug.toLowerCase(), 'slug is lowercase');
