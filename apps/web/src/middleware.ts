@@ -522,8 +522,12 @@ export async function middleware(req: NextRequest) {
   // Hardware introduction and ordering information are public. The management
   // path still passes through the existing host-session and tenant-module gate.
   if (context.module?.slug === 'fieldnode') {
-    if ((context.surface === 'module' && pathname === '/') ||
-        (context.surface === 'local-module' && /^\/modules\/fieldnode\/?$/u.test(pathname))) {
+    if (context.surface === 'module' && pathname === '/') {
+      // next.config's exact-host relative rewrite serves the introduction
+      // without proxying an absolute URL back through this middleware.
+      return withAuthSecurityHeaders(NextResponse.next());
+    }
+    if (context.surface === 'local-module' && /^\/modules\/fieldnode\/?$/u.test(pathname)) {
       return withAuthSecurityHeaders(rewriteTo('/fieldnode', req));
     }
   }

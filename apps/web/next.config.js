@@ -116,6 +116,14 @@ const nextConfig = {
         // rewrite lets real Next routes such as /, /sso, and /logout win
         // before the API proxy is considered.
         beforeFiles: [
+          // Keep the public FieldNode root inside this Next request. An
+          // absolute middleware rewrite can be treated as an upstream proxy
+          // behind TLS termination, re-entering the private module gate.
+          {
+            source: '/',
+            has: [{ type: 'host', value: 'fieldnode\\.operatoros\\.net' }],
+            destination: '/fieldnode',
+          },
           {
             source: '/:path*',
             has: [{ type: 'host', value: 'api.operatoros.net' }],

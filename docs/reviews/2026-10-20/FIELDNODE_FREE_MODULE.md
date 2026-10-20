@@ -27,7 +27,12 @@ the global module kill switch. The registry's historical `requiresSubscription`
 field still means a server-confirmed module grant; free grants do not require a
 paid subscription. Management never redirects owners into paid TechDeck.
 
-The public middleware exception is limited to the introduction root. Management,
+The public middleware exception is limited to the introduction root. An exact-host
+relative Next beforeFiles rewrite serves the canonical root inside one request;
+the middleware passes that root through rather than proxying an absolute URL back
+through the private gate. A built-server browser probe exposed and motivated this
+routing correction; a direct middleware response alone did not verify rendering.
+Management,
 unknown deep paths and SSO callbacks retain existing exact-host rules. Public
 management links disable prefetch so reading the introduction does not start a
 background sign-in transaction. Private module metadata stays noindex.
@@ -93,7 +98,7 @@ command or database change was performed in this source task.
 
 ## Verification and rollout
 
-Recorded checks include21 new regressions in selected suites146pass/0fail with
+Recorded checks include22 new regressions in selected suites147pass/0fail with
 six existing optional HTTP skips, strict checking of13 changed test files, full
 four-workspace typecheck, zero-warning lint, full52/52 unit tests and a production
 build on the initial candidate. The review added a return-path regression and

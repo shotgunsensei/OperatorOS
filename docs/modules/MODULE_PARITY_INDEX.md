@@ -4,7 +4,7 @@
 
 | Module / user goal | Source destination | Status | Acceptance / blocker |
 | --- | --- | --- | --- |
-| FieldNode hardware introduction and free-account entry | Public /fieldnode and intended fieldnode.operatoros.net; shared catalog/free grant policy | Implemented source candidate | 21 new regressions and source types/lint pass; production/DNS/data activation unapproved |
+| FieldNode hardware introduction and free-account entry | Public /fieldnode and intended fieldnode.operatoros.net; shared catalog/free grant policy | Implemented source candidate | 22 new regressions and source types/lint pass; production/DNS/data activation unapproved |
 | Manage owned FieldNodes | Protected /manage module destination | Explicitly unavailable | Approved device identity, ownership/pairing backend and tenant authorization required; no fake inventory or appliance migration |
 
 [FieldNode scope and gates](../reviews/2026-10-20/FIELDNODE_FREE_MODULE.md). Historical 13-module import/parity evidence below is unchanged and does not imply FieldNode device parity.

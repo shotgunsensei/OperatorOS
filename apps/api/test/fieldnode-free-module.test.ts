@@ -205,9 +205,30 @@ test('anonymous canonical FieldNode root is public and does not create an SSO tr
   const response = await middleware(request('https://fieldnode.operatoros.net/'));
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('location'), null);
-  assert.equal(response.headers.get('x-middleware-rewrite'), 'https://fieldnode.operatoros.net/fieldnode');
+  assert.equal(response.headers.get('x-middleware-rewrite'), null);
+  assert.equal(response.headers.get('x-middleware-next'), '1');
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.headers.getSetCookie().length, 0);
+});
+
+test('the actual Next configuration serves only the exact FieldNode root through a relative internal rewrite', async () => {
+  const filename = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/next.config.js');
+  const compiled = ts.transpileModule(readFileSync(filename, 'utf8'), {
+    fileName: filename, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const loaded = { exports: {} as { default?: { rewrites: () => Promise<{ beforeFiles: Array<{ source: string; destination: string; has?: Array<{ type: string; value: string }> }> }> } } };
+  runInNewContext(compiled, { module: loaded, exports: loaded.exports, process: { env: { NODE_ENV: 'test', INTERNAL_API_URL: 'http://127.0.0.1:5001' } } }, { filename });
+  assert.ok(loaded.exports.default);
+  const rules = (await loaded.exports.default.rewrites()).beforeFiles;
+  const fieldNodeRules = rules.filter(rule => rule.destination === '/fieldnode');
+  assert.equal(fieldNodeRules.length, 1);
+  assert.equal(fieldNodeRules[0]?.source, '/');
+  assert.equal(fieldNodeRules[0]?.destination, '/fieldnode');
+  assert.equal(fieldNodeRules[0]?.has?.length, 1);
+  assert.equal(fieldNodeRules[0]?.has?.[0]?.type, 'host');
+  const hostPattern = new RegExp(`^${fieldNodeRules[0]?.has?.[0]?.value}$`);
+  assert.equal(hostPattern.test('fieldnode.operatoros.net'), true);
+  for (const invalid of ['fieldnodeXoperatorosYnet', 'fieldnode.operatoros.net.attacker.example', 'other.operatoros.net']) assert.equal(hostPattern.test(invalid), false);
 });
 
 test('anonymous local FieldNode root is public with and without a trailing slash', async () => {
