@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import http from 'node:http';
 import { resolve } from 'node:path';
 import { evaluateProductionEnvironment, BILLING_WEBHOOK_SIGNING_ENV } from './production-env-preflight.mjs';
+import { isLunchBreakHost, lunchBreakHostPathAllowed } from '../packages/modules/lunch-break-host.mjs';
 
 const DEFAULT_API_PORT = 5001;
 const DEFAULT_PUBLIC_PORT = 5000;
@@ -171,6 +172,13 @@ export function createPublicGateway(
     throw new Error('The internal Next host must remain loopback-only');
   }
   const server = http.createServer((request, response) => {
+    const publicHub = isLunchBreakHost(request.headers.host) ||
+      isLunchBreakHost(request.headers['x-forwarded-host']?.split(',')[0]);
+    if (publicHub && !lunchBreakHostPathAllowed(request.method, (request.url || '/').split('?')[0])) {
+      response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' });
+      response.end(request.method === 'HEAD' ? undefined : 'Page not found');
+      return;
+    }
     if (!isReady()) {
       writeBootstrapResponse(request, response);
       return;
@@ -193,6 +201,12 @@ export function createPublicGateway(
   });
 
   server.on('upgrade', (request, socket, head) => {
+    // This hub has no socket/API capability, including the /ws direct proxy
+    // which normally bypasses Next middleware for authenticated modules.
+    if (isLunchBreakHost(request.headers.host) || isLunchBreakHost(request.headers['x-forwarded-host']?.split(',')[0])) {
+      socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n');
+      return;
+    }
     if (!isReady()) {
       socket.end('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nRetry-After: 3\r\n\r\n');
       return;

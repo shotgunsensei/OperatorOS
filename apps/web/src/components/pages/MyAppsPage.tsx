@@ -19,6 +19,7 @@ import {
   Store,
 } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
+import LunchBreakEntry from '@/components/LunchBreakEntry';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { useAuth } from '@/components/AuthProvider';
 import { useTenant } from '@/components/TenantProvider';
@@ -488,6 +489,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
 
   return (
     <div className="ops-page" data-testid="page-my-apps">
+      <LunchBreakEntry />
       <header
         style={{
           marginBottom: space.xl,

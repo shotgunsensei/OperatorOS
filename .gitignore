@@ -39,3 +39,5 @@ build/
 /apps/modules/*/source/**/bun.lock
 /apps/modules/*/source/**/bun.lockb
 /apps/modules/*/source/**/pnpm-lock*.yaml
+# Local Lunch Break browser evidence; keep screenshots/traces out of source PRs.
+/apps/web/output/playwright/lunch-break/
