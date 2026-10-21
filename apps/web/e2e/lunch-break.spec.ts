@@ -30,7 +30,7 @@ test('public hub shows five observed game websites, free access and no auth requ
     'href',
     'https://operatorpoolhall.operatoros.net/',
   );
-  await expect(page.getByText('No extra hub subscription.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Free for everyone.', { exact: false })).toBeVisible();
   expect(apiRequests).toEqual([]);
 });
 
