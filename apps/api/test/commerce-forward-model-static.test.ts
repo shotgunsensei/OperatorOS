@@ -75,6 +75,7 @@ test('only the six approved business add-ons can be sold through the stack', () 
     'torqueshed',
     'faultlinelab',
     'ninja-pool-hall',
+    'fieldnode',
   ]);
 });
 
@@ -152,7 +153,7 @@ test('pricing administration and readiness use the six-item sellable allowlist',
   for (const slug of approvedCompanions) {
     assert.ok(COMPANION_MODULES.some(module => module.key === slug), `${slug} must be sellable`);
   }
-  for (const excluded of ['tradeflowkit', 'pulsedesk', 'techdeck', 'torqueshed', 'faultlinelab', 'ninja-pool-hall', 'outcall']) {
+  for (const excluded of ['tradeflowkit', 'pulsedesk', 'techdeck', 'torqueshed', 'faultlinelab', 'ninja-pool-hall', 'fieldnode', 'outcall']) {
     assert.equal(COMPANION_MODULES.some(module => module.key === excluded), false, `${excluded} must be excluded from add-on pricing`);
   }
 });

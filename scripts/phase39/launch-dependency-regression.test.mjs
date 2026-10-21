@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
+import { EventEmitter } from 'node:events';
 import { dirname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -20,6 +21,101 @@ const selectorParser = require(require.resolve('postcss-selector-parser', { path
 const tailwindViteRoot = dirname(require.resolve('@tailwindcss/vite'));
 const tailwindNodeRoot = dirname(require.resolve('@tailwindcss/node', { paths: [tailwindViteRoot] }));
 const { SourceMapConsumer } = require(require.resolve('source-map-js', { paths: [tailwindNodeRoot] }));
+
+const twilioRoot = dirname(require.resolve('twilio/package.json', { paths: [join(process.cwd(), 'apps', 'api')] }));
+const axiosRoot = dirname(require.resolve('axios/package.json', { paths: [twilioRoot] }));
+const followRedirects = require(require.resolve('follow-redirects', { paths: [axiosRoot] }));
+
+// Exercise the installed redirect implementation without sockets, credentials,
+// provider calls or a replacement implementation of its stripping policy.
+function followSyntheticRedirect(headers, location, sensitiveHeaders = []) {
+  const requests = [];
+  const native = {
+    request(options, callback) {
+      const request = new EventEmitter();
+      request.finished = false;
+      request.write = (_data, _encoding, done) => { if (done) done(); return true; };
+      request.end = () => { request.finished = true; };
+      request.destroy = () => {};
+      request.abort = () => {};
+      request.getHeader = name => name.toLowerCase() === 'host' ? options.hostname : undefined;
+      request.setHeader = () => {};
+      request.removeHeader = () => {};
+      requests.push({
+        hostname: options.hostname,
+        protocol: options.protocol,
+        headers: Array.isArray(options.headers) ? [...options.headers] : { ...options.headers },
+        callback,
+        request,
+      });
+      return request;
+    },
+  };
+  const transport = followRedirects.wrap({ http: native, https: native });
+  const request = transport.https.request('https://api.example.test/source', {
+    headers, method: 'GET', sensitiveHeaders,
+  });
+  request.on('error', error => { throw error; });
+  request.end();
+  requests[0].callback({
+    statusCode: 302, headers: { location }, destroy() {}, req: requests[0].request,
+  });
+  assert.equal(requests.length, 2);
+  assert.equal(requests[1].hostname, new URL(location, 'https://api.example.test/source').hostname);
+  // Preserve array entries in the observation so a vulnerable implementation
+  // cannot accidentally pass merely because the test reads object-style keys.
+  return Array.isArray(requests[1].headers)
+    ? Object.fromEntries(Array.from({ length: requests[1].headers.length / 2 }, (_, index) => [
+      String(requests[1].headers[index * 2]).toLowerCase(), requests[1].headers[index * 2 + 1],
+    ]))
+    : Object.fromEntries(Object.entries(requests[1].headers).map(([name, value]) => [name.toLowerCase(), value]));
+}
+
+test('follow-redirects strips array-form credential headers across origins and protocol downgrade', () => {
+  for (const location of ['https://other.example.test/target', 'http://other.example.test/target']) {
+    const redirected = followSyntheticRedirect([
+      'Authorization', 'synthetic-authorization',
+      'Proxy-Authorization', 'synthetic-proxy',
+      'Cookie', 'synthetic-cookie',
+      'X-Declared-Key', 'synthetic-declared',
+      'X-Public', 'public',
+    ], location, ['X-Declared-Key']);
+    for (const name of ['authorization', 'proxy-authorization', 'cookie', 'x-declared-key']) {
+      assert.equal(redirected[name], undefined, `${name} must not cross the redirect boundary`);
+    }
+    assert.equal(redirected['x-public'], 'public');
+  }
+});
+
+test('follow-redirects strips declared credential names containing regex metacharacters', () => {
+  const redirected = followSyntheticRedirect({
+    'X-Api^Key': 'synthetic-caret',
+    'X-Token|Secret': 'synthetic-alternation',
+    'X-Control-Key': 'synthetic-control',
+    Authorization: 'synthetic-authorization',
+    'X-Public': 'public',
+  }, 'https://other.example.test/target', ['X-Api^Key', 'X-Token|Secret', 'X-Control-Key']);
+  for (const name of ['x-api^key', 'x-token|secret', 'x-control-key', 'authorization']) {
+    assert.equal(redirected[name], undefined, `${name} must be matched literally and removed`);
+  }
+  assert.equal(redirected['x-public'], 'public');
+});
+
+test('follow-redirects preserves legitimate same-origin relative redirects and public headers', () => {
+  const redirected = followSyntheticRedirect({
+    Authorization: 'synthetic-authorization',
+    Cookie: 'synthetic-cookie',
+    'X-Api^Key': 'synthetic-caret',
+    'X-Public': 'public',
+  }, '/target', ['X-Api^Key']);
+  assert.deepEqual(redirected, {
+    authorization: 'synthetic-authorization',
+    cookie: 'synthetic-cookie',
+    'x-api^key': 'synthetic-caret',
+    'x-public': 'public',
+  });
+});
+
 
 test('proxy trust cannot turn a short IPv4-mapped IPv6 subnet into trust for every client', () => {
   for (const subnet of ['::ffff:10.0.0.0/8', '::/1']) {

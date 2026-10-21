@@ -28,6 +28,7 @@ const EXPECTED_SLUGS = [
   'callcommand-ai',
   'ninjamation',
   'outcall',
+  'fieldnode',
 ] as const;
 
 test('customer product-value contracts cover the exact canonical module roster', () => {

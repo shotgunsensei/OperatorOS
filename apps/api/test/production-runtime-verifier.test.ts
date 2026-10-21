@@ -23,11 +23,11 @@ function secureHeaders() {
   return headers;
 }
 
-test('production verifier loads OperatorOS plus exactly 13 canonical module registrations', async () => {
+test('production verifier loads OperatorOS plus exactly 14 canonical module registrations', async () => {
   const registry = await verifier.loadRegistry();
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId === 'operatoros').length, 1);
-  assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId !== 'operatoros').length, 13);
-  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 13);
+  assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId !== 'operatoros').length, 14);
+  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 14);
   assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, false);
 });
 

@@ -9,6 +9,7 @@ export const FREE_ACCOUNT_APP_SLUGS = [
   'torqueshed',
   'faultlinelab',
   'ninja-pool-hall',
+  'fieldnode',
 ] as const;
 
 export const FREE_ACCOUNT_METADATA_PATCH = Object.freeze({

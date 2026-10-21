@@ -421,7 +421,7 @@ export default function PricingSection({ initialSelection, initialCatalog = null
               <SummaryRow label={`${additionalSeats} additional seat${additionalSeats === 1 ? '' : 's'}`} value={money(price?.additionalSeatsCents)} />
               <div style={{ borderTop: `1px solid ${brand.borderSoft}`, paddingTop: 16 }}>
                 <div style={{ color: brand.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Free With Any Account</div>
-                <div style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.6 }}>TorqueShed · FaultlineLab · Operator Pool Hall</div>
+                <div style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.6 }}>{FREE_WITH_ANY_ACCOUNT.map(app => app.name).join(' · ')}</div>
               </div>
               {error && <p role="alert" style={{ color: '#ff7b72', fontSize: 13, margin: 0 }}>{error}</p>}
               {catalogError && <div role="alert" style={{ color: '#ff7b72', fontSize: 13 }}>
@@ -443,7 +443,7 @@ export default function PricingSection({ initialSelection, initialCatalog = null
         <header style={{ marginBottom: 30, display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
             <h2 style={sectionHeadingStyle}>Free with every account</h2>
-            <p style={sectionCopyStyle}>These three applications come with every OperatorOS account at no cost—no paid subscription required.</p>
+            <p style={sectionCopyStyle}>These applications come with every OperatorOS account at no cost; no paid subscription is required.</p>
           </div>
           {!user && (
             <Link href={registerPath} data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>

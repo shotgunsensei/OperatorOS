@@ -519,6 +519,18 @@ export async function middleware(req: NextRequest) {
     const destination = techDeckPublicDestination(pathname);
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
   }
+  // Hardware introduction and ordering information are public. The management
+  // path still passes through the existing host-session and tenant-module gate.
+  if (context.module?.slug === 'fieldnode') {
+    if (context.surface === 'module' && pathname === '/') {
+      // next.config's exact-host relative rewrite serves the introduction
+      // without proxying an absolute URL back through this middleware.
+      return withAuthSecurityHeaders(NextResponse.next());
+    }
+    if (context.surface === 'local-module' && /^\/modules\/fieldnode\/?$/u.test(pathname)) {
+      return withAuthSecurityHeaders(rewriteTo('/fieldnode', req));
+    }
+  }
   if (context.module?.slug === 'pulsedesk') {
     const destination = pulseDeskPublicDestination(pathname);
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));

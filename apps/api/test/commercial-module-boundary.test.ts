@@ -17,7 +17,7 @@ import {
 
 const EXPECTED = {
   core: ['pulsedesk', 'techdeck', 'tradeflowkit'],
-  free: ['faultlinelab', 'ninja-pool-hall', 'torqueshed'],
+  free: ['faultlinelab', 'fieldnode', 'ninja-pool-hall', 'torqueshed'],
   addon: [
     'brandforgeos',
     'callcommand-ai',

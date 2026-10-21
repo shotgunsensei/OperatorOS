@@ -25,7 +25,7 @@ test('forward application-stack prices and eligibility are one shared monthly co
     'brandforgeos', 'callcommand-ai', 'ninja-launch-kit',
     'ninjamation', 'snapproofos', 'studyforge-ai',
   ]);
-  for (const excluded of ['tradeflowkit', 'pulsedesk', 'techdeck', 'torqueshed', 'faultlinelab', 'ninja-pool-hall', 'outcall']) {
+  for (const excluded of ['tradeflowkit', 'pulsedesk', 'techdeck', 'torqueshed', 'faultlinelab', 'ninja-pool-hall', 'fieldnode', 'outcall']) {
     assert.equal(ELIGIBLE_COMPANION_MODULE_KEYS.includes(excluded as never), false);
   }
 });

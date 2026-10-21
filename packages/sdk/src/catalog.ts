@@ -299,6 +299,22 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     defaultStatus: 'coming_soon',
     component: 'operations-deck',
   },
+  {
+    slug: 'fieldnode',
+    name: 'FieldNode',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.fieldnode.promise,
+    category: 'ops',
+    commercialType: 'free',
+    applicationType: 'companion-application',
+    canonicalBaseUrl: 'https://fieldnode.operatoros.net',
+    planMin: 'starter',
+    ord: 20,
+    envUrlKeys: ['FIELDNODE_URL'],
+    stripeAddonEnvKeys: [],
+    internal: true,
+    defaultStatus: 'live',
+    component: 'diagnostic-lab',
+  },
 ] as const;
 
 export const MODULE_CATALOG_BY_SLUG: Readonly<Record<string, ModuleCatalogEntry>> = Object.freeze(

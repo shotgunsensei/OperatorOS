@@ -1,5 +1,29 @@
 # OperatorOS implementation status
 
+## FieldNode free-module source candidate — 2026-10-20
+
+Hosted follow-through: exact remote head `03c4a4ed66250c22a3db0c03f7c40298fba67b8c`
+failed release run39488703971 with11/14 scopes passing:52/52 unit and108/108
+integration passed, API2171/2177 failed six roster/help/matrix expectations,
+and the browser matrix stopped at collection because FieldNode had no selector.
+Four visual cases passed separately. The bounded correction adds truthful help,
+the fourth included-app expectations, and the public-introduction to protected
+management SSO/browser transition without weakening authorization assertions.
+Fresh local selected suites pass154/154 with six existing optional HTTP skips;
+all four workspace types, zero-warning lint and strict15-test-file types pass.
+
+The same run's security gate independently found two follow-redirects1.16.0
+advisories. The source override/lock now pins official1.16.1, with no new host
+package installation or advisory exception. Three zero-network installed-library
+regressions reproduce both defects on the retained1.16.0 local graph (two failures)
+and preserve the same-origin control. The corrected lock audit passes with no
+unresolved advisories; this is not installed1.16.1 runtime verification. Current
+Twilio callers keep redirects disabled; a production exploit is not established.
+The exact corrected-head hosted frozen install, complete release and independent
+review remain pending and must be recorded before any acceptance claim.
+
+FieldNode is a fourth free-account application with a public hardware introduction and a protected management entry. Remote pairing/management and hardware ordering stay explicitly unavailable until their approved integrations exist. Intended host: fieldnode.operatoros.net; no domain, database or deployment action occurred. Schema/release stays67. Source checks:22 new regressions in selected suites147pass/0fail/6 existing optional HTTP skips; strict checking of all13 changed test files, full four-workspace typecheck and zero-warning lint pass. SQL cases were not run. Full production build, browser verification and immutable independent review remain release gates; their actual results belong in the PR verification record. [Scope, ownership, activation and rollback gates](reviews/2026-10-20/FIELDNODE_FREE_MODULE.md).
+
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 
 This selected 18-path candidate preserves PI component

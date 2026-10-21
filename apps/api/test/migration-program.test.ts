@@ -14,13 +14,16 @@ import { planOutCallImport } from '../src/lib/outcall-import.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
-test('Phase 13 manifests cover every active module and every release target', () => {
+test('Phase 13 manifests cover the thirteen imported modules and their release targets', () => {
   assert.deepEqual(validateMigrationManifestCoverage(), []);
   assert.deepEqual(
     PHASE13_MIGRATION_MANIFESTS.map(manifest => manifest.slug).sort(),
-    MODULE_CATALOG.map(module => module.slug).sort(),
+    MODULE_CATALOG.filter(module => module.slug !== 'fieldnode').map(module => module.slug).sort(),
   );
   assert.equal(new Set(PHASE13_MIGRATION_MANIFESTS.map(manifest => manifest.slug)).size, 13);
+  assert.equal(MODULE_CATALOG.some(module => module.slug === 'fieldnode'), true);
+  assert.equal(PHASE13_MIGRATION_MANIFESTS.some(manifest => manifest.slug === 'fieldnode'), false,
+    'the new FieldNode landing and unavailable management shell do not invent an imported hardware data source');
   for (const manifest of PHASE13_MIGRATION_MANIFESTS) {
     assert.match(manifest.source.commit ?? manifest.source.version, /\S/);
     assert.match(manifest.source.exportMethod, /\S/);
@@ -61,6 +64,7 @@ test('single-module rehearsal remains bounded and unknown modules fail closed', 
   assert.equal(report.modules[0]?.slug, 'snapproofos');
   assert.equal(report.modules[0]?.productionCutoverReady, false);
   assert.throws(() => runPhase13MigrationRehearsal('unsupported-module'), /Unknown migration module/);
+  assert.throws(() => runPhase13MigrationRehearsal('fieldnode'), /Unknown migration module/);
 });
 
 test('OutCall explicitly reconciles a zero-row source and cannot apply data', () => {

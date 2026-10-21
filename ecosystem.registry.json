@@ -94,7 +94,9 @@
       "applicationType": "companion-application",
       "commercialType": "free",
       "ecosystemUrl": "https://operatorpoolhall.operatoros.net",
-      "legacyUrls": ["https://ninja-pool-hall.operatoros.net"],
+      "legacyUrls": [
+        "https://ninja-pool-hall.operatoros.net"
+      ],
       "status": "active",
       "launchMode": "subdomain",
       "authMode": "sso",
@@ -158,7 +160,9 @@
       "applicationType": "companion-application",
       "commercialType": "addon",
       "ecosystemUrl": "https://deployops.operatoros.net",
-      "legacyUrls": ["https://ninjalaunchkit.operatoros.net"],
+      "legacyUrls": [
+        "https://ninjalaunchkit.operatoros.net"
+      ],
       "status": "active",
       "launchMode": "subdomain",
       "authMode": "sso",
@@ -190,7 +194,9 @@
       "applicationType": "companion-application",
       "commercialType": "addon",
       "ecosystemUrl": "https://scriptops.operatoros.net",
-      "legacyUrls": ["https://ninjamation.operatoros.net"],
+      "legacyUrls": [
+        "https://ninjamation.operatoros.net"
+      ],
       "status": "active",
       "launchMode": "subdomain",
       "authMode": "sso",
@@ -213,6 +219,22 @@
       "billingMode": "operatoros",
       "iconKey": "outcall",
       "ord": 13
+    },
+    {
+      "slug": "fieldnode",
+      "name": "FieldNode",
+      "category": "ops",
+      "description": "Explore FieldNode hardware and open its free application, with device management reserved for verified owners after pairing is connected.",
+      "applicationType": "companion-application",
+      "commercialType": "free",
+      "ecosystemUrl": "https://fieldnode.operatoros.net",
+      "legacyUrls": [],
+      "status": "active",
+      "launchMode": "subdomain",
+      "authMode": "sso",
+      "billingMode": "operatoros",
+      "iconKey": "fieldnode",
+      "ord": 14
     }
   ]
 }

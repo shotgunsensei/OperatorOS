@@ -292,5 +292,32 @@
     "minimumAuthAdapterVersion": "1.0.0",
     "icon": "outcall",
     "owner": "Shotgun Ninjas Productions"
+  },
+  {
+    "moduleId": "fieldnode",
+    "slug": "fieldnode",
+    "displayName": "FieldNode",
+    "clientId": "operatoros:fieldnode",
+    "entitlementKey": "fieldnode",
+    "productionBaseUrl": "https://fieldnode.operatoros.net",
+    "stagingBaseUrl": null,
+    "exactRedirectUris": [
+      "https://fieldnode.operatoros.net/sso"
+    ],
+    "exactLogoutUris": [
+      "https://fieldnode.operatoros.net/logout"
+    ],
+    "exactAllowedOrigins": [
+      "https://fieldnode.operatoros.net"
+    ],
+    "callbackPath": "/sso",
+    "launchPath": "/",
+    "healthCheckPath": "/healthz",
+    "enabled": true,
+    "environment": "production",
+    "contractVersion": "v1",
+    "minimumAuthAdapterVersion": "1.0.0",
+    "icon": "fieldnode",
+    "owner": "Shotgun Ninjas Productions"
   }
 ]
