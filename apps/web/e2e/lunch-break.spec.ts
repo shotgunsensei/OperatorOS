@@ -160,7 +160,7 @@ test('ordinary free-user UI exposes Lunch Break and preserves the independent Po
   page,
 }) => {
   page.on('pageerror', (error) => console.error('SYNTHETIC_UI_PAGE_ERROR', error.message));
-  const origin = new URL(test.info().project.use.baseURL as string).origin;
+  const origin = new URL(baseURL).origin;
   await context.addCookies([
     { name: 'operatoros_session', value: 'synthetic-ui-only-never-verified', url: origin },
   ]);

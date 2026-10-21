@@ -459,7 +459,9 @@ export async function middleware(req: NextRequest) {
     if (!lunchBreakHostPathAllowed(req.method, pathname)) {
       return withAuthSecurityHeaders(new NextResponse('Page not found', { status: 404 }));
     }
-    return withAuthSecurityHeaders(NextResponse.next());
+    // Replit can retain an internal Host while forwarding the public host.
+    // Resolve the root here using the same host decision as the allowlist.
+    return withAuthSecurityHeaders(pathname === '/' ? rewriteTo('/lunch-break', req) : NextResponse.next());
   }
 
   const canonicalRedirect = canonicalizeNoncanonicalHost(req, context);
@@ -643,6 +645,7 @@ export const config = {
   matcher: [
     // Match private and dotted paths on the public hub host too.
     { source: '/:path*', has: [{ type: 'header', key: 'host', value: '[lL][uU][nN][cC][hH][bB][rR][eE][aA][kK]\\.[oO][pP][eE][rR][aA][tT][oO][rR][oO][sS]\\.[nN][eE][tT]\\.?(?::[0-9]+)?' }] },
+    { source: '/:path*', has: [{ type: 'header', key: 'x-forwarded-host', value: '[lL][uU][nN][cC][hH][bB][rR][eE][aA][kK]\\.[oO][pP][eE][rR][aA][tT][oO][rR][oO][sS]\\.[nN][eE][tT]\\.?(?::[0-9]+)?(?:,.*)?' }] },
     '/app/:path*',
     '/modules/:path*',
     '/((?!api(?:/|$)|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|.*\\..*).*)',

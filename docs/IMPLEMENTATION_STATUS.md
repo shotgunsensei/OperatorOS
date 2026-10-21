@@ -8,9 +8,12 @@ public five-game landing page, Home/Browse/sidebar entry points, exact-host
 read-only routing and gateway isolation. Fresh visual polish adds source
 imagery, explicit free access, keyboard jump navigation, responsive cards and
 honest account/device requirements. Focused native routing/navigation checks
-pass 42/42 with no skips; root lint passes. No module entitlement, paid SKU,
-identity, schema, provider or production setting changes. Final production build passes on runtime commit `82e4c24e`; 32 built HTTP checks
-and Chrome keyboard/four-viewport checks pass. Live acceptance is recorded
+pass 52/52 with no skips after review fixes and intentional sidebar snapshot
+updates; root lint and the post-review full build pass. No module entitlement,
+paid SKU, identity, schema, provider or production setting changes. Two patch
+dependency updates close the hosted audit blockers without new exceptions.
+Final hosted acceptance is pending. Earlier 32 built HTTP checks and Chrome
+keyboard/four-viewport checks pass. Live acceptance is recorded
 separately after publication; no current deployed-state claim is made here. Details and exact evidence limits:
 [DNS, audit, assets and release boundary](LUNCH_BREAK_RELEASE.md).
 

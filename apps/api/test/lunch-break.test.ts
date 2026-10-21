@@ -157,8 +157,24 @@ test('actual middleware denies private paths without cookies, redirects or forwa
       headers: { host: 'lunchbreak.operatoros.net' },
     }),
   );
-  assert.equal(root.headers.get('x-middleware-next'), '1');
+  assert.equal(new URL(root.headers.get('x-middleware-rewrite')!).pathname, '/lunch-break');
   assert.equal(root.headers.has('set-cookie'), false);
+});
+
+test('forwarded hub root rewrites internally and its private paths stay closed', async () => {
+  const headers = { host: 'internal.example', 'x-forwarded-host': 'lunchbreak.operatoros.net, internal.example' };
+  const root = await middleware(new NextRequest('http://internal.example/?view=games', { headers }));
+  const destination = new URL(root.headers.get('x-middleware-rewrite')!);
+  assert.equal(destination.origin, 'http://internal.example');
+  assert.equal(destination.pathname, '/lunch-break');
+  assert.equal(destination.search, '?view=games');
+  assert.equal(root.headers.has('set-cookie'), false);
+  assert.equal(root.headers.has('location'), false);
+  for (const path of ['/api/auth/me', '/readyz', '/.env', '/sso']) {
+    const response = await middleware(new NextRequest(`http://internal.example${path}`, { headers }));
+    assert.equal(response.status, 404, path);
+    assert.equal(response.headers.has('set-cookie'), false);
+  }
 });
 
 test('Next host matcher covers private and dotted paths; rewrite stays relative and exact-host', async () => {

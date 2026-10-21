@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { runInNewContext } from 'node:vm';
 
 const { createPublicGateway } = await import('../../../scripts/start-unified-runtime.mjs');
 const listen = (server: http.Server) =>
@@ -104,5 +105,68 @@ test('public Lunch Break gateway rejects API/auth/WS before upstream and preserv
     assert.equal(apiUpgrades, 1, 'existing module WS route must still reach API fixture');
   } finally {
     await Promise.all([close(gateway), close(api), close(next)]);
+  }
+});
+
+test('hub startup retries its allowed root and recovers after readiness without exposing operational paths', async () => {
+  let ready = false;
+  let upstreamRequests = 0;
+  const next = http.createServer((_req, res) => {
+    upstreamRequests++;
+    res.end('hub ready');
+  });
+  const nextPort = await listen(next);
+  const gateway = createPublicGateway({ apiPort: nextPort, nextPort }, { isReady: () => ready });
+  try {
+    const port = await listen(gateway);
+    const headers = { host: 'lunchbreak.operatoros.net', accept: 'text/html' };
+    // Native HTTP preserves the synthetic Host; fetch may replace that header.
+    const read = (path: string, accept: string) => new Promise<{
+      status: number; headers: http.IncomingHttpHeaders; body: string;
+    }>((resolve, reject) => {
+      const req = http.get({ hostname: '127.0.0.1', port, path, headers: { ...headers, accept } }, (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => resolve({ status: res.statusCode!, headers: res.headers, body }));
+      });
+      req.on('error', reject);
+    });
+    const response = await read('/', 'text/html');
+    assert.equal(response.status, 503);
+    assert.equal(response.headers['set-cookie'], undefined);
+    const body = response.body;
+    const script = /<script nonce="[^"]+">([^<]+)<\/script>/.exec(body)?.[1];
+    assert.ok(script);
+    const scheduled: Array<() => Promise<void>> = [];
+    const polled: Array<{ path: string; status: number }> = [];
+    let restored: string | undefined;
+    const original = 'https://lunchbreak.operatoros.net/?view=games#games';
+    runInNewContext(script, {
+      document: { getElementById: () => ({ textContent: '' }) },
+      fetch: async (path: string) => {
+        const result = await read(path, 'application/json');
+        polled.push({ path, status: result.status });
+        return { ok: result.status === 200 };
+      },
+      window: {
+        location: { href: original, replace: (target: string) => { restored = target; } },
+        setTimeout: (callback: () => Promise<void>) => scheduled.push(callback),
+      },
+    });
+    await scheduled.shift()!();
+    assert.deepEqual(polled, [{ path: '/', status: 503 }]);
+    assert.equal(restored, undefined);
+    assert.equal(upstreamRequests, 0);
+    assert.equal(await request(port, '/readyz', headers), 404);
+    ready = true;
+    await scheduled.shift()!();
+    assert.deepEqual(polled, [{ path: '/', status: 503 }, { path: '/', status: 200 }]);
+    assert.equal(restored, original);
+    assert.equal(upstreamRequests, 1);
+    assert.equal(await request(port, '/readyz', headers), 404);
+    assert.equal(await request(port, '/', headers, false, 'POST'), 404);
+  } finally {
+    await Promise.all([close(gateway), close(next)]);
   }
 });
