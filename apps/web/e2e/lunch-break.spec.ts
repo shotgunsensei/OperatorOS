@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+// The dedicated hub config and the shared release harness both target the
+// task-owned local server. No production host or account is a test target.
+const baseURL =
+  process.env.LUNCH_BREAK_TEST_URL || process.env.E2E_WEB_URL || 'http://127.0.0.1:5123';
+const target = new URL(baseURL);
+if (
+  !['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname) ||
+  target.protocol !== 'http:' ||
+  target.username ||
+  target.password ||
+  target.search ||
+  target.hash ||
+  target.pathname !== '/'
+) {
+  throw new Error('Lunch Break browser acceptance requires a plain loopback HTTP origin');
+}
+test.use({ baseURL });
+
 test.beforeEach(async ({ context }) => {
   // Browser traffic stays local. The external-link test installs a later
   // synthetic destination handler; it never contacts the real game.

@@ -101,6 +101,7 @@ try {
   if (suite === 'e2e' || suite === 'all') {
     const browserArgs = [
       'test',
+      'e2e/lunch-break.spec.ts',
       'e2e/sso-v1.spec.ts',
       'e2e/techdeck-resolution-ingestion.spec.ts',
       'e2e/techdeck-resolution-workspace.spec.ts',
