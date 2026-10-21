@@ -9,6 +9,7 @@ import { colors } from '@/lib/design-tokens';
 import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 import { EmptyState, ErrorState, PageHeader } from '@/components/ExperiencePrimitives';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
+import LunchBreakEntry from '@/components/LunchBreakEntry';
 
 type AccessSource = 'plan' | 'addon' | 'trial' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
@@ -438,6 +439,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
 
   return (
     <div className="ops-page" style={{ maxWidth: 1200 }} data-testid="apps-page">
+      <LunchBreakEntry />
       <PageHeader
         eyebrow="Workspace"
         title="Browse tools"

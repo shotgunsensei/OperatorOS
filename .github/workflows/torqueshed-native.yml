@@ -39,13 +39,15 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: phase29_ci_only
-          POSTGRES_DB: operatoros_phase29
+          POSTGRES_DB: operatoros_phase29_ci
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U postgres -d operatoros_phase29"
+          --health-cmd "pg_isready -U postgres -d operatoros_phase29_ci"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      DATABASE_URL: postgresql://postgres:phase29_ci_only@127.0.0.1:5432/operatoros_phase29
+      DATABASE_URL: postgresql://postgres:phase29_ci_only@127.0.0.1:5432/operatoros_phase29_ci
+      PARITY_DATABASE_IS_DISPOSABLE: "1"
+      OPERATOROS_DETERMINISTIC_PROVIDER_MODE: "1"
       SESSION_SECRET: phase29-ci-session-secret-only
       APP_ENV: test
       NODE_ENV: test

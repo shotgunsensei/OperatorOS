@@ -1,5 +1,23 @@
 # OperatorOS implementation status
 
+## Public free Lunch Break hub (2026-10-21)
+
+A narrow hub candidate is based on current published-source main `32946763`,
+without the held combined candidate's ancestry or SSO-file delta. It adds a
+public five-game landing page, Home/Browse/sidebar entry points, exact-host
+read-only routing and gateway isolation. Fresh visual polish adds source
+imagery, explicit free access, keyboard jump navigation, responsive cards and
+honest account/device requirements. Focused native routing/navigation checks
+pass 52/52 with no skips after review fixes and intentional sidebar snapshot
+updates; root lint and the post-review full build pass. No module entitlement,
+paid SKU, identity, schema, provider or production setting changes. Two patch
+dependency updates close the hosted audit blockers without new exceptions.
+Final hosted acceptance is pending. Earlier 32 built HTTP checks and Chrome
+keyboard/four-viewport checks pass. Live acceptance is recorded
+separately after publication; no current deployed-state claim is made here. Details and exact evidence limits:
+[DNS, audit, assets and release boundary](LUNCH_BREAK_RELEASE.md).
+
+
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 
 This selected 18-path candidate preserves PI component

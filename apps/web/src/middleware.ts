@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { findAudienceLane } from './lib/audience-lanes';
+import { LUNCH_BREAK_HOST, lunchBreakHostPathAllowed } from '../../../packages/modules/lunch-break.js';
 import {
   getModuleById,
+  normalizeHost,
   resolveModuleContext,
   type ResolvedOperatorOSModuleContext,
 } from '../../../packages/modules/registry.js';
@@ -452,6 +454,16 @@ export async function middleware(req: NextRequest) {
     cookies: req.cookies,
   });
 
+  // This public links host cannot issue sessions or reach shared APIs.
+  if (context.host === LUNCH_BREAK_HOST || normalizeHost(req.headers.get('host')) === LUNCH_BREAK_HOST) {
+    if (!lunchBreakHostPathAllowed(req.method, pathname)) {
+      return withAuthSecurityHeaders(new NextResponse('Page not found', { status: 404 }));
+    }
+    // Replit can retain an internal Host while forwarding the public host.
+    // Resolve the root here using the same host decision as the allowlist.
+    return withAuthSecurityHeaders(pathname === '/' ? rewriteTo('/lunch-break', req) : NextResponse.next());
+  }
+
   const canonicalRedirect = canonicalizeNoncanonicalHost(req, context);
   if (canonicalRedirect) return canonicalRedirect;
 
@@ -631,6 +643,9 @@ export const config = {
   // Match console routes, local module fallbacks, and hostname-routed
   // page requests. API routes and static assets stay out of middleware.
   matcher: [
+    // Match private and dotted paths on the public hub host too.
+    { source: '/:path*', has: [{ type: 'header', key: 'host', value: '[lL][uU][nN][cC][hH][bB][rR][eE][aA][kK]\\.[oO][pP][eE][rR][aA][tT][oO][rR][oO][sS]\\.[nN][eE][tT]\\.?(?::[0-9]+)?' }] },
+    { source: '/:path*', has: [{ type: 'header', key: 'x-forwarded-host', value: '[lL][uU][nN][cC][hH][bB][rR][eE][aA][kK]\\.[oO][pP][eE][rR][aA][tT][oO][rR][oO][sS]\\.[nN][eE][tT]\\.?(?::[0-9]+)?(?:,.*)?' }] },
     '/app/:path*',
     '/modules/:path*',
     '/((?!api(?:/|$)|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|.*\\..*).*)',

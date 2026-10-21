@@ -116,6 +116,8 @@ const nextConfig = {
         // rewrite lets real Next routes such as /, /sso, and /logout win
         // before the API proxy is considered.
         beforeFiles: [
+          // Keep the public hub inside Next; middleware rejects private paths.
+          { source: '/', has: [{ type: 'header', key: 'host', value: '[lL][uU][nN][cC][hH][bB][rR][eE][aA][kK]\\.[oO][pP][eE][rR][aA][tT][oO][rR][oO][sS]\\.[nN][eE][tT]\\.?(?::[0-9]+)?' }], destination: '/lunch-break' },
           {
             source: '/:path*',
             has: [{ type: 'host', value: 'api.operatoros.net' }],
