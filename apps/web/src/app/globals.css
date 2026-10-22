@@ -252,3 +252,79 @@ textarea,
     transition-duration: .01ms !important;
   }
 }
+
+/* FieldNode uses the existing stylesheet and shared brand tokens. */
+.fieldnode-landing,
+.fieldnode-management {
+  box-sizing: border-box;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: clamp(24px, 6vw, 72px) clamp(20px, 5vw, 56px);
+}
+.fieldnode-management { max-width: 840px; }
+.fieldnode-landing *, .fieldnode-management * { box-sizing: border-box; }
+.fieldnode-landing a, .fieldnode-management a { color: var(--brand-accent-cyan); }
+.fieldnode-landing a:focus-visible, .fieldnode-management a:focus-visible {
+  outline: 3px solid var(--ops-focus);
+  outline-offset: 5px;
+}
+.fieldnode-hero { padding: clamp(32px, 6vw, 72px) 0; }
+.fieldnode-landing .fieldnode-eyebrow {
+  margin: 0 0 20px;
+  color: var(--brand-accent-cyan);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.fieldnode-landing h1 {
+  max-width: 18ch;
+  margin: 0 0 24px;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.1;
+  letter-spacing: -.035em;
+}
+.fieldnode-landing h2, .fieldnode-management h1 {
+  margin: 0 0 18px;
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.2;
+}
+.fieldnode-landing p, .fieldnode-management p {
+  max-width: 72ch;
+  color: var(--brand-text-secondary);
+  line-height: 1.75;
+  margin: 16px 0;
+}
+.fieldnode-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
+.fieldnode-landing .fieldnode-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 22px;
+  border: 1px solid var(--brand-border-strong);
+  border-radius: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+}
+.fieldnode-landing .fieldnode-button-primary {
+  border-color: var(--brand-accent-cyan);
+  background: var(--brand-accent-cyan);
+  color: var(--brand-accent-ink);
+}
+.fieldnode-button-secondary { background: var(--brand-bg-elevated); }
+.fieldnode-section {
+  border-top: 1px solid var(--brand-border-strong);
+  padding: 36px 0;
+  scroll-margin-top: 24px;
+}
+.fieldnode-section > a, .fieldnode-management > a { display: inline-block; margin-top: 16px; }
+.fieldnode-section [role="status"], .fieldnode-management [role="status"] {
+  padding: 18px 20px;
+  border: 1px solid var(--brand-border-soft);
+  border-radius: 10px;
+  background: var(--brand-bg-secondary);
+}
+@media (max-width: 560px) {
+  .fieldnode-landing .fieldnode-button { width: 100%; justify-content: center; }
+}

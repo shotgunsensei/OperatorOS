@@ -17,7 +17,7 @@ import {
 
 const EXPECTED = {
   core: ['pulsedesk', 'techdeck', 'tradeflowkit'],
-  free: ['faultlinelab', 'ninja-pool-hall', 'torqueshed'],
+  free: ['faultlinelab', 'fieldnode', 'ninja-pool-hall', 'torqueshed'],
   addon: [
     'brandforgeos',
     'callcommand-ai',
@@ -63,7 +63,7 @@ test('only commercial add-ons declare add-on Stripe environment keys', () => {
 
   const outcall = MODULE_CATALOG.find(module => module.slug === 'outcall');
   assert.equal(outcall?.commercialType, 'addon');
-  assert.equal(outcall?.defaultStatus, 'coming_soon');
+  assert.equal(outcall?.defaultStatus, 'live', 'application availability does not grant commercial eligibility');
 });
 
 test('billing service rejects canonical core/free modules as individual add-ons', () => {

@@ -9,8 +9,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 test('Phase 37 records the owner-authorized current reconstruction without claiming historical literal parity', () => {
   const gate = buildOutCallSourceGate();
-  assert.equal(gate.phaseStatus, 'RECONSTRUCTED_SOURCE_LOCAL');
-  assert.equal(gate.blockerCode, 'PROVIDER_ACCEPTANCE_REQUIRED');
+  assert.equal(gate.phaseStatus, 'APPLICATION_SOURCE_ACTIVE_PROVIDER_GATED');
+  assert.equal(gate.blockerCode, 'COMMERCIAL_DECISION_AND_PROVIDER_ACCEPTANCE_REQUIRED');
   assert.equal(gate.source.historicalCommit, null);
   assert.equal(gate.source.provenanceStatus, 'OWNER_AUTHORIZED_RECONSTRUCTION');
   assert.ok(gate.source.canonicalCurrentImplementation.targetCount >= 7);
@@ -23,17 +23,19 @@ test('Phase 37 records the owner-authorized current reconstruction without claim
   assert.equal(gate.acceptance.originalHistoricalLiteralParityClaimed, false);
 });
 
-test('OutCall activation remains locked across every launch authority', () => {
+test('OutCall application launches separately from provider and commercial approval', () => {
   const gate = buildOutCallSourceGate();
-  assert.equal(gate.activationAllowed, false);
+  assert.equal(gate.applicationLaunchAllowed, true);
+  assert.equal(gate.liveProviderAcceptanceProven, false);
   assert.equal(gate.acceptance.completeTwilioSandboxLifecycleProven, false);
   assert.equal(gate.acceptance.goLiveAccepted, false);
-  assert.equal(gate.activationLock.failClosed, true);
-  assert.ok(Object.entries(gate.activationLock.checks).every(([, value]) => value === true));
-  assert.equal(gate.activationLock.sdkCatalogStatus, 'coming_soon');
-  assert.equal(gate.activationLock.ecosystemStatus, 'planned');
-  assert.equal(gate.activationLock.deploymentRegistryEnabled, false);
-  assert.equal(gate.activationLock.existingDatabaseStatusAfterSeed, 'coming_soon');
+  assert.equal(gate.activationPolicy.failClosed, true);
+  assert.ok(Object.entries(gate.activationPolicy.checks).every(([, value]) => value === true));
+  assert.equal(gate.activationPolicy.sdkCatalogStatus, 'live');
+  assert.equal(gate.activationPolicy.ecosystemStatus, 'active');
+  assert.equal(gate.activationPolicy.deploymentRegistryEnabled, true);
+  assert.equal(gate.activationPolicy.existingDatabaseStatusAfterSeed, 'live');
+  assert.equal(gate.activationPolicy.newEnrollment, 'closed_pending_commercial_decision');
 });
 
 test('committed Phase 37 recovery ledger matches the compiler output', () => {

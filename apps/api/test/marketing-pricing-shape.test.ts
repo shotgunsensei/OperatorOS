@@ -52,7 +52,7 @@ test('pricing catalog exposes the finalized three core products', () => {
   );
   assert.deepEqual(
     FREE_WITH_ANY_ACCOUNT.map(app => app.key),
-    ['torqueshed', 'faultlinelab', 'ninja-pool-hall'],
+    ['torqueshed', 'faultlinelab', 'ninja-pool-hall', 'fieldnode'],
   );
   assert.equal(COMPANION_MODULES.length, 6);
 });

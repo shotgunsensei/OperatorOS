@@ -20,6 +20,7 @@ export const MODULE_PRODUCT_VALUE_SLUGS = [
   'callcommand-ai',
   'ninjamation',
   'outcall',
+  'fieldnode',
 ] as const;
 
 export type ModuleProductValueSlug = (typeof MODULE_PRODUCT_VALUE_SLUGS)[number];
@@ -249,6 +250,31 @@ export const MODULE_PRODUCT_VALUE_BY_SLUG = {
       setupBoundary: 'Operator Pool Hall is a free team and community benefit. It does not provide wagering, paid competition, prizes, or independently certified rankings.',
     },
   },
+  fieldnode: {
+    slug: 'fieldnode',
+    promise: 'Explore FieldNode hardware and open its free application, with device management reserved for verified owners after pairing is connected.',
+    buyer: 'FieldNode hardware owners and teams considering a field appliance',
+    firstUsefulResult: 'Review the hardware introduction and find the management entry with clear ownership and pairing requirements.',
+    deliverables: [
+      'A shared hardware introduction and purchase-information entry',
+      'Free application access with every OperatorOS account',
+      'An explicit management availability and pairing requirement',
+    ],
+    primaryWorkflow: {
+      name: 'Hardware introduction to owner management',
+      steps: [
+        'Read the FieldNode hardware introduction',
+        'Review hardware ordering availability on OperatorOS',
+        'Sign in with your free or paid OperatorOS account',
+        'Review management availability and verified pairing requirements',
+      ],
+      completion: 'An interested visitor or existing owner reaches the appropriate entry without buying an application license or subscription.',
+    },
+    integrations: {
+      supported: ['OperatorOS account and organization access'],
+      setupBoundary: 'Hardware checkout is unavailable until a verified purchase destination is configured. Remote device management stays unavailable until an approved service verifies ownership and pairing for the active organization.',
+    },
+  },
   brandforgeos: {
     slug: 'brandforgeos',
     promise: 'Turn brand decisions into an approved, reusable campaign package your team can create, review, hand off, and measure together.',
@@ -469,7 +495,7 @@ export const MODULE_PRODUCT_VALUE_BY_SLUG = {
         'Controlled Twilio voice, SMS trigger, and DTMF callbacks',
         'OperatorOS account access, private export, and deletion controls',
       ],
-      setupBoundary: 'OutCall is coming soon and must not be sold or launched until production activation, public callback, exact-host, and controlled real-provider acceptance are complete. It is not emergency response, monitoring, location tracking, duress detection, or a replacement for 911.',
+      setupBoundary: 'Existing authorized access opens the OutCall workspace. New enrollment awaits approved commercial terms. Live verification and calls require complete provider configuration, explicit activation, a current approved account resource policy, a verified personal number, and controlled real-provider acceptance. It is not emergency response, monitoring, location tracking, duress detection, or a replacement for 911.',
     },
   },
 } as const satisfies Record<ModuleProductValueSlug, ModuleProductValueContract>;

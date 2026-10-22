@@ -1,6 +1,7 @@
 'use client';
 
 import type { GameState, Shot, ShotEvents } from './ninja-pool-hall/types';
+import type { ToolModuleCatalogResponse } from '@operatoros/sdk';
 import { getModuleByHost } from '../../../../packages/modules/registry.js';
 
 const API_BASE = '/api';
@@ -61,6 +62,21 @@ async function apiDownload(path: string, options: RequestInit = {}): Promise<Blo
   }
   return res.blob();
 }
+
+export const toolModulesApi = {
+  catalog: (tenantId: string, signal?: AbortSignal): Promise<ToolModuleCatalogResponse> =>
+    apiFetch('/tools/catalog', { cache: 'no-store', signal, headers: { 'X-Tenant-Id': tenantId } }),
+  officeexitLinkConfiguration: (tenantId: string, signal?: AbortSignal): Promise<{ enabled: boolean; tenantId: string; officeexitOrigin?: string }> =>
+    apiFetch('/tools/officeexit/link-configuration', { cache: 'no-store', signal, headers: { 'X-Tenant-Id': tenantId } }),
+  resolveOfficeexitLink: (tenantId: string, requestId: string, signal?: AbortSignal): Promise<{
+    requestId: string; tenantId: string; tenantName: string; officeexitOrganizationId: string;
+    officeexitUserId: string; officeexitOrganizationName: string; expiresAt: string;
+  }> => apiFetch('/tools/officeexit/link-requests/resolve', { method: 'POST', cache: 'no-store', signal,
+    headers: { 'X-Tenant-Id': tenantId }, body: JSON.stringify({ requestId }) }),
+  approveOfficeexitLink: (tenantId: string, requestId: string, signal?: AbortSignal): Promise<{ redirectUrl: string }> =>
+    apiFetch('/tools/officeexit/link-requests/approve', { method: 'POST', cache: 'no-store', signal,
+      headers: { 'X-Tenant-Id': tenantId }, body: JSON.stringify({ requestId }) }),
+};
 
 function accountChangeCode(value = '') {
   const code = value.trim();

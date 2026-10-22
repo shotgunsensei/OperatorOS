@@ -27,7 +27,8 @@
   "freeClients": [
     "operatoros:torqueshed",
     "operatoros:faultlinelab",
-    "operatoros:ninja-pool-hall"
+    "operatoros:ninja-pool-hall",
+    "operatoros:fieldnode"
   ],
   "addonClients": [
     "operatoros:brandforgeos",

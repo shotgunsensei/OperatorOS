@@ -19,11 +19,12 @@ function readRepoFile(repoPath: string): string {
   return fs.readFileSync(path.join(root, repoPath), 'utf8');
 }
 
-test('free-account catalog is the exact three tenant-scoped companion apps', () => {
+test('free-account catalog is the exact four tenant-scoped companion apps', () => {
   assert.deepEqual([...FREE_ACCOUNT_APP_SLUGS], [
     'torqueshed',
     'faultlinelab',
     'ninja-pool-hall',
+    'fieldnode',
   ]);
   assert.deepEqual(NEW_FREE_ACCOUNT_GRANT_METADATA, {
     grantedBy: 'free_account',

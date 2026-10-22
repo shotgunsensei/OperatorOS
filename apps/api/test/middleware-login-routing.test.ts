@@ -88,7 +88,7 @@ test('cross-host and recursive login destinations collapse to the host fallback'
   assertAuthorizationRedirect(recursive, 'operatoros.net', 'https://operatoros.net/app');
 });
 
-test('unavailable OutCall deep links show their state before starting sign-in', async () => {
+test('active OutCall deep links start exact-host authentication without enabling a provider', async () => {
   const previous = process.env.OUTCALL_TEST_ADAPTER;
   delete process.env.OUTCALL_TEST_ADAPTER;
   try {
@@ -96,10 +96,22 @@ test('unavailable OutCall deep links show their state before starting sign-in', 
       const response = await middleware(new NextRequest(`https://outcall.operatoros.net${path}`, {
         headers: { host: 'outcall.operatoros.net', 'x-forwarded-proto': 'https' },
       }));
-      assert.equal(response.headers.get('location'), null);
-      assert.equal(response.headers.get('x-middleware-rewrite'), 'https://outcall.operatoros.net/modules/outcall');
+      assert.equal(response.status, 307);
+      const location = new URL(response.headers.get('location')!);
+      assert.equal(location.origin, 'https://auth.operatoros.net');
+      assert.equal(location.searchParams.get('client_id'), 'operatoros:outcall');
+      assert.equal(location.searchParams.get('redirect_uri'), 'https://outcall.operatoros.net/sso');
+      assert.equal(location.searchParams.get('code_challenge_method'), 'S256');
+      assert.match(location.searchParams.get('state') ?? '', /^[A-Za-z0-9_-]{40,}$/);
       assert.equal(response.headers.get('cache-control'), 'no-store');
-      assert.equal(response.headers.getSetCookie().length, 0);
+      const cookies = response.headers.getSetCookie();
+      for (const name of ['operatoros_sso_state', 'operatoros_sso_nonce', 'operatoros_sso_verifier']) {
+        const cookie = cookies.find(value => value.startsWith(`${name}=`));
+        assert.ok(cookie, `${name} transaction cookie must be set`);
+        assert.match(cookie, /;\s*HttpOnly(?:;|$)/i);
+        assert.match(cookie, /;\s*Secure(?:;|$)/i);
+        assert.doesNotMatch(cookie, /;\s*Domain=/i);
+      }
     }
   } finally {
     if (previous === undefined) delete process.env.OUTCALL_TEST_ADAPTER;

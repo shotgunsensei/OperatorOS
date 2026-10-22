@@ -92,6 +92,7 @@ test('real handler differentiates failure stages and preserves responses and ide
     console: { log() {}, error(...args: unknown[]) { errors.push(args); } },
     getPaymentProviderAdapter: () => ({ status: { state: configured?'configured':'disabled' }, verifyWebhook: async (raw: Buffer, sig: string) => { step('verify'); return stripe.webhooks.constructEvent(raw,sig,secret); } }),
     isTorqueTokenStripeEvent: async () => { step('credit_classification'); return torque; },
+    receiveVerifiedToolPurchaseEvent: async () => null, ToolPurchaseProviderError: class extends Error {},
     receiveVerifiedTorqueTokenStripeEvent: async () => { step('credit_receipt'); return { status:'processed', receipt:{ id:'synthetic',tenant_id:'synthetic',safe_payload_json:{} },duplicate:false }; },
     recordTorqueStripeEventDispatch: async () => { step('credit_dispatch_record'); },
     classifyWebhookEvent: () => { step('event_classification'); return { isAddon:false,isFeatureAddon:false,matchedAt:'none' }; },

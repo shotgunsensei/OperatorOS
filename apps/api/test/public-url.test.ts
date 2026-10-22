@@ -109,7 +109,7 @@ test('sanitizeReturnTo requires HTTPS for every canonical production host', () =
   const moduleOrigins = OPERATOROS_MODULE_REGISTRY
     .filter(module => module.id !== 'operatoros')
     .map(module => module.productionBaseUrl);
-  assert.equal(moduleOrigins.length, 13, 'the HTTPS policy must cover all 13 modules');
+  assert.equal(moduleOrigins.length, 14, 'the HTTPS policy must cover all 14 modules');
 
   const canonicalOrigins = new Set([
     ...Object.values(PLATFORM_DOMAINS),

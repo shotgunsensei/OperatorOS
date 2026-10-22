@@ -53,6 +53,10 @@ export function buildOutCallSourceGate() {
   const marketingSource = text('apps/web/src/lib/marketing-catalog.ts');
   const seedSource = text('apps/api/src/lib/saas-db-init.ts');
   const verifierSource = text('scripts/verify-production-runtime.mjs');
+  const providerSource = text('apps/api/src/lib/outcall-provider.ts');
+  const resourceSource = text('apps/api/src/lib/outcall-resources.ts');
+  const productsSource = text('packages/sdk/src/products.ts');
+  const companions = productsSource.slice(productsSource.indexOf('export const COMPANION_MODULES:'), productsSource.indexOf('export const COMPANION_MODULE_KEYS'));
   const deploymentEntry = deploymentRegistry.find(entry => entry.slug === 'outcall');
   const ecosystemEntry = ecosystemRegistry.modules.find(entry => entry.slug === 'outcall');
   const recovery = parity.capabilities.find(capability => capability.type === 'source_recovery');
@@ -74,26 +78,37 @@ export function buildOutCallSourceGate() {
       && sourceFiles[0] === 'apps/modules/outcall/source/README.md'
       && sourceReadme.includes('owner-authorized reconstruction')
       && sourceReadme.includes('does not claim byte-for-byte or\nliteral parity'),
-    importedBoundaryRequiresPlannedStatus: sourceReadme.includes('shared registry intentionally remains\n`planned`'),
-    sdkCatalogComingSoon: sdkEntry.includes("defaultStatus: 'coming_soon'"),
+    importedBoundaryPreservesHistoricalLockEvidence: sourceReadme.includes('shared registry intentionally remains\n`planned`'),
+    sdkCatalogLaunchable: sdkEntry.includes("defaultStatus: 'live'"),
     marketingCatalogDerivesCanonicalStatus: marketingSource.includes('const SOURCE: readonly MarketingCatalogSource[] = MODULE_CATALOG;')
-      && marketingSource.includes("outcall:\n    'Schedule a discreet safety call"),
-    deploymentRegistryDisabled: deploymentEntry?.enabled === false,
-    ecosystemRegistryPlanned: ecosystemEntry?.status === 'planned',
-    existingDatabaseRowsRelocked: seedSource.includes("spec.slug === 'outcall' && spec.defaultStatus === 'coming_soon'")
-      && seedSource.includes("updates.status = 'coming_soon'"),
-    productionVerifierRequiresLock: verifierSource.includes('outcall source-recovery activation lock')
-      && verifierSource.includes('outcall.enabled !== false'),
+      && marketingSource.includes('status: statusFor(entry)'),
+    deploymentRegistryEnabled: deploymentEntry?.enabled === true,
+    ecosystemRegistryActive: ecosystemEntry?.status === 'active',
+    existingDatabaseRowsFollowCatalog: !seedSource.includes("spec.slug === 'outcall' && spec.defaultStatus === 'coming_soon'")
+      && seedSource.includes("if (spec.defaultStatus === 'live')"),
+    newCommerceRemainsClosed: companions.includes('export const COMPANION_MODULES:')
+      && !/key:\s*'outcall'/u.test(companions)
+      && seedSource.includes('isEligibleCompanionModuleKey(c.slug)'),
+    productionVerifierRequiresRegistrationAndReadiness: verifierSource.includes('outcall authenticated application registration')
+      && verifierSource.includes('outcall explicit provider readiness'),
+    providerRequiresLiveFlagAndApproval: providerSource.includes('enabled(process.env.OUTCALL_LIVE_PROVIDER)')
+      && providerSource.includes('hasApprovedOutCallResourcePolicy()'),
+    productionCannotUseTestAdapter: providerSource.includes("process.env.APP_ENV === 'test'")
+      && providerSource.includes("process.env.NODE_ENV === 'test'"),
+    approvalRemainsExpiringAndPrivileged: resourceSource.includes('a.policy_hash=${outCallPolicyHash(value)}')
+      && resourceSource.includes('a.revoked_at IS NULL') && resourceSource.includes('a.expires_at>NOW()')
+      && resourceSource.includes("u.platform_role='super_admin'"),
   };
 
   const failClosed = Object.values(checks).every(Boolean);
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     phase: 37,
-    evidenceDate: '2026-08-26',
-    phaseStatus: 'RECONSTRUCTED_SOURCE_LOCAL',
-    activationAllowed: false,
-    blockerCode: 'PROVIDER_ACCEPTANCE_REQUIRED',
+    evidenceDate: '2026-10-20',
+    phaseStatus: 'APPLICATION_SOURCE_ACTIVE_PROVIDER_GATED',
+    applicationLaunchAllowed: true,
+    liveProviderAcceptanceProven: false,
+    blockerCode: 'COMMERCIAL_DECISION_AND_PROVIDER_ACCEPTANCE_REQUIRED',
     source: {
       historicalRepository: null,
       historicalCommit: null,
@@ -139,12 +154,14 @@ export function buildOutCallSourceGate() {
       configuredOutCallOrTwilioVariableNamesObservedLocally: 0,
       note: 'No credentials were read or fabricated. Provider acceptance remains an external activation gate after local source reconstruction.',
     },
-    activationLock: {
-      sdkCatalogStatus: 'coming_soon',
-      marketingStatus: 'derived_from_sdk_coming_soon',
-      ecosystemStatus: 'planned',
-      deploymentRegistryEnabled: false,
-      existingDatabaseStatusAfterSeed: 'coming_soon',
+    activationPolicy: {
+      sdkCatalogStatus: 'live',
+      marketingStatus: 'derived_from_sdk_live',
+      ecosystemStatus: 'active',
+      deploymentRegistryEnabled: true,
+      existingDatabaseStatusAfterSeed: 'live',
+      newEnrollment: 'closed_pending_commercial_decision',
+      liveProvider: 'requires_configuration_flag_and_current_account_approval',
       checks,
       failClosed,
     },
@@ -155,7 +172,8 @@ export function buildOutCallSourceGate() {
       everyCurrentSourceOutcomeMappedAndTested: recovery?.state === 'ACTIVE_NATIVE' && evidenceExists,
       originalHistoricalLiteralParityClaimed: false,
       completeTwilioSandboxLifecycleProven: false,
-      registryEnabledOnlyAfterAllGates: failClosed,
+      applicationLaunchRequiresCentralEntitlement: true,
+      providerAndCommerceBoundariesPreserved: failClosed,
       goLiveAccepted: false,
     },
   };
@@ -168,7 +186,7 @@ function main() {
     writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   }
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  if (!report.activationLock.failClosed) process.exitCode = 1;
+  if (!report.activationPolicy.failClosed) process.exitCode = 1;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

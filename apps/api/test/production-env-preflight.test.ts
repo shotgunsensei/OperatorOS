@@ -21,6 +21,19 @@ const coreEnv = {
   TRUST_PROXY: 'true',
 };
 
+const outCallEnv = {
+  ...coreEnv,
+  OUTCALL_PUBLIC_URL: 'https://outcall.operatoros.net',
+  OUTCALL_FIELD_ENCRYPTION_KEY: 'outcall-preflight-test-field-key-32-plus',
+  OUTCALL_LOOKUP_HMAC_KEY: 'outcall-preflight-test-lookup-key-32-plus',
+  TWILIO_ACCOUNT_SID: 'ACtestplaceholder',
+  TWILIO_AUTH_TOKEN: 'outcall-preflight-test-placeholder',
+  TWILIO_VERIFY_SERVICE_SID: 'VAtestplaceholder',
+  TWILIO_PHONE_NUMBER: '+15555550100',
+  TWILIO_ALLOWED_COUNTRIES: 'US,CA',
+  OUTCALL_LIVE_PROVIDER: 'enabled',
+};
+
 test('production environment contract is machine-readable and owns core deployment inputs', () => {
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.contractVersion, 2);
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.deploymentTarget, 'replit-autoscale');
@@ -328,4 +341,53 @@ test('CallCommand readiness rejects malformed provider identifiers, weak routing
       'CALLCOMMAND_REALTIME_MODEL',
     ],
   );
+});
+
+test('OutCall readiness rejects unsupported countries even when a supported country is present', () => {
+  for (const countries of ['US,GB', 'GB,CA', 'US,CA,PR', ' ca, us, zz ', 'GB', 'PR,GB']) {
+    const report = preflight.evaluateProductionEnvironment({
+      ...outCallEnv,
+      TWILIO_ALLOWED_COUNTRIES: countries,
+    }, ['core', 'outcall']);
+    assert.equal(report.ok, false, countries);
+    assert.deepEqual(report.issues.map((issue: { name: string }) => issue.name), ['TWILIO_ALLOWED_COUNTRIES'], countries);
+  }
+});
+
+test('OutCall readiness accepts supported countries with runtime case, whitespace, duplicate and separator normalization', () => {
+  for (const countries of ['US', 'CA', 'US,CA', ' ca , us , ca ', ', US, ,', 'uS,cA,uS']) {
+    const report = preflight.evaluateProductionEnvironment({
+      ...outCallEnv,
+      TWILIO_ALLOWED_COUNTRIES: countries,
+    }, ['core', 'outcall']);
+    assert.equal(report.ok, true, countries);
+    assert.deepEqual(report.issues, [], countries);
+  }
+});
+
+test('OutCall readiness rejects missing and empty normalized country lists', () => {
+  for (const countries of [undefined, '', '   ', ' , , ']) {
+    const report = preflight.evaluateProductionEnvironment({
+      ...outCallEnv,
+      TWILIO_ALLOWED_COUNTRIES: countries,
+    }, ['core', 'outcall']);
+    assert.equal(report.ok, false);
+    assert.deepEqual(report.issues.map((issue: { name: string }) => issue.name), ['TWILIO_ALLOWED_COUNTRIES']);
+  }
+});
+
+test('OutCall supported countries do not bypass the exact-host, live-activation or production test-adapter guards', () => {
+  for (const [name, value] of [
+    ['OUTCALL_PUBLIC_URL', 'https://other.operatoros.net'],
+    ['OUTCALL_LIVE_PROVIDER', 'disabled'],
+    ['OUTCALL_TEST_ADAPTER', 'enabled'],
+  ]) {
+    const report = preflight.evaluateProductionEnvironment({
+      ...outCallEnv,
+      TWILIO_ALLOWED_COUNTRIES: ' ca, US,ca ',
+      [name]: value,
+    }, ['core', 'outcall']);
+    assert.equal(report.ok, false, name);
+    assert.deepEqual(report.issues.map((issue: { name: string }) => issue.name), [name]);
+  }
 });

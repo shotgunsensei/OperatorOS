@@ -1,3 +1,15 @@
+## Current delegated mailbox source checkpoint - 2026-10-20, final v4
+
+| Capability | Verified source evidence | Remaining acceptance |
+| --- | --- | --- |
+| Google/Microsoft delegated mailbox import | Reviewed tenant-vault/PKCE/current-authority/transactional queue implementation;96/96 native/static,7/7 actual synthetic PostgreSQL cases; strict/types/lint and39page Next build pass; unchanged6/6 component-browser proof | Canonical maintained dependency closure is absent and runtime capability remains false. Permitted frozen install/full combined CI and approved real mailbox, callback/consent, session and provider recovery acceptance remain required |
+
+Actual SQL found and verified correction of vault/config and queue module UUID
+boundaries. Historical model-test approvals are not current eligibility. No schema
+migration, production write, OAuth grant, credential or live mailbox operation was
+performed. This row does not close all historical PulseDesk parity capabilities.
+[Exact implementation/verification limits](../../reviews/2026-10-20/PULSEDESK_LIVE_MAILBOX.md).
+
 # PulseDesk parity matrix
 
 ## Phase 20 truth notice (2026-08-08)

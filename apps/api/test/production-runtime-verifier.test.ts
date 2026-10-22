@@ -23,12 +23,12 @@ function secureHeaders() {
   return headers;
 }
 
-test('production verifier loads OperatorOS plus exactly 13 canonical module registrations', async () => {
+test('production verifier loads OperatorOS plus exactly 14 canonical module registrations', async () => {
   const registry = await verifier.loadRegistry();
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId === 'operatoros').length, 1);
-  assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId !== 'operatoros').length, 13);
-  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 13);
-  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, false);
+  assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId !== 'operatoros').length, 14);
+  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 15);
+  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, true);
 });
 
 test('authorization redirect validator enforces exact PKCE request, safe next, headers, and host-only cookies', () => {
@@ -138,4 +138,20 @@ test('production verifier derives database identity from the authoritative relea
     () => verifier.parseDatabaseReleaseContract(source.replace('releaseVersion: 2', 'releaseVersion: 3')),
     /internally inconsistent/,
   );
+});
+
+test('OutCall public readiness distinguishes explicit provider state without claiming delivery', async () => {
+  const registry = await verifier.loadRegistry();
+  for (const provider of ['disabled', 'configured', 'unknown']) {
+    const fetchImpl = async (input: string | URL | Request) => {
+      if (String(input) === 'https://outcall.operatoros.net/api/modules/outcall/health') {
+        return Response.json({ status: 'ok', module: 'outcall', provider });
+      }
+      throw new Error('Other surfaces are outside this isolated fixture');
+    };
+    const report = await verifier.verifyProductionRuntime({ fetchImpl, registry });
+    const readiness = report.results.find((result: { name: string }) => result.name === 'outcall explicit provider readiness');
+    assert.ok(readiness);
+    assert.equal(readiness.ok, provider !== 'unknown');
+  }
 });

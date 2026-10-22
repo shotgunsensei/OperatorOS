@@ -33,7 +33,7 @@ import {
 import { hasPlatformAdminAuthority } from './rbac.js';
 import { moduleAccessLevelToEffective, tenantRoleToEffective } from './role-aliases.js';
 import { resolveCoreSuiteTrialAccess } from './core-suite-trial.js';
-import { FREE_WITH_ANY_ACCOUNT } from '@operatoros/sdk';
+import { FREE_WITH_ANY_ACCOUNT, isIndependentToolModuleSlug } from '@operatoros/sdk';
 
 const FREE_ACCOUNT_MODULE_KEYS = new Set(FREE_WITH_ANY_ACCOUNT.map(app => app.key));
 const APPLICATION_STACK_SEAT_STATUSES = ['trialing', 'active', 'past_due', 'canceling'] as const;
@@ -307,6 +307,8 @@ export async function tenantHasModuleEntitlement(
   ]);
   if (!tenant || !module) return false;
   if (globalModuleUnavailableReason(module)) return false;
+  // Tool licenses need a purchase ledger; legacy plan/manual rows are not proof.
+  if (isIndependentToolModuleSlug(module.slug)) return false;
 
   const tenantModule = await getTenantModuleRow(tenantId, module.id);
   if (tenantModule) {
@@ -375,7 +377,7 @@ export async function resolveTenantModuleAccess(
     };
   }
 
-  if (hasPlatformAdminAuthority(user)) {
+  if (hasPlatformAdminAuthority(user) && !isIndependentToolModuleSlug(module.slug)) {
     return {
       tenantId,
       moduleSlug: module.slug,
@@ -472,6 +474,18 @@ export async function resolveTenantModuleAccess(
       tenantModule,
       userModuleAccess,
       viaPlatformRole: false,
+    };
+  }
+
+  // Reserved tools cannot inherit any positive plan, manual, assignment or
+  // support-role branch. Sales and license issuance are not implemented in
+  // this foundation; only a later reviewed independent ledger may authorize
+  // them. Keep tenant/member/explicit-deny/global checks above this boundary.
+  if (isIndependentToolModuleSlug(module.slug)) {
+    return {
+      tenantId, moduleSlug: module.slug, moduleId: module.id,
+      hasAccess: false, source: null, reason: 'tool_purchase_ledger_required',
+      accessLevel: 'none', tenantModule, userModuleAccess, viaPlatformRole: false,
     };
   }
 
@@ -716,6 +730,9 @@ export async function grantModuleEntitlement(
   ]);
   if (!tenant) throw new TenantEntitlementError(404, 'TENANT_NOT_FOUND', 'Tenant not found');
   if (!module) throw new TenantEntitlementError(404, 'MODULE_NOT_FOUND', 'Module not found');
+  if (isIndependentToolModuleSlug(module.slug)) {
+    throw new TenantEntitlementError(409, 'TOOL_PURCHASE_LANE_REQUIRED', 'Tool modules require the independent purchase ledger');
+  }
   if (module.archivedAt) throw new TenantEntitlementError(409, 'MODULE_ARCHIVED', 'Module is archived');
 
   const before = await getTenantModuleRow(tenantId, module.id);
@@ -820,6 +837,9 @@ export async function revokeModuleEntitlement(
   ]);
   if (!tenant) throw new TenantEntitlementError(404, 'TENANT_NOT_FOUND', 'Tenant not found');
   if (!module) throw new TenantEntitlementError(404, 'MODULE_NOT_FOUND', 'Module not found');
+  if (isIndependentToolModuleSlug(module.slug)) {
+    throw new TenantEntitlementError(409, 'TOOL_PURCHASE_LANE_REQUIRED', 'Tool modules require the independent purchase ledger');
+  }
 
   const before = await getTenantModuleRow(tenantId, module.id);
   let tenantModule: TenantModuleRow | null = null;

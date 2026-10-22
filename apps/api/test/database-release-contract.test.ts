@@ -12,15 +12,18 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 67);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 68);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 67);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 67);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 68);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 68);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS[58].id, 'core_suite_trial_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS[59].id, 'forward_commerce_contract');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'outcall_resource_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS[66].id, 'outcall_resource_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'tool_purchase_ledger');
+  assert.match(read('apps/api/src/lib/database-release.ts'), /tool_purchase_ledger: ensureToolPurchaseTables/);
+  assert.match(read('apps/api/src/lib/database-release.ts'), /await verifyToolPurchaseTables\(\)/);
   assert.equal(createHash('sha256').update(JSON.stringify(release.DATABASE_RELEASE_STEPS.slice(0,66))).digest('hex'),
     'fb53873a03fc3cb82ee622fc8424e00731c9a4daf17b6ab0643484e1f3e70115','v67 preserves every v66 step');
   assert.equal(release.DATABASE_RELEASE_STEPS[64].id, 'techdeck_resolution_semantic_tables');

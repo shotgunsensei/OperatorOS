@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const isMobileBuild = process.env.MOBILE_BUILD === '1';
 const isDev = process.env.NODE_ENV !== 'production';
+// Header matching avoids Next's implicit `params.host` query injection. Preserve
+// case-insensitive canonical HTTPS host spelling without a named capture/port wildcard.
+const FIELDNODE_MANAGEMENT_HOST = 'fieldnode.operatoros.net'
+  .replace(/[a-z]/g, letter => `[${letter}${letter.toUpperCase()}]`).replace(/\./g, '\\.') + '(?::443)?';
 
 // Next.js currently emits inline bootstrap/style content for this mixed
 // server/client application. Keep that compatibility explicit while closing
@@ -118,6 +122,32 @@ const nextConfig = {
         beforeFiles: [
           // Keep the public hub inside Next; middleware rejects private paths.
           { source: '/', has: [{ type: 'header', key: 'host', value: '[lL][uU][nN][cC][hH][bB][rR][eE][aA][kK]\\.[oO][pP][eE][rR][aA][tT][oO][rR][oO][sS]\\.[nN][eE][tT]\\.?(?::[0-9]+)?' }], destination: '/lunch-break' },
+          // Frozen PR19 path families only. The central gateway independently
+          // checks methods, UUIDs, exact assets and appliance allowed_path.
+          ...[
+            '/manage', '/manage/',
+            '/manage/assets/index-B5aEKOjw.css', '/manage/assets/index-BWuDwhpj.js',
+            '/manage/api/auth/operatoros/status', '/manage/api/auth/operatoros/signup',
+            '/manage/api/auth/operatoros/setup/confirm', '/manage/api/auth/operatoros/link',
+            '/manage/api/auth/operatoros/consume', '/manage/api/auth/operatoros/mfa/verify',
+            '/manage/api/auth/operatoros/mfa/status', '/manage/api/auth/operatoros/mfa/recovery',
+            '/manage/api/auth/me', '/manage/api/auth/logout', '/manage/api/nodes',
+            '/manage/api/nodes/:nodeId([0-9a-fA-F-]{36})',
+            '/manage/api/nodes/:nodeId([0-9a-fA-F-]{36})/enrollment',
+            '/manage/api/nodes/:nodeId([0-9a-fA-F-]{36})/revoke',
+            '/manage/api/nodes/:nodeId([0-9a-fA-F-]{36})/access',
+            '/manage/api/users', '/manage/api/users/:userId([0-9a-fA-F-]{36})', '/manage/api/audit',
+            '/manage/nodes/:nodeId([0-9a-fA-F-]{36})/console',
+            '/manage/nodes/:nodeId([0-9a-fA-F-]{36})/api/v1/:path*',
+          ].map(source => ({ source, has: [{ type: 'header', key: 'host', value: FIELDNODE_MANAGEMENT_HOST }], destination: `${apiUrl}/v1/modules/fieldnode${source}` })),
+          // Keep the public FieldNode root inside this Next request. An
+          // absolute middleware rewrite can be treated as an upstream proxy
+          // behind TLS termination, re-entering the private module gate.
+          {
+            source: '/',
+            has: [{ type: 'host', value: 'fieldnode\\.operatoros\\.net' }],
+            destination: '/fieldnode',
+          },
           {
             source: '/:path*',
             has: [{ type: 'host', value: 'api.operatoros.net' }],

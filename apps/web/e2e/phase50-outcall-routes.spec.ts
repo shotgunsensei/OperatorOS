@@ -27,10 +27,8 @@ async function establishExactHostSession(page: Page) {
     expect(identity.rows).toHaveLength(1);
     const elite = await pg.query<{ id: string }>("select id from subscription_plans where slug='elite' and is_active=true limit 1");
     expect(elite.rows).toHaveLength(1);
-    // OutCall intentionally remains coming_soon in the production catalog until
-    // live-provider acceptance. Promote only this disposable test database so
-    // the exact-host route surface can be exercised with OUTCALL_TEST_ADAPTER.
-    await pg.query("update modules set status='beta' where slug='outcall' and status='coming_soon'");
+    // Catalog availability is source-owned. Only this disposable tenant grant
+    // and explicit test adapter are synthetic; do not promote a module row.
     await pg.query("insert into subscriptions (user_id,plan_id,status,current_period_start,current_period_end,tenant_id,scope_type) values ($1,$2,'active',now(),now()+interval '30 days',$3,'tenant')", [identity.rows[0].user_id, elite.rows[0].id, identity.rows[0].tenant_id]);
     await pg.query("insert into tenant_modules (tenant_id,module_id,status,source,allow_all_members) select $1,id,'enabled','included',true from modules where slug='outcall' on conflict do nothing", [identity.rows[0].tenant_id]);
   } finally {

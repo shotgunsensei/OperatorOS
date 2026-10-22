@@ -51,6 +51,15 @@ for (const configuredHost of [undefined, 'localhost']) {
         await new Promise(resolveDelay => setTimeout(resolveDelay, 50));
       }
       assert.equal(healthy, true, output);
+      // The transport worker can emit the actual bound-address diagnostic after
+      // the health request succeeds. Wait for that diagnostic without replacing
+      // the socket/address assertions with the configured-host console message.
+      const listenerDiagnostic = /Server listening at http:\/\/(?:127\.0\.0\.1|\[::1\]):/;
+      const diagnosticDeadline = Date.now() + 2_000;
+      while (!listenerDiagnostic.test(output) && Date.now() < diagnosticDeadline) {
+        assert.equal(child.exitCode, null, output);
+        await new Promise(resolveDelay => setTimeout(resolveDelay, 25));
+      }
       // Fastify's listener diagnostic is produced by the actual bound socket.
       assert.match(output, /Server listening at http:\/\/(?:127\.0\.0\.1|\[::1\]):/);
       assert.match(output, new RegExp(`Runner Gateway listening on http://${host.replaceAll('.', '\\.')}:${port}`));

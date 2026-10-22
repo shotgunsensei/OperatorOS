@@ -166,8 +166,8 @@ after(async () => {
   }
 });
 
-test('catalog publishes one exact HTTPS OperatorOS origin for all 13 modules', () => {
-  assert.equal(MODULE_CATALOG.length, 13);
+test('catalog publishes one exact HTTPS OperatorOS origin for all 14 modules', () => {
+  assert.equal(MODULE_CATALOG.length, 14);
   assert.equal(MODULE_SEEDS.length, MODULE_CATALOG.length);
 
   for (const entry of MODULE_CATALOG) {
@@ -238,9 +238,9 @@ test('startup seeding repairs known URL and display-name drift and ignores legac
   }
 });
 
-test('startup seeding relocks OutCall while Phase 37 source and provider gates are incomplete', async () => {
+test('startup seeding restores OutCall application availability without assigning a commercial price', async () => {
   await db.update(modules)
-    .set({ status: 'live' })
+    .set({ status: 'coming_soon' })
     .where(eq(modules.slug, 'outcall'));
 
   await seedModules();
@@ -248,7 +248,8 @@ test('startup seeding relocks OutCall while Phase 37 source and provider gates a
   const [outcall] = await db.select().from(modules)
     .where(eq(modules.slug, 'outcall'))
     .limit(1);
-  assert.equal(outcall?.status, 'coming_soon');
+  assert.equal(outcall?.status, 'live');
+  assert.equal(outcall?.metadata?.addonPriceCents, undefined, 'launchability does not approve new OutCall pricing');
 });
 
 test('authenticated module APIs project canonical names even if a catalog row drifts', async () => {

@@ -1,3 +1,179 @@
+## 2026-10-22 - Local integration preserving the published free hub
+
+Published49b68ed6 is preserved as the base. Bounded reviewed FieldNode, Outcall, PulseDesk, BrandForge and independent tool components are composed locally, with the held SSO file unchanged and unexecuted. Current proof includes corrected fixture72/72, tools141/141, actual commerce SQL41/41 and zero-warning lint; module189/195 has six HTTP reachability skips awaiting the built server. Schema68 was applied only to a new disposable fixture. No publication, production migration or deployment occurred. Build, exact-tree CI, canonical dependency and live acceptance gates remain. [Exact components, failures, cache limits and release gates](docs/releases/combined-local-2026-10-22.md).
+
+## 2026-10-21 - OfficeExit complete tenant product, source only
+
+John's approved USD $99 one-time OfficeExit purchase covers the entire tenant and
+all ten current OfficeExit 2026 features, including Publisher Rescue. The dedicated
+purchase/fulfillment grant now requires the existing internal `MSP Pro` alias and
+`officeexit-2026-tenant-v1` terms identifier. Historical standalone edition mappings
+remain unchanged. This supersedes earlier undecided price/capability notes; it adds
+no user, device or site limit, customer-facing tier or future-major-version promise.
+`CLOSED_TOOL_COMMERCE` is byte-identical to the frozen `b305feee` candidate.
+
+Focused source checks passed 115/115; actual disposable PostgreSQL 16.14
+store/commerce checks passed 41/41; local SDK compilation, all four workspace type
+checks, zero-warning root lint and the production Next web build passed. Catalog
+Chromium acceptance passed 8/8, including built free/paid owner views and synthetic
+tenant/auth races and 390/1440px accessibility. Fresh actual producer-to-frozen
+OfficeExit `417c8335` consumer proof passed 8/8 with native RSA, real producer SQL,
+in-memory consumer PGlite and injected transport: owner mapping, exact ten-feature
+grant/null device allowance, refund and stale-grant rejection. The first browser
+harness accidentally selected an unserved built route; the first interop assertion
+did not account for the consumer's canonical feature ordering. Both failed receipts
+and corrected passes are retained. No product defect was hidden by either correction.
+
+These are bounded source checks, not a complete API/platform gate or live payment,
+Supabase/session, binary/signature or production acceptance. Reused installed tools
+are not a canonical frozen-lockfile installation. No package acquisition, provider
+request, credential/trust change, production/shared schema/data write, publication,
+CI rerun, merge or deployment occurred. The inherited held SSO test was not edited
+or executed. [Exact contract and remaining gates](releases/officeexit-complete-tenant-2026-10-21.md).
+
+## 2026-10-21 - Independent one-time tool products, source candidate
+
+The reviewed October 20 foundation is integrated onto the current Lunch Break/all-module candidate. Browse tools presents OfficeExit and VendorTrust365 as independent one-time tenant add-ons for free and paid accounts, with no subscription renewal or bundled annual update/support fee. Current `not_bundled` support policy supersedes historical pending-support wording below. Price, license unit and allowance remain undecided; sales/download/checkout and purchase entitlements remain unavailable.
+
+Fresh policy20/20, real Fastify/disposable PostgreSQL16.14 authorization/entitlement/free-module21/21, routing/free-module regressions64/64 and synthetic real-provider-component browser6/6 pass. Initial sandbox socket failures and browser fixture compilation failure are retained with their corrected reruns. Independent scoped runtime review found no concrete defect. Final lint/types, exact-build browser and production build closure are recorded by the frozen external manifest; no full-platform gate or live purchase is preclaimed. No schema, held SSO test, production data, provider, security or deployment action changed. The all14module Friday target including Outcall remains.
+
+Actual unified checkout/ledger/revocation/private delivery and explicit OperatorOS-to-OfficeExit organization mapping remain implementation requirements, not missing-key assumptions. VendorTrust purchase is separate from authorization for its assessed Microsoft tenant. [Exact source and acceptance boundary](reviews/2026-10-21/TOOL_PRODUCTS_RELEASE.md).
+
+## 2026-10-21 — Combined local release preparation; publication held
+
+This isolated local candidate combines reviewed FieldNode `f6f3e8e67d00b641b80c8255eb95c8acd1fc14f3`, Outcall `38242eb0d196af007e0c1487e14ec066d8445d1e`, PulseDesk `9b0eed3390f6fa566fd95b88bf90b79b8c3188e1`, and BrandForgeOS `db40081c915c99652440c1698c93886d23f1bfc4` without moving their branches or remote PR136. Only additive historical-ledger conflicts required resolution; the shared help guide preserves both FieldNode and Outcall entries. Reviewed runtime source remains unchanged. Three independently reviewed test-only corrections update obsolete BrandForge/Outcall assertions and wait for the runner's asynchronous actual-bound-address diagnostic without weakening its socket or execution-disabled assertions.
+
+Combined validation before this commit: root lint and four workspace type checks passed; the disposable PostgreSQL 16.14 integration gate passed 108/108 with apply/reapply/current-v67 verification; corrected static cases passed 9/9; runner cases passed 2/2. The first complete API baseline was 2476/2482 with no skips. Its four non-held failures are reconciled by the 9-case static and 2-case runner reruns; its two held-SSO matrix assertions remain unresolved. This is not a new complete API pass. The first unit baseline was 51/52; after selecting the existing pnpm 10.34.5 Corepack cache without acquisition, the complete 20-case quality-gate file passed. This is not a new complete 52-case unit pass. The first overly narrow network fixture rejected the intended 127.0.0.2 loopback probe; evidence guard v2 permits that literal loopback address while retaining external-network denial.
+
+Production build and combined browser journeys are pending at this commit. The external frozen candidate manifest records their later exact outcomes and artifact closure; no successful build or browser result is preclaimed here. All database commands above targeted only the named task-owned tmpfs disposable container; no production schema or data changed.
+
+Canonical maintained PulseDesk dependency/runtime closure remains unverified: ImapFlow 1.3.1/Mailparser 3.9.8 and their 47-version lockfile closure were inspected read-only, but existing expanded trees and partial archive/store integrity coverage do not establish a complete canonical installation. No package was acquired or installed. Current reused local tool dependencies are not a frozen-lockfile install, and live mailbox capability remains unavailable until the canonical maintained runtime and delegated mailbox acceptance are proven.
+
+All 14 module Friday readiness remains the goal. Outcall source access does not authorize telephony spending or prove a live call. BrandForge live delivery remains fail-closed pending the selected provider/event/receiver. FieldNode's frozen consumer connection does not prove production hosting, persistent MFA-key recovery, real device ownership/pairing, hardware transport, checkout or updater operation. Live account/provider/data acceptance, exact deployment/rollback approval and the source-publication hold remain outstanding. The held `apps/web/e2e/sso-v1.spec.ts` blob is inherited unchanged and was not executed or published; its publication requires the already-pending specific approval. No merge, deployment, security-setting change, paid operation or real account creation occurred.
+
+## FieldNode managed mount and actual joint acceptance - 2026-10-20
+
+This supersedes the earlier narrow gateway, pending inventory and joint-in-progress
+notes below. The source maps only frozen FieldNode PR19 management HTML/assets,
+20 portal method/path pairs, bounded console HTTP and the sole serial WebSocket.
+OperatorOS retains the public introduction, exact-host SSO/exchange and central
+logout. FieldNode retains immutable tenant/user mappings, local MFA and explicit
+device grants. Both server-only TLS origins require explicit configuration; no
+production default or browser-supplied authority is accepted.
+
+The final ten-file source manifest is frozen-expanded-v3.json, SHA-256
+EF43B1AAAFE1117816AC1A158F3E3499BDAC5B7B5A74484B807A7C873F68805C.
+Author and independent reviewer passed 238/238 selected controls, zero failure/skip,
+all three changed tests under strict typing, and zero-warning root lint. The full
+production build passed four workspace types and 39 Next pages, build ID
+xYAgO8d7fkTKwDnwjPBYj, finished 23:06:02.444Z. All five retained identity/SDK paths
+are unchanged. This is a component build/review, not full combined release CI.
+
+Four reproduced security/correctness findings are fixed: cookie issuance before
+complete upstream validation; channel-slot leakage after malformed WebSocket
+handshakes; serial upgrades without exact Origin; and late error-body output or
+cookie issuance after authority rejection was already observed. Rejected bodies
+issue no cookie, invalid handshakes leave the next valid slot available, and
+observed lost authority returns sign_in_required. Failed baselines are retained.
+Actual compiled integration also exposed Next 15.5.25 host-query injection into
+management rewrites; only those predicates now use a noncapturing Host-header
+match. The frozen consumer's exact five bodyless method/path pairs accept only
+zero-byte JSON or an empty object and forward zero bytes. Strict query, UUID,
+Origin, CSRF, identity, parser/body-size and unrelated route protections remain.
+
+The serial ceiling deliberately guards the pinned ws 8.21.3 receiver property,
+because the shared plugin has no public per-route ceiling. Version/capability
+mismatch fails closed before opening an upstream. Single and fragmented4097-byte
+controls pass; global WebSocket settings are unchanged. Revalidate this internal
+compatibility seam on runtime upgrades.
+
+Actual joint browser acceptance passed at 2026-10-20T23:24:56.200Z against unchanged compiled
+OperatorOS and frozen FieldNode PR19 commit 1ea2ea7976d0e02921ce7bb7b4a3472a47da3fbd.
+The real normal free-account signup, exact-host SSO, fixed central validator,
+explicit empty-workspace signup and real TOTP ceremony created one passwordless
+workspace and no node or device grant. The final receipt separately records
+secure cookie profiles, CSRF/Origin negatives, local/central logout, one-use
+recovery and rotation, foreign-tenant privacy clearing and central revocation.
+Exact frozen assets were received. Ungranted HTTP/stream requests and serial
+WebSocket disclosed no device data. Positive connected-appliance transport is
+unverified and was not replaced with a fabricated device/Hub.
+
+Only operatoros_fieldnode_joint_test and fieldnode_joint_test on the existing
+task-owned loopback PostgreSQL fixture were migrated/reset. Central release 67
+apply/verify and consumer portal_0004 were limited to them. API APP_ENV=test with
+NODE_ENV=production exercised actual Secure-cookie behavior; no live provider
+configuration was inherited. Server transports used process-scoped test CA and
+normal hostname/certificate validation. Browser ignoreHTTPSErrors was limited to
+the existing local test certificate; no OS trust or product TLS setting changed.
+All 272 consumer files remained unchanged; owned app/browser processes stopped
+and all five exact ports were free at final cleanup. Earlier failed attempts and
+harness corrections remain preserved in fieldnode-joint-acceptance evidence.
+
+No production database, mapping, account, credential, origin/DNS/ingress/security
+setting, hardware, merge or deployment changed. Approved hosting/origins, exact
+production database and recoverable matching MFA-key backup, mappings/pairing,
+owned-device acceptance and publication remain human gates. Checkout is
+unimplemented and updater disabled. Canonical installed-graph/full combined CI
+and the held SSO-test expectation update remain distinct pending source gates.
+[Exact transport and commands](fieldnode/OPERATOROS_MANAGEMENT_GATEWAY_V1.md).
+
+## FieldNode management gateway source checkpoint - 2026-10-20
+
+The source-only central gateway adds exactly two POST mappings under the intended
+FieldNode host: `/manage/api/auth/operatoros/consume` and
+`/manage/api/auth/operatoros/mfa/verify`. It verifies the current central identity,
+accepts only explicit server TLS origins with no defaults, and bounds transport,
+Origin, CSRF presence, request/response cookies, lifetime and response size.
+Unknown `/manage` descendants, UI/assets/WebSockets remain rejected until the
+FieldNode owner supplies their exact contracts. Shared SSO remains central.
+
+Fresh final verification:179/179 selected tests,0failed/skipped, strict test types,
+zero-warning root lint and a full production build with four workspace typechecks
+and39Nextpages pass. Independent review repeated179/179,strict/lint and five
+malformed-authority probes; inspected the identical-source build receipt.
+Review found role/access String coercion accepting singleton JSON arrays. The
+original179case baseline177pass/2fail is retained; strict string validation now
+rejects those responses before an upstream POST. The frozen nine-field SDK wire
+contract and reviewed identity implementation remain unchanged.
+
+The FieldNode owner must still confirm first-consume body/CSRF bootstrap and the
+exact2xx/4xx JSON/cookie response profile. This narrow proxy forwards that bounded
+owner payload; it does not claim arbitrary JSON redaction. No live TLS service,
+shared management UI, local MFA ceremony, workspace provisioning, device action,
+database, deployment, credential or security configuration was exercised or changed.
+Missing configuration fails503; source passing does not enable the joint journey.
+[Exact contract, commands, limits and remaining owner interfaces](fieldnode/OPERATOROS_MANAGEMENT_GATEWAY_V1.md).
+
+## PulseDesk delegated mailbox source checkpoint - 2026-10-20, final v4
+
+The reviewed source adds the established Google Workspace and Microsoft 365
+delegated OAuth/IMAP path using maintained ImapFlow1.3.1/Mailparser3.9.8, existing
+tenant-vault encryption, actor-bound callbacks, current queued authority and
+transactional ticket/dedup/cursor writes. Actual runtime capability remains false:
+the canonical maintained dependency closure is absent. No provider was enabled.
+
+Actual PostgreSQL exposed module slug/UUID errors in vault/config persistence and
+then shared-job allocation/dispatch that earlier model tests missed. Both are
+corrected using the canonical server-resolved module UUID; central auth retains
+the existing slug contract. Failed baselines are retained. Independent final-v4
+review verified all17 source hashes/blobs, reran96/96 native/static tests, strict
+test types, full API types and scoped zero-warning lint. The final expanded
+actual-auth/vault/queue PostgreSQL harness passed7/7, with scoped cleanup and no
+provider calls; the reviewer inspected and bound that evidence, without rerunning
+SQL. SDK/API build and Next production build39pages passed on existing tools;
+the unchanged web/adapter retain6/6 component-browser and11 maintained-library
+assertions. These are separate scopes, not one complete release run.
+
+Source-only lock provenance preserves2520 existing mappings and security overrides.
+No canonical frozen install or full combined release CI is claimed. Controlled
+mailbox/app/callback consent, actual provider import/replay/recovery and target
+host/session acceptance remain owner gates. No production database/schema,
+account, credential, recipient, security setting, merge or deployment changed.
+[Detailed source, tests, rollback and limitations](reviews/2026-10-20/PULSEDESK_LIVE_MAILBOX.md).
+The older uncommitted/review-pending wording in that frozen implementation note
+is historical; final-v4 independent approval and the eventual local commit receipt
+are recorded in the parent evidence ledger. Publication remains held separately.
+
 # OperatorOS implementation status
 
 ## Public free Lunch Break hub (2026-10-21)
@@ -17,6 +193,210 @@ keyboard/four-viewport checks pass. Live acceptance is recorded
 separately after publication; no current deployed-state claim is made here. Details and exact evidence limits:
 [DNS, audit, assets and release boundary](LUNCH_BREAK_RELEASE.md).
 
+## FieldNode central identity authority - 2026-10-20
+
+The source adds authenticated `GET /v1/modules/fieldnode/identity` and SDK
+contract version 1. It requires a current FieldNode-scoped session, active
+trusted tenant, persisted membership and central module access, then narrows
+the response against explicit grants and the fresh access decision. It returns
+immutable user/tenant identity, persisted membership role, bounded module access
+and session expiry with `authenticationAssurance: not_attested`. It creates no
+workspace, account, device grant or database object.
+
+Independent review reproduced a cached-context race where a concurrent platform
+role promotion could incorrectly emit manager without an explicit grant. The
+fix uses the actual later access-decision provenance. The two original timing
+probes now pass against the recovered original fixture. Final component checks:
+101/101 selected cases, independent 101/101 and 48/48 original-fixture probes,
+strict typing, root lint, all four workspace types and production build with
+39 pages. Both original race failures and two generated-output sandbox EPERM
+build failures are retained; the identical-source build passed outside the
+sandbox with a sterile child environment and no dependency acquisition.
+
+The six independently frozen identity blobs remain exact when incorporating
+the disjoint reviewed PR136 correction. Central SSO/callback ownership stays
+with OperatorOS; a separate narrow `/manage` service proxy and explicit FieldNode
+workspace/user mapping, local MFA, device grants and joint acceptance are still
+required. SQL execution, production data, credentials, deployment and live
+device/provider acceptance were not performed. See
+[identity contract and gates](fieldnode/OPERATOROS_IDENTITY_CONTRACT_V1.md).
+
+## PR136 final release follow-through - 2026-10-20
+
+Exact remote head `0f24958537e0dbb0c05bc6ad2e7dc61d21f201e9`, tree
+`41a8ce76a9bfd7c4249a29b74b626c004933bab0`, completed release run 39494095553
+with 12/14 scopes passing: 52/52 unit, 2176/2177 API, 108/108 integration,
+108/109 browser and 4/4 visual cases. The two remaining failures were a missing
+FieldNode setup-guidance entry and an ambiguous status locator matching both
+the global notification container and the management notice. The correction
+adds truthful setup guidance and scopes that assertion to the module shell.
+The hosted hardening stage passed with the locked redirect security update.
+
+Native run 39494095586 separately passed Android and iOS simulator build/deep-link
+jobs, plus the native type/unit/config/bundle step. Its three database-backed
+auth cases stopped in their safety hook because the workflow did not declare a
+disposable database. The correction explicitly marks the ephemeral loopback
+service and uses a delimited test database name consistently in its service,
+health check and URL. A new regression invokes the real target guard and fails
+on the original workflow; no guard, assertion or production setting is relaxed.
+These are source corrections pending a complete corrected-head hosted result,
+not a full release or physical-device acceptance claim.
+
+Fresh correction checks: 36/36 focused static/help tests, zero failures or skips;
+independent review reproduced 36/36. Root lint, all four workspace type checks,
+and strict checking of the three focused FieldNode/native static test files pass.
+Ad-hoc broader strict invocations exposed missing existing browser `pg` declarations
+and an unconfigured `@/` alias; those failures are retained, not counted as passes.
+
+## OutCall application activation source candidate - 2026-10-20
+
+The catalog, registry and startup policy now permit existing centrally entitled
+users to open OutCall while complete provider configuration, explicit live
+activation and expiring account/policy approval remain required for live work.
+New commercial enrollment stays closed; no seventh Stack companion, price,
+free grant, account approval or live flag is assumed. Independent focused
+verification passes56/56, product-truth8/8, strict changed-file types and scoped
+zero-warning lint. Root follow-through passed a full production build (39 Next
+pages plus four workspace typechecks), 46 disposable PostgreSQL16.14-backed and
+provider/control tests, and five intercepted local component-browser cases.
+The existing full local exact-host OutCall journey also passes1/1 with its
+synthetic provider and real PostgreSQL/API/Next: all11routes, signup/login,
+profile/schedule/record, redirects, responsive controls and accessibility.
+Official compiled release apply/verify on that disposable database passes67/67.
+No real provider, account, production database or deployment action ran.
+The parent-held SSO file, reviewed visual refresh, full combined-head build/CI,
+commercial decision and controlled deployed/provider acceptance remain gates.
+[Exact source, evidence and remaining owner gates](outcall/SOURCE_ACTIVATION_2026-10-20.md).
+This candidate supersedes the global launch-lock description in the earlier
+country-preflight note only if integrated; historical verification is preserved.
+
+## OutCall country preflight follow-through - 2026-10-20
+
+The static readiness check now matches the existing runtime: normalize and
+deduplicate configured countries, then require a nonempty subset of US and CA.
+The former `US,GB` false-positive fails. Four added regressions demonstrate the
+original failure and the complete focused suite passes 16/16 without skips;
+strict focused types, scoped zero-warning lint and syntax/whitespace pass.
+Independent review repeated 16 cases and compared 827 synthetic country inputs
+against the actual runtime normalization with zero mismatches. Existing
+activation, tenant, provider, approval and spend controls are unchanged. No
+database, provider, account, credential or live activation action occurred.
+[Exact scope, commands and remaining gates](outcall/READINESS_FOLLOWTHROUGH_2026-10-20.md).
+
+## Subsequent real PostgreSQL verification - 2026-10-20 22:18 UTC
+
+Unchanged runtime source at commit26dd663e6d9078702f0c2c77e097f98a8aee797e
+passed11/11 bounded real PostgreSQL16.14 cases,0failed, after the earlier
+model-only checkpoint below. Actual pg8.23.0/Drizzle0.45.2 and canonical
+tenant/module/entitlement/feature functions executed; only the awaited adapter
+was synthetic and non-delivering. Three concurrent identical requests allocated
+one job/run; conflicting provider/requester intent did not orphan a run. A real
+tenant-filtered trigger proved rollback then identical retry. Tenant isolation,
+eight preflight authority/configuration revocations, missing membership despite
+platform-admin status, and revoke/cancel/feature loss during await all passed.
+
+The task-only disposable target was127.0.0.1:55486/operatoros_phase21_outcall_test;
+captured Pool URL and socket guards rejected other targets. All owned rows across
+ten tables and the owned trigger/function were verified absent afterward; the
+canonical module row was unchanged and the pool closed. No schema apply, real
+provider, vault, recipient, service or production action occurred. Initial loader
+preparation failures and sandbox EACCES remain separately recorded; the permitted
+bounded run succeeded without changing application source.
+
+Exact task evidence: evidence/resume-oct20/all-module-release/brandforge-real-pg/
+README.md, result-b84ffce84c42421196.json and final-evidence.json. The commands are
+`node evidence/resume-oct20/all-module-release/brandforge-real-pg/run.cjs --prepare`
+and the explicitly cleared `--run-cleared` mode; no package acquisition occurred.
+This adds actual driver/transaction/concurrency proof to the earlier23 helper/
+route,13 policy and4 domain passes. It does not prove HTTP/session, generic job
+leasing, browser, live provider or deployment acceptance. Overlapping workers may
+still enter the synchronous deterministic adapter; async/live effects require
+reviewed fencing and provider idempotency. Production connector capability remains
+unavailable; no provider/event/receiver product choice has been made.
+
+# OperatorOS implementation status
+
+## BrandForge connector boundary and sync safety - 2026-10-20
+
+The provider-neutral connector policy remains production-unavailable. A follow-up
+on `6f86b5f` corrects inherited business-row replay and queued-worker authority
+limits: shared job and business run now commit atomically with provider/requester/
+current configuration intent binding; matching retries return the original run and
+collisions return 409. Queued work freshly requires active account/tenant, actual
+owner/admin membership, canonical module write access, integration feature and the
+same nonrevoked connection/configuration before execution and after awaited work.
+Global administrator authority cannot substitute for current tenant membership.
+Shared platform code, the provider catalog and schema/release67 are unchanged.
+
+Desired-behavior probes fail **2/2** against the unchanged `6f86b5f` baseline.
+Corrected actual-source checks pass **23/23** (17 helper + six actual route/worker
+wiring cases), plus unchanged policy **13/13** and domain **4/4** separately.
+Concurrency, rollback and 20 before/during-work revocations are modeled with
+explicit fake SQL. Cached-path full API source types and emit, strict new/policy
+test types and zero-warning scoped lint pass. Initial test/compiler failures
+remain in the evidence. No real PostgreSQL, HTTP/session, browser/provider
+acceptance or normal production release gate is claimed. No dependency
+acquisition, denied-junction retry, service or DB/provider operation occurred.
+The frozen patch is uncommitted pending independent review.
+
+The selected provider/event/receiving contract and actual live adapter remain
+open. Recommend a bounded signed external-publication notification only after
+owner selection of its receiving system; complete package delivery needs a
+separate lossless payload contract. Existing unbound queued jobs fail closed;
+there is no automatic migration, resume or dispatch. Overlapping invocations can
+both enter the deterministic adapter; lease fencing and provider idempotency
+remain gates for future asynchronous/live effects. No credential, grant,
+publication, deployment or all-module completion is claimed. See
+[connector boundary and proof](modules/brandforgeos/CONNECTOR_BOUNDARY_2026-10-20.md).
+
+## FieldNode free-module source candidate — 2026-10-20
+
+Hosted follow-through: exact remote head `03c4a4ed66250c22a3db0c03f7c40298fba67b8c`
+failed release run39488703971 with11/14 scopes passing:52/52 unit and108/108
+integration passed, API2171/2177 failed six roster/help/matrix expectations,
+and the browser matrix stopped at collection because FieldNode had no selector.
+Four visual cases passed separately. The bounded correction adds truthful help,
+the fourth included-app expectations, and the public-introduction to protected
+management SSO/browser transition without weakening authorization assertions.
+Fresh local selected suites pass154/154 with six existing optional HTTP skips;
+all four workspace types, zero-warning lint and strict15-test-file types pass.
+
+The same run's security gate independently found two follow-redirects1.16.0
+advisories. The source override/lock now pins official1.16.1, with no new host
+package installation or advisory exception. Three zero-network installed-library
+regressions reproduce both defects on the retained1.16.0 local graph (two failures)
+and preserve the same-origin control. The corrected lock audit passes with no
+unresolved advisories; this is not installed1.16.1 runtime verification. Current
+Twilio callers keep redirects disabled; a production exploit is not established.
+The exact corrected-head hosted frozen install, complete release and independent
+review remain pending and must be recorded before any acceptance claim.
+
+FieldNode is a fourth free-account application with a public hardware introduction and a protected management entry. Remote pairing/management and hardware ordering stay explicitly unavailable until their approved integrations exist. Intended host: fieldnode.operatoros.net; no domain, database or deployment action occurred. Schema/release stays67. Source checks:22 new regressions in selected suites147pass/0fail/6 existing optional HTTP skips; strict checking of all13 changed test files, full four-workspace typecheck and zero-warning lint pass. SQL cases were not run. Full production build, browser verification and immutable independent review remain release gates; their actual results belong in the PR verification record. [Scope, ownership, activation and rollback gates](reviews/2026-10-20/FIELDNODE_FREE_MODULE.md).
+
+## Independent Tool Modules foundation (2026-10-20, draft and disabled)
+
+Separate one-time tenant Tool Modules reserve OfficeExit and VendorTrust365
+outside Application Stacks, companions and seats. The authenticated readiness
+catalog uses a real current tenant membership/owner, so a free owner with zero
+Stack seats is eligible independently of a paid base subscription. Checkout,
+sales, downloads and native licensing remain unavailable. Generic legacy grants
+and revocations cannot create or erase independent purchase provenance for the
+reserved slugs. No tool is registered for hosted launch/SSO; schema release 67
+and the reviewed paid-launch candidate remain unchanged on main.
+
+Policy20/20 and disposable PostgreSQL route/entitlement18/18 pass, zero skips.
+Root lint, API types, strict new-test checking and read-only release plan pass.
+Full production build passes all four workspace typechecks, API/runner and
+Next compilation (38 static pages). Existing unit gate is 51/52 with one
+Corepack-cache/DNS environment failure, zero skips; the affected quality-gate
+file separately passes 20/20 using the existing cache with networking disabled.
+The full aggregate was not rerun or called green. Independent frozen source
+review found no substantive issue; final documentation attestation and hosted
+release/vector checks remain pending. No live provider, migration,
+deployment, scan or executable delivery was performed. This does not prove an
+actual one-time purchase or licensed free-base access. Price/currency, license
+unit/quantity, refund, edition/upgrade, support and device/offline terms remain
+decisions. [Contract and acceptance](reviews/2026-10-20/INDEPENDENT_TOOL_FOUNDATION.md).
 
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 

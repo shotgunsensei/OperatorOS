@@ -19,13 +19,19 @@ test('BrandForge Application Stack access unlocks software features without clai
   assert.match(brandRoutes, /accessModel: applicationStack \? 'application_stack' : 'grandfathered_or_manual'/);
   assert.match(brandRoutes, /completeAccess: applicationStack/);
   assert.match(brandRoutes, /unmetered: monthlyCredits === null/);
-  assert.match(brandRoutes, /if \(!isOperatorOSTestEnvironment\(\)\)[\s\S]*?PROVIDER_ADAPTER_UNAVAILABLE/);
-  assert.match(brandRoutes, /No external delivery was attempted/);
-  assert.ok(
-    brandRoutes.indexOf("if (!isOperatorOSTestEnvironment())")
-      < brandRoutes.indexOf('requireIntegrationEntitlement(request, reply, catalog.requiredFeature)'),
-    'provider availability must be checked before any integration setup is represented as usable',
-  );
+  assert.match(brandRoutes, /brandForgeConnectorAvailability\(item\.provider\)/);
+  for (const action of ['connect', 'sync']) {
+    const start = brandRoutes.indexOf('`${base}/integrations/:provider/' + action + '`');
+    assert.ok(start >= 0, `${action}: registered provider route must remain present`);
+    const end = brandRoutes.indexOf('\n  app.', start);
+    const route = brandRoutes.slice(start, end < 0 ? undefined : end);
+    const decision = route.indexOf("const policy = brandForgeConnectorPolicy(param(request, 'provider'));");
+    const rejection = route.indexOf('if (!policy.allowed) return reply.code(policy.statusCode).send(brandForgeConnectorFailure(policy));');
+    const parse = route.indexOf('input = parseBrandForgeConnector');
+    const entitlement = route.indexOf('requireIntegrationEntitlement(request, reply, catalog.requiredFeature)');
+    assert.ok(decision >= 0 && rejection > decision && parse > rejection && entitlement > parse,
+      `${action}: policy rejection must precede configuration parsing and integration setup`);
+  }
 });
 
 test('BrandForge campaign UI captures and edits the full actionable brief with a retryable production state', () => {

@@ -28,6 +28,7 @@ const EXPECTED_SLUGS = [
   'callcommand-ai',
   'ninjamation',
   'outcall',
+  'fieldnode',
 ] as const;
 
 test('customer product-value contracts cover the exact canonical module roster', () => {
@@ -79,7 +80,7 @@ test('catalog and pricing-card descriptions inherit the canonical promises', () 
   }
 });
 
-test('Pool Hall remains a free benefit and OutCall remains unavailable for sale or launch', () => {
+test('Pool Hall remains free while OutCall separates authorized launch from enrollment and live calling', () => {
   const pool = MODULE_PRODUCT_VALUE_BY_SLUG['ninja-pool-hall'];
   const poolCatalog = MODULE_CATALOG.find(module => module.slug === pool.slug);
   assert.equal(poolCatalog?.commercialType, 'free');
@@ -90,9 +91,10 @@ test('Pool Hall remains a free benefit and OutCall remains unavailable for sale 
   const outcall = MODULE_PRODUCT_VALUE_BY_SLUG.outcall;
   const outcallCatalog = MODULE_CATALOG.find(module => module.slug === outcall.slug);
   assert.equal(outcallCatalog?.commercialType, 'addon');
-  assert.equal(outcallCatalog?.defaultStatus, 'coming_soon');
-  assert.match(outcall.integrations.setupBoundary, /coming soon/i);
-  assert.match(outcall.integrations.setupBoundary, /must not be sold or launched/i);
+  assert.equal(outcallCatalog?.defaultStatus, 'live');
+  assert.match(outcall.integrations.setupBoundary, /existing authorized access/i);
+  assert.match(outcall.integrations.setupBoundary, /new enrollment awaits approved commercial terms/i);
+  assert.match(outcall.integrations.setupBoundary, /current approved account resource policy/i);
   assert.match(outcall.integrations.setupBoundary, /not emergency response/i);
 });
 

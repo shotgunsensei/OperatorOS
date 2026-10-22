@@ -58,12 +58,13 @@ for (const [slug, name, section] of modules) {
   });
 }
 
-test('OutCall: existing unavailable boundary remains visible and does not offer activation', async ({ page }) => {
+test('OutCall: authorized workspace exposes safety and honest provider readiness', async ({ page }) => {
   await establishParitySession(page.request);
   await page.goto(`${WEB}/modules/outcall/dashboard`);
-  await expect(page.getByRole('heading', { name: 'OutCall is not available right now.' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Return to My Apps' })).toBeVisible();
-  await expect(page.getByTestId('outcall-workflow-journey')).toHaveCount(0);
+  await expect(page.getByTestId('outcall-module-shell')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Readiness and safety' })).toBeVisible();
+  await expect(page.getByTestId('button-outcall-accept-safety')).toBeVisible();
+  await expect(page.getByTestId('button-outcall-start-verification')).toBeDisabled();
   mkdirSync(artifacts, { recursive: true });
   await page.screenshot({ path: resolve(artifacts, 'outcall-availability.png'), fullPage: true });
 });

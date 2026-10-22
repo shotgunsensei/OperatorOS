@@ -10,7 +10,7 @@ async function main() {
       operation: 'plan', recurring: recurringCommercialPrices(process.env), oneTime: TORQUESHED_CREDIT_CATALOG,
       webhookUrl: ECOSYSTEM_STRIPE_WEBHOOK_URL, webhookEvents: ECOSYSTEM_STRIPE_EVENTS,
       portalEnvKey: 'STRIPE_BILLING_PORTAL_CONFIGURATION_ID',
-      note: 'Prices already in use are validated by configured ID. No legacy sale is reopened; OutCall remains unavailable.',
+      note: 'Prices already in use are validated by configured ID. No legacy sale is reopened; new OutCall enrollment awaits approved commercial terms.',
     }, null, 2));
     return;
   }

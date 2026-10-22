@@ -76,6 +76,8 @@ async function fixture(options: Options = {}) {
         return stripe.webhooks.constructEvent(raw, signature, secret);
       } }),
     async isTorqueTokenStripeEvent() { return options.torque ?? false; },
+    async receiveVerifiedToolPurchaseEvent() { return null; },
+    ToolPurchaseProviderError: class extends Error {},
     async receiveVerifiedTorqueTokenStripeEvent() {
       calls.torque++;
       return { status: options.torquePending ? 'retry' : 'processed', duplicate: false,

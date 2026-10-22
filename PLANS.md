@@ -1,4 +1,43 @@
+## 2026-10-21 - Independent one-time tool products, source candidate
+
+The reviewed October 20 foundation is integrated onto the current Lunch Break/all-module candidate. Browse tools presents OfficeExit and VendorTrust365 as independent one-time tenant add-ons for free and paid accounts, with no subscription renewal or bundled annual update/support fee. Current `not_bundled` support policy supersedes historical pending-support wording below. Price, license unit and allowance remain undecided; sales/download/checkout and purchase entitlements remain unavailable.
+
+Fresh policy20/20, real Fastify/disposable PostgreSQL16.14 authorization/entitlement/free-module21/21, routing/free-module regressions64/64 and synthetic real-provider-component browser6/6 pass. Initial sandbox socket failures and browser fixture compilation failure are retained with their corrected reruns. Independent scoped runtime review found no concrete defect. Final lint/types, exact-build browser and production build closure are recorded by the frozen external manifest; no full-platform gate or live purchase is preclaimed. No schema, held SSO test, production data, provider, security or deployment action changed. The all14module Friday target including Outcall remains.
+
+Actual unified checkout/ledger/revocation/private delivery and explicit OperatorOS-to-OfficeExit organization mapping remain implementation requirements, not missing-key assumptions. VendorTrust purchase is separate from authorization for its assessed Microsoft tenant. [Exact source and acceptance boundary](docs/reviews/2026-10-21/TOOL_PRODUCTS_RELEASE.md).
+
 # OperatorOS completion plan
+
+## First release and FieldNode source slice — 2026-10-20
+
+Owner direction now requires every OperatorOS module, explicitly OutCall, at a working standard for the first release, targeting end of day Friday, October 23, 2026, Eastern. This supersedes the earlier narrow free-core recommendation. Reconcile existing accepted workflows and exact revisions, use targeted regressions for changed paths, and close the actual provider/account and functional gaps without restarting completed work. The date is a target, not a claim of acceptance. Production test accounts/mailbox, paid-provider allowances, database changes, activation, publication and rollback remain separately approved human gates.
+
+FieldNode source adds a free-account catalog entry, public shared hardware introduction, intended exact host and protected unavailable management destination. No checkout, ownership backend, appliance code or database operation is invented. [Source and activation contract](docs/reviews/2026-10-20/FIELDNODE_FREE_MODULE.md). Final tests/review and a draft PR remain the next source gates.
+
+## Independent Tool Modules foundation (2026-10-20, draft and disabled)
+
+Separate one-time tenant Tool Modules reserve OfficeExit and VendorTrust365
+outside Application Stacks, companions and seats. The authenticated readiness
+catalog uses a real current tenant membership/owner, so a free owner with zero
+Stack seats is eligible independently of a paid base subscription. Checkout,
+sales, downloads and native licensing remain unavailable. Generic legacy grants
+and revocations cannot create or erase independent purchase provenance for the
+reserved slugs. No tool is registered for hosted launch/SSO; schema release 67
+and the reviewed paid-launch candidate remain unchanged on main.
+
+Policy20/20 and disposable PostgreSQL route/entitlement18/18 pass, zero skips.
+Root lint, API types, strict new-test checking and read-only release plan pass.
+Full production build passes all four workspace typechecks, API/runner and
+Next compilation (38 static pages). Existing unit gate is 51/52 with one
+Corepack-cache/DNS environment failure, zero skips; the affected quality-gate
+file separately passes 20/20 using the existing cache with networking disabled.
+The full aggregate was not rerun or called green. Independent frozen source
+review found no substantive issue; final documentation attestation and hosted
+release/vector checks remain pending. No live provider, migration,
+deployment, scan or executable delivery was performed. This does not prove an
+actual one-time purchase or licensed free-base access. Price/currency, license
+unit/quantity, refund, edition/upgrade, support and device/offline terms remain
+decisions. [Contract and acceptance](docs/reviews/2026-10-20/INDEPENDENT_TOOL_FOUNDATION.md).
 
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 

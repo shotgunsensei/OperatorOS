@@ -169,6 +169,15 @@ export function getStripeFeatureBillingClient(): Pick<StripeClient, 'checkout' |
   return getStripe();
 }
 
+/** Server-only one-time tool billing; shares the existing mode gate and client. */
+export function getStripeToolPurchaseClient(): Pick<StripeClient,
+  'accounts' | 'products' | 'prices' | 'customers' | 'checkout' | 'paymentIntents' | 'charges'> {
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe is not configured'), { code: 'STRIPE_NOT_CONFIGURED' });
+  }
+  return getStripe();
+}
+
 // Task #66: monthly + annual price resolution. STRIPE_PRICE_<PLAN>_<INTERVAL>
 // is the canonical form; the bare STRIPE_PRICE_<PLAN> is honored only for the
 // monthly fallback so existing prod env stays valid through the cutover.

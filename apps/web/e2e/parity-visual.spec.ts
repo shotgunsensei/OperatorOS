@@ -43,11 +43,8 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
       expect(response?.status(), `${contract.moduleSlug}/${viewport.name}`).toBeLessThan(400);
       await expect(page.locator('body')).toContainText(contract.moduleName);
       if (contract.moduleSlug === 'outcall') {
-        await expect(
-          page.getByRole('heading', { name: 'OutCall is not available yet', exact: true }),
-          'OutCall remains source-recovery locked and must fail closed',
-        ).toBeVisible();
-        await expect(page.locator('body')).toContainText('Organization administrators cannot enable it.');
+        await expect(page.getByTestId('outcall-module-shell')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Readiness and safety' })).toBeVisible();
       } else {
         await expect(
           page.locator('body'),

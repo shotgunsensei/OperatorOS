@@ -171,7 +171,7 @@ export const SCRIPT_OPS_GUIDE: HelpGuide = {
 export const OUTCALL_GUIDE: HelpGuide = {
   id: 'outcall', name: 'OutCall', kind: 'companion-application', accent: '#c4b5fd',
   description: 'Discreet exit assistance using one verified personal number, private trigger phrases, scheduled calls, history, privacy, and safety controls.',
-  availability: 'Coming soon. Live calls require an approved calling service and a verified personal number.', startHref: `${outcall}/`,
+  availability: 'Existing authorized access is available. New enrollment awaits approved commercial terms. Live calls require an approved calling service and a verified personal number.', startHref: `${outcall}/`,
   pages: [
     guidePage(outcall, 'outcall-overview', 'OutCall overview', '/', 'Check your safety acknowledgement, verified number, assistance profile, schedule, and call-service readiness.', ['Review whether the safety acknowledgement is current.', 'Confirm one personal mobile number.', 'Review the neutral assistance profile and call-service status.', 'Open schedules, triggers, calls, or privacy controls.'], { notes: ['OutCall is not an emergency or monitoring service and does not replace contacting local emergency services.'] }),
     guidePage(outcall, 'outcall-contacts', 'Verified destination and rescue profiles', '/contacts', 'Prepare neutral assistance messages for your verified number without creating a bulk contact list.', ['Create or edit a neutral assistance profile.', 'Choose only the personal number you verified.', 'Review the call script, caller ID, keypad choices, and privacy limits.', 'OutCall does not support arbitrary recipients or bulk audiences.']),

@@ -230,7 +230,10 @@ function runPlanner(slug: string): Record<string, unknown> {
 
 export function validateMigrationManifestCoverage(): string[] {
   const errors: string[] = [];
-  const catalogSlugs = MODULE_CATALOG.map(module => module.slug).sort();
+  // FieldNode is a new OperatorOS introduction/readiness surface. Its appliance
+  // repository and data are separately owned; there is no legacy import to run.
+  // Catalog/grant activation still needs the separately approved database plan.
+  const catalogSlugs = MODULE_CATALOG.filter(module => module.slug !== 'fieldnode').map(module => module.slug).sort();
   const manifestSlugs = PHASE13_MIGRATION_MANIFESTS.map(module => module.slug).sort();
   if (stable(catalogSlugs) !== stable(manifestSlugs)) {
     errors.push(`Manifest coverage differs from active catalog: catalog=${catalogSlugs.join(',')} manifest=${manifestSlugs.join(',')}`);

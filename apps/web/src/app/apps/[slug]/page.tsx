@@ -26,6 +26,7 @@ import TorqueShedWorkspace from '@/components/module-shells/TorqueShedWorkspace'
 import FaultlineLabShell from '@/components/module-shells/FaultlineLabShell';
 import BrandForgeRouteShell from '@/components/module-shells/BrandForgeRouteShell';
 import SnapProofShell from '@/components/module-shells/SnapProofShell';
+import FieldNodeShell from '@/components/module-shells/FieldNodeShell';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
@@ -64,6 +65,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
   'faultlinelab':     FaultlineLabShell,
   'brandforgeos':     BrandForgeRouteShell,
   'snapproofos':      SnapProofShell,
+  'fieldnode':        FieldNodeShell,
 };
 const POLISHED_SHELL_NAMES: Record<string, string> = {
   techdeck: 'TechDeck', pulsedesk: 'PulseDesk', tradeflowkit: 'TradeFlowKit',
@@ -71,6 +73,7 @@ const POLISHED_SHELL_NAMES: Record<string, string> = {
   'callcommand-ai': 'CallCommand AI', ninjamation: 'Script Ops', outcall: 'OutCall',
   'ninja-pool-hall': 'Operator Pool Hall', torqueshed: 'TorqueShed', faultlinelab: 'FaultlineLab',
   brandforgeos: 'BrandForgeOS', snapproofos: 'SnapProofOS',
+  fieldnode: 'FieldNode',
 };
 
 function InternalAppContent() {

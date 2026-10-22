@@ -53,6 +53,7 @@ const excludedFromCompanionSales = [
   'torqueshed',
   'faultlinelab',
   'ninja-pool-hall',
+  'fieldnode',
   'outcall',
 ] as const;
 
@@ -518,6 +519,7 @@ test('public billing catalog exposes only the approved monthly application-stack
     'torqueshed',
     'faultlinelab',
     'ninja-pool-hall',
+    'fieldnode',
   ]);
   assert.equal(body.companionModuleMonthlyPriceCents, 2900);
   assert.equal(body.additionalSeatMonthlyPriceCents, 1500);
@@ -789,7 +791,7 @@ test('signed stack webhook binds the exact intent, activates every purchased ben
   const active = await db.select()
     .from(tenantEntitlements)
     .where(eq(tenantEntitlements.tenantId, owner.currentTenantId!));
-  assert.equal(active.length, 7);
+  assert.equal(active.length, 8);
   assert.deepEqual(
     active.map(row => `${row.entitlementType}:${row.entitlementKey}:${row.source}`).sort(),
     [
@@ -797,6 +799,7 @@ test('signed stack webhook binds the exact intent, activates every purchased ben
       'companion_module:snapproofos:selected_free_companion',
       'core_product:tradeflowkit:stripe',
       'included_app:faultlinelab:included_with_core',
+      'included_app:fieldnode:included_with_core',
       'included_app:ninja-pool-hall:included_with_core',
       'included_app:torqueshed:included_with_core',
       'seat_pack:additional-seats:stripe',
@@ -817,7 +820,7 @@ test('signed stack webhook binds the exact intent, activates every purchased ben
   const afterReplay = await db.select()
     .from(tenantEntitlements)
     .where(eq(tenantEntitlements.tenantId, owner.currentTenantId!));
-  assert.equal(afterReplay.length, 7, 'signed event replay must not duplicate entitlements');
+  assert.equal(afterReplay.length, 8, 'signed event replay must not duplicate entitlements');
 
   const secondFlagship = await app.inject({
     method: 'POST',
@@ -1152,7 +1155,7 @@ test('provider item drift deactivates access, exact correction recovers it, and 
       eq(tenantEntitlements.tenantId, owner.currentTenantId!),
       eq(tenantEntitlements.active, true),
     ))).length,
-    7,
+    8,
     'only a fully revalidated provider subscription may recover quarantined access',
   );
 
@@ -1172,7 +1175,7 @@ test('provider item drift deactivates access, exact correction recovers it, and 
       eq(tenantEntitlements.tenantId, owner.currentTenantId!),
       eq(tenantEntitlements.active, true),
     ))).length,
-    7,
+    8,
     'scheduled cancellation keeps paid access through the provider period',
   );
 
@@ -1274,7 +1277,7 @@ test('invoice webhooks accept current and legacy references without granting inv
   assert.equal(recovery.json().action, 'core_product_stack_updated');
   assert.equal((await db.select().from(tenantEntitlements).where(and(
     eq(tenantEntitlements.tenantId, owner.currentTenantId!), eq(tenantEntitlements.active, true),
-  ))).length, 7, 'a failed invoice cannot regress the freshly revalidated active provider subscription');
+  ))).length, 8, 'a failed invoice cannot regress the freshly revalidated active provider subscription');
 });
 
 test('legacy plan and per-module purchase APIs are closed while existing grants remain readable', async () => {

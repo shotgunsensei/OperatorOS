@@ -52,6 +52,12 @@ export const MODULE_SETUP_GUIDES: Record<string, ModuleSetupGuide> = {
     check: 'Finish a game and check your saved match history.',
     nextStep: 'Start practicing', setupHref: 'https://operatorpoolhall.operatoros.net/practice',
   },
+  fieldnode: {
+    firstTask: 'Read the hardware introduction and choose Manage my FieldNodes if you already own an appliance.',
+    services: 'The application is included with signup. Device management needs a connected appliance and verified ownership; hardware ordering is not configured yet.',
+    check: 'Review the current management availability notice before relying on remote access.',
+    nextStep: 'Explore FieldNode', setupHref: 'https://fieldnode.operatoros.net/',
+  },
   brandforgeos: {
     firstTask: 'Save your brand, create a campaign, and prepare content for review.',
     services: 'AI drafts need the configured AI service. Planning or approving a post does not publish it to a social account.',
@@ -89,9 +95,9 @@ export const MODULE_SETUP_GUIDES: Record<string, ModuleSetupGuide> = {
     nextStep: 'Open script sources', setupHref: 'https://scriptops.operatoros.net/sources',
   },
   outcall: {
-    firstTask: 'Review service availability before planning a callback.',
-    services: 'OutCall is not available yet. A saved contact or schedule does not mean a call will be placed.',
-    check: 'Wait for OperatorOS to make the service available and confirm its phone delivery before relying on it.',
-    nextStep: 'Review available apps', setupHref: 'https://app.operatoros.net/?page=apps',
+    firstTask: 'Review readiness and safety, then verify your own number when calling is enabled.',
+    services: 'Existing authorized access opens the workspace. Live calls need configured Twilio services and a current approved account resource policy. A saved profile or schedule does not mean a call will be placed. New enrollment awaits approved commercial terms.',
+    check: 'Complete an approved call to your own verified number and confirm its recorded delivery outcome before relying on it.',
+    nextStep: 'Review delivery readiness', setupHref: 'https://outcall.operatoros.net/delivery',
   },
 };

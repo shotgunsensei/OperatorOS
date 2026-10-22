@@ -222,8 +222,8 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry, exp
   }
   const platform = registrations.find((entry) => entry.moduleId === 'operatoros');
   const modules = registrations.filter((entry) => entry.moduleId !== 'operatoros');
-  if (!platform || modules.length !== 13) {
-    throw new Error('canonical registry must contain OperatorOS plus exactly 13 modules');
+  if (!platform || modules.length !== 14) {
+    throw new Error('canonical registry must contain OperatorOS plus exactly 14 modules');
   }
 
   const results = [];
@@ -317,11 +317,20 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry, exp
   }
 
   const outcall = modules.find((entry) => entry.slug === 'outcall');
-  await runCheck(results, 'outcall source-recovery activation lock', async () => {
-    if (!outcall || outcall.enabled !== false) {
-      throw new Error('OutCall must remain disabled until source and provider acceptance are proven');
+  await runCheck(results, 'outcall authenticated application registration', async () => {
+    if (!outcall || outcall.enabled !== true) {
+      throw new Error('OutCall must expose its canonical entitlement-protected application registration');
     }
-    return 'disabled pending source recovery and provider acceptance';
+    return 'registered; provider configuration, account approval and commercial enrollment are separate';
+  });
+  await runCheck(results, 'outcall explicit provider readiness', async () => {
+    const response = await request(fetchImpl, 'https://outcall.operatoros.net/api/modules/outcall/health');
+    requireStatus(response, [200], 'outcall readiness');
+    const body = await jsonOrNull(response);
+    if (body?.module !== 'outcall' || body.status !== 'ok' || !['configured', 'disabled'].includes(body.provider)) {
+      throw new Error('OutCall health must identify the module and its provider readiness explicitly');
+    }
+    return `${body.provider}; health does not prove delivery or permit an external call`;
   });
 
   const passed = results.filter((result) => result.ok).length;

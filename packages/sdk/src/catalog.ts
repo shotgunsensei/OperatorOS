@@ -293,11 +293,27 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['OUTCALL_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_OUTCALL'],
     internal: false,
-    // Phase 37: source recovery and a real provider lifecycle are hard
-    // activation gates. The existing reconstructed workload stays in the
-    // tree for evidence, but it must not be sold or launched as source parity.
-    defaultStatus: 'coming_soon',
+    // Existing central entitlements may launch the reconstructed application.
+    // New enrollment remains outside the approved Stack companion catalog;
+    // live operations separately require provider and account approval.
+    defaultStatus: 'live',
     component: 'operations-deck',
+  },
+  {
+    slug: 'fieldnode',
+    name: 'FieldNode',
+    description: MODULE_PRODUCT_VALUE_BY_SLUG.fieldnode.promise,
+    category: 'ops',
+    commercialType: 'free',
+    applicationType: 'companion-application',
+    canonicalBaseUrl: 'https://fieldnode.operatoros.net',
+    planMin: 'starter',
+    ord: 20,
+    envUrlKeys: ['FIELDNODE_URL'],
+    stripeAddonEnvKeys: [],
+    internal: true,
+    defaultStatus: 'live',
+    component: 'diagnostic-lab',
   },
 ] as const;
 

@@ -64,11 +64,11 @@ test('torqueshed is retained in the ecosystem (additive)', () => {
   assert.ok(getEcosystemModule('torqueshed'), 'torqueshed is present');
 });
 
-test('outcall remains planned with central SSO and billing authority until Phase 37 activation gates pass', () => {
+test('outcall application is active with central SSO and unchanged billing authority', () => {
   const outcall = getEcosystemModule('outcall');
   assert.ok(outcall, 'outcall is present');
   assert.equal(outcall!.ecosystemUrl, 'https://outcall.operatoros.net');
-  assert.equal(outcall!.status, 'planned');
+  assert.equal(outcall!.status, 'active');
   assert.equal(outcall!.authMode, 'sso');
   assert.equal(outcall!.billingMode, 'operatoros');
 });

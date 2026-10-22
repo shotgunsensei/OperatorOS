@@ -176,6 +176,9 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/rules': { sectionId: 'ninja-pool-hall-shell', label: 'Rules', redirectPath: '/settings' },
     '/settings': { sectionId: 'ninja-pool-hall-shell', label: 'Rules and Settings' },
   },
+  fieldnode: {
+    '/manage': { sectionId: 'fieldnode-management', label: 'Manage my FieldNodes' },
+  },
   brandforgeos: {
     '/dashboard': { sectionId: 'brandforgeos-dashboard', label: 'Dashboard', redirectPath: '/' },
     '/brands': { sectionId: 'brandforgeos-brands', label: 'Brand Kits' },

@@ -132,7 +132,7 @@ export const MARKETING_MODULES: readonly MarketingModule[] = SOURCE.slice()
       name: entry.name,
       packageType,
       packageLabel: applicationLabel(entry),
-      accessLabel: accessLabel(entry.commercialType),
+      accessLabel: entry.slug === 'outcall' ? 'Existing authorized access; new enrollment pending' : accessLabel(entry.commercialType),
       applicationType: entry.applicationType,
       outcome: productValue.promise,
       audience: productValue.buyer,

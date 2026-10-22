@@ -33,7 +33,9 @@ test('vendor setup is searchable without claiming the service is connected', () 
   const guide = findHelpGuide('callcommand-ai');
   assert.match(helpSearchText(guide, guide.pages[0]), /twilio/);
   assert.match(MODULE_SETUP_GUIDES.pulsedesk.services, /not available yet/);
-  assert.match(MODULE_SETUP_GUIDES.outcall.services, /not available yet/);
+  assert.match(MODULE_SETUP_GUIDES.outcall.services, /Live calls need configured Twilio services and a current approved account resource policy/);
+  assert.match(MODULE_SETUP_GUIDES.outcall.services, /A saved profile or schedule does not mean a call will be placed/);
+  assert.match(MODULE_SETUP_GUIDES.outcall.services, /New enrollment awaits approved commercial terms/);
 });
 
 test('missing and unexpected service states never appear ready', () => {

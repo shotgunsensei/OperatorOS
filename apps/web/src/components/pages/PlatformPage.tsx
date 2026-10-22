@@ -1110,7 +1110,7 @@ function ModuleStackCommerceReadiness({ module, pricing }: { module: any; pricin
   const eligible = FORWARD_COMPANION_KEYS.has(module.slug);
   if (!eligible) {
     const message = module.slug === 'outcall'
-      ? 'OutCall is coming soon and is not eligible for purchase or price administration.'
+      ? 'OutCall enrollment and price administration await approved commercial terms.'
       : 'This application is a flagship, free/core service, or otherwise outside the paid companion catalog. No per-application purchase or price control is available.';
     return (
       <Card style={{ marginTop: 12 }} data-testid="module-stack-commerce-excluded">

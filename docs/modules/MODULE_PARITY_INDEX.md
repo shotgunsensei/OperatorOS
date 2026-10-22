@@ -1,3 +1,45 @@
+## 2026-10-22 - Local integration preserving the published free hub
+
+Published49b68ed6 is preserved as the base. Bounded reviewed FieldNode, Outcall, PulseDesk, BrandForge and independent tool components are composed locally, with the held SSO file unchanged and unexecuted. Current proof includes corrected fixture72/72, tools141/141, actual commerce SQL41/41 and zero-warning lint; module189/195 has six HTTP reachability skips awaiting the built server. Schema68 was applied only to a new disposable fixture. No publication, production migration or deployment occurred. Build, exact-tree CI, canonical dependency and live acceptance gates remain. [Exact components, failures, cache limits and release gates](../releases/combined-local-2026-10-22.md).
+
+## 2026-10-21 - Independent one-time tool products, source candidate
+
+The reviewed October 20 foundation is integrated onto the current Lunch Break/all-module candidate. Browse tools presents OfficeExit and VendorTrust365 as independent one-time tenant add-ons for free and paid accounts, with no subscription renewal or bundled annual update/support fee. Current `not_bundled` support policy supersedes historical pending-support wording below. Price, license unit and allowance remain undecided; sales/download/checkout and purchase entitlements remain unavailable.
+
+Fresh policy20/20, real Fastify/disposable PostgreSQL16.14 authorization/entitlement/free-module21/21, routing/free-module regressions64/64 and synthetic real-provider-component browser6/6 pass. Initial sandbox socket failures and browser fixture compilation failure are retained with their corrected reruns. Independent scoped runtime review found no concrete defect. Final lint/types, exact-build browser and production build closure are recorded by the frozen external manifest; no full-platform gate or live purchase is preclaimed. No schema, held SSO test, production data, provider, security or deployment action changed. The all14module Friday target including Outcall remains.
+
+Actual unified checkout/ledger/revocation/private delivery and explicit OperatorOS-to-OfficeExit organization mapping remain implementation requirements, not missing-key assumptions. VendorTrust purchase is separate from authorization for its assessed Microsoft tenant. [Exact source and acceptance boundary](../reviews/2026-10-21/TOOL_PRODUCTS_RELEASE.md).
+
+## 2026-10-21 — Combined local candidate, not released
+
+The four reviewed FieldNode, Outcall, PulseDesk and BrandForgeOS source slices are assembled in one isolated local candidate with unchanged runtime bytes and preserved component branches. Combined SQL integration 108/108, corrected static 9/9, runner 2/2, lint and workspace types passed. Full API baseline 2476/2482 and unit 51/52 are retained as failures with targeted reconciliation, not relabeled as full passes; two held-SSO assertions remain unresolved. Production build/browser outcomes are pending at this commit and will be bound to its exact source by the external frozen candidate manifest. Canonical mailbox runtime, live account/provider acceptance, source publication and release approvals remain gates. This entry does not supersede the all 14 module release target or claim a public launch.
+
+## FieldNode actual joint acceptance - 2026-10-20
+
+| Goal | Verified source evidence | Remaining acceptance |
+| --- | --- | --- |
+| Free OperatorOS FieldNode entry and managed service | Frozen PR19 exact management HTML/assets/20 portal mappings, bounded HTTP/serial transports; independent 238/238, strict/lint and 39-page/four-type production build. Actual normal free signup/SSO/fixed identity, empty passwordless workspace, real local TOTP, logout/recovery/rotation, tenant privacy and central revocation passed against the unchanged frozen consumer. No node or device grant was created. | Positive connected-appliance streams/serial and owned-device grants; approved hosting/origins, exact production DB/portal_0004 and recoverable MFA key, pairing and live acceptance; canonical combined CI/held SSO-test updates. No deployment or production activation. |
+
+Four reproduced security findings and actual Next host-query/bodyless-consumer
+compatibility defects were corrected, with failed baselines preserved. The
+ws 8.21.3 per-receiver guard remains upgrade-sensitive and fail-closed. Joint
+fixtures used only two task databases, exact-loopback transports and existing
+local test certificates; server TLS validation and browser certificate-fixture
+exceptions are recorded separately. The standalone owner proofs, historical
+179-case narrow gateway and 101-case identity suites have distinct scopes.
+No hardware checkout, operational updater, full combined release or all-module
+readiness claim follows from this row.
+[Exact source/transport limits](../fieldnode/OPERATOROS_MANAGEMENT_GATEWAY_V1.md).
+
+## FieldNode central management gateway source checkpoint - 2026-10-20
+
+| Module / goal | Source proof | Remaining acceptance |
+| --- | --- | --- |
+| FieldNode unified entry | Current-identity validation plus two exact disabled-by-default management POST mappings; independent179/179, strict/lint, full39page/four-type build; malformed role arrays fail before POST | Owner consume/CSRF/response conformance, remaining UI/assets/WebSocket inventory, first-signup/local-MFA and actual cross-service/device acceptance remain open; no live host, schema, credentials or configuration changed |
+
+[Bounded gateway and unchanged central authority](../fieldnode/OPERATOROS_MANAGEMENT_GATEWAY_V1.md).
+Prior standalone FieldNode and central101case identity proofs remain separate.
+
 # OperatorOS module parity index
 
 ## Public free Lunch Break hub (2026-10-21)
@@ -17,6 +59,77 @@ keyboard/four-viewport checks pass. Live acceptance is recorded
 separately after publication; no current deployed-state claim is made here. Details and exact evidence limits:
 [DNS, audit, assets and release boundary](../LUNCH_BREAK_RELEASE.md).
 
+## FieldNode identity component overlay - 2026-10-20
+
+The central FieldNode identity endpoint and SDK contract are implemented and
+independently reviewed. Selected tests pass 101/101; independent original-fixture
+probes pass 48/48 after fixing a demonstrated concurrent-role privilege-ceiling
+race. Strict types, lint, four workspace type checks and 39-page production build
+pass for the component. This does not prove the joint management journey:
+the narrow service proxy, immutable workspace/user mapping, local MFA and actual
+device grants remain separate source/acceptance work. No data or schema changes.
+
+## PR136 release correction overlay - 2026-10-20
+
+Remote `0f249585` release run 39494095553 completed 12/14 scopes: unit 52/52,
+API 2176/2177, integration 108/108, browser 108/109 and visual 4/4. Remaining
+FieldNode guidance and locator defects are corrected without changing access
+policy. Native run 39494095586 passed both simulator jobs; its auth job's
+disposable-target declaration is corrected with a real-guard regression.
+Fresh complete hosted verification of the corrected head remains required.
+No tenant, schema, hardware or production change is part of this correction.
+
+## OutCall application activation source candidate - 2026-10-20
+
+| Module / goal | Source result | Acceptance / blocker |
+| --- | --- | --- |
+| OutCall authorized workspace entry | Catalog/registry active; startup follows catalog; central entitlement and provider/resource approval boundaries preserved | 56 independent focused cases,8 product-truth cases,46 disposable PostgreSQL16.14-backed/provider controls, full production build39pages/four types,5 synthetic component-browser cases and1 complete local exact-host11-route workflow/a11y/responsive journey pass; compiled disposable release67/67 verified. Commercial decision, held SSO integration, combined-head CI, visual comparison and deployed/live acceptance remain open |
+
+[Exact candidate scope and verification](../outcall/SOURCE_ACTIVATION_2026-10-20.md).
+No original historical literal parity, real provider success or deployed go-live
+is claimed. OutCall remains part of the owner's all-module Friday target.
+
+## OutCall readiness consistency - 2026-10-20
+
+| Module / goal | Source result | Acceptance / blocker |
+| --- | --- | --- |
+| OutCall controlled-country readiness | Static preflight agrees with runtime US/CA-only policy; 16 focused cases pass and independent 827-input comparison has no mismatch | Source correction only; global launch lock, account-policy approval, owned recipient and real provider/deployed acceptance remain open |
+
+[Verification and unchanged activation boundaries](../outcall/READINESS_FOLLOWTHROUGH_2026-10-20.md). The all-module Friday target still includes OutCall; this correction does not claim activation or live acceptance.
+
+## FieldNode native OperatorOS introduction — 2026-10-20
+
+| Module / user goal | Source destination | Status | Acceptance / blocker |
+| --- | --- | --- | --- |
+| FieldNode hardware introduction and free-account entry | Public /fieldnode and intended fieldnode.operatoros.net; shared catalog/free grant policy | Implemented source candidate | 22 new regressions and source types/lint pass; production/DNS/data activation unapproved |
+| Manage owned FieldNodes | Protected /manage module destination | Explicitly unavailable | Approved device identity, ownership/pairing backend and tenant authorization required; no fake inventory or appliance migration |
+
+[FieldNode scope and gates](../reviews/2026-10-20/FIELDNODE_FREE_MODULE.md). Historical 13-module import/parity evidence below is unchanged and does not imply FieldNode device parity.
+
+## Independent Tool Modules foundation (2026-10-20, draft and disabled)
+
+Separate one-time tenant Tool Modules reserve OfficeExit and VendorTrust365
+outside Application Stacks, companions and seats. The authenticated readiness
+catalog uses a real current tenant membership/owner, so a free owner with zero
+Stack seats is eligible independently of a paid base subscription. Checkout,
+sales, downloads and native licensing remain unavailable. Generic legacy grants
+and revocations cannot create or erase independent purchase provenance for the
+reserved slugs. No tool is registered for hosted launch/SSO; schema release 67
+and the reviewed paid-launch candidate remain unchanged on main.
+
+Policy20/20 and disposable PostgreSQL route/entitlement18/18 pass, zero skips.
+Root lint, API types, strict new-test checking and read-only release plan pass.
+Full production build passes all four workspace typechecks, API/runner and
+Next compilation (38 static pages). Existing unit gate is 51/52 with one
+Corepack-cache/DNS environment failure, zero skips; the affected quality-gate
+file separately passes 20/20 using the existing cache with networking disabled.
+The full aggregate was not rerun or called green. Independent frozen source
+review found no substantive issue; final documentation attestation and hosted
+release/vector checks remain pending. No live provider, migration,
+deployment, scan or executable delivery was performed. This does not prove an
+actual one-time purchase or licensed free-base access. Price/currency, license
+unit/quantity, refund, edition/upgrade, support and device/offline terms remain
+decisions. [Contract and acceptance](../reviews/2026-10-20/INDEPENDENT_TOOL_FOUNDATION.md).
 
 ## Selected failed-payment and invoice transaction source integration (2026-10-19)
 

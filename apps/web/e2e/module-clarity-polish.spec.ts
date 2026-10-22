@@ -34,50 +34,38 @@ for (const module of contracts.modules) {
       await page.setViewportSize({ width, height: 960 });
       const response = await page.goto(`${WEB}${module.criticalRoute}`, { waitUntil: 'domcontentloaded' });
       expect(response?.status()).toBeLessThan(400);
-      if (module.moduleSlug === 'outcall') {
-        await expect(page.getByTestId('app-shell-not-accessible')).toBeVisible();
-        await expect(page.getByTestId('module-page-guide')).toHaveCount(0);
-        await expect(page.getByRole('heading', { name: 'OutCall is not available yet' })).toBeVisible();
-        await expect(page.getByTestId('app-shell-not-accessible')).toContainText('Organization administrators cannot enable it.');
-      } else {
-        const guide = page.getByTestId('module-page-guide');
-        await expect(guide).toBeVisible();
-        await expect(guide.locator('ol')).toBeHidden();
-      }
+      const guide = page.getByTestId('module-page-guide');
+      await expect(guide).toBeVisible();
+      await expect(guide.locator('ol')).toBeHidden();
       await waitForModuleContent(page);
       await page.screenshot({ path: resolve(artifacts, `${module.moduleSlug}-${width}.png`), fullPage: true });
-      if (module.moduleSlug !== 'outcall') {
-        const guide = page.getByTestId('module-page-guide');
-        const summary = guide.locator('summary');
-        await summary.focus();
-        await page.keyboard.press('Enter');
-        await expect(guide.locator('details')).toHaveAttribute('open', '');
-        expect(await guide.locator('ol li').count()).toBeGreaterThanOrEqual(3);
-        await expect(guide.getByRole('link', { name: 'Open full guide' })).toHaveAttribute('href', /\/help\?/);
-      }
+      const summary = guide.locator('summary');
+      await summary.focus();
+      await page.keyboard.press('Enter');
+      await expect(guide.locator('details')).toHaveAttribute('open', '');
+      expect(await guide.locator('ol li').count()).toBeGreaterThanOrEqual(3);
+      await expect(guide.getByRole('link', { name: 'Open full guide' })).toHaveAttribute('href', /\/help\?/);
       const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
       const issues = axe.violations.filter(item => item.impact === 'serious' || item.impact === 'critical');
       findings.push({ width, issues: issues.map(issue => ({ id: issue.id, impact: issue.impact, nodes: issue.nodes.map(node => ({ target: node.target, summary: node.failureSummary })) })) });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-      if (module.moduleSlug !== 'outcall') await page.getByTestId('module-page-guide').screenshot({ path: resolve(artifacts, `${module.moduleSlug}-${width}-help.png`) });
+      await guide.screenshot({ path: resolve(artifacts, `${module.moduleSlug}-${width}-help.png`) });
       expect.soft(overflow, `${module.moduleName} at ${width}px horizontal overflow`).toBeLessThanOrEqual(1);
       expect.soft(issues.map(item => `${item.id}: ${item.nodes.map(node => node.target.join(' ')).join(', ')}`), `${module.moduleName} at ${width}px accessibility`).toEqual([]);
-      if (module.moduleSlug !== 'outcall') {
-        await page.getByTestId('module-page-guide').locator('summary').click();
-        await expect(page.getByTestId('module-page-guide').locator('details')).not.toHaveAttribute('open');
-        if (width === 390) {
-          const menu = page.getByRole('button', { name: `Open ${module.moduleName} navigation`, exact: true });
-          if (await menu.isVisible()) {
-            await menu.click();
-            const dialog = page.getByRole('dialog');
-            await expect(dialog).toBeVisible();
-            await expect(dialog.getByRole('button', { name: 'Close menu' })).toBeFocused();
-            await page.keyboard.press('Shift+Tab');
-            expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
-            await page.keyboard.press('Escape');
-            await expect(dialog).toHaveCount(0);
-            await expect(menu).toBeFocused();
-          }
+      await summary.click();
+      await expect(guide.locator('details')).not.toHaveAttribute('open');
+      if (width === 390) {
+        const menu = page.getByRole('button', { name: `Open ${module.moduleName} navigation`, exact: true });
+        if (await menu.isVisible()) {
+          await menu.click();
+          const dialog = page.getByRole('dialog');
+          await expect(dialog).toBeVisible();
+          await expect(dialog.getByRole('button', { name: 'Close menu' })).toBeFocused();
+          await page.keyboard.press('Shift+Tab');
+          expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
+          await page.keyboard.press('Escape');
+          await expect(dialog).toHaveCount(0);
+          await expect(menu).toBeFocused();
         }
       }
     }
@@ -105,7 +93,7 @@ test('documented module sections open with page guidance or a clear access expla
   await page.setViewportSize({ width: 1440, height: 1000 });
   mkdirSync(artifacts, { recursive: true });
   const visits: Array<{ module: string; path: string; status: number | undefined; heading: string; guidance: boolean; state: string | null; issues: unknown[]; overflow: number; mobileOverflow: number }> = [];
-  for (const guide of HELP_GUIDES.filter(item => MODULE_HELP_GUIDE_IDS.some(id => id === item.id) && item.id !== 'outcall')) {
+  for (const guide of HELP_GUIDES.filter(item => MODULE_HELP_GUIDE_IDS.some(id => id === item.id))) {
     for (const section of guide.pages) {
       const response = await page.goto(`${WEB}/modules/${guide.id}${section.path === '/' ? '' : section.path}`, { waitUntil: 'domcontentloaded' });
       await waitForModuleContent(page);

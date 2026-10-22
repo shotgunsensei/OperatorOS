@@ -1,10 +1,11 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "phase": 37,
-  "evidenceDate": "2026-08-26",
-  "phaseStatus": "RECONSTRUCTED_SOURCE_LOCAL",
-  "activationAllowed": false,
-  "blockerCode": "PROVIDER_ACCEPTANCE_REQUIRED",
+  "evidenceDate": "2026-10-20",
+  "phaseStatus": "APPLICATION_SOURCE_ACTIVE_PROVIDER_GATED",
+  "applicationLaunchAllowed": true,
+  "liveProviderAcceptanceProven": false,
+  "blockerCode": "COMMERCIAL_DECISION_AND_PROVIDER_ACCEPTANCE_REQUIRED",
   "source": {
     "historicalRepository": null,
     "historicalCommit": null,
@@ -34,7 +35,7 @@
         "apps/web/src/components/module-shells/OutCallWorkspace.tsx"
       ],
       "targetCount": 7,
-      "fingerprintSha256": "906257d8e67f9d88855e95ce27cebbdd26c3ebc204c2548c11e7f12148d3247e",
+      "fingerprintSha256": "cefb6873026a921652a95df60e3ef683dbfc4cd2076085f1e988d190ef163589",
       "automatedEvidence": [
         "apps/api/test/outcall-adapter.test.ts",
         "apps/api/test/outcall-phase12b-db.test.ts",
@@ -67,25 +68,31 @@
     "configuredOutCallOrTwilioVariableNamesObservedLocally": 0,
     "note": "No credentials were read or fabricated. Provider acceptance remains an external activation gate after local source reconstruction."
   },
-  "activationLock": {
-    "sdkCatalogStatus": "coming_soon",
-    "marketingStatus": "derived_from_sdk_coming_soon",
-    "ecosystemStatus": "planned",
-    "deploymentRegistryEnabled": false,
-    "existingDatabaseStatusAfterSeed": "coming_soon",
+  "activationPolicy": {
+    "sdkCatalogStatus": "live",
+    "marketingStatus": "derived_from_sdk_live",
+    "ecosystemStatus": "active",
+    "deploymentRegistryEnabled": true,
+    "existingDatabaseStatusAfterSeed": "live",
+    "newEnrollment": "closed_pending_commercial_decision",
+    "liveProvider": "requires_configuration_flag_and_current_account_approval",
     "checks": {
       "parityClassifiesAuthorizedReconstruction": true,
       "recoveryCapabilityActive": true,
       "canonicalTargetsPresent": true,
       "automatedEvidencePresent": true,
       "importedBoundaryRecordsReconstruction": true,
-      "importedBoundaryRequiresPlannedStatus": true,
-      "sdkCatalogComingSoon": true,
+      "importedBoundaryPreservesHistoricalLockEvidence": true,
+      "sdkCatalogLaunchable": true,
       "marketingCatalogDerivesCanonicalStatus": true,
-      "deploymentRegistryDisabled": true,
-      "ecosystemRegistryPlanned": true,
-      "existingDatabaseRowsRelocked": true,
-      "productionVerifierRequiresLock": true
+      "deploymentRegistryEnabled": true,
+      "ecosystemRegistryActive": true,
+      "existingDatabaseRowsFollowCatalog": true,
+      "newCommerceRemainsClosed": true,
+      "productionVerifierRequiresRegistrationAndReadiness": true,
+      "providerRequiresLiveFlagAndApproval": true,
+      "productionCannotUseTestAdapter": true,
+      "approvalRemainsExpiringAndPrivileged": true
     },
     "failClosed": true
   },
@@ -96,7 +103,8 @@
     "everyCurrentSourceOutcomeMappedAndTested": true,
     "originalHistoricalLiteralParityClaimed": false,
     "completeTwilioSandboxLifecycleProven": false,
-    "registryEnabledOnlyAfterAllGates": true,
+    "applicationLaunchRequiresCentralEntitlement": true,
+    "providerAndCommerceBoundariesPreserved": true,
     "goLiveAccepted": false
   }
 }

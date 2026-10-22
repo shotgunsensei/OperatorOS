@@ -3,7 +3,7 @@ import { hashPassword } from './auth.js';
 import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules, tenants, tenantUsers, tenantModules, tenantUserModuleAccess, platformComponents } from '../schema.js';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
-import { MODULE_CATALOG, MODULE_CATALOG_BY_SLUG, PLATFORM_COMPONENTS } from '@operatoros/sdk';
+import { MODULE_CATALOG, MODULE_CATALOG_BY_SLUG, PLATFORM_COMPONENTS, isEligibleCompanionModuleKey } from '@operatoros/sdk';
 import {
   FREE_ACCOUNT_APP_SLUGS,
   FREE_ACCOUNT_METADATA_PATCH,
@@ -493,32 +493,23 @@ interface ModuleSeedSpec {
   planMin: 'starter' | 'pro' | 'elite';
   ord: number;
   /**
-   * Default add-on price in USD cents seeded into modules.metadata
-   * on first insert. After insert, admins can edit modules.metadata
-   * to override; we never stomp admin-edited values on restart.
-   *
-   * Pricing rule (matches Stripe price catalog):
-   *   starter-tier addon = $19/mo (1900 cents)
-   *   pro-tier addon     = $29/mo (2900 cents)
-   *   elite-tier addon   = $49/mo (4900 cents)
+   * Commercial display metadata for approved Stack companions. It does not
+   * authorize checkout or establish a new price. Existing admin-edited
+   * metadata is preserved on restart.
    */
   addonPriceCents: number;
 }
 
-// Default addon prices keyed by plan tier. The buy_addon CTA needs a
-// non-null `addon_price_cents` from the API to render — without these
-// seeded into `modules.metadata.addonPriceCents`, the UI silently
-// suppresses the "Buy Add-on" button even when STRIPE_PRICE_ADDON_<SLUG>
-// is configured. Per-tier defaults are baked into the seed; admins can
-// edit `modules.metadata` to set custom prices per module.
+// The approved companion roster owns eligibility. Application availability
+// alone must not assign OutCall a commercial price or reopen legacy sales.
 const STACK_COMPANION_PRICE_CENTS = 2900;
 
 // Derived from the SDK MODULE_CATALOG so the slug list, canonical origins,
 // plan tiers, and lifecycle defaults can never drift between the API seed
 // and web app. The seed-specific fields below
 // (description, category, defaultStatus, addonPriceCents) come from
-// the catalog where it carries them; addonPriceCents is computed from
-// the plan tier so we don't duplicate per-tier pricing in two places.
+// the catalog where it carries them; addonPriceCents follows the existing
+// approved Stack companion terms rather than the legacy plan tier.
 const MODULE_SEED_SPECS: ModuleSeedSpec[] = MODULE_CATALOG.map(c => ({
   slug: c.slug,
   name: c.name,
@@ -530,7 +521,7 @@ const MODULE_SEED_SPECS: ModuleSeedSpec[] = MODULE_CATALOG.map(c => ({
   canonicalBaseUrl: c.canonicalBaseUrl,
   planMin: c.planMin,
   ord: c.ord,
-  addonPriceCents: c.commercialType === 'addon' && c.defaultStatus !== 'coming_soon'
+  addonPriceCents: c.commercialType === 'addon' && c.defaultStatus !== 'coming_soon' && isEligibleCompanionModuleKey(c.slug)
     ? STACK_COMPANION_PRICE_CENTS
     : 0,
 }));
@@ -682,13 +673,6 @@ export async function seedModules() {
       }
       if (spec.defaultStatus === 'live') {
         updates.status = 'live';
-      }
-      // Phase 37 intentionally overrides the normal admin-promotion policy
-      // for OutCall. Its source tree has not been recovered and provider
-      // sandbox acceptance has not been recorded, so an older active row
-      // must fail closed again on the next release/seed run.
-      if (spec.slug === 'outcall' && spec.defaultStatus === 'coming_soon') {
-        updates.status = 'coming_soon';
       }
       // Task #109: keep TradeFlowKit's push adapter pointed at the
       // tradeflowkit_v1 shape (bearer-token, flat body). Only nudge rows

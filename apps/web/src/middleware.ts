@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { fieldNodeManagementPath } from '../../../packages/modules/fieldnode-management-paths.js';
 import { findAudienceLane } from './lib/audience-lanes';
 import { LUNCH_BREAK_HOST, lunchBreakHostPathAllowed } from '../../../packages/modules/lunch-break.js';
 import {
@@ -530,6 +531,33 @@ export async function middleware(req: NextRequest) {
   if (context.module?.slug === 'techdeck') {
     const destination = techDeckPublicDestination(pathname);
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+  }
+  // Hardware introduction and ordering information are public. The management
+  // path still passes through the existing host-session and tenant-module gate.
+  if (context.module?.slug === 'fieldnode') {
+    // The frozen consumer inventory is classified before the fixed central
+    // gateway; there is no arbitrary-origin or standalone/device-agent relay.
+    const localPrefix = context.surface === 'local-module' ? '/modules/fieldnode' : '';
+    const managementApi = pathname.slice(localPrefix.length);
+    if (managementApi === '/manage' || managementApi.startsWith('/manage/')) {
+      const registered = fieldNodeManagementPath(req.method, managementApi + req.nextUrl.search, req.headers.get('upgrade')?.toLowerCase() === 'websocket');
+      if (!registered) return withAuthSecurityHeaders(NextResponse.json({
+        error: 'FieldNode management route is not registered', code: 'FIELDNODE_GATEWAY_ROUTE_NOT_REGISTERED',
+      }, { status: 404 }));
+      if (registered.kind === 'html' && !req.cookies.has(AUTH_COOKIE)) return await redirectToLogin(req, context);
+      if (context.surface === 'local-module') {
+        return withAuthSecurityHeaders(rewriteTo(`/api/modules/fieldnode${managementApi}`, req));
+      }
+      return withAuthSecurityHeaders(NextResponse.next());
+    }
+    if (context.surface === 'module' && pathname === '/') {
+      // next.config's exact-host relative rewrite serves the introduction
+      // without proxying an absolute URL back through this middleware.
+      return withAuthSecurityHeaders(NextResponse.next());
+    }
+    if (context.surface === 'local-module' && /^\/modules\/fieldnode\/?$/u.test(pathname)) {
+      return withAuthSecurityHeaders(rewriteTo('/fieldnode', req));
+    }
   }
   if (context.module?.slug === 'pulsedesk') {
     const destination = pulseDeskPublicDestination(pathname);

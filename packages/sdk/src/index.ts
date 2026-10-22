@@ -2,8 +2,11 @@ export * from './catalog.js';
 export * from './ecosystem.js';
 export * from './product-value.js';
 export * from './products.js';
+export * from './tool-modules.js';
+export * from './tool-bridge.js';
 export * from './shared-platform.js';
 export * from './techdeck-resolution.js';
+export * from './fieldnode-identity.js';
 
 export interface HealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';

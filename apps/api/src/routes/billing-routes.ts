@@ -33,6 +33,7 @@ import {
   registerTorqueTokenWebhookHandler,
 } from '../lib/operatoros-token-billing.js';
 import { getPaymentProviderAdapter } from '../lib/shared-provider-adapters.js';
+import { receiveVerifiedToolPurchaseEvent, ToolPurchaseProviderError } from '../lib/tool-purchase-provider.js';
 import { stripeWebhookFailureDiagnostic, type StripeWebhookFailureStage } from '../lib/stripe-webhook-diagnostics.js';
 import {
   COMPANION_MODULES,
@@ -563,6 +564,15 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }
       const event = await paymentAdapter.verifyWebhook(rawBody, signature) as any;
 
+      // Independent one-time tenant products own their immutable order receipt.
+      // Classify locally before Torque's provider correlation or legacy grants.
+      failureStage = 'event_processing';
+      const toolPurchase = await receiveVerifiedToolPurchaseEvent({ event, rawBody });
+      if (toolPurchase) {
+        return reply.code(200).send({ received: true, kind: 'tool_purchase', handled: true,
+          duplicate: toolPurchase.duplicate, ignored: toolPurchase.ignored });
+      }
+
       // Canonical revenue dispatcher: Torque credit events are routed before
       // the generic plan/add-on claim. Signature verification happens exactly
       // once, and the shared receipt owns exactly-once fulfillment.
@@ -672,6 +682,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       return { received: true, kind, ...result };
     } catch (err: any) {
       console.error('[billing webhook] Verification or processing failed', stripeWebhookFailureDiagnostic(failureStage, err));
+      if (err instanceof ToolPurchaseProviderError) {
+        return reply.code(err.statusCode).send({ error: 'Tool payment event validation failed', code: err.code });
+      }
       if (err instanceof OperatorOsTokenBillingError) {
         return reply.code(err.statusCode).send({
           error: 'Torque payment event validation failed',

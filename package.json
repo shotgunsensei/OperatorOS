@@ -47,7 +47,7 @@
     "verify:deployment-scope": "node scripts/verify-deployment-scope.mjs",
     "phase39:recovery": "node scripts/phase39/recovery-rehearsal.mjs",
     "verify:hardening:phase39": "node scripts/phase39/generate-sbom.mjs && node scripts/phase39/security-scan.mjs && node --test scripts/phase39/*.test.mjs && pnpm --filter @operatoros/api exec tsx --test --test-concurrency=1 test/phase39-production-hardening.test.ts test/production-env-preflight.test.ts",
-    "verify:outcall:phase37": "node scripts/phase20-product-truth.mjs && node scripts/phase37-outcall-source-gate.mjs && node --test scripts/phase37/outcall-source-gate.test.mjs scripts/phase20-product-truth.test.mjs",
+    "verify:outcall:phase37": "node scripts/phase20-product-truth.mjs && node scripts/phase37-outcall-source-gate.mjs && node --test scripts/phase37/*.test.mjs scripts/phase20-product-truth.test.mjs",
     "verify:ninjamation:phase36": "node scripts/phase20-product-truth.mjs && node scripts/phase36-ninjamation-report.mjs && node --test scripts/phase36/ninjamation-contract.test.mjs scripts/phase20-product-truth.test.mjs",
     "verify:callcommand:phase35": "node scripts/phase20-product-truth.mjs && node scripts/phase35-callcommand-report.mjs && node --test scripts/phase35/callcommand-contract.test.mjs scripts/phase20-product-truth.test.mjs",
     "verify:techdeck:phase26": "node scripts/phase20-product-truth.mjs && node scripts/phase26-techdeck-report.mjs",

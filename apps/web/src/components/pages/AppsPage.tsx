@@ -10,6 +10,7 @@ import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 import { EmptyState, ErrorState, PageHeader } from '@/components/ExperiencePrimitives';
 import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import LunchBreakEntry from '@/components/LunchBreakEntry';
+import IndependentToolsCatalog from '@/components/IndependentToolsCatalog';
 
 type AccessSource = 'plan' | 'addon' | 'trial' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
@@ -445,6 +446,8 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         title="Browse tools"
         description="Find the OperatorOS tool that matches the work you need to complete. Each card shows availability and the exact next step for this organization."
       />
+
+      <IndependentToolsCatalog />
 
       {loadError && (
         <div style={{ marginBottom: 24 }}>

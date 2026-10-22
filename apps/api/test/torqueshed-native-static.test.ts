@@ -8,6 +8,19 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 function files(path: string): string[] { return readdirSync(path).flatMap(name => { const full = join(path, name); return statSync(full).isDirectory() ? files(full) : [full]; }); }
 
+test('native CI database is explicitly disposable and passes the real target guard', async () => {
+  const workflow = read('.github/workflows/torqueshed-native.yml');
+  const contracts = workflow.match(/  contracts:\r?\n([\s\S]*?)(?=\r?\n  android-device:)/u)?.[1];
+  assert.ok(contracts, 'native contract job must exist');
+  const databaseName = contracts.match(/^\s+POSTGRES_DB:\s*(\S+)\s*$/mu)?.[1];
+  const databaseUrl = contracts.match(/^\s+DATABASE_URL:\s*(\S+)\s*$/mu)?.[1];
+  const disposable = contracts.match(/^\s+PARITY_DATABASE_IS_DISPOSABLE:\s*["']?(1)["']?\s*$/mu)?.[1];
+  const { assertDisposableDatabaseEnvironment } = await import('../../../scripts/parity/lib/database.mjs');
+  const target = assertDisposableDatabaseEnvironment({ DATABASE_URL: databaseUrl, PARITY_DATABASE_IS_DISPOSABLE: disposable });
+  assert.equal(target.database, databaseName, 'test pool and service must target the same disposable database');
+  assert.ok(contracts.includes(`pg_isready -U postgres -d ${databaseName}`));
+});
+
 test('Phase 29 active native product is Expo Router and never imports migration evidence', () => {
   const appRoot = resolve(root, 'apps/torqueshed-native'); const source = files(appRoot).filter(path => /\.(ts|tsx|json)$/.test(path)).map(path => readFileSync(path, 'utf8')).join('\n');
   assert.match(read('apps/torqueshed-native/package.json'), /expo-router\/entry/);

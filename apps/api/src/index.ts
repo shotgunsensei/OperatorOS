@@ -42,6 +42,7 @@ import { registerSsoRoutes } from './routes/sso-routes.js';
 import { registerAdminRoutes } from './routes/admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
 import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
+import { registerToolModuleRoutes } from './routes/tool-module-routes.js';
 import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
 import { registerDiagnosticsRoutes } from './routes/diagnostics-routes.js';
 import { registerDirectoryRoutes } from './routes/directory-routes.js';
@@ -53,6 +54,8 @@ import { registerCrossModuleDataFabricRoutes } from './routes/cross-module-data-
 import { registerOperatorOsMessagingComplianceRoutes } from './routes/operatoros-messaging-compliance-routes.js';
 import { registerTenantMessengerRoutes } from './routes/tenant-messenger-routes.js';
 import { registerCoreSuiteTrialRoutes } from './routes/core-suite-trial-routes.js';
+import { registerFieldNodeIdentityRoutes } from './routes/fieldnode-identity-routes.js';
+import { registerFieldNodeManagementGatewayRoutes } from './routes/fieldnode-management-gateway-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import {
   startTorqueAssistReservationReaper,
@@ -292,6 +295,7 @@ await registerTenantAdminRoutes(app);
 await registerAdminRoutes(app);
 await registerPlatformRoutes(app);
 await registerEntitlementRoutes(app);
+await registerToolModuleRoutes(app);
 await registerEcosystemRoutes(app);
 await registerDiagnosticsRoutes(app);
 await registerDirectoryRoutes(app);
@@ -303,6 +307,8 @@ await registerCrossModuleDataFabricRoutes(app);
 await registerOperatorOsMessagingComplianceRoutes(app);
 await registerTenantMessengerRoutes(app);
 await registerCoreSuiteTrialRoutes(app);
+await registerFieldNodeIdentityRoutes(app);
+await registerFieldNodeManagementGatewayRoutes(app);
 
 const databaseReleaseVerifiedBySupervisor = process.env.OPERATOROS_DATABASE_RELEASE_VERIFIED === '1';
 if (!databaseReleaseVerifiedBySupervisor) {

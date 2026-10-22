@@ -17,8 +17,22 @@ import {
   listUserNotifications,
   markUserNotificationRead,
 } from '../lib/shared-notification-outbox.js';
-import { isOperatorOSTestEnvironment } from '../lib/shared-service-safety.js';
 import { runDeterministicConnectorForTests } from '../lib/shared-provider-adapters.js';
+import { resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
+import {
+  BRANDFORGE_SYNC_HANDLER,
+  BrandForgeSyncError,
+  enqueueBrandForgeSync,
+  executeBrandForgeSync,
+  type BrandForgeSyncServices,
+} from '../lib/brandforgeos-sync.js';
+import {
+  brandForgeConnectorAvailability,
+  brandForgeConnectorFailure,
+  brandForgeConnectorPolicy,
+  parseBrandForgeConnectorConfiguration,
+  parseBrandForgeConnectorSync,
+} from '../lib/brandforgeos-connector-policy.js';
 import { writeAudit } from '../lib/audit.js';
 import { resolveEntitlements } from '../lib/entitlement-resolver.js';
 import { tenantHasActiveApplicationStackCompanion } from '../lib/product-entitlements.js';
@@ -30,7 +44,6 @@ import {
   BRANDFORGE_WORKFLOWS,
   commentInput,
   exportInput,
-  integrationConnectInput,
   landingPageInput,
   leadInput,
   offerInput,
@@ -49,7 +62,6 @@ const readGuards = [requireTenantModuleAccess(MODULE_SLUG)];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
 const adminGuards = [...writeGuards, requireTenantAdmin];
 const EXPORT_HANDLER = 'brandforge.phase31.export.v1';
-const SYNC_HANDLER = 'brandforge.phase31.sync.v1';
 
 type Row = Record<string, any>;
 function tenant(request: FastifyRequest) {
@@ -146,20 +158,20 @@ async function exists(
   return Boolean(result.rows[0]);
 }
 
-function integrationCatalog(provider: string) {
-  return BRANDFORGE_INTEGRATION_CATALOG.find((item) => item.provider === provider);
-}
-
-async function brandForgeFeatures(request: FastifyRequest) {
-  const snapshot = await resolveEntitlements(actor(request), tenant(request));
+async function brandForgeFeaturesForActor(actorId: string, tenantId: string) {
+  const snapshot = await resolveEntitlements(actorId, tenantId);
   const features = snapshot?.modules.find((item) => item.slug === MODULE_SLUG && item.enabled)?.features ?? {};
-  if (!(await tenantHasActiveApplicationStackCompanion(tenant(request), 'brandforgeos'))) {
+  if (!(await tenantHasActiveApplicationStackCompanion(tenantId, 'brandforgeos'))) {
     return features;
   }
   return BRANDFORGE_INTEGRATION_CATALOG.reduce<Record<string, unknown>>(
     (complete, item) => ({ ...complete, [item.requiredFeature]: true }),
     { ...features },
   );
+}
+
+async function brandForgeFeatures(request: FastifyRequest) {
+  return brandForgeFeaturesForActor(actor(request), tenant(request));
 }
 
 async function requireIntegrationEntitlement(
@@ -369,37 +381,15 @@ registerSharedJobHandler(EXPORT_HANDLER, async (context) => {
   );
 });
 
-registerSharedJobHandler(SYNC_HANDLER, async (context) => {
-  const syncId = String(context.payload.syncId || '');
-  const selected = await db.execute(
-    sql`SELECT run.*,link.provider_key,link.status integration_status FROM brandforge_sync_runs run JOIN brandforge_integrations link ON link.tenant_id=run.tenant_id AND link.id=run.integration_id WHERE run.tenant_id=${context.tenantId} AND run.id=${syncId} LIMIT 1`,
-  );
-  const run = selected.rows[0] as Row | undefined;
-  if (!run)
-    throw Object.assign(new Error('Sync run not found'), { code: 'BRANDFORGE_SYNC_NOT_FOUND' });
-  await db.execute(
-    sql`UPDATE brandforge_sync_runs SET status='processing',started_at=NOW() WHERE tenant_id=${context.tenantId} AND id=${syncId}`,
-  );
-  if (!isOperatorOSTestEnvironment()) {
-    await db.execute(
-      sql`UPDATE brandforge_sync_runs SET status='dead_letter',error_code='PROVIDER_ADAPTER_UNAVAILABLE',completed_at=NOW() WHERE tenant_id=${context.tenantId} AND id=${syncId}`,
-    );
-    throw Object.assign(new Error('Provider-specific sync adapter is unavailable'), {
-      code: 'PROVIDER_ADAPTER_UNAVAILABLE',
-    });
-  }
-  const receipt = runDeterministicConnectorForTests({
-    kind: integrationCatalog(String(run.provider_key))?.kind === 'webhook' ? 'webhook' : 'oauth',
-    payload: { provider: run.provider_key, syncId },
-    idempotencyKey: syncId,
-  });
-  await db.execute(
-    sql`UPDATE brandforge_sync_runs SET status='completed',processed_items=1,total_items=1,result=${receipt},completed_at=NOW() WHERE tenant_id=${context.tenantId} AND id=${syncId}`,
-  );
-  await db.execute(
-    sql`UPDATE brandforge_integrations SET last_sync_at=NOW(),health=${{ state: 'test', externalDelivery: false }},updated_at=NOW() WHERE tenant_id=${context.tenantId} AND id=${run.integration_id}`,
-  );
-});
+const syncServices: BrandForgeSyncServices = {
+  database: db,
+  enqueue: enqueueSharedJob,
+  resolveAccess: resolveTenantModuleAccess,
+  hasFeature: async (actorId, tenantId, feature) =>
+    (await brandForgeFeaturesForActor(actorId, tenantId))[feature] === true,
+  execute: runDeterministicConnectorForTests,
+};
+registerSharedJobHandler(BRANDFORGE_SYNC_HANDLER, context => executeBrandForgeSync(context, syncServices));
 
 export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
   app.get(`${base}/product-contract`, { preHandler: readGuards }, async (request) => ({
@@ -409,8 +399,7 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     reportTypes: BRANDFORGE_REPORT_TYPES,
     integrations: BRANDFORGE_INTEGRATION_CATALOG.map((item) => ({
       ...item,
-      runtimeAvailable: isOperatorOSTestEnvironment(),
-      availability: isOperatorOSTestEnvironment() ? 'test_only' : 'planned',
+      ...brandForgeConnectorAvailability(item.provider),
     })),
     authority: {
       identity: 'operatoros',
@@ -729,8 +718,7 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     return {
       integrations: BRANDFORGE_INTEGRATION_CATALOG.map((item) => ({
         ...item,
-        runtimeAvailable: isOperatorOSTestEnvironment(),
-        availability: isOperatorOSTestEnvironment() ? 'test_only' : 'planned',
+        ...brandForgeConnectorAvailability(item.provider),
         entitled: features[item.requiredFeature] === true,
         connection: byProvider.get(item.provider) ?? null,
       })),
@@ -743,21 +731,12 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     `${base}/integrations/:provider/connect`,
     { preHandler: adminGuards },
     async (request, reply) => {
-      if (!isOperatorOSTestEnvironment()) {
-        return reply.code(503).send({
-          error: 'Direct provider connections are not available in this release. Export the approved campaign package for deliberate provider handoff.',
-          code: 'PROVIDER_ADAPTER_UNAVAILABLE',
-        });
-      }
-      const catalog = integrationCatalog(param(request, 'provider'));
-      if (!catalog)
-        return reply.code(404).send({
-          error: 'Integration provider is unsupported',
-          code: 'BRANDFORGE_PROVIDER_UNSUPPORTED',
-        });
+      const policy = brandForgeConnectorPolicy(param(request, 'provider'));
+      if (!policy.allowed) return reply.code(policy.statusCode).send(brandForgeConnectorFailure(policy));
+      const catalog = policy.catalog;
       let input;
       try {
-        input = parsePhase31(integrationConnectInput, body(request));
+        input = parseBrandForgeConnectorConfiguration(body(request));
       } catch (error) {
         return failure(reply, error);
       }
@@ -808,43 +787,26 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     `${base}/integrations/:provider/sync`,
     { preHandler: adminGuards },
     async (request, reply) => {
-      if (!isOperatorOSTestEnvironment()) {
-        return reply.code(503).send({
-          error: 'Direct provider synchronization is not available in this release. No external delivery was attempted.',
-          code: 'PROVIDER_ADAPTER_UNAVAILABLE',
-        });
+      const policy = brandForgeConnectorPolicy(param(request, 'provider'));
+      if (!policy.allowed) return reply.code(policy.statusCode).send(brandForgeConnectorFailure(policy));
+      const catalog = policy.catalog;
+      let input;
+      try {
+        input = parseBrandForgeConnectorSync(body(request));
+      } catch (error) {
+        return failure(reply, error);
       }
-      const catalog = integrationCatalog(param(request, 'provider'));
-      if (!catalog)
-        return reply.code(404).send({
-          error: 'Integration provider is unsupported',
-          code: 'BRANDFORGE_PROVIDER_UNSUPPORTED',
-        });
       if (!(await requireIntegrationEntitlement(request, reply, catalog.requiredFeature))) return;
-      const linkResult = await db.execute(
-        sql`SELECT * FROM brandforge_integrations WHERE tenant_id=${tenant(request)} AND provider_key=${param(request, 'provider')} AND status IN ('ready','degraded') LIMIT 1`,
-      );
-      const link = linkResult.rows[0] as Row | undefined;
-      if (!link)
-        return reply
-          .code(409)
-          .send({ error: 'Integration is not ready', code: 'BRANDFORGE_INTEGRATION_NOT_READY' });
-      const created = await db.execute(
-        sql`INSERT INTO brandforge_sync_runs (tenant_id,integration_id,requested_by_user_id) VALUES (${tenant(request)},${link.id},${actor(request)}) RETURNING *`,
-      );
-      const run = created.rows[0] as Row;
-      const queued = await enqueueSharedJob({
-        tenantId: tenant(request),
-        moduleId: await moduleId(),
-        requestedByUserId: actor(request),
-        handlerKey: SYNC_HANDLER,
-        payload: { syncId: run.id },
-        idempotencyKey: String(body(request).idempotencyKey || run.id),
-      });
-      await db.execute(
-        sql`UPDATE brandforge_sync_runs SET shared_job_id=${(queued.job as Row).id} WHERE id=${run.id}`,
-      );
-      return reply.code(202).send({ syncRun: run, job: queued.job, duplicate: queued.duplicate });
+      try {
+        const result = await enqueueBrandForgeSync({
+          tenantId: tenant(request), moduleId: await moduleId(), actorId: actor(request),
+          provider: catalog.provider, idempotencyKey: input.idempotencyKey,
+        }, syncServices);
+        return reply.code(202).send(result);
+      } catch (error) {
+        if (error instanceof BrandForgeSyncError) return reply.code(error.statusCode).send({ error: error.message, code: error.code });
+        throw error;
+      }
     },
   );
   app.get(

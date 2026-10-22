@@ -332,8 +332,14 @@ function checkOutCall(env, issues) {
   if (isPresent(env, 'TWILIO_PHONE_NUMBER') && !/^\+[1-9]\d{7,14}$/.test(env.TWILIO_PHONE_NUMBER)) {
     addIssue(issues, 'outcall', 'TWILIO_PHONE_NUMBER', 'must be an E.164 phone number');
   }
-  if (isPresent(env, 'TWILIO_ALLOWED_COUNTRIES') && !env.TWILIO_ALLOWED_COUNTRIES.split(',').some(value => ['US', 'CA'].includes(value.trim().toUpperCase()))) {
-    addIssue(issues, 'outcall', 'TWILIO_ALLOWED_COUNTRIES', 'must include US or CA for the controlled launch');
+  if (isPresent(env, 'TWILIO_ALLOWED_COUNTRIES')) {
+    const allowedCountries = new Set(env.TWILIO_ALLOWED_COUNTRIES
+      .split(',')
+      .map(value => value.trim().toUpperCase())
+      .filter(Boolean));
+    if (allowedCountries.size === 0 || [...allowedCountries].some(country => !['US', 'CA'].includes(country))) {
+      addIssue(issues, 'outcall', 'TWILIO_ALLOWED_COUNTRIES', 'must contain a nonempty subset of US and CA for the controlled launch');
+    }
   }
   if (!['1', 'true', 'enabled'].includes(String(env.OUTCALL_LIVE_PROVIDER).toLowerCase())) {
     addIssue(issues, 'outcall', 'OUTCALL_LIVE_PROVIDER', 'must be explicitly enabled after controlled provider acceptance');

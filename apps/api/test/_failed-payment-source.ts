@@ -78,6 +78,7 @@ export function actualWebhookHandler(context: Record<string, unknown>) {
   const module = { exports: undefined as any };
   runInNewContext(code, { module, Buffer, console: { log() {}, warn() {}, error() {} },
     CALLCOMMAND_NUMBER_FEATURE_KEY: 'managed_phone_numbers', OperatorOsTokenBillingError: class extends Error {},
+    receiveVerifiedToolPurchaseEvent: async () => null, ToolPurchaseProviderError: class extends Error {},
     stripeWebhookFailureDiagnostic: () => ({}), ...context });
   return module.exports;
 }
