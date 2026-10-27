@@ -14,6 +14,8 @@ import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildBrandForgeWorkflowFocus } from '@/lib/companion-workflow';
 import BrandSvgConceptExporter from './BrandSvgConceptExporter';
 import OutcomeWorkflowAction from './OutcomeWorkflowAction';
+import quality from './CreativeWorkspaceQuality.module.css';
+import { ErrorState } from '@/components/ExperiencePrimitives';
 
 type Tab = 'dashboard' | 'brands' | 'personas' | 'offers' | 'campaigns' | 'copy-studio' | 'calendar' | 'analytics' | 'ai-workflows' | 'strategy' | 'templates' | 'integrations' | 'reports' | 'activity' | 'admin' | 'settings';
 const tabs: Array<{ id: Tab; label: string; Icon: typeof LayoutDashboard }> = [
@@ -48,7 +50,7 @@ const inputStyle: React.CSSProperties = {
 const buttonStyle: React.CSSProperties = {
   border: 0,
   borderRadius: radius.sm,
-  background: 'linear-gradient(135deg,#a855f7,#ec4899)',
+  background: 'linear-gradient(135deg,#7c3aed,#be185d)',
   color: '#fff',
   fontWeight: 700,
   padding: '10px 15px',
@@ -128,6 +130,7 @@ export default function BrandForgeWorkspace({ routePath, tenantKey, embedded = f
   const [completeData, setCompleteData] = useState<Record<string, any>>({});
   const [calendarMonth, setCalendarMonth] = useState(new Date().toISOString().slice(0, 7));
   const [loading, setLoading] = useState(true);
+  const [loadedTab, setLoadedTab] = useState<Tab | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -190,6 +193,7 @@ export default function BrandForgeWorkspace({ routePath, tenantKey, embedded = f
           const plan = await moduleShellApi.brandforgeos.planUsage(); setCompleteData({ contract, plan });
         }
       }
+      setLoadedTab(tab);
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -253,14 +257,15 @@ export default function BrandForgeWorkspace({ routePath, tenantKey, embedded = f
   return (
     <div
       id="brandforgeos-workspace"
+      className={quality.workspace}
       data-testid="brandforgeos-workspace"
       data-evidence="persisted_records_only"
       tabIndex={-1}
       style={{
-        minHeight: '100vh',
-        background: 'radial-gradient(circle at 80% 0%,rgba(168,85,247,.14),transparent 35%),#09070f',
+        minHeight: embedded ? 0 : '100vh',
+        background: embedded ? 'transparent' : 'radial-gradient(circle at 80% 0%,rgba(168,85,247,.14),transparent 35%),#09070f',
         color: semantic.text,
-        padding: `0 ${space.xxl}px ${space.xxl}px`,
+        padding: embedded ? 0 : `0 clamp(16px, 4vw, ${space.xxl}px) ${space.xxl}px`,
       }}
     >
       {!embedded && <header
@@ -312,7 +317,7 @@ export default function BrandForgeWorkspace({ routePath, tenantKey, embedded = f
         ))}
       </nav>}
 
-      {error && (
+      {error && loadedTab === tab && (
         <div
           role="alert"
           style={{
@@ -332,6 +337,8 @@ export default function BrandForgeWorkspace({ routePath, tenantKey, embedded = f
       )}
       {loading ? (
         <div style={{ ...cardStyle, color: semantic.textMuted }}>Loading your creative workspace…</div>
+      ) : loadedTab !== tab ? (
+        <ErrorState title="Creative workspace unavailable" description={error || 'Could not load this creative workspace.'} action={<button type="button" style={subtleButton} onClick={() => void load()}>Try again</button>} />
       ) : (
         <>
           {tab === 'dashboard' && <DashboardPanel dashboard={dashboard} campaigns={campaigns} calendar={calendar} navigate={navigate} hrefFor={hrefFor} />}
@@ -1521,7 +1528,7 @@ function GenerationPanel({ generations, brands, campaigns, provider, contract, s
         <Field label="Brief" value={prompt} onChange={setPrompt} required multiline />
         <Select label="Brand kit" value={brandId} onChange={setBrandId} options={brands.map((item) => [item.id, item.name])} />
         <Select label="Campaign" value={campaignId} onChange={setCampaignId} options={campaigns.map((item) => [item.id, item.name])} />
-        <Submit saving={saving || provider.name === 'disabled'} label="Generate material" />
+        <Submit saving={saving} disabled={provider.name === 'disabled'} label="Generate material" />
       </CreateGrid>
       <div style={{ display: 'grid', gap: space.md }}>
         {generations.length ? (
@@ -1668,14 +1675,14 @@ function Select({ label, value, onChange, options, required }: { label: string; 
     </label>
   );
 }
-function Submit({ saving, label }: { saving: boolean; label: string }) {
+function Submit({ saving, label, disabled = false }: { saving: boolean; label: string; disabled?: boolean }) {
   return (
     <button
       type="submit"
-      disabled={saving}
+      disabled={saving || disabled}
       style={{
         ...buttonStyle,
-        opacity: saving ? 0.55 : 1,
+        opacity: saving || disabled ? 0.55 : 1,
         display: 'inline-flex',
         justifyContent: 'center',
         alignItems: 'center',

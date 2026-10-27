@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { authApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import { brand } from '@/lib/brand';
+import AccountFlowFrame from './AccountFlowFrame';
 
 interface ForgotPasswordPageProps {
   onSwitch: (page: 'login' | 'reset-password') => void;
@@ -30,30 +31,10 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
   };
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: brand.bgPrimary, padding: 'clamp(16px, 4vw, 32px)',
-    }}>
-      <div style={{
-        width: '100%', maxWidth: 440, background: brand.bgSecondary,
-        border: `1px solid ${brand.borderSoft}`, borderRadius: 16,
-        padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 12, margin: '0 auto 16px',
-            background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, fontWeight: 800, color: brand.accentInk,
-          }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: brand.textPrimary, margin: 0 }}>Reset your OperatorOS access</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
-            {sent ? 'If an account uses this email, reset instructions are on the way.' : 'Enter your email and we’ll send a reset link.'}
-          </p>
-        </div>
+    <AccountFlowFrame title="Reset your OperatorOS access" description={sent ? 'If an account uses this email, reset instructions are on the way.' : 'Enter your email and we will send reset instructions.'}>
 
         {error && (
-          <div style={{
+          <div role="alert" style={{
             padding: '10px 14px', marginBottom: 16, borderRadius: 8,
             background: 'rgba(248,81,73,0.1)', border: `1px solid ${colors.accentRed}`,
             color: colors.accentRed, fontSize: 13,
@@ -63,8 +44,8 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
         {!sent ? (
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Email</label>
-              <input data-testid="input-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required
+              <label htmlFor="forgot-email" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Email</label>
+              <input id="forgot-email" autoComplete="email" data-testid="input-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required
                 style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: `1px solid ${brand.borderSoft}`, background: brand.bgPrimary, color: brand.textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
                 placeholder="you@example.com" />
             </div>
@@ -75,7 +56,7 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
           </form>
         ) : (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div data-testid="reset-sent" style={{ color: colors.accentGreen, fontSize: 14, marginBottom: 16 }}>
+            <div data-testid="reset-sent" role="status" style={{ color: colors.accentGreen, fontSize: 14, marginBottom: 16 }}>
               If that email exists, reset instructions have been sent.
             </div>
             <button
@@ -92,9 +73,8 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
 
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <button data-testid="link-login" onClick={() => onSwitch('login')}
-            style={{ background: 'none', border: 'none', color: colors.accent, cursor: 'pointer', fontSize: 13 }}>Back to sign in</button>
+            style={{ background: 'none', border: 'none', color: '#9cc8ff', cursor: 'pointer', fontSize: 13 }}>Back to sign in</button>
         </div>
-      </div>
-    </div>
+    </AccountFlowFrame>
   );
 }

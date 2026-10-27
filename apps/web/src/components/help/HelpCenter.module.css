@@ -89,7 +89,7 @@
 .supportCard svg { flex: none; color: #f87171; }
 .supportCard span { display: grid; gap: 4px; }
 .supportCard small { max-width: 700px; color: #aebed0; line-height: 1.55; }
-.supportCard a { flex: none; padding: 9px 12px; border-radius: 9px; background: #ef4444; color: #fff; text-decoration: none; font-size: 12px; font-weight: 850; }
+.supportCard a { flex: none; padding: 9px 12px; border-radius: 9px; background: #b91c1c; color: #fff; text-decoration: none; font-size: 12px; font-weight: 850; }
 .returnLinks { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 22px; }
 .returnLinks a { color: #9fb0c3; font-size: 12px; }
 .returnLinks a:hover { color: #fff; }

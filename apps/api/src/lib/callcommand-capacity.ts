@@ -261,6 +261,7 @@ export async function reconcileCallCommandRealtimeUsage(input: {
   inputTokens: number;
   outputTokens: number;
   occurredAt?: Date;
+  sidebandOwnership?: import('./callcommand-realtime-ownership.js').CallCommandRealtimeOwnership;
 }) {
   const providerEventId = boundedText(input.providerEventId, 160);
   if (!providerEventId) {
@@ -273,6 +274,13 @@ export async function reconcileCallCommandRealtimeUsage(input: {
     .update(JSON.stringify({ model: input.model, inputTokens, outputTokens }))
     .digest('hex');
   return db.transaction(async tx => {
+    if (input.sidebandOwnership) {
+      const { lockCallCommandRealtimeOwnership } = await import('./callcommand-realtime-ownership.js');
+      await lockCallCommandRealtimeOwnership(tx,input.sidebandOwnership,{allowTerminalUsage:true});
+      if (input.sidebandOwnership.tenantId !== input.tenantId || input.sidebandOwnership.callId !== input.callId) {
+        throw new CallCommandCapacityError('Usage ownership does not match','CALLCOMMAND_REALTIME_OWNER_EXPIRED',409);
+      }
+    }
     const claimed = first(await tx.execute(sql`
       INSERT INTO callcommand_ingestion_events(
         tenant_id,source,provider_event_id,payload_sha256,call_id,status,processed_at
@@ -388,23 +396,33 @@ export async function acquireCallCommandLane(input: AcquireLaneInput) {
     if (!['queued', 'ringing', 'in_progress'].includes(String(call.status))) {
       throw new CallCommandCapacityError('Call is not eligible for lane admission', 'CALLCOMMAND_CALL_NOT_ADMISSIBLE');
     }
+    const settings = first(await tx.execute(sql`
+      SELECT * FROM callcommand_tenant_runtime_settings WHERE tenant_id=${input.tenantId} LIMIT 1
+    `));
     await tx.execute(sql`
-      UPDATE callcommand_lane_leases
+      UPDATE callcommand_lane_leases AS lease
       SET status='expired',expired_at=${now},release_reason='lease_ttl_expired',updated_at=${now}
       WHERE tenant_id=${input.tenantId} AND status='active' AND expires_at<=${now}
+        AND NOT EXISTS(SELECT 1 FROM callcommand_calls unresolved
+          WHERE unresolved.tenant_id=lease.tenant_id AND unresolved.id=lease.call_id
+            AND unresolved.capacity_lease_id=lease.id AND unresolved.openai_realtime_call_id IS NOT NULL
+            AND unresolved.status IN ('ringing','in_progress','answered','connected')
+            AND unresolved.terminal_reconciled_at IS NULL AND unresolved.ended_at IS NULL)
     `);
     const existing = first(await tx.execute(sql`
       SELECT * FROM callcommand_lane_leases WHERE tenant_id=${input.tenantId} AND call_id=${input.callId} FOR UPDATE
     `));
-    if (existing?.status === 'active') return { admitted: true as const, duplicate: true, lease: existing, overflowPolicy: null };
+    if (existing?.status === 'active') {
+      if(new Date(existing.expires_at as Date|string).getTime()<=now.getTime()) {
+        return {admitted:false as const,duplicate:true,lease:existing,overflowPolicy:String(settings?.overflow_policy??'refuse'),code:'CALLCOMMAND_RECONCILIATION_REQUIRED'};
+      }
+      return { admitted: true as const, duplicate: true, lease: existing, overflowPolicy: null };
+    }
     if (existing?.status === 'released') {
       return { admitted: false as const, duplicate: true, lease: existing, overflowPolicy: 'refuse', code: 'CALL_ALREADY_RELEASED' };
     }
     const entitlement = first(await tx.execute(sql`
       SELECT * FROM callcommand_capacity_entitlements WHERE tenant_id=${input.tenantId} LIMIT 1
-    `));
-    const settings = first(await tx.execute(sql`
-      SELECT * FROM callcommand_tenant_runtime_settings WHERE tenant_id=${input.tenantId} LIMIT 1
     `));
     const projection = entitlement
       ? calculateCallCommandCapacity({
@@ -421,7 +439,7 @@ export async function acquireCallCommandLane(input: AcquireLaneInput) {
       return { admitted: false as const, duplicate: false, lease: null, overflowPolicy, code: 'NO_ACTIVE_CAPACITY' };
     }
     const active = await tx.execute(sql`
-      SELECT lane_number FROM callcommand_lane_leases
+      SELECT lane_number,expires_at FROM callcommand_lane_leases
       WHERE tenant_id=${input.tenantId} AND status='active' ORDER BY lane_number
     `);
     const used = new Set(active.rows.map(item => Number((item as Row).lane_number)));
@@ -430,7 +448,8 @@ export async function acquireCallCommandLane(input: AcquireLaneInput) {
       if (!used.has(candidate)) { laneNumber = candidate; break; }
     }
     if (!laneNumber) {
-      return { admitted: false as const, duplicate: false, lease: null, overflowPolicy, code: 'CAPACITY_EXHAUSTED' };
+      const unresolvedHold=active.rows.some(item=>new Date((item as Row).expires_at as Date|string).getTime()<=now.getTime());
+      return { admitted: false as const, duplicate: false, lease: null, overflowPolicy, code: unresolvedHold?'CALLCOMMAND_RECONCILIATION_REQUIRED':'CAPACITY_EXHAUSTED' };
     }
     const defaultTtl = Number(settings?.default_lease_seconds ?? 900);
     const maximumTtl = Number(settings?.maximum_lease_seconds ?? 14400);

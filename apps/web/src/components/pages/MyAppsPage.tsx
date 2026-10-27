@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -312,17 +312,30 @@ function toneBadge(tone: LaunchpadModule['statusTone']) {
 }
 
 export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
-  const { user } = useAuth();
+  const { user, captureIdentity } = useAuth();
   const { activeTenant, activeRole, tenants, allTenants, switchTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
-  const [summaries, setSummaries] = useState<ModuleSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const tenantId = activeTenant?.id;
+  const mounted = useRef(true);
+  const accessRead = useRef(0);
+  const scope = useRef({ user, tenantId });
+  if (scope.current.user !== user || scope.current.tenantId !== tenantId) scope.current = { user, tenantId };
+  const [access, setAccess] = useState<{
+    owner: () => boolean; summaries: ModuleSummary[]; loading: boolean; error: string | null;
+  }>(() => ({ owner: () => false, summaries: [], loading: true, error: null }));
+  const accessCurrent = access.owner();
+  const summaries = accessCurrent ? access.summaries : [];
+  const loading = accessCurrent ? access.loading : Boolean(tenantId);
+  const loadError = accessCurrent ? access.error : null;
   const [recentSlugs, setRecentSlugs] = useState<string[]>([]);
   const [switchingTenant, setSwitchingTenant] = useState(false);
   const [repairingTenant, setRepairingTenant] = useState(false);
-  const [trial, setTrial] = useState<CoreSuiteTrialStatus | null>(null);
-  const [trialBusy, setTrialBusy] = useState(false);
+  const trialRead = useRef(0);
+  const trialAction = useRef(0);
+  const [trialState, setTrialState] = useState<{ owner: () => boolean; value: CoreSuiteTrialStatus | null }>(() => ({ owner: () => false, value: null }));
+  const [trialActionState, setTrialActionState] = useState<{ owner: () => boolean; busy: boolean }>(() => ({ owner: () => false, busy: false }));
+  const trial = trialState.owner() ? trialState.value : null;
+  const trialBusy = trialActionState.owner() && trialActionState.busy;
 
   const userIsPlatformAdmin = isSuperAdmin((user as any)?.platformRole);
   const userIsTenantAdmin = hasTenantAdminRole(activeRole, (user as any)?.platformRole);
@@ -331,53 +344,61 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
     ? mergeTenantListsForSelector(tenants, allTenants)
     : tenants;
 
-  const load = async () => {
-    setLoadError(null);
-    if (!activeTenant?.id) {
-      setSummaries([]);
-      setLoading(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; accessRead.current++; trialRead.current++; trialAction.current++; };
+  }, []);
+
+  const load = useCallback(async () => {
+    const expectedScope = scope.current;
+    const identityCurrent = captureIdentity(user);
+    if (!mounted.current || !identityCurrent() || expectedScope.user !== user || expectedScope.tenantId !== tenantId) return;
+    const read = ++accessRead.current;
+    const current = () => mounted.current && accessRead.current === read
+      && scope.current === expectedScope && identityCurrent();
+    if (!current()) return;
+    setAccess({ owner: current, summaries: [], loading: Boolean(tenantId), error: null });
+    if (!tenantId) {
       return;
     }
     try {
-      setLoading(true);
       const data = (await modulesApi.list()) as ModuleListResponse;
-      setSummaries(data.modules ?? []);
+      if (!current()) return;
+      setAccess({ owner: current, summaries: data.modules ?? [], loading: false, error: null });
       if (data.ssoFallback && data.warning) toast(data.warning, 'error');
     } catch (err: any) {
-      setSummaries([]);
-      setLoadError('Your tool access could not be loaded. Nothing changed. Check your connection and try again.');
-    } finally {
-      setLoading(false);
+      if (!current()) return;
+      setAccess({ owner: current, summaries: [], loading: false, error: 'Your tool access could not be loaded. Nothing changed. Check your connection and try again.' });
     }
-  };
+  }, [tenantId, user, captureIdentity, toast]);
 
   useEffect(() => {
     setRecentSlugs(readRecent());
   }, []);
 
-  const loadTrial = async () => {
+  const loadTrial = useCallback(async () => {
+    const identityCurrent = captureIdentity(user);
+    if (!mounted.current || !user?.id || !identityCurrent()) return;
+    const read = ++trialRead.current;
+    const current = () => mounted.current && trialRead.current === read && identityCurrent();
+    setTrialState({ owner: current, value: null });
     try {
       const response = await trialApi.status();
-      setTrial(response.trial);
+      if (current()) setTrialState({ owner: current, value: response.trial });
     } catch {
-      setTrial(null);
+      if (current()) setTrialState({ owner: current, value: null });
     }
-  };
+  }, [user, captureIdentity]);
 
   useEffect(() => {
-    if (user?.id) void loadTrial();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+    void loadTrial();
+    return () => { trialRead.current++; };
+  }, [loadTrial]);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      await load();
-      if (!alive) return;
-    })();
-    return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTenant?.id]);
+    void load();
+    return () => { accessRead.current++; };
+  }, [load]);
 
   const cards = useMemo(() => {
     const bySlug = new Map(summaries.map((summary) => [summary.module.slug, summary]));
@@ -436,43 +457,54 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
 
   const handleTrialAction = async () => {
     if (!trial || trialBusy) return;
+    const identityCurrent = captureIdentity(user);
+    if (!mounted.current || !identityCurrent()) return;
     if (trial.state === 'expired' || trial.state === 'revoked' || trial.state === 'already_used') {
       onNavigate('billing');
       return;
     }
-    setTrialBusy(true);
+    const action = ++trialAction.current;
+    const current = () => mounted.current && trialAction.current === action && identityCurrent();
+    setTrialActionState({ owner: current, busy: true });
     try {
       if (trial.state === 'verification_required') {
         await authApi.requestEmailVerification(user?.email ?? '');
+        if (!current()) return;
         toast('Verification email requested. Open the single-use link in your inbox, then return here.', 'success');
         return;
       }
       if (trial.state === 'eligible') {
         const response = await trialApi.start();
-        setTrial(response.trial);
+        if (!current()) return;
+        const read = ++trialRead.current;
+        const trialCurrent = () => mounted.current && trialRead.current === read && identityCurrent();
+        setTrialState({ owner: trialCurrent, value: response.trial });
         toast('Your seven-day flagship application trial is active.', 'success');
-        if (response.trial.personalTenantId && activeTenant?.id !== response.trial.personalTenantId) {
+        if (response.trial.personalTenantId && scope.current.tenantId !== response.trial.personalTenantId) {
           await switchTenant(response.trial.personalTenantId);
         } else {
           await load();
         }
         return;
       }
-      if (trial.state === 'active' && trial.personalTenantId && activeTenant?.id !== trial.personalTenantId) {
+      if (trial.state === 'active' && trial.personalTenantId && scope.current.tenantId !== trial.personalTenantId) {
         await switchTenant(trial.personalTenantId);
       }
     } catch (error: any) {
+      if (!current()) return;
       if (error?.code === 'EMAIL_VERIFICATION_REQUIRED') {
         await loadTrial();
+        if (!current()) return;
         toast('Verify your email address before starting the trial.', 'error');
       } else if (error?.code === 'TRIAL_ALREADY_USED') {
         await loadTrial();
+        if (!current()) return;
         toast('This verified email has already used the evaluation trial.', 'error');
       } else {
         toast(error?.error || 'The trial action could not be completed. Nothing changed.', 'error');
       }
     } finally {
-      setTrialBusy(false);
+      if (current()) setTrialActionState({ owner: current, busy: false });
     }
   };
 

@@ -12,6 +12,8 @@ import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, radius, semantic, space } from '@/lib/design-tokens';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildStudyForgeWorkflowFocus } from '@/lib/companion-workflow';
+import { ErrorState, LoadingState } from '@/components/ExperiencePrimitives';
+import quality from './CreativeWorkspaceQuality.module.css';
 
 type Item = Record<string, any>;
 type CompleteWorkspace = {
@@ -65,11 +67,14 @@ export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'ov
   const [selected, setSelected] = useState<Item | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try { setWorkspace(await moduleShellApi.studyforge.completeWorkspace() as CompleteWorkspace); }
     catch (cause: any) { setError(cause?.message || 'Could not load the complete learning workspace.'); }
+    finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
 
@@ -104,10 +109,10 @@ export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'ov
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routePath]);
 
-  return <div data-testid="studyforge-phase33-complete" data-can-write={canWrite ? 'true' : 'false'} style={{ marginBottom: 36, minHeight: '100vh' }}>
-    {error && <div role="alert" style={{ ...shellCard, borderColor: 'rgba(248,113,113,.7)', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
+  return <div className={quality.workspace} data-testid="studyforge-phase33-complete" data-can-write={canWrite ? 'true' : 'false'} style={{ marginBottom: 28, minHeight: 0 }}>
+    {error && workspace && <div role="alert" style={{ ...shellCard, borderColor: 'rgba(248,113,113,.7)', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
     {!canWrite && <div role="status" data-testid="studyforge-complete-read-only" style={{ ...shellCard, borderColor: 'rgba(196,181,253,.55)', color: '#ddd6fe', marginBottom: 16 }}>Saved study sets, review sheets, flashcards, quiz questions, progress history, and allowed downloads remain available. Read-only access cannot save answers, study sessions, preferences, folders, countdowns, or changes to a set.</div>}
-    {!workspace ? <div style={shellCard}>Loading complete StudyForge learning records…</div> : <>
+    {!workspace ? error ? <ErrorState title="Study workspace unavailable" description={error} action={<button type="button" style={quiet} disabled={loading} onClick={() => void load()}>Try again</button>} /> : <LoadingState label="Loading complete StudyForge learning records." /> : <>
       {view === 'settings' && !workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} canWrite={canWrite} />}
       {view === 'overview' && <CompleteDashboard workspace={workspace} hrefFor={hrefFor} />}
       {view === 'sets' && <Organizer workspace={workspace} busy={busy} act={act} open={open} canWrite={canWrite} />}
@@ -175,7 +180,7 @@ function CompleteDashboard({ workspace, hrefFor }: { workspace: CompleteWorkspac
       </a>
     </article>
 </CoreSuiteSection>
-    <div style={grid}>{metrics.map(([label, value, Icon]) => <article key={label} style={{ ...shellCard, position: 'relative', overflow: 'hidden' }}>
+    <div className={quality.metrics}>{metrics.map(([label, value, Icon]) => <article key={label} style={{ ...shellCard, position: 'relative', overflow: 'hidden' }}>
       <Icon size={18} color="#a78bfa" /><div style={{ color: semantic.textMuted, fontSize: 13, marginTop: 12 }}>{label}</div><strong style={{ fontSize: 26, display: 'block', marginTop: 4 }}>{value}</strong>
     </article>)}</div>
   </Panel>;

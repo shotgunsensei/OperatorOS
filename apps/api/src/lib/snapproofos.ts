@@ -258,5 +258,6 @@ export function createCustodyHash(input: {
 
 export function csvCell(value: unknown): string {
   const stringValue = value === null || value === undefined ? '' : String(value);
-  return `"${stringValue.replaceAll('"', '""')}"`;
+  const literal = typeof value === 'string' && /^\s*[=+\-@]/u.test(stringValue) ? `'${stringValue}` : stringValue;
+  return `"${literal.replaceAll('"', '""')}"`;
 }

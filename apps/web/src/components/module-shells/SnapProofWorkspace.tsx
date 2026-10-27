@@ -26,6 +26,7 @@ import SnapProofFieldWorkspace, { type SnapProofFieldTab } from './SnapProofFiel
 import type { SnapProofRouteArea } from './SnapProofRoute.contract';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildSnapProofWorkflowFocus } from '@/lib/companion-workflow';
+import quality from './CreativeWorkspaceQuality.module.css';
 
 type Tab = 'dashboard' | 'customers' | 'projects' | 'jobs' | 'capture' | 'work' | 'costs' | 'templates' | 'team' | 'activity' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'share' | 'exports' | 'custody' | 'retention' | 'branding' | 'settings';
 const fieldTabs = new Set<Tab>(['customers', 'projects', 'jobs', 'capture', 'work', 'costs', 'templates', 'team', 'activity', 'reports', 'share', 'exports', 'branding']);
@@ -121,6 +122,7 @@ export default function SnapProofWorkspace({ view, recordId, tenantKey, hrefFor 
   const [reports, setReports] = useState<SnapProofReport[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(initialCaseId);
   const selectedCaseIdRef = useRef<string | null>(initialCaseId);
+  const detailReadVersion = useRef(0);
   const [detail, setDetail] = useState<any>(null);
   const [custody, setCustody] = useState<Array<Record<string, any>>>([]);
   const [loading, setLoading] = useState(true);
@@ -169,25 +171,32 @@ export default function SnapProofWorkspace({ view, recordId, tenantKey, hrefFor 
   }, [chooseCase, reportRouteRequested, selectedReportId, tab, tenantKey]);
 
   const loadDetail = useCallback(async (caseId: string | null) => {
+    const version = ++detailReadVersion.current;
+    // Never keep another case's proof visible while this selection is loading.
+    setDetail(null);
+    setCustody([]);
     if (!caseId || !['cases', 'evidence', 'review', 'findings', 'reports', 'custody', 'retention'].includes(tab)) {
-      setDetail(null);
-      setCustody([]);
       return;
     }
+    const current = () => detailReadVersion.current === version && selectedCaseIdRef.current === caseId;
     try {
       const [caseDetail, chain] = await Promise.all([
         moduleShellApi.snapproofos.getCase(caseId),
         tab === 'custody' ? moduleShellApi.snapproofos.custody(caseId) : Promise.resolve({ events: [] }),
       ]);
+      if (!current()) return;
       setDetail(caseDetail);
       setCustody(chain.events);
     } catch (err) {
-      setError(errorText(err));
+      if (current()) setError(errorText(err));
     }
   }, [tab]);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { void loadDetail(selectedCaseId); }, [selectedCaseId, loadDetail]);
+  useEffect(() => {
+    void loadDetail(selectedCaseId);
+    return () => { detailReadVersion.current++; };
+  }, [selectedCaseId, loadDetail]);
   useEffect(() => { if (recordId && tab !== 'reports') chooseCase(recordId); }, [chooseCase, recordId, tab]);
 
   const navigate = (next: Tab) => {
@@ -227,6 +236,7 @@ export default function SnapProofWorkspace({ view, recordId, tenantKey, hrefFor 
   return (
     <section
       id="snapproofos-workspace"
+      className={quality.workspace}
       data-testid={`snapproofos-${view}-route`}
       data-workspace-view={view}
       data-evidence="persisted-field-proof-and-private-evidence"
@@ -432,10 +442,10 @@ function ReportsPanel({ cases, reports, selectedCaseId, selectedReportId, saving
 }
 
 function CustodyPanel({ cases, selectedCaseId, events, onSelectCase }: { cases: SnapProofCase[]; selectedCaseId: string | null; events: Array<Record<string, any>>; onSelectCase: (id: string) => void }) {
-  const valid = useMemo(() => events.every((event, index) => index === 0 ? event.previousHash === null : event.previousHash === events[index - 1]?.eventHash), [events]);
+  const valid = useMemo(() => events.length > 0 && events.every((event, index) => index === 0 ? event.previousHash === null : event.previousHash === events[index - 1]?.eventHash), [events]);
   return <Panel id="snapproofos-custody" title="Chain of custody" description="Follow who added, reviewed, or changed each item and verify that the displayed evidence trail remains intact.">
     <Select label="Case" value={selectedCaseId || ''} onChange={onSelectCase} required options={cases.map(item => [item.id, `${item.reference} · ${item.title}`])} />
-    <div style={{ ...cardStyle, background: valid ? '#06201b' : '#290b13', borderColor: valid ? '#0f766e' : '#be123c', margin: `${space.md}px 0` }}><ShieldCheck size={18} /> <strong>{valid ? 'Displayed custody links are continuous' : 'Displayed custody chain is discontinuous'}</strong></div>
+    <div style={{ ...cardStyle, background: valid ? '#06201b' : events.length ? '#290b13' : semantic.bgPanel, borderColor: valid ? '#0f766e' : events.length ? '#be123c' : semantic.border, margin: `${space.md}px 0` }}><ShieldCheck size={18} /> <strong>{events.length === 0 ? 'No custody events to verify' : valid ? 'Displayed custody links are continuous' : 'Displayed custody chain is discontinuous'}</strong></div>
     <div style={{ display: 'grid', gap: 8 }}>{events.length ? events.map(event => <article key={event.id} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}><strong style={{ color: semantic.accentSuccess }}>Recorded action {event.sequenceNumber}</strong><div><strong>{String(event.eventType).replaceAll('_', ' ')}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.xs }}>{new Date(event.createdAt).toLocaleString()}</div><details style={{ display: 'block', color: semantic.accentInfo, fontSize: 10, wordBreak: 'break-all', marginTop: 6 }}><summary>Technical details</summary><code>{event.eventHash}</code></details></div></article>) : <Empty text="No custody events exist for this case." />}</div>
   </Panel>;
 }

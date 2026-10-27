@@ -325,7 +325,12 @@ function cloneBoundedJson(value: unknown, state: { nodes: number }, depth = 0): 
     if (value.length > 128) invalid('Realtime JSON array is too large');
     return value.map(item => cloneBoundedJson(item, state, depth + 1));
   }
-  if (!value || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) invalid('Realtime JSON must use plain objects');
+  if (!value || typeof value !== 'object') invalid('Realtime JSON must use plain objects');
+  const prototype = Object.getPrototypeOf(value);
+  // The canonical number-provider compiler returns null-prototype schema
+  // objects. Revalidate them with the same bounds and key checks; custom
+  // prototypes remain forbidden.
+  if (prototype !== Object.prototype && prototype !== null) invalid('Realtime JSON must use plain objects');
   const entries = Object.entries(value as Record<string, unknown>);
   if (entries.length > 128) invalid('Realtime JSON object is too large');
   const result: Record<string, JsonValue> = Object.create(null) as Record<string, JsonValue>;
@@ -486,6 +491,7 @@ export class OpenAiRealtimeSidebandController {
   #callbacks: RealtimeSidebandCallbacks;
   #allowedTools: Set<string>;
   #handledToolCalls = new Set<string>();
+  #greetingAttempted = false;
   #state: 'connecting' | 'open' | 'closed' = 'connecting';
   #openFailure: CallCommandRealtimeError | null = null;
   #openWaiters = new Set<{
@@ -511,7 +517,7 @@ export class OpenAiRealtimeSidebandController {
       this.#state = 'open';
       // Preserve the complete server-compiled business/safety instructions.
       // The opening greeting must not run business actions before caller input.
-      if (greetOnOpen) this.#send({ type: 'response.create', response: { tool_choice: 'none' } });
+      if (greetOnOpen) this.greet();
       this.#settleOpenWaiters();
     });
     socket.on('message', (raw: unknown) => { void this.#handleMessage(raw); });
@@ -700,7 +706,12 @@ export class OpenAiRealtimeSidebandController {
           arguments: args,
         });
         output = serializeToolOutput(result);
-      } catch {
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error
+          && error.code === 'CALLCOMMAND_REALTIME_OWNER_EXPIRED') {
+          this.close();
+          return;
+        }
         this.#reportError('CALLCOMMAND_REALTIME_TOOL_EXECUTION_FAILED', false);
         output = JSON.stringify({ ok: false, error: 'Tool execution failed' });
       }
@@ -710,6 +721,14 @@ export class OpenAiRealtimeSidebandController {
       item: { type: 'function_call_output', call_id: toolCallId, output },
     });
     this.#send({ type: 'response.create' });
+  }
+
+  /** Caller must durably authorize the initial greeting after validated open. */
+  greet(): void {
+    if(this.#greetingAttempted) return;
+    if(this.#state!=='open') throw new CallCommandRealtimeError('Sideband is not open','CALLCOMMAND_REALTIME_SOCKET_NOT_OPEN',409);
+    this.#greetingAttempted=true;
+    this.#send({type:'response.create',response:{tool_choice:'none'}});
   }
 
   async #handleMessage(raw: unknown): Promise<void> {

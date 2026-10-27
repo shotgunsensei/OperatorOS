@@ -248,7 +248,7 @@ const techDeckRouteCss = `
   [data-testid="techdeck-module-shell"]:before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(circle at 12% 0%,rgba(56,189,248,.14),transparent 30rem),repeating-linear-gradient(90deg,transparent 0 89px,rgba(56,189,248,.018) 90px 91px); }
   .techdeck-brand { display:flex; align-items:center; gap:10px; color:#e5eefc; text-decoration:none; }
   .techdeck-brand>span { width:38px; height:38px; display:grid; place-items:center; color:#38bdf8; border:1px solid rgba(56,189,248,.42); border-radius:7px; background:#08111e; box-shadow:inset 0 0 18px rgba(56,189,248,.09); }
-  .techdeck-brand strong { font:900 16px ui-monospace,"Cascadia Code",monospace; letter-spacing:.03em; }
+  .techdeck-brand strong { font:800 17px var(--module-font-heading); letter-spacing:-.03em; }
   .techdeck-action { display:inline-flex; align-items:center; gap:7px; border:1px solid rgba(56,189,248,.38); background:#0c4a6e; color:#e0f2fe; border-radius:6px; padding:9px 12px; font-size:13px; font-weight:850; text-decoration:none; }
   .techdeck-action:focus-visible,.techdeck-route-card:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
   .techdeck-overview { display:grid; gap:18px; }
@@ -259,11 +259,11 @@ const techDeckRouteCss = `
   .techdeck-metric span { color:#8fa3bd; font-size:12px; }
   .techdeck-metric strong { color:#e5eefc; font-size:15px; }
   .techdeck-route-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-  .techdeck-route-card { padding:17px; display:grid; grid-template-columns:auto 1fr; gap:7px 10px; color:#e5eefc; text-decoration:none; transition:border-color .16s ease,transform .16s ease; }
+  .techdeck-route-card { padding:20px; display:grid; grid-template-columns:40px minmax(0,1fr); gap:6px 14px; color:#e5eefc; text-decoration:none; transition:border-color .16s ease,transform .16s ease,background .16s ease; }
   .techdeck-route-card:hover { border-color:#38bdf8; transform:translateY(-1px); }
-  .techdeck-route-card svg { grid-row:1/3; color:#38bdf8; }
-  .techdeck-route-card strong { font-size:14px; }
-  .techdeck-route-card span { color:#8fa3bd; font-size:12px; line-height:1.5; }
+  .techdeck-route-card svg { grid-row:1/3; width:20px; height:20px; box-sizing:content-box; padding:9px; border:1px solid #29445a; border-radius:10px; background:#0b1d2b; color:#7dd3fc; }
+  .techdeck-route-card strong { align-self:end; font-size:15px; }
+  .techdeck-route-card span { color:#a9b8cb; font-size:13px; line-height:1.6; }
   .techdeck-route-state { min-height:160px; display:flex; align-items:center; justify-content:center; gap:9px; color:#8fa3bd; border:1px solid #263348; background:#0d1320; border-radius:8px; }
   .techdeck-workday-state { min-height:220px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:18px; border:1px solid #263348; background:#080d16; border-radius:12px; }
   .techdeck-workday-state span { min-height:90px; border:1px solid #263348; border-radius:8px; background:#0d1320; }
@@ -279,4 +279,5 @@ const techDeckRouteCss = `
   .techdeck-panel { border:1px solid #263348; background:#0d1320; border-radius:8px; }
   @media(max-width:900px){.techdeck-readiness{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:640px){.techdeck-readiness,.techdeck-route-grid,.techdeck-workday-state{grid-template-columns:1fr}.techdeck-action{width:100%;justify-content:center}.techdeck-workday-error{align-items:flex-start;flex-direction:column}.techdeck-workday-error a{margin-left:0}}
+  @media(prefers-reduced-motion:reduce){.techdeck-route-card{transition:none}.techdeck-route-card:hover{transform:none}}
 `;

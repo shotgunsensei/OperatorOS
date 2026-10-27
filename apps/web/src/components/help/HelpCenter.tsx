@@ -231,7 +231,7 @@ export default function HelpCenter({
           ))}
         </aside>
 
-        <main id="help-guide-content" className={styles.guideContent} tabIndex={-1}>
+        <section id="help-guide-content" aria-label="Selected help guide" className={styles.guideContent} tabIndex={-1}>
           {query ? (
             <>
               <div className={styles.contentHeader}>
@@ -317,7 +317,7 @@ export default function HelpCenter({
             <a href="https://app.operatoros.net/">Open console</a>
             <Link href="/modules">Browse modules</Link>
           </div>
-        </main>
+        </section>
       </div>
     </div>
   );

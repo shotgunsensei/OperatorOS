@@ -550,6 +550,7 @@ function TaskRow({ task, selected, pending, canWrite, run, routePrefix }: {
 const css = `
   .tfk-ops { margin-top:18px; padding:18px; display:grid; gap:15px; }
   .tfk-workday-slot { min-width:0; min-height:382px; }
+  .tfk-workday-slot[aria-busy='false'] { min-height:0; }
   .tfk-workday-loading { min-height:382px; display:flex; align-items:center; justify-content:center; gap:8px; color:var(--tfk-muted-foreground); }
   .tfk-ops-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
   .tfk-ops-head span { color:var(--tfk-primary-hover); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }

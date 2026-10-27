@@ -35,11 +35,13 @@ import {
 } from '../lib/ninja-pool-online.js';
 import { DEFAULT_NINJA_POOL_PREFERENCES } from '../lib/ninja-pool-match.js';
 import type { GameState, Settings } from '../lib/ninja-pool-game.js';
+import { createNinjaPoolSocketAuthority, NINJA_POOL_SOCKET_AUTHORITY_MS, type NinjaPoolSocketAuthority } from '../lib/ninja-pool-socket-authority.js';
 
 const readGuards = [requireTenantModuleAccess('ninja-pool-hall')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const socketsByRoom = new Map<string, Map<string, Set<WebSocket>>>();
+const socketAuthorities = new WeakMap<WebSocket, NinjaPoolSocketAuthority>();
 
 type Room = typeof ninjaPoolOnlineRooms.$inferSelect;
 type Actor = { tenantId: string; userId: string };
@@ -60,7 +62,7 @@ function actor(request: FastifyRequest): Actor {
 }
 
 function send(socket: WebSocket, payload: unknown): void {
-  if (socket.readyState !== 1) return;
+  if (socket.readyState !== 1 || !socketAuthorities.get(socket)?.maySend()) return;
   socket.send(JSON.stringify(payload));
 }
 
@@ -681,13 +683,23 @@ export async function registerNinjaPoolOnlineRoutes(app: FastifyInstance): Promi
     request: FastifyRequest<{ Params: { id: string; tenantId?: string } }>,
   ) => {
       const context = actor(request);
+      const authority = createNinjaPoolSocketAuthority(request, context, writeGuards, () => socket.close(4403, 'Room access ended'));
+      socketAuthorities.set(socket, authority);
+      // A disconnect during an authority/database read must not later acquire a
+      // presence entry or renew an authority lease.
+      socket.once('close', () => authority.stop());
+      socket.once('error', () => authority.stop());
+      if (!await authority.refresh()) return;
       let room = await currentParticipantRoom(request.params.id, context);
+      if (socket.readyState !== 1 || !authority.maySend()) { authority.stop(); return; }
       if (!room) {
+        authority.stop();
         socket.close(4404, 'Room not found');
         return;
       }
       if (['completed', 'abandoned', 'expired'].includes(room.status)) {
         send(socket, { type: 'roomSnapshot', reason: 'final-state', room: roomView(room, context.userId) });
+        authority.stop();
         socket.close(4409, 'Room finalized');
         return;
       }
@@ -700,6 +712,11 @@ export async function registerNinjaPoolOnlineRoutes(app: FastifyInstance): Promi
         }).where(eq(ninjaPoolOnlineRooms.id, room.id)).returning();
         if (reconnected) room = reconnected;
       }
+      if (socket.readyState !== 1 || !authority.maySend()) {
+        authority.stop();
+        removeSocket(room.id, context.userId, socket);
+        return;
+      }
       send(socket, { type: 'joined', role: roleFor(room, context.userId), room: roomView(room, context.userId) });
       broadcastSnapshot(room, 'presence-change');
 
@@ -707,6 +724,10 @@ export async function registerNinjaPoolOnlineRoutes(app: FastifyInstance): Promi
       let chain = Promise.resolve();
       let windowStarted = Date.now();
       let messageCount = 0;
+      const recheck = setInterval(() => { void authority.refresh(); }, NINJA_POOL_SOCKET_AUTHORITY_MS);
+      const expiry = setTimeout(() => { authority.stop(); socket.close(4403, 'Room session expired'); }, Math.max(0, Math.min(2_147_483_647, authority.expiresAt - Date.now())));
+      recheck.unref();
+      expiry.unref();
       const heartbeat = setInterval(() => {
         if (!alive) {
           socket.terminate();
@@ -733,12 +754,19 @@ export async function registerNinjaPoolOnlineRoutes(app: FastifyInstance): Promi
           socket.close(4429, 'Message rate exceeded');
           return;
         }
-        chain = chain.then(() => processMessage(socket, room!.id, context, raw)).catch((error) => {
+        chain = chain.then(async () => {
+          if (socket.readyState !== 1 || !await authority.refresh()) return;
+          await processMessage(socket, room!.id, context, raw);
+        }).catch((error) => {
           request.log.warn({ roomId: room!.id, userId: context.userId, error: error instanceof Error ? error.message : 'unknown' }, 'ninja_pool_online_message_failed');
           send(socket, { type: 'error', code: 'NINJA_POOL_ONLINE_MESSAGE_FAILED', error: 'Room message could not be applied' });
         });
       });
       socket.on('close', async () => {
+        authority.stop();
+        socketAuthorities.delete(socket);
+        clearInterval(recheck);
+        clearTimeout(expiry);
         clearInterval(heartbeat);
         removeSocket(room!.id, context.userId, socket);
         if (!connected(room!.id, context.userId)) {

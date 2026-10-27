@@ -35,6 +35,7 @@ import {
 } from '@/lib/auth';
 import type { FaultlineLabRouteArea } from './FaultlineLabRoute.contract';
 import FaultlineGuidedAuthoring from './FaultlineGuidedAuthoring';
+import workspaceStyles from './FaultlineWorkspace.module.css';
 
 type WorkspaceView = Exclude<FaultlineLabRouteArea, 'settings'>;
 type Tab = 'overview' | 'catalog' | 'session' | 'assignments' | 'progress' | 'evidence' | 'authoring' | 'reports';
@@ -165,6 +166,7 @@ export default function FaultlineLabWorkspace({
     };
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -188,6 +190,7 @@ export default function FaultlineLabWorkspace({
       if (view === 'overview' || view === 'reports') tasks.push(moduleShellApi.faultlinelab.analytics().then(setAnalytics).catch(() => setAnalytics(null)));
       if (view === 'assignments' && canAdmin) tasks.push(moduleShellApi.faultlinelab.listMembers().then(next => setMembers(next.members)).catch(() => setMembers([])));
       await Promise.all(tasks);
+      setHasLoaded(true);
     } catch (next) {
       setError(errorText(next));
     } finally {
@@ -600,7 +603,7 @@ export default function FaultlineLabWorkspace({
   }
 
   return (
-    <section className="fl-shell" data-testid="faultlinelab-route-workspace" data-workspace-view={view}>
+    <section className={`fl-shell ${workspaceStyles.workspace}`} data-testid="faultlinelab-route-workspace" data-workspace-view={view}>
       <style>{styles}</style>
       <div className="fl-wrap">
         <div className="fl-route-toolbar"><span>INVESTIGATION WORKSPACE</span><button onClick={() => void load()} disabled={loading}><RefreshCw size={15} /> Refresh route</button></div>
@@ -608,10 +611,15 @@ export default function FaultlineLabWorkspace({
         {error && <div className="fl-alert error" role="alert"><AlertTriangle size={18} /> {error}</div>}
         {notice && <div className="fl-alert success" role="status"><CheckCircle2 size={18} /> {notice}</div>}
         {!canWrite && <div className="fl-alert" role="status" data-testid="faultlinelab-read-only" style={{ border: '1px solid rgba(251,191,36,.38)', background: 'rgba(120,53,15,.18)', color: '#fde68a' }}><ShieldCheck size={18} /> Read-only access: you can review published challenges, saved investigations, evidence, and results. Starting attempts, uploading proof, authoring, assignments, and publication are disabled.</div>}
-        {loading && <div className="fl-card fl-loading">Loading your FaultlineLab workspace…</div>}
+        {loading && <div className="fl-card fl-loading" role="status" aria-busy="true">Loading your FaultlineLab workspace…</div>}
 
-        {!loading && tab === 'overview' && (
+        {!loading && hasLoaded && tab === 'overview' && (
           <section id="faultlinelab-dashboard" data-testid="faultlinelab-overview-route" className="fl-main">
+            <header className={workspaceStyles.introduction}>
+              <span className={workspaceStyles.mark}><FlaskConical size={26} aria-hidden="true" /></span>
+              <div><span className={workspaceStyles.eyebrow}>Learn through investigation</span><h2>Better diagnoses start with evidence.</h2><p>Work through simulated cases, test your reasoning, and review what the evidence proves. Practice here does not grant access to a live system.</p></div>
+              <a href={hrefFor('/challenges')}><Beaker size={17} aria-hidden="true" /> Explore the library</a>
+            </header>
             <CoreSuiteSection title="Training progress" description="Available cases, assignments, attempts, and solved challenges.">
 <div className="fl-metrics">
               <article><span>Playable cases</span><b>{catalogFacets.total}</b></article>
@@ -634,7 +642,7 @@ export default function FaultlineLabWorkspace({
           </section>
         )}
 
-        {!loading && tab === 'catalog' && (
+        {!loading && hasLoaded && tab === 'catalog' && (
           <section id="faultlinelab-challenges" data-testid="faultlinelab-challenges-route" tabIndex={-1} className="fl-grid">
             <div className="fl-main">
               <div className="fl-section-head"><div><span>READY-TO-PLAY CONTENT</span><h2>Challenge board</h2></div><strong>{published.length} shown · {catalogFacets.total} playable</strong></div>
@@ -694,7 +702,7 @@ export default function FaultlineLabWorkspace({
           </section>
         )}
 
-        {!loading && tab === 'session' && (
+        {!loading && hasLoaded && tab === 'session' && (
           <section id="faultlinelab-session" data-testid="faultlinelab-session" tabIndex={-1}>
             {!session ? <div className="fl-card fl-empty">Start a challenge or open a recent attempt to enter the investigation workspace.</div> : (
               <div className="fl-grid">
@@ -742,21 +750,21 @@ export default function FaultlineLabWorkspace({
           </section>
         )}
 
-        {!loading && tab === 'assignments' && (
+        {!loading && hasLoaded && tab === 'assignments' && (
           <section id="faultlinelab-assignments" data-testid="faultlinelab-assignments-route" tabIndex={-1} className="fl-grid">
             <div className="fl-main"><div className="fl-section-head"><div><span>TEAM QUEUE</span><h2>Assignments</h2></div><strong>{assignments.length}</strong></div>{assignments.map((item) => <article className="fl-card fl-row" key={item.id}><div><h3>{item.title || item.challengeTitle}</h3><p>{item.instructions || `${item.challengeTitle} · ${item.status}`}</p><small>{item.dueAt ? `Due ${new Date(item.dueAt).toLocaleString()}` : 'No due date'}</small></div><div className="fl-actions">{canWrite && ['assigned', 'in_progress'].includes(item.status) && item.assigneeUserId === user?.id && <button onClick={() => void startSession({ mode: 'assignment', assignmentId: item.id })}><Play size={14} /> Start</button>}{canAdmin && ['assigned', 'in_progress'].includes(item.status) && <button className="danger" onClick={async () => { await moduleShellApi.faultlinelab.cancelAssignment(item.id, item.version); await load(); }}>Cancel</button>}</div></article>)}{assignments.length === 0 && <div className="fl-card fl-empty">No assignments are waiting.</div>}</div>
             <aside className="fl-side">{canAdmin ? <form className="fl-card fl-form" onSubmit={createAssignment}><span>MANAGER CONTROL</span><h3>Assign published challenge</h3><label>Challenge<select name="challengeId" required><option value="">Select challenge</option>{allPublished.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Team member<select name="assigneeUserId" required><option value="">Select member</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>Assignment title<input name="title" maxLength={200} /></label><label>Instructions<textarea name="instructions" rows={4} maxLength={5000} /></label><label>Due date<input name="dueAt" type="datetime-local" /></label><button disabled={busy === 'assignment'}><Users size={14} /> Create assignment</button></form> : <div className="fl-card"><ShieldCheck size={20} /><h3>{canWrite ? 'Participant view' : 'Read-only assignment view'}</h3><p>{canWrite ? 'Organization owners and administrators create assignments; participants can focus on completing them.' : 'You can review assigned work and its status. Edit access is required to start it, and organization administration is required to create or cancel assignments.'}</p></div>}</aside>
           </section>
         )}
 
-        {!loading && tab === 'progress' && (
+        {!loading && hasLoaded && tab === 'progress' && (
           <section id="faultlinelab-progress" data-testid="faultlinelab-runs-route" tabIndex={-1} className="fl-grid">
             <div className="fl-main"><div className="fl-metrics"><article><span>Attempts</span><b>{progress.progress?.attemptsCompleted ?? 0}</b></article><article><span>Solved</span><b>{progress.progress?.challengesSolved ?? 0}</b></article><article><span>Current streak</span><b>{progress.progress?.currentStreak ?? 0}</b></article><article><span>Daily streak</span><b>{progress.dailyStreak ?? 0}</b></article></div><article className="fl-card"><h2>Challenge history</h2>{(progress.challengeProgress ?? []).map((item: any) => <div className="fl-progress-row" key={item.challengeId}><span>{item.title}</span><b>{item.bestPercentage ?? 0}% · {item.bestTier ?? 'No tier'}</b></div>)}{!(progress.challengeProgress ?? []).length && <p>No completed scored attempts yet.</p>}</article><article className="fl-card"><h2>Earned badges</h2><div className="fl-chip-row">{(progress.badges ?? []).map((item: any) => <span key={item.badgeKey}><ShieldCheck size={13} /> {item.badgeKey}</span>)}{!(progress.badges ?? []).length && <p>Complete scored challenges to earn badges.</p>}</div></article></div>
             <aside className="fl-side"><article className="fl-card"><span>YOUR HISTORY</span><h3>Attempt export</h3><p>Download your attempt history as a CSV. FaultlineLab does not issue certificates.</p><button onClick={() => void exportAttempts()} disabled={busy === 'export'}><Download size={14} /> Download CSV</button></article><article className="fl-card" id="faultlinelab-analytics" tabIndex={-1}><span>TEAM ANALYTICS</span>{analytics ? <><h3>{analytics.summary?.completedAttempts ?? 0} completed</h3><p>{analytics.summary?.passedAttempts ?? 0} passed · {analytics.summary?.averagePercentage ?? 0}% average</p></> : <><h3>Manager access required</h3><p>Your personal progress remains available. Team results are available to workspace owners and managers.</p></>}</article></aside>
           </section>
         )}
 
-        {!loading && tab === 'evidence' && (
+        {!loading && hasLoaded && tab === 'evidence' && (
           <section id="faultlinelab-evidence" data-testid="faultlinelab-evidence-route" className="fl-grid" tabIndex={-1}>
             <div className="fl-main">
               <article className="fl-card"><span>EVIDENCE REGISTER</span><h2>Recorded investigation proof</h2><p>Evidence unlocks only through challenge actions. Private uploads stay with this investigation and are not public proof.</p></article>
@@ -767,7 +775,7 @@ export default function FaultlineLabWorkspace({
           </section>
         )}
 
-        {!loading && tab === 'reports' && (
+        {!loading && hasLoaded && tab === 'reports' && (
           <section id="faultlinelab-analytics" data-testid="faultlinelab-reports-route" className="fl-grid" tabIndex={-1}>
             <div className="fl-main">
               <div className="fl-metrics"><article><span>Completed attempts</span><b>{progress.progress?.attemptsCompleted ?? 0}</b></article><article><span>Solved</span><b>{progress.progress?.challengesSolved ?? 0}</b></article><article><span>Current streak</span><b>{progress.progress?.currentStreak ?? 0}</b></article><article><span>Daily streak</span><b>{progress.dailyStreak ?? 0}</b></article></div>
@@ -777,14 +785,14 @@ export default function FaultlineLabWorkspace({
           </section>
         )}
 
-        {!loading && tab === 'authoring' && !canWrite && (
+        {!loading && hasLoaded && tab === 'authoring' && !canWrite && (
           <section id="faultlinelab-authoring" data-testid="faultlinelab-authoring-route" tabIndex={-1} className="fl-grid">
             <article className="fl-card fl-main"><ShieldCheck size={20} /><h2>Challenge authoring is read-only</h2><p>You can review published challenges from the challenge board. Edit access is required to create drafts, validate content, upload author files, or start a preview.</p></article>
             <aside className="fl-side"><article className="fl-card"><h3>Publication control</h3><p>Only organization owners or administrators who also have FaultlineLab edit access can assign, publish, or retire team challenges.</p></article></aside>
           </section>
         )}
 
-        {!loading && tab === 'authoring' && canWrite && (
+        {!loading && hasLoaded && tab === 'authoring' && canWrite && (
           <section id="faultlinelab-authoring" data-testid="faultlinelab-authoring-route" tabIndex={-1} className="fl-grid">
             <form key={draft?.challenge?.id ?? 'new'} className="fl-card fl-form fl-main" onSubmit={saveDraft}>
               <div className="fl-section-head"><div><span>CHALLENGE EDITOR</span><h2>{draft ? `Edit ${draft.challenge.title}` : 'New challenge draft'}</h2></div>{draft && <strong>revision {draft.challenge.currentVersionNumber}</strong>}</div>

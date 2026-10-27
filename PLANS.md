@@ -1,3 +1,9 @@
+## 2026-10-27 - Local quality pass, not production acceptance
+
+All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.
+
+The final exact source/command receipt is external to the immutable commit. Fresh DB-free combined API regression is 103/103; current API/web types, changed-source lint and built rendering are independently recorded. Formal scan MCP, current PostgreSQL engine access, canonical dependency and real tenant/provider/device acceptance remain limitations. Do not call all modules ready except accounts. [Quality review, module coverage and gates](docs/reviews/2026-10-27/QUALITY_REVIEW.md).
+
 ## 2026-10-21 - Independent one-time tool products, source candidate
 
 The reviewed October 20 foundation is integrated onto the current Lunch Break/all-module candidate. Browse tools presents OfficeExit and VendorTrust365 as independent one-time tenant add-ons for free and paid accounts, with no subscription renewal or bundled annual update/support fee. Current `not_bundled` support policy supersedes historical pending-support wording below. Price, license unit and allowance remain undecided; sales/download/checkout and purchase entitlements remain unavailable.

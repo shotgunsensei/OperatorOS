@@ -234,10 +234,12 @@ const pulseDeskRouteCss = `
   .pulsedesk-action { display:inline-flex; align-items:center; gap:7px; border:1px solid rgba(56,189,248,.42); background:#075985; color:#e0f2fe; border-radius:8px; padding:9px 12px; font-size:13px; font-weight:850; text-decoration:none; }
   .pulsedesk-action:focus-visible,.pulsedesk-route-card:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
   .pulsedesk-route-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
-  .pulsedesk-route-card { display:grid; grid-template-columns:auto 1fr; gap:7px 11px; padding:18px; border:1px solid #29445a; border-radius:12px; color:#eaf4ff; text-decoration:none; background:linear-gradient(145deg,#0e1a27,#0a1722); }
+  .pulsedesk-route-card { display:grid; grid-template-columns:40px minmax(0,1fr); gap:6px 14px; padding:20px; border:1px solid #29445a; border-radius:12px; color:#eaf4ff; text-decoration:none; background:linear-gradient(145deg,#0e1a27,#0a1722); }
   .pulsedesk-route-card:hover { border-color:#38bdf8; }
-  .pulsedesk-route-card svg { grid-row:1/3; color:#4ade80; }
-  .pulsedesk-route-card span { color:#9bb0c6; font-size:12px; line-height:1.5; }
+  .pulsedesk-route-card svg { grid-row:1/3; width:20px; height:20px; box-sizing:content-box; padding:9px; border:1px solid #294d49; border-radius:10px; background:#112c2b; color:#86efac; }
+  .pulsedesk-route-card strong { align-self:end; font-size:15px; }
+  .pulsedesk-route-card span { color:#aec0d2; font-size:13px; line-height:1.6; }
+  [data-testid="pulsedesk-module-shell"] .pds-warning>svg { flex:0 0 18px; align-self:flex-start; }
   .pulsedesk-route-state { min-height:170px; display:flex; align-items:center; justify-content:center; gap:9px; border:1px solid #29445a; border-radius:10px; background:#0e1a27; color:#9bb0c6; }
   .pulsedesk-route-panel { border:1px solid #29445a; border-radius:10px; background:#0e1a27; padding:18px; }
   .pulsedesk-route-panel .pdq-heading { grid-template-columns:1fr; }
@@ -277,8 +279,15 @@ const pulseDeskRouteCss = `
   [data-testid="pulsedesk-module-shell"] .pds-warning { background:rgba(120,53,15,.22); border-color:rgba(251,191,36,.4); color:#fde68a; }
   [data-testid="pulsedesk-module-shell"] .pds-warning strong { color:#fef3c7!important; }
   [data-testid="pulsedesk-module-shell"] .pds-row-button { text-decoration:none; }
+  [data-testid="pulsedesk-module-shell"] .pds-form :is(input:not([type="checkbox"]),select,textarea) { width:100%; }
   [data-testid="pulsedesk-module-shell"] .directory-pulsedesk { --d-bg:#0a1520;--d-panel:#132536;--d-text:#eaf4ff;--d-muted:#9bb0c6;--d-border:#29445a;--d-accent:#38bdf8;--d-danger:#fb7185; }
   [data-testid="pulsedesk-module-shell"] .directory-tabs button[aria-selected='true'] { color:#07111b!important; }
   @media(max-width:1100px){#pulsedesk-directory .directory-layout{grid-template-columns:1fr}#pulsedesk-directory .directory-list{max-height:320px}}
   @media(max-width:720px){.pulsedesk-route-grid{grid-template-columns:1fr}.pulsedesk-action{width:100%;justify-content:center}#pulsedesk-directory .directory-columns{grid-template-columns:1fr}}
+  @media(max-width:540px){
+    [data-testid="pulsedesk-module-shell"] .pds-filters { display:grid;grid-template-columns:16px minmax(0,1fr);align-items:center;gap:8px; }
+    [data-testid="pulsedesk-module-shell"] .pds-filters>input { width:100%;min-width:0; }
+    [data-testid="pulsedesk-module-shell"] .pds-filters>select { grid-column:1/-1;width:100%;min-width:0; }
+    [data-testid="pulsedesk-module-shell"] .pds-filters :is(input,select) { min-height:44px; }
+  }
 `;

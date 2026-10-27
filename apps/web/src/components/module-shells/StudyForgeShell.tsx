@@ -9,6 +9,8 @@ import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { ShellWorkspaceBadge } from './ShellChrome';
 import StudyForgeCompleteWorkspace from './StudyForgeCompleteWorkspace';
+import { ErrorState, LoadingState } from '@/components/ExperiencePrimitives';
+import quality from './CreativeWorkspaceQuality.module.css';
 
 type Item = Record<string, any>;
 type Workspace = {
@@ -104,10 +106,11 @@ export default function StudyForgeShell({ routePath = '', embedded = false, view
   return (
     <div
       id="studyforge-workspace"
+      className={quality.workspace}
       data-testid="shell-studyforge-ai"
       data-evidence="persisted_records_only"
       data-can-write={canWrite ? 'true' : 'false'}
-      style={{ minHeight: '100vh', overflowX: 'clip', background: 'radial-gradient(circle at 85% 0%,rgba(124,58,237,.18),transparent 35%),#070a13', color: semantic.text, padding: `0 clamp(16px, 4vw, ${space.xxl}px) ${space.xxl}px` }}
+      style={{ minHeight: embedded ? 0 : '100vh', overflowX: 'clip', background: embedded ? 'transparent' : 'radial-gradient(circle at 85% 0%,rgba(124,58,237,.18),transparent 35%),#070a13', color: semantic.text, padding: embedded ? 0 : `0 clamp(16px, 4vw, ${space.xxl}px) ${space.xxl}px` }}
     >
       {!embedded && <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `${space.xl}px 0`, flexWrap: 'wrap' }}>
         <div style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', borderRadius: 14, background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
@@ -131,10 +134,10 @@ export default function StudyForgeShell({ routePath = '', embedded = false, view
         ))}
       </nav>}
 
-      {error && <div role="alert" data-testid="studyforge-error" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
+      {error && data && <div role="alert" data-testid="studyforge-error" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
       {!canWrite && legacyView && view !== 'sessions' && <div role="status" data-testid="studyforge-read-only" style={{ ...cardStyle, borderColor: 'rgba(196,181,253,.55)', color: '#ddd6fe', marginBottom: space.lg }}>Read-only access: you can review saved study material, reveal flashcards, practice quiz answers locally, and download allowed exports. Creating or changing records, saving study results, and updating progress require member, administrator, or owner access.</div>}
       {(!legacyView || view === 'sessions') && <StudyForgeCompleteWorkspace routePath={routePath} view={view} hrefFor={hrefFor} canWrite={canWrite} />}
-      {legacyView && (!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading your courses and study progress…</p></Panel> : (
+      {legacyView && (!data ? error ? <ErrorState title="Study workspace unavailable" description={error} action={<button type="button" style={subtleButton} onClick={() => void load()}>Try again</button>} /> : <LoadingState label="Loading your courses and study progress." /> : (
         <>
           {view === 'sources' && <Subjects data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}
           {view === 'sources' && <Sources data={data} mutate={mutate} busy={busy} canWrite={canWrite} />}

@@ -3,6 +3,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { requireTenantAdmin, requireTenantModuleAccess, requireTenantModuleWriteAccess } from '../lib/tenant-auth.js';
+import { tenantHasModuleEntitlement } from '../lib/tenant-entitlements.js';
+import { inspectCallCommandIngestionAuthority } from '../lib/callcommand-ingestion-authority.js';
 import { maskPhone, normalizeE164, parseTwilioCallSid, phoneFingerprint } from '../lib/callcommand.js';
 import {
   CALLCOMMAND_ACTION_TYPES,
@@ -459,6 +461,7 @@ export async function dispatchCallCommandActions(input: {
   correlationId?: string | null;
   idempotencyNamespace?: string | null;
   durableNotifications?: boolean;
+  authorizeReservation?: (tx: import('../lib/callcommand-realtime-ownership.js').CallCommandRealtimeTransaction) => Promise<void>;
 }) {
   const modId = await moduleId();
   const results: Row[] = [];
@@ -471,7 +474,7 @@ export async function dispatchCallCommandActions(input: {
       ? `runtime:${hashValue(input.idempotencyNamespace).slice(0, 40)}`
       : input.ruleId ?? 'flow';
     const key = `${input.call.id}:${namespace}:${index}:${actionType}`;
-    const reserved = await db.execute(sql`
+    const reserve = (executor: Executor) => executor.execute(sql`
       INSERT INTO callcommand_action_runs(
         tenant_id,call_id,rule_id,action_type,status,idempotency_key,provider,
         safe_result,attempts,reservation_status,reserved_at,lease_expires_at
@@ -482,6 +485,9 @@ export async function dispatchCallCommandActions(input: {
       ON CONFLICT (tenant_id,idempotency_key) DO NOTHING
       RETURNING *
     `);
+    const reserved = input.authorizeReservation
+      ? await db.transaction(async tx => { await input.authorizeReservation!(tx); return reserve(tx); })
+      : await reserve(db);
     if (!reserved.rows[0]) {
       const existing = await db.execute(sql`
         UPDATE callcommand_action_runs SET status='failed',reservation_status='failed',
@@ -938,7 +944,16 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
       const bearer = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i,''); if (!bearer.startsWith('cci_')) throw new CallCommandPhase35Error('Ingestion token is required','CALLCOMMAND_INGESTION_UNAUTHORIZED',401);
       const tokenHash = hashValue(bearer); const tokenRow = await db.execute(sql`SELECT * FROM callcommand_ingestion_tokens WHERE token_hash=${tokenHash} AND source=${source} AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at>NOW()) LIMIT 1`);
       if (!tokenRow.rows[0]) throw new CallCommandPhase35Error('Ingestion token is invalid or expired','CALLCOMMAND_INGESTION_UNAUTHORIZED',401);
-      const configuration = tokenRow.rows[0] as Row; const value = body(request); const eventId = cleanText(value.eventId ?? request.headers['x-idempotency-key'],'eventId',200)!;
+      const configuration = tokenRow.rows[0] as Row;
+      const admission = await inspectCallCommandIngestionAuthority(String(configuration.tenant_id), {
+        loadTenantStatus: async tenantId => {
+          const current = await db.execute(sql`SELECT status FROM tenants WHERE id=${tenantId} LIMIT 1`);
+          return (current.rows[0] as Row | undefined)?.status ?? null;
+        },
+        tenantHasModuleEntitlement,
+      });
+      if (!admission.allowed) throw new CallCommandPhase35Error(admission.message, admission.code, admission.statusCode);
+      const value = body(request); const eventId = cleanText(value.eventId ?? request.headers['x-idempotency-key'],'eventId',200)!;
       const payloadHash = hashValue(JSON.stringify(value)); const replay = await recordIngestion({ tenantId: String(configuration.tenant_id), source, eventId, payloadHash });
       if (replay.duplicate) return reply.code(200).send({ duplicate: true });
       const phone = value.callerPhone ? normalizeE164(value.callerPhone,'callerPhone') : '+10000000000';

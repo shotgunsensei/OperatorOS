@@ -22,6 +22,7 @@ import NinjaPoolHallMatch from './NinjaPoolHallMatch';
 import NinjaPoolHallProfile from './NinjaPoolHallProfile';
 import NinjaPoolHallMatchDetail from './NinjaPoolHallMatchDetail';
 import NinjaPoolHallOnline from './NinjaPoolHallOnline';
+import lobbyStyles from './NinjaPoolHallLobby.module.css';
 
 type View =
   'home' | 'practice' | 'bot' | 'local' | 'online' | 'host' | 'join' | 'profile' | 'detail';
@@ -94,13 +95,19 @@ export default function NinjaPoolHallShell({
   const [roomId, setRoomId] = useState<string | null>(initial.roomId);
   const [profileData, setProfileData] = useState<NinjaPoolProfileResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [openingResult, setOpeningResult] = useState(false);
 
   const loadProfile = useCallback(async () => {
+    setProfileLoading(true);
+    setError(null);
     try {
       setProfileData(await moduleShellApi.ninjaPoolHall.getProfile());
       setError(null);
     } catch (cause: any) {
       setError(cause?.error || cause?.message || 'Unable to load Operator Pool Hall profile.');
+    } finally {
+      setProfileLoading(false);
     }
   }, []);
 
@@ -172,8 +179,23 @@ export default function NinjaPoolHallShell({
     setView('online');
   }, []);
 
+  async function openLatestResult() {
+    if (openingResult) return;
+    setOpeningResult(true);
+    setError(null);
+    try {
+      const response = await moduleShellApi.ninjaPoolHall.listMatches(1);
+      if (response.matches[0]) openDetail(response.matches[0].id);
+      else setError('No saved result is available. Refresh your profile and try again.');
+    } catch (cause: any) {
+      setError(cause?.error || cause?.message || 'The saved result could not be loaded. Please try again.');
+    } finally {
+      setOpeningResult(false);
+    }
+  }
+
   return (
-    <div id="ninja-pool-hall-shell" className="nph-shell" data-testid="ninja-pool-hall-shell">
+    <div id="ninja-pool-hall-shell" className={`nph-shell ${lobbyStyles.lobby}`} data-testid="ninja-pool-hall-shell">
       <style>{shellCss}</style>
       <div className="nph-shell-wrap">
         {!embedded && (
@@ -240,14 +262,14 @@ export default function NinjaPoolHallShell({
         {error && (
           <div className="nph-shell-error" role="alert">
             {error}
-            <button type="button" onClick={() => void loadProfile()}>
+            <button type="button" disabled={profileLoading} onClick={() => void loadProfile()}>
               Retry
             </button>
           </div>
         )}
 
-        {!profileData ? (
-          <div className="nph-shell-loading">
+        {!profileData ? profileLoading && (
+          <div className="nph-shell-loading" role="status" aria-busy="true">
             <Loader2 className="spin" size={24} /> Loading your table…
           </div>
         ) : view === 'home' ? (
@@ -356,13 +378,10 @@ export default function NinjaPoolHallShell({
           <button
             className="nph-hidden-detail-link"
             type="button"
-            onClick={() => {
-              void moduleShellApi.ninjaPoolHall.listMatches(1).then((response) => {
-                if (response.matches[0]) openDetail(response.matches[0].id);
-              });
-            }}
+            disabled={openingResult}
+            onClick={() => void openLatestResult()}
           >
-            <Trophy size={15} /> Open latest saved result
+            <Trophy size={15} /> {openingResult ? 'Opening saved result…' : 'Open latest saved result'}
           </button>
         )}
       </div>

@@ -90,7 +90,7 @@ function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone
 }
 
 function Heading({ icon, title, subtitle, action }: { icon: React.ReactNode; title: string; subtitle: string; action?: React.ReactNode }) {
-  return <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginBottom: 15 }}><span style={{ color: '#2dd4bf', marginTop: 2 }}>{icon}</span><div style={{ flex: 1 }}><h2 style={{ margin: 0, fontSize: 19 }}>{title}</h2><p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: 13, lineHeight: 1.5 }}>{subtitle}</p></div>{action}</div>;
+  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 11, alignItems: 'flex-start', marginBottom: 15 }}><span style={{ color: '#2dd4bf', marginTop: 2 }}>{icon}</span><div style={{ flex: '1 1 210px' }}><h2 style={{ margin: 0, fontSize: 19 }}>{title}</h2><p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: 13, lineHeight: 1.5 }}>{subtitle}</p></div>{action && <div style={{ marginLeft: 'auto' }}>{action}</div>}</div>;
 }
 
 function disabledStyle(enabled: boolean): React.CSSProperties { return enabled ? {} : { opacity: .5, cursor: 'not-allowed' }; }
@@ -131,7 +131,8 @@ export default function CallCommandCommercialWorkspace({ view, recordId, hrefFor
   const [callDetailLoading, setCallDetailLoading] = useState(false);
   const [callQuery, setCallQuery] = useState('');
   const canWrite = allowWrite && commercial?.capabilities?.canWrite === true;
-  const canAdmin = commercial?.capabilities?.canAdmin === true;
+  // Local edit access can narrow current server capabilities, never widen it.
+  const canAdmin = canWrite && commercial?.capabilities?.canAdmin === true;
 
   const refresh = useCallback(async () => {
     const [productResult, commercialResult] = await Promise.allSettled([

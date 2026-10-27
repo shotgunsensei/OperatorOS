@@ -11,7 +11,7 @@
 .journey { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--flow-border); border-radius: 12px; background: var(--flow-panel); }
 .journey ol { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .journey li { flex: 1 1 110px; min-width: 0; }
-.journey a { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; color: var(--flow-muted); font-size: 13px; font-weight: 600; text-decoration: none; }
+.journey a { box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; height: 100%; min-height: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; color: var(--flow-muted); font-size: 13px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; text-decoration: none; }
 .journey a span { display: grid; place-items: center; width: 23px; height: 23px; flex: none; border: 1px solid var(--flow-border); border-radius: 50%; font-size: 12px; font-variant-numeric: tabular-nums; }
 .journey a[aria-current='step'] { color: var(--flow-text); background: var(--flow-raised); border-color: var(--flow-accent); }
 .journey a[aria-current='step'] span { color: var(--flow-accent); border-color: var(--flow-accent); }
@@ -30,7 +30,7 @@
 .journey a:focus-visible, .section > summary:focus-visible { outline: 2px solid var(--flow-accent); outline-offset: 3px; }
 @media (max-width: 760px) {
   .journey { padding: 12px; }
-  .journey li { flex-basis: 95px; }
+  .journey li { flex-basis: 132px; }
   .journey a { padding: 7px; }
   .section > summary { padding: 12px; }
   .sectionBody { padding: 0 12px 12px; }

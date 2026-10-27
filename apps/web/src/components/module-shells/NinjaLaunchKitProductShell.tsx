@@ -43,7 +43,7 @@ export default function NinjaLaunchKitProductShell({
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#020617', colorScheme: 'dark' }}>
+    <div style={{ minHeight: embedded ? 0 : '100vh', background: embedded ? 'transparent' : '#020617', colorScheme: 'dark' }}>
       {!embedded && (
         <nav
           aria-label="Deploy Ops product mode"

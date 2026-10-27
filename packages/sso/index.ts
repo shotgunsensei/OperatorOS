@@ -252,6 +252,9 @@ export interface SsoExchangeCodeBinding {
   state?: string;
   nonce?: string;
   codeChallenge?: string;
+  /** Issuing session authority; mandatory when redeeming a browser code. */
+  tokenVersion?: number;
+  sessionFingerprint?: string;
 }
 
 /** Derive a stable 32-byte AES key from the shared secret (domain-separated). */
@@ -280,6 +283,8 @@ export function createSsoExchangeCode(binding: SsoExchangeCodeBinding, secret: s
     s: binding.state,
     n: binding.nonce,
     p: binding.codeChallenge,
+    v: binding.tokenVersion,
+    f: binding.sessionFingerprint,
   });
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -321,12 +326,16 @@ export function parseSsoExchangeCode(
       s?: unknown;
       n?: unknown;
       p?: unknown;
+      v?: unknown;
+      f?: unknown;
     };
     if (typeof parsed.j !== 'string' || parsed.j.length === 0) return null;
     if (typeof parsed.a !== 'string' || parsed.a.length === 0) return null;
     for (const value of [parsed.c, parsed.r, parsed.t, parsed.s, parsed.n, parsed.p]) {
       if (value !== undefined && typeof value !== 'string') return null;
     }
+    if (parsed.v !== undefined && (!Number.isSafeInteger(parsed.v) || (parsed.v as number) < 0)) return null;
+    if (parsed.f !== undefined && (typeof parsed.f !== 'string' || !/^[a-f0-9]{64}$/.test(parsed.f))) return null;
     return {
       jti: parsed.j,
       aud: parsed.a,
@@ -336,6 +345,8 @@ export function parseSsoExchangeCode(
       ...(typeof parsed.s === 'string' && parsed.s ? { state: parsed.s } : {}),
       ...(typeof parsed.n === 'string' && parsed.n ? { nonce: parsed.n } : {}),
       ...(typeof parsed.p === 'string' && parsed.p ? { codeChallenge: parsed.p } : {}),
+      ...(typeof parsed.v === 'number' ? { tokenVersion: parsed.v } : {}),
+      ...(typeof parsed.f === 'string' ? { sessionFingerprint: parsed.f } : {}),
     };
   } catch {
     return null;

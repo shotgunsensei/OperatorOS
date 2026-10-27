@@ -32,6 +32,7 @@ import {
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
 import { getAiProvider } from '../lib/ai-provider.js';
+import { consumeStudyForgeUsage, resolveStudyForgeAccess } from '../lib/studyforge-access.js';
 import {
   parseTradeFlowKitLeadCreate,
   parseTradeFlowKitLeadListQuery,
@@ -2870,6 +2871,20 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
           .send({ error: 'Source needs at least 8 words', code: 'SOURCE_TOO_SHORT' });
       }
       const bounded = trimmed.slice(0, 8000);
+      const access = await resolveStudyForgeAccess(user.id, ctx.tenantId);
+      try {
+        await consumeStudyForgeUsage({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          kind: 'generation',
+          limit: access.limits.generationsPerMonth,
+        });
+      } catch (error: any) {
+        if (error?.statusCode === 402) {
+          return reply.code(402).send({ error: error.message, code: error.code });
+        }
+        throw error;
+      }
       const cards = (await buildCardsWithAi(bounded)) ?? buildCards(bounded);
       if (cards.length === 0) {
         return reply

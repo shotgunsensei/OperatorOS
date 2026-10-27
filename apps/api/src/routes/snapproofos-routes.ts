@@ -91,7 +91,7 @@ async function scopedEvidence(tenantId: string, evidenceId: string, executor: Ex
   return result.rows[0] as Record<string, any> | undefined;
 }
 
-async function appendCustody(input: {
+export async function appendCustody(input: {
   tenantId: string;
   caseId: string;
   evidenceId?: string | null;

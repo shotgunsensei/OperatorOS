@@ -25,7 +25,7 @@ import {
   parseLibraryQuery,
   parseSyncRequest,
 } from '../lib/ninjamation-phase36.js';
-import { runNinjamationCatalogSync } from '../lib/ninjamation-sync.js';
+import { authorizeNinjamationSync, runNinjamationCatalogSync } from '../lib/ninjamation-sync.js';
 import {
   consumeNinjamationUsage,
   releaseNinjamationUsage,
@@ -114,6 +114,10 @@ async function selectScript(tenantId: string, id: string) {
 
 registerSharedJobHandler(SYNC_HANDLER, async (context) => {
   if (!context.requestedByUserId) throw Object.assign(new Error('Sync actor is required'), { code: 'NINJAMATION_SYNC_ACTOR_REQUIRED' });
+  const authority = { tenantId: context.tenantId, userId: context.requestedByUserId, moduleId: context.moduleId };
+  // Scheduled jobs use the schedule creator, exactly like explicitly queued
+  // syncs. Recheck before even creating a scheduled business run or fetching.
+  await db.transaction(tx => authorizeNinjamationSync(authority, tx));
   let runId = String(context.payload.runId ?? '');
   if (!runId) {
     const scheduled = await db.execute(sql`
@@ -127,9 +131,13 @@ registerSharedJobHandler(SYNC_HANDLER, async (context) => {
     runId = String(scheduled.rows[0].id);
   }
   const selected = await db.execute(sql`
-    SELECT requested_commit FROM ninjamation_sync_runs WHERE tenant_id=${context.tenantId} AND id=${runId} LIMIT 1
+    SELECT requested_commit,requested_by_user_id,shared_job_id FROM ninjamation_sync_runs
+    WHERE tenant_id=${context.tenantId} AND id=${runId} LIMIT 1
   `);
   if (!selected.rows[0]) throw Object.assign(new Error('Sync run not found'), { code: 'NINJAMATION_SYNC_NOT_FOUND' });
+  if (selected.rows[0].requested_by_user_id !== context.requestedByUserId || selected.rows[0].shared_job_id !== context.id) {
+    throw Object.assign(new Error('The queued sync no longer matches its requester and job'), { code: 'NINJAMATION_SYNC_CONTEXT_MISMATCH' });
+  }
   const commit = selected.rows[0].requested_commit ? String(selected.rows[0].requested_commit) : NINJAMATION_PHASE36_CATALOG_COMMIT;
   const snapshot = await fetchAutomationPacksSnapshot({ commit });
   await runNinjamationCatalogSync({
@@ -257,14 +265,14 @@ export async function registerNinjamationPhase36Routes(app: FastifyInstance) {
     };
   });
 
-  app.post(`${BASE}/scripts/:id/favorite`, { preHandler: readGuards }, async (request, reply) => {
+  app.post(`${BASE}/scripts/:id/favorite`, { preHandler: writeGuards }, async (request, reply) => {
     const id = params(request).id;
     const exists = await db.execute(sql`SELECT id FROM ninjamation_scripts WHERE tenant_id=${tenant(request)} AND id=${id} AND deleted_at IS NULL LIMIT 1`);
     if (!exists.rows[0]) return reply.code(404).send({ error: 'Script not found', code: 'NINJAMATION_SCRIPT_NOT_FOUND' });
     const result = await db.execute(sql`INSERT INTO ninjamation_favorites(tenant_id,user_id,script_id) VALUES (${tenant(request)},${actor(request)},${id}) ON CONFLICT (tenant_id,user_id,script_id) DO UPDATE SET created_at=ninjamation_favorites.created_at RETURNING id,created_at`);
     return reply.code(201).send({ favorite: true, ...camel(result.rows[0] as Row) });
   });
-  app.delete(`${BASE}/scripts/:id/favorite`, { preHandler: readGuards }, async (request, reply) => {
+  app.delete(`${BASE}/scripts/:id/favorite`, { preHandler: writeGuards }, async (request, reply) => {
     await db.execute(sql`DELETE FROM ninjamation_favorites WHERE tenant_id=${tenant(request)} AND user_id=${actor(request)} AND script_id=${params(request).id}`);
     return reply.code(204).send();
   });

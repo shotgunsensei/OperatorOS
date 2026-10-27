@@ -40,6 +40,7 @@ import { ShellWorkspaceBadge } from './ShellChrome';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildScriptOpsWorkflowFocus } from '@/lib/companion-workflow';
 import OutcomeWorkflowAction from './OutcomeWorkflowAction';
+import quality from './CreativeWorkspaceQuality.module.css';
 
 type Row = Record<string, any>;
 type Section = 'dashboard' | 'library' | 'generate' | 'sync' | 'account' | 'admin';
@@ -285,6 +286,7 @@ export default function NinjamationShell({
     return value;
   }, []);
   const refresh = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try {
       await loadWorkspace();
@@ -518,14 +520,15 @@ export default function NinjamationShell({
   return (
     <div
       data-testid="shell-ninjamation"
+      className={quality.workspace}
       aria-busy={Boolean(busy)}
       style={{
-        minHeight: '100vh',
+        minHeight: embedded ? 0 : '100vh',
         background:
-          'radial-gradient(circle at 12% 0%,rgba(41,151,255,.16),transparent 34%),radial-gradient(circle at 88% 10%,rgba(185,28,28,.1),transparent 28%),#020711',
+          embedded ? 'transparent' : 'radial-gradient(circle at 12% 0%,rgba(41,151,255,.16),transparent 34%),radial-gradient(circle at 88% 10%,rgba(185,28,28,.1),transparent 28%),#020711',
         color: colors.text,
         colorScheme: 'dark',
-        padding: 'clamp(16px,3vw,34px)',
+        padding: embedded ? 0 : 'clamp(16px,3vw,34px)',
         boxSizing: 'border-box',
       }}
     >
@@ -664,7 +667,7 @@ export default function NinjamationShell({
         )}
         {loading ? (
           <LoadingState label="Loading the automation arsenal" />
-        ) : (
+        ) : workspace ? (
           <>
             {active === 'dashboard' && (
               <section
@@ -1696,7 +1699,7 @@ export default function NinjamationShell({
               </section>
             )}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

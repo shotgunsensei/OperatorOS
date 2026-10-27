@@ -2,7 +2,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarClock, Download, FileArchive, KeyRound, RadioTower, RefreshCw, ShieldCheck, Webhook } from 'lucide-react';
-import { moduleShellApi, type TechDeckLiteralWorkspaceResponse } from '@/lib/auth';
+import { directoryApi, moduleShellApi, type DirectoryOrganization, type DirectorySite, type TechDeckLiteralWorkspaceResponse } from '@/lib/auth';
+import { tenantMessengerApi, type MessengerMember } from '@/lib/messenger';
+import { useAuth } from '@/components/AuthProvider';
 
 export type TechDeckLiteralArea = 'calendar' | 'portal' | 'licenses' | 'status' | 'webhooks' | 'api-tokens' | 'compliance';
 interface Props { tenantKey: string; canWrite: boolean; canManage: boolean; area: TechDeckLiteralArea }
@@ -47,6 +49,91 @@ function packageStatus(status: string, scanStatus: string | null): string {
 function RowList({ rows, empty, label }: { rows: Array<Record<string, any>>; empty: string; label: (row: Record<string, any>) => React.ReactNode }) {
   if (rows.length === 0) return <p className="tdl-empty">{empty}</p>;
   return <ul className="tdl-list">{rows.slice(0, 6).map((row, index) => <li key={String(row.id ?? index)}>{label(row)}</li>)}</ul>;
+}
+
+function PortalAssignmentForm({ tenantKey, busy, onAssign }: {
+  tenantKey: string;
+  busy: boolean;
+  onAssign: (input: Record<string, unknown>) => Promise<unknown>;
+}) {
+  const { user } = useAuth();
+  const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
+  const [sites, setSites] = useState<DirectorySite[]>([]);
+  const [members, setMembers] = useState<Pick<MessengerMember, 'id' | 'name' | 'email'>[]>([]);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [directoryError, setDirectoryError] = useState('');
+  const [membersError, setMembersError] = useState('');
+  const [search, setSearch] = useState('');
+  const [memberId, setMemberId] = useState('');
+  const [organizationId, setOrganizationId] = useState('');
+  const [siteId, setSiteId] = useState('');
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    let current = true;
+    setDirectoryLoading(true); setDirectoryError(''); setOrganizations([]); setSites([]);
+    setOrganizationId(''); setSiteId('');
+    void Promise.all([directoryApi.organizations.list('techdeck'), directoryApi.sites.list('techdeck')])
+      .then(([clients, locations]) => { if (current) { setOrganizations(clients.organizations); setSites(locations.sites); } })
+      .catch(error => { if (current) setDirectoryError(errorMessage(error)); })
+      .finally(() => { if (current) setDirectoryLoading(false); });
+    return () => { current = false; };
+  }, [tenantKey, retry, user]);
+
+  useEffect(() => {
+    let current = true;
+    setMembersLoading(true); setMembersError(''); setMembers([]); setMemberId('');
+    const timer = setTimeout(() => {
+      // The shared member directory permits module sessions and revalidates
+      // actual active tenant membership; the generic tenant-users API does not.
+      void tenantMessengerApi.members(search.trim()).then(result => {
+        if (!current) return;
+        const available = result.members.slice(0, 100);
+        // Its caller is omitted. Include that caller only after the tenant
+        // membership lookup succeeded, without granting new access.
+        setMembers((user && !available.some(member => member.id === user.id)
+          ? [{ id: user.id, name: user.name || user.email, email: user.email }, ...available]
+          : available).slice(0, 100));
+      }).catch(error => { if (current) setMembersError(errorMessage(error)); })
+        .finally(() => { if (current) setMembersLoading(false); });
+    }, 200);
+    return () => { current = false; clearTimeout(timer); };
+  }, [tenantKey, search, retry, user]);
+
+  const clientSites = sites.filter(site => site.organizationId === organizationId);
+  const lookupError = directoryError || membersError;
+  const ready = !busy && !directoryLoading && !membersLoading && !lookupError;
+  const selectionValid = members.some(member => member.id === memberId)
+    && organizations.some(client => client.id === organizationId)
+    && (!siteId || clientSites.some(site => site.id === siteId));
+
+  return <form className="tdl-portal-form" onSubmit={event => {
+    event.preventDefault();
+    if (!ready || !selectionValid) return;
+    void onAssign({ userId: memberId, directoryOrganizationId: organizationId, directorySiteId: siteId || undefined,
+      canCreateTickets: true, canComment: true, canViewEvidence: true }).then(result => {
+      if (result) { setMemberId(''); setOrganizationId(''); setSiteId(''); }
+    });
+  }}>
+    <style>{`.tdl-portal-form label{display:grid;gap:6px;font-size:13px;font-weight:600;color:inherit}.tdl-portal-form label :is(input,select){width:100%;min-width:0}.tdl-portal-form small{font-size:12px;line-height:1.5;color:var(--module-muted,#9bb0c6)}.tdl-portal-form :is(input,select,button){min-height:44px}.tdl-portal-form select{background:var(--module-panel-raised,#101826);color:var(--module-text,#e5eefc);border:1px solid var(--module-border,#263348);border-radius:6px;padding:8px 10px;color-scheme:dark}.tdl-portal-form select:disabled{color:var(--module-muted,#9bb0c6);opacity:.65}.tdl-portal-form :is(input,select,button):focus-visible{outline:2px solid var(--module-focus,#7dd3fc);outline-offset:2px}.tdl-portal-form [role=alert]{overflow-wrap:anywhere}`}</style>
+    <label>Find portal member<input type="search" aria-label="Find portal member" value={search} maxLength={80} placeholder="Name or email" onChange={event => setSearch(event.target.value)} disabled={busy} /></label>
+    <small>Search by name or email. Up to 100 active members are shown.</small>
+    {lookupError && <div className="tdl-error" role="alert">{lookupError}<button type="button" onClick={() => setRetry(value => value + 1)}>Retry portal choices</button></div>}
+    {(directoryLoading || membersLoading) && <p role="status" aria-busy="true">Loading permitted portal choices…</p>}
+    <label>Portal member<select name="userId" aria-label="Portal member" required value={memberId} disabled={!ready} onChange={event => setMemberId(event.target.value)}>
+      <option value="">Choose an active member</option>{members.map(member => <option key={member.id} value={member.id}>{member.name} ({member.email})</option>)}
+    </select></label>
+    <label>Client organization<select name="organizationId" aria-label="Client organization" required value={organizationId} disabled={!ready} onChange={event => { setOrganizationId(event.target.value); setSiteId(''); }}>
+      <option value="">Choose a client</option>{organizations.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}
+    </select></label>
+    <label>Client site<select name="siteId" aria-label="Client site" value={siteId} disabled={!ready || !organizationId} onChange={event => setSiteId(event.target.value)}>
+      <option value="">All sites for this client</option>{clientSites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}
+    </select></label>
+    <small>Leave the site at “All sites” to use the existing client-wide scope.</small>
+    {!directoryLoading && !directoryError && organizations.length === 0 && <p className="tdl-note">Create the client in the Business Directory before granting portal access.</p>}
+    <button disabled={!ready || !selectionValid}>Grant portal access</button>
+  </form>;
 }
 
 export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage, area }: Props) {
@@ -127,6 +214,7 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
 
   return (
     <section id="techdeck-literal-workspace" className="techdeck-panel tdl-console" data-testid="techdeck-literal-workspace" data-can-write={canWrite ? 'true' : 'false'} data-can-manage={canManage ? 'true' : 'false'} tabIndex={-1}>
+      <style>{`.tdl-console .tdl-field{display:grid;gap:6px;font-size:13px;font-weight:600}.tdl-console .tdl-field input{width:100%;min-width:0}`}</style>
       <header className="tdl-heading">
         <div><span>Client service controls</span><h2>Service automation and trust operations</h2><p>Calendar, client portal, licensing, service status, integrations, secure intake, and repeatable compliance packages.</p></div>
         <button type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? 'tdl-spin' : ''} />Refresh</button>
@@ -141,20 +229,18 @@ export default function TechDeckLiteralConsole({ tenantKey, canWrite, canManage,
           <h3><CalendarClock size={17} />Calendar and recurrence</h3>
           <RowList rows={workspace?.appointments ?? []} empty="No appointments scheduled." label={row => <><strong>{row.title}</strong><span>{new Date(String(row.starts_at)).toLocaleString()}</span></>} />
           {canWrite && <form onSubmit={submit('appointment', 'appointments', input => ({ ...input, startsAt: new Date(input.startsAt).toISOString(), endsAt: new Date(input.endsAt).toISOString() }))}>
-            <input name="title" required aria-label="Appointment title" placeholder="Appointment title" /><input name="startsAt" required type="datetime-local" aria-label="Starts at" /><input name="endsAt" required type="datetime-local" aria-label="Ends at" /><button disabled={busy === 'appointment'}>Schedule</button>
+            <label className="tdl-field">Appointment title<input name="title" required aria-label="Appointment title" placeholder="Appointment title" /></label><label className="tdl-field">Starts at<input name="startsAt" required type="datetime-local" aria-label="Starts at" /></label><label className="tdl-field">Ends at<input name="endsAt" required type="datetime-local" aria-label="Ends at" /></label><button disabled={busy === 'appointment'}>Schedule</button>
           </form>}
           <RowList rows={workspace?.schedules ?? []} empty="No recurring ticket rules." label={row => <><strong>{row.name}</strong><span>{row.enabled ? 'Enabled' : 'Paused'} · every {row.interval_seconds}s</span></>} />
           {canManage && <form onSubmit={submit('recurrence', 'recurring-tickets', input => ({ name: input.name, title: input.ticketTitle, intervalDays: Number(input.intervalDays), nextRunAt: new Date().toISOString(), priority: 'medium' }))}>
-            <input name="name" required aria-label="Recurring rule name" placeholder="Rule name" /><input name="ticketTitle" required aria-label="Generated ticket title" placeholder="Generated ticket title" /><input name="intervalDays" required type="number" min="1" max="30" defaultValue="1" aria-label="Interval days" /><button disabled={busy === 'recurrence'}>Create rule</button>
+            <label className="tdl-field">Recurring rule name<input name="name" required aria-label="Recurring rule name" placeholder="Rule name" /></label><label className="tdl-field">Generated ticket title<input name="ticketTitle" required aria-label="Generated ticket title" placeholder="Generated ticket title" /></label><label className="tdl-field">Interval days<input name="intervalDays" required type="number" min="1" max="30" defaultValue="1" aria-label="Interval days" /></label><button disabled={busy === 'recurrence'}>Create rule</button>
           </form>}
         </article>}
 
         {area === 'portal' && <article id="techdeck-portal" className="tdl-card">
           <h3><ShieldCheck size={17} />Scoped client portal</h3>
           <RowList rows={workspace?.portalAssignments ?? []} empty="No portal assignments." label={row => <><strong>{row.organization_name}</strong><span>{row.site_name ?? 'All assigned sites'} · assigned member</span></>} />
-          {canManage && <form onSubmit={submit('portal', 'portal-assignments', input => ({ userId: input.userId, directoryOrganizationId: input.organizationId, directorySiteId: input.siteId || undefined, canCreateTickets: true, canComment: true, canViewEvidence: true }))}>
-            <input name="userId" required aria-label="OperatorOS member ID" placeholder="Paste member ID from OperatorOS" /><input name="organizationId" required aria-label="Client ID" placeholder="Paste client ID" /><input name="siteId" aria-label="Optional site ID" placeholder="Paste site ID (optional)" /><button disabled={busy === 'portal'}>Grant portal access</button>
-          </form>}
+          {canManage && <PortalAssignmentForm key={tenantKey} tenantKey={tenantKey} busy={busy === 'portal'} onAssign={input => act('portal', 'portal-assignments', input)} />}
           <p className="tdl-note">Portal users see and comment only on tickets for their assigned Directory clients and sites.</p>
         </article>}
 

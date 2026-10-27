@@ -22,6 +22,7 @@ import {
 import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/runner-gateway/src/safety.js';
 import cookie from '@fastify/cookie';
 import { closeDatabasePool, db } from './db.js';
+import { startCallCommandRealtimeRecovery, stopCallCommandRealtimeRecovery } from './lib/callcommand-realtime-recovery.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns, users } from './schema.js';
 import { serveUI } from './ui.js';
 import {
@@ -320,8 +321,10 @@ if (!databaseReleaseVerifiedBySupervisor) {
 }
 startSsoTokenCleanup();
 startSharedServiceWorker();
+startCallCommandRealtimeRecovery();
 startTorqueAssistReservationReaper();
 app.addHook('onClose', async () => {
+  await stopCallCommandRealtimeRecovery();
   stopTorqueAssistReservationReaper();
   await stopSharedServiceWorker();
   await closeDatabasePool();

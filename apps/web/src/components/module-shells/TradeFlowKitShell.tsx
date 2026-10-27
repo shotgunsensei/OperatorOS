@@ -8,7 +8,6 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
-  Bell,
   BriefcaseBusiness,
   CalendarClock,
   ClipboardList,
@@ -390,8 +389,6 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
           <Link className={styles.iconButton} href={`${hrefFor('/dashboard')}#tradeflowkit-global-search-input`} aria-label="Open TradeFlowKit search"><Search size={17} /></Link>
           <Link className={styles.iconButton} href={hrefFor('/settings')} aria-label="TradeFlowKit settings"><Settings size={17} /></Link>
           <button className={styles.iconButton} type="button" onClick={toggleTheme} aria-label={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`} title={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`}>{darkThemeActive ? <Sun size={17} /> : <Moon size={17} />}</button>
-          <span className={styles.iconButton} role="img" aria-label="Protected by OperatorOS" title="Protected by OperatorOS"><ShieldCheck size={17} /></span>
-          <span className={styles.iconButton} role="img" aria-label="Notifications are delivered by OperatorOS" title="Notifications are delivered by OperatorOS"><Bell size={17} /></span>
         </>
       )}
       breadcrumbContent={<>TradeFlowKit / <strong>{pageCopy[route.screen].title}</strong></>}
@@ -445,7 +442,7 @@ function TradeFlowKitScreen({
   if (screen === 'dashboard') {
     return <>
       <TradeFlowKitOperations tenantKey={tenantKey} canWrite={canWrite} canManage={canManage} view="dashboard" routePrefix={hrefFor('')} />
-      <TradeFlowKitGlobalSearch tenantKey={tenantKey} />
+      <TradeFlowKitGlobalSearch tenantKey={tenantKey} hrefFor={hrefFor} />
       <CoreSuiteSection title="Workspace tools" description="Sales, work management, payments, and reporting.">
       <div className={styles.dashboardGrid} aria-label="TradeFlowKit active workflows">
         <QuickLink href={hrefFor('/leads')} Icon={ClipboardList} title="Lead pipeline" body="Capture and qualify real service opportunities." />

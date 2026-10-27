@@ -362,7 +362,13 @@ export async function registerNinjaLaunchKitPhase34Routes(app: FastifyInstance):
       const modId = await moduleId();
       const requestHash = { title: parsed.title, templateSlug: parsed.templateSlug, input: parsed.input, generationMode: parsed.generationMode, plan: access.plan };
       operation = await beginIdempotentOperation({ tenantId, moduleId: modId, scope: 'launchkit.phase34.create', idempotencyKey: parsed.idempotencyKey, request: requestHash, leaseMs: 120_000 });
-      if (operation.state === 'replay') return reply.code(operation.responseStatus).send({ ...(operation.responseJson as Row), replayed: true });
+      if (operation.state === 'replay') {
+        const replay = operation.responseJson as Row;
+        // The shared idempotency scope is tenant-wide; product kits are private
+        // to their creator. Revalidate current ownership before returning one.
+        await loadKit(tenantId, userId, String(replay?.kit?.id ?? ''));
+        return reply.code(operation.responseStatus).send({ ...replay, replayed: true });
+      }
       if (operation.state === 'conflict') return reply.code(409).send({ error: 'Idempotency key was reused with a different launch brief', code: 'IDEMPOTENCY_CONFLICT' });
       if (operation.state === 'in_progress') return reply.code(409).send({ error: 'Launch kit generation is already processing', code: 'IDEMPOTENCY_IN_PROGRESS' });
       await consumeNinjaLaunchGeneration({ tenantId, userId, limit: access.limits.kitsPerMonth });

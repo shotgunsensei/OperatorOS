@@ -27,6 +27,8 @@ import NinjaLaunchKitShell from './NinjaLaunchKitShell';
 import { ShellWorkspaceBadge, ShellLaunchButton } from './ShellChrome';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildDeployOpsWorkflowFocus, type DeployOpsExecutionSummary } from '@/lib/companion-workflow';
+import quality from './CreativeWorkspaceQuality.module.css';
+import { ErrorState } from '@/components/ExperiencePrimitives';
 
 type Row = Record<string, any>;
 type Overview = {
@@ -432,26 +434,31 @@ export default function NinjaLaunchKitCompleteWorkspace({
   const accessLabel = applicationStack ? 'APPLICATION STACK' : `${plan.toUpperCase()} plan`;
   const lockedVisuals = selected?.visualPromos?.filter((item: Row) => item.locked).length ?? 0;
 
+  if (!loading && !overview && error) {
+    return <div className={quality.workspace} data-testid="shell-ninja-launch-kit-complete" data-can-write={canWrite ? 'true' : 'false'}><ErrorState title="Campaign workspace unavailable" description={error} action={<button type="button" style={secondary} onClick={() => { setLoading(true); void load(); }}>Try again</button>} /></div>;
+  }
+
   return (
     <div
       data-testid="shell-ninja-launch-kit-complete"
+      className={quality.workspace}
       data-launchkit-view={resolvedView}
       data-requested-kit-id={requestedKit.id ?? undefined}
       data-can-write={canWrite ? 'true' : 'false'}
       data-selected-owned={selected ? (ownedByCurrentUser ? 'true' : 'false') : undefined}
       data-selected-can-manage={selected ? (canManageSelected ? 'true' : 'false') : undefined}
       style={{
-        minHeight: '100vh',
+        minHeight: embedded ? 0 : '100vh',
         overflowX: 'hidden',
-        background: 'radial-gradient(circle at 12% 0%,rgba(2,132,199,.22),transparent 36%),radial-gradient(circle at 88% 8%,rgba(109,40,217,.14),transparent 30%),#020617',
+        background: embedded ? 'transparent' : 'radial-gradient(circle at 12% 0%,rgba(2,132,199,.22),transparent 36%),radial-gradient(circle at 88% 8%,rgba(109,40,217,.14),transparent 30%),#020617',
         color: '#fafafa',
         colorScheme: 'dark',
       }}
     >
       <style>{`.nlk-workday-slot{min-width:0}.nlk-workday-loading{min-height:382px;display:flex;align-items:center;justify-content:center;gap:8px;color:#a1a1aa}@media(max-width:1023px){.nlk-grid{grid-template-columns:1fr!important}.nlk-pad{padding:18px!important}.nlk-nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;flex-wrap:nowrap!important}.nlk-workday-loading{min-height:382px}} .nlk-button:focus-visible,.nlk-input:focus-visible{outline:3px solid #67e8f9;outline-offset:2px}[data-launchkit-view] #launchkit-dashboard,[data-launchkit-view] #launchkit-builder,[data-launchkit-view] #launchkit-templates,[data-launchkit-view] #launchkit-kits,[data-launchkit-view] #launchkit-visual-promos,[data-launchkit-view] #launchkit-outputs,[data-launchkit-view] #launchkit-brands,[data-launchkit-view] #launchkit-exports,[data-launchkit-view] #launchkit-account,[data-launchkit-view] #launchkit-execution{display:none}[data-launchkit-view="overview"] #launchkit-dashboard,[data-launchkit-view="projects"] #launchkit-builder,[data-launchkit-view="projects"] #launchkit-kits,[data-launchkit-view="templates"] #launchkit-templates,[data-launchkit-view="brief"] #launchkit-builder,[data-launchkit-view="brief"] #launchkit-brands,[data-launchkit-view="deliverables"] #launchkit-visual-promos,[data-launchkit-view="deliverables"] #launchkit-outputs,[data-launchkit-view="review"] #launchkit-execution,[data-launchkit-view="exports"] #launchkit-exports,[data-launchkit-view="settings"] #launchkit-account{display:block}`}</style>
       <div
-        className="nlk-pad"
-        style={{ maxWidth: 1380, margin: '0 auto', padding: '30px clamp(18px,4vw,52px) 72px' }}
+        className={embedded ? undefined : 'nlk-pad'}
+        style={{ maxWidth: 1380, margin: '0 auto', padding: embedded ? 0 : '30px clamp(18px,4vw,52px) 72px' }}
       >
         {!embedded && (
           <header

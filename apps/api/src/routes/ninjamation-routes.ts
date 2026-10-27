@@ -530,6 +530,13 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
         code: 'NINJAMATION_DOWNLOAD_NOT_APPROVED',
       });
     }
+    const content = String(current.content);
+    if (sha256(content) !== String(current.content_sha256)) {
+      return reply.code(409).send({
+        error: 'Stored script integrity check failed',
+        code: 'NINJAMATION_DOWNLOAD_INTEGRITY_FAILED',
+      });
+    }
     const fileName = safeFileName(current.name, current.language as NinjamationLanguage);
     await db.transaction(async (tx) => {
       await tx.execute(sql`
@@ -552,7 +559,7 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
       .header('Cache-Control', 'private, no-store')
       .header('X-Content-Type-Options', 'nosniff')
       .header('X-Ninjamation-Content-SHA256', String(current.content_sha256))
-      .send(`${String(current.content).trimEnd()}\n`);
+      .send(content);
   });
 
   app.post('/v1/modules/ninjamation/generations', { preHandler: writeGuards }, async (request, reply) => {

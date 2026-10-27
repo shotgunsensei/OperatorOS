@@ -110,9 +110,9 @@ export default function CallCommandSetup({ product, commercial, canAdmin, refres
 
   return <div className={styles.setup} data-testid="callcommand-guided-setup">
     <header className={styles.hero}>
-      <span className={styles.eyebrow}>Your business. Always answered.</span>
+      <span className={styles.eyebrow}>Your business, your receptionist</span>
       <h2>A receptionist, ready in three steps.</h2>
-      <p>Tell us about your business, pick your number, and switch on your AI receptionist. OperatorOS handles the phone connection, AI configuration, and number subscription.</p>
+      <p>Tell us about your business, choose your number, and review answering readiness before activation. Your saved setup stays here as you work through each step.</p>
       <ol className={styles.steps}>{['Your business', 'Your number', 'Start answering'].map((label, index) => <li key={label} className={step === index + 1 ? styles.current : undefined} aria-current={step === index + 1 ? 'step' : undefined}>{index + 1}. {label}</li>)}</ol>
     </header>
     {!canAdmin && <p className={styles.notice}>An organization owner or administrator can set up phone service. You can review the saved setup.</p>}

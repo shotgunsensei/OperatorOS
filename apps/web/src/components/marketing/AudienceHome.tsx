@@ -19,11 +19,24 @@ export default function AudienceHome() {
     <div className={styles.root}>
       <section className={`${styles.container} ${styles.homeHero}`} data-testid="marketing-hero" aria-labelledby="audience-title">
         <div className={styles.homeIntro}>
-          <p className={styles.eyebrow}>YOUR BUSINESS. YOUR WAY FORWARD.</p>
-          <h1 id="audience-title" data-testid="marketing-hero-title">You run the business.<br /><span>Choose your lane.</span></h1>
-          <p className={styles.lead}>Start with the work you do. Find the tools that move it forward.</p>
+          <div className={styles.homeHeading}>
+            <p className={styles.eyebrow}>YOUR WORK. CONNECTED.</p>
+            <h1 id="audience-title" data-testid="marketing-hero-title">Run the work.<br /><span>Keep the whole picture.</span></h1>
+          </div>
+          <div className={styles.homePitch}>
+            <p className={styles.lead}>Customer work, service requests, and your team&apos;s next steps. Bring them into one workspace, with tools that fit the way you work.</p>
+            <div className={styles.homeActions}>
+              <Link href="/modules" className={styles.primaryButton}>Explore the apps <ArrowRight size={18} aria-hidden="true" /></Link>
+              <Link href="/pricing" className={styles.secondaryButton}>Compare plans</Link>
+            </div>
+            <p className={styles.homeAccessNote}><LockKeyhole size={14} aria-hidden="true" />One account. Access set by your organization.</p>
+          </div>
         </div>
-        <div className={styles.laneGrid} data-testid="audience-lanes">
+        <div className={styles.laneSectionHeading}>
+          <h2>Start with the work you do.</h2>
+          <p>Find your fit. Build from there.</p>
+        </div>
+        <div id="audience-lanes" className={styles.laneGrid} data-testid="audience-lanes">
           {AUDIENCE_LANES.map((lane, index) => (
             <Link key={lane.slug} href={lanePath(lane)} className={styles.laneCard} style={{ '--lane-accent': lane.accent } as React.CSSProperties} data-testid={`audience-lane-${lane.slug}`} aria-label={`Explore ${lane.audience} with ${lane.product}`}>
               <Image src={lane.image} alt="" fill priority sizes="(max-width: 700px) 100vw, 33vw" className={styles.laneImage} />

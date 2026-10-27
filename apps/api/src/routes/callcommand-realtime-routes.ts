@@ -2,12 +2,18 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
+import {
+  CallCommandRealtimeOwnershipError,
+  lockCallCommandRealtimeOwnership,
+  withCallCommandRealtimeOwnership,
+  type CallCommandRealtimeOwnership,
+  type CallCommandRealtimeTransaction,
+} from '../lib/callcommand-realtime-ownership.js';
 import { executeFlowGraph } from '../lib/callcommand-phase35.js';
 import {
   authorizeCallCommandTool,
   compileCallCommandInstructions,
   reconcileCallCommandRealtimeUsage,
-  releaseCallCommandLane,
   type CallCommandRealtimeModel as MeteredRealtimeModel,
 } from '../lib/callcommand-capacity.js';
 import {
@@ -28,6 +34,9 @@ import {
 import {
   hasCallCommandRealtimeSideband,
   registerCallCommandRealtimeSideband,
+  drainCallCommandRealtimeSidebands,
+  retireCallCommandRealtimeSideband,
+  type CallCommandRealtimeSidebandSession,
 } from '../lib/callcommand-realtime-session-registry.js';
 import {
   callCommandAutomationRuleMatches,
@@ -156,8 +165,8 @@ function buildToolBindings(input: { actions: Row[]; transferTargets: Row[]; tran
   return { tools, actionBindings, targetAliases };
 }
 
-async function loadAuthority(callId: string): Promise<Row | null> {
-  const result = await db.execute(sql`
+async function loadAuthority(callId: string, executor: Pick<typeof db,'execute'> = db, tenantId?: string): Promise<Row | null> {
+  const result = await executor.execute(sql`
     SELECT
       c.*,
       channel.status AS channel_status,
@@ -199,7 +208,7 @@ async function loadAuthority(callId: string): Promise<Row | null> {
         AND channel.provider_verified_at IS NOT NULL
         AND channel.health_status='healthy' AND channel.health_checked_at IS NOT NULL
       ) AS commercial_realtime_ready,
-      lease.id AS active_lease_id
+      lease.id AS active_lease_id,EXTRACT(EPOCH FROM lease.acquired_at)::text AS active_lease_generation
     FROM callcommand_calls c
     JOIN callcommand_channels channel
       ON channel.tenant_id=c.tenant_id AND channel.id=c.channel_id AND channel.deleted_at IS NULL
@@ -216,8 +225,10 @@ async function loadAuthority(callId: string): Promise<Row | null> {
     LEFT JOIN callcommand_tenant_runtime_settings settings ON settings.tenant_id=c.tenant_id
     LEFT JOIN callcommand_lane_leases lease
       ON lease.tenant_id=c.tenant_id AND lease.call_id=c.id
+      AND lease.id=c.capacity_lease_id AND lease.provider_call_sid=c.provider_call_sid
       AND lease.status='active' AND lease.expires_at>NOW()
     WHERE c.id=${callId} AND c.provider='twilio' AND c.direction='inbound'
+      AND (${tenantId === undefined} OR c.tenant_id=${tenantId ?? ''})
     LIMIT 1
   `);
   return (result.rows[0] as Row | undefined) ?? null;
@@ -227,6 +238,43 @@ async function safeReject(adapter: RealtimeAdapter, openAiCallId: string, status
   try { await adapter.reject(openAiCallId, statusCode); } catch { /* signed webhook still receives a safe local failure */ }
 }
 
+function sidebandOwner(authority: Row): CallCommandRealtimeOwnership {
+  const owner = authority.sidebandOwnership as CallCommandRealtimeOwnership | undefined;
+  if (!owner) throw new CallCommandRealtimeOwnershipError();
+  return owner;
+}
+
+async function currentSidebandAuthority(tx: CallCommandRealtimeTransaction, owner: CallCommandRealtimeOwnership): Promise<Row> {
+  const current = await loadAuthority(owner.callId,tx,owner.tenantId);
+  if (!current || current.openai_realtime_call_id !== owner.openAiCallId
+    || current.active_lease_id !== owner.capacityLeaseId
+    || current.active_lease_generation !== owner.capacityGeneration || current.channel_status !== 'active'
+    || current.commercial_realtime_ready !== true || !isRealtimeCallEligible(current)
+    || !ACTIVE_CALL_STATES.has(String(current.status))
+    || (realtimeConsentRequired(current) && !current.consent_id)
+    || (realtimeRecordingEnabled(current) && !['pending','ready'].includes(String(current.recording_status)))) {
+    throw new CallCommandRealtimeOwnershipError();
+  }
+  // Same active-custodian policy used by the existing runtime compiler.
+  const custodian = await tx.execute(sql`SELECT tu.user_id FROM tenant_users tu
+    JOIN users u ON u.id=tu.user_id AND u.status='active' WHERE tu.tenant_id=${owner.tenantId} LIMIT 1`);
+  if (!custodian.rows[0]) throw new CallCommandRealtimeOwnershipError();
+  return {...current,sidebandOwnership:owner};
+}
+
+async function withOwnedAuthority<T>(authority: Row, operation: (tx: CallCommandRealtimeTransaction, current: Row)=>Promise<T>) {
+  const owner = sidebandOwner(authority);
+  return withCallCommandRealtimeOwnership(owner,async tx => operation(tx,await currentSidebandAuthority(tx,owner)));
+}
+
+function reservationGuard(authority: Row) {
+  const owner = sidebandOwner(authority);
+  return async (tx: CallCommandRealtimeTransaction) => {
+    await lockCallCommandRealtimeOwnership(tx,owner);
+    await currentSidebandAuthority(tx,owner);
+  };
+}
+
 async function claimIncomingEvent(input: {
   authority: Row;
   incoming: VerifiedOpenAiIncomingCall;
@@ -234,14 +282,30 @@ async function claimIncomingEvent(input: {
 }) {
   const processingOwner = randomUUID();
   return db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-capacity:${input.authority.tenant_id}`},0))`);
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-realtime:${input.authority.id}`},0))`);
     const locked = (await tx.execute(sql`
-      SELECT openai_realtime_call_id,realtime_status FROM callcommand_calls
+      SELECT * FROM callcommand_calls
       WHERE tenant_id=${input.authority.tenant_id} AND id=${input.authority.id} FOR UPDATE
     `)).rows[0] as Row | undefined;
     if (!locked) throw new CallCommandRealtimeError('Call was not found', 'CALLCOMMAND_REALTIME_CALL_NOT_FOUND', 404);
+    const current=await loadAuthority(String(input.authority.id),tx,String(input.authority.tenant_id));
+    if (!current || !current.active_lease_id || !ACTIVE_CALL_STATES.has(String(current.status)) || current.ended_at
+      || current.terminal_reconciled_at || current.channel_status!=='active' || current.commercial_realtime_ready!==true
+      || !isRealtimeCallEligible(current) || (realtimeConsentRequired(current) && !current.consent_id)
+      || (realtimeRecordingEnabled(current) && !['pending','ready'].includes(String(current.recording_status)))) {
+      throw new CallCommandRealtimeOwnershipError();
+    }
+    input.authority.active_lease_id=current.active_lease_id;
+    input.authority.active_lease_generation=current.active_lease_generation;
     if (locked.openai_realtime_call_id && String(locked.openai_realtime_call_id) !== input.incoming.openAiCallId) {
       throw new CallCommandRealtimeError('Call is already bound to a different provider call', 'CALLCOMMAND_REALTIME_CALL_CONFLICT', 409);
+    }
+    const boundReceipt=(await tx.execute(sql`SELECT provider_event_id,status FROM callcommand_ingestion_events
+      WHERE tenant_id=${input.authority.tenant_id} AND source='openai_realtime' AND call_id=${input.authority.id}
+      ORDER BY received_at,id LIMIT 1 FOR UPDATE`)).rows[0];
+    if(boundReceipt && boundReceipt.provider_event_id!==input.incoming.eventId) {
+      return {duplicate:true as const,mode:'none' as const,recovered:false as const,status:String(boundReceipt.status)};
     }
     const created = await tx.execute(sql`
       INSERT INTO callcommand_ingestion_events(
@@ -255,7 +319,8 @@ async function claimIncomingEvent(input: {
     `);
     if (!created.rows[0]) {
       const existing = (await tx.execute(sql`
-        SELECT * FROM callcommand_ingestion_events
+        SELECT *,CASE WHEN processing_lease_expires_at IS NOT NULL THEN processing_lease_expires_at<=clock_timestamp()
+          ELSE received_at::timestamptz<=clock_timestamp()-INTERVAL '30 seconds' END AS lease_expired FROM callcommand_ingestion_events
         WHERE tenant_id=${input.authority.tenant_id} AND source='openai_realtime'
           AND provider_event_id=${input.incoming.eventId} FOR UPDATE
       `)).rows[0] as Row | undefined;
@@ -263,9 +328,7 @@ async function claimIncomingEvent(input: {
         throw new CallCommandRealtimeError('Webhook replay conflicts with the original event', 'CALLCOMMAND_REALTIME_WEBHOOK_CONFLICT', 409);
       }
       const status = String(existing.status ?? 'processing');
-      const leaseExpired = existing.processing_lease_expires_at
-        ? new Date(existing.processing_lease_expires_at).getTime() <= Date.now()
-        : new Date(existing.received_at).getTime() <= Date.now() - 30_000;
+      const leaseExpired = existing.lease_expired===true;
       if (status === 'processing' && leaseExpired) {
         await tx.execute(sql`
           UPDATE callcommand_ingestion_events SET processing_owner=${processingOwner},
@@ -306,15 +369,16 @@ async function claimIncomingEvent(input: {
 }
 
 async function markProviderAccepting(authority: Row, incoming: VerifiedOpenAiIncomingCall): Promise<void> {
-  await db.execute(sql`
+  await withOwnedAuthority(authority,async tx => { await tx.execute(sql`
     UPDATE callcommand_ingestion_events SET status='accepting',
       processing_lease_expires_at=NOW()+INTERVAL '30 seconds',error_code=NULL
     WHERE tenant_id=${authority.tenant_id} AND source='openai_realtime' AND provider_event_id=${incoming.eventId}
-  `);
+  `); });
 }
 
 async function markProviderAccepted(authority: Row, incoming: VerifiedOpenAiIncomingCall): Promise<void> {
-  await db.transaction(async tx => {
+  await withOwnedAuthority(authority,async tx => {
+    await recordConfirmedReceipt(tx,sidebandOwner(authority));
     await tx.execute(sql`
       UPDATE callcommand_ingestion_events SET status='provider_confirmed',processed_at=NULL,error_code=NULL,
         processing_lease_expires_at=NOW()+INTERVAL '30 seconds'
@@ -328,8 +392,9 @@ async function markProviderAccepted(authority: Row, incoming: VerifiedOpenAiInco
   });
 }
 
-async function markSidebandConnected(authority: Row, incoming: VerifiedOpenAiIncomingCall): Promise<void> {
-  await db.transaction(async tx => {
+async function markSidebandConnected(authority: Row, incoming: Pick<VerifiedOpenAiIncomingCall,'eventId'|'openAiCallId'>): Promise<void> {
+  await withOwnedAuthority(authority,async tx => {
+    await recordConfirmedReceipt(tx,sidebandOwner(authority));
     await tx.execute(sql`
       UPDATE callcommand_ingestion_events SET status='sideband_connected',processed_at=NOW(),error_code=NULL,
         processing_lease_expires_at=NOW()+INTERVAL '30 seconds'
@@ -357,30 +422,22 @@ async function markSidebandConnected(authority: Row, incoming: VerifiedOpenAiInc
   });
 }
 
-async function markIncomingFailed(authority: Row, incoming: VerifiedOpenAiIncomingCall, code: string): Promise<void> {
-  const safeCode = safeText(code, 80) || 'CALLCOMMAND_REALTIME_ACCEPT_FAILED';
-  await db.transaction(async tx => {
-    await tx.execute(sql`
-      UPDATE callcommand_ingestion_events SET status='failed',processed_at=NOW(),error_code=${safeCode},
-        processing_owner=NULL,processing_lease_expires_at=NULL
-      WHERE tenant_id=${authority.tenant_id} AND source='openai_realtime' AND provider_event_id=${incoming.eventId}
-    `);
-    await tx.execute(sql`
-      UPDATE callcommand_calls SET status='failed',realtime_status='failed',realtime_error_code=${safeCode},
-        realtime_last_event_at=NOW(),completed_at=COALESCE(completed_at,NOW()),ended_at=COALESCE(ended_at,NOW()),updated_at=NOW()
-      WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}
-    `);
-    await tx.execute(sql`
-      UPDATE callcommand_live_sessions SET state='failed',ended_at=COALESCE(ended_at,NOW()),sequence=sequence+1,updated_at=NOW()
-      WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND ended_at IS NULL
-    `);
-    await tx.execute(sql`
-      UPDATE callcommand_tenant_runtime_settings SET realtime_health_status='degraded',
-        realtime_last_error_code=${safeCode},updated_at=NOW()
-      WHERE tenant_id=${authority.tenant_id}
-    `);
+async function releaseOwnedLane(tx: CallCommandRealtimeTransaction, owner: CallCommandRealtimeOwnership, reason: string) {
+  await tx.execute(sql`UPDATE callcommand_lane_leases SET status='released',released_at=NOW(),release_reason=${reason},updated_at=NOW()
+    WHERE tenant_id=${owner.tenantId} AND id=${owner.capacityLeaseId} AND call_id=${owner.callId} AND status='active'`);
+}
+
+async function markIncomingFailed(authority: Row, incoming: Pick<VerifiedOpenAiIncomingCall,'eventId'>, code: string, definitelyUnaccepted = false): Promise<void> {
+  await withOwnedAuthority(authority,async tx => {
+    await tx.execute(sql`UPDATE callcommand_ingestion_events SET error_code=${safeText(code,80)},
+      status=CASE WHEN ${definitelyUnaccepted} THEN 'accept_declined' ELSE status END,
+      processing_lease_expires_at=NOW()+INTERVAL '30 seconds'
+      WHERE tenant_id=${authority.tenant_id} AND source='openai_realtime' AND provider_event_id=${incoming.eventId}`);
+    await tx.execute(sql`UPDATE callcommand_calls SET realtime_status=${definitelyUnaccepted ? 'failed':'connecting'},realtime_error_code=${safeText(code,80)},updated_at=NOW()
+      WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}`);
+    await tx.execute(sql`UPDATE callcommand_tenant_runtime_settings SET realtime_health_status='degraded',realtime_last_error_code=${safeText(code,80)},updated_at=NOW()
+      WHERE tenant_id=${authority.tenant_id}`);
   });
-  await releaseCallCommandLane({ tenantId: String(authority.tenant_id), callId: String(authority.id), reason: 'realtime_accept_failed' });
 }
 
 async function loadRuntimeConfiguration(authority: Row) {
@@ -470,7 +527,7 @@ function toolAuthority(name: string): string | null {
 
 async function reserveControlAction(authority: Row, invocation: RealtimeToolInvocation, actionType: string) {
   const key = `${authority.id}:realtime:control:${actionType}`;
-  const created = await db.execute(sql`
+  const created = await withOwnedAuthority(authority,tx => tx.execute(sql`
     INSERT INTO callcommand_action_runs(
       tenant_id,call_id,action_type,status,idempotency_key,provider,safe_result,
       attempts,reservation_status,reserved_at,lease_expires_at
@@ -478,7 +535,7 @@ async function reserveControlAction(authority: Row, invocation: RealtimeToolInvo
       ${authority.tenant_id},${authority.id},${actionType},'running',${key},'openai','{}'::jsonb,
       1,'claimed',NOW(),NOW()+INTERVAL '2 minutes'
     ) ON CONFLICT (tenant_id,idempotency_key) DO NOTHING RETURNING *
-  `);
+  `));
   if (created.rows[0]) return { claimed: true as const, row: created.rows[0] as Row };
   const expired = await db.execute(sql`
     UPDATE callcommand_action_runs SET status='failed',reservation_status='failed',
@@ -535,6 +592,7 @@ async function dispatchRealtimeNotifications(input: {
       // finalization. New model tool IDs must not resend the same destination.
       idempotencyNamespace: `realtime-notification:${name}`,
       durableNotifications: true,
+      ...(input.authority.sidebandOwnership ? {authorizeReservation:reservationGuard(input.authority)} : {}),
     }));
   }
   const outcomes = results.map(result => String(result.status ?? 'unknown'));
@@ -563,7 +621,9 @@ async function executeRealtimeTool(input: {
   invocation: RealtimeToolInvocation;
 }) {
   const { invocation, adapter } = input;
-  const authority = await loadAuthority(String(input.authority.id));
+  const owner = sidebandOwner(input.authority);
+  const authority = await loadAuthority(owner.callId,db,owner.tenantId);
+  if (authority) authority.sidebandOwnership=owner;
   if (!authority || authority.channel_status !== 'active' || authority.commercial_realtime_ready !== true || !isRealtimeCallEligible(authority)) {
     throw new CallCommandRealtimeError('Call authority is no longer active','CALLCOMMAND_REALTIME_CONFIGURATION_INACTIVE',409);
   }
@@ -592,10 +652,10 @@ async function executeRealtimeTool(input: {
     if (!authorization.allowed) throw new CallCommandRealtimeError('Tool is not authorized', authorization.code, 403);
     const summary = safeText(invocation.arguments.summary, 1_500);
     if (!summary) throw new CallCommandRealtimeError('Tool summary is required', 'CALLCOMMAND_REALTIME_TOOL_ARGUMENT_INVALID', 400);
-    await db.execute(sql`
+    await withOwnedAuthority(authority,tx => tx.execute(sql`
       UPDATE callcommand_calls SET summary=${summary},updated_at=NOW()
       WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}
-    `);
+    `));
     if (['send_email', 'send_slack_alert', 'create_webhook_event'].includes(invocation.name)) {
       const notification = await dispatchRealtimeNotifications({ authority, configuration, call, summary, toolName: invocation.name });
       return {
@@ -615,6 +675,7 @@ async function executeRealtimeTool(input: {
       tenantId: String(authority.tenant_id), userId: configuration.userId, call,
       actions: merged, correlationId: `realtime:${authority.id}`,
       idempotencyNamespace: `openai:${invocation.toolCallId}`,
+      authorizeReservation:reservationGuard(authority),
     });
     const statuses = results.map(result => String(result.status ?? 'unknown'));
     return { ok: statuses.length > 0 && statuses.every(status => SUCCESSFUL_ACTION_STATES.has(status)), action: invocation.name, outcomes: statuses };
@@ -642,9 +703,9 @@ async function executeRealtimeTool(input: {
     let providerActionConfirmed = false;
     let transferLogId: string | null = null;
     try {
-      await db.execute(sql`UPDATE callcommand_calls SET summary=${summary},updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}`);
+      await withOwnedAuthority(authority,tx => tx.execute(sql`UPDATE callcommand_calls SET summary=${summary},updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}`));
       const notification = await dispatchRealtimeNotifications({ authority, configuration, call, summary });
-      transferLogId = await db.transaction(async tx => {
+      transferLogId = await withOwnedAuthority(authority,async tx => {
         const session = (await tx.execute(sql`
           UPDATE callcommand_live_sessions SET state='transferring',sequence=sequence+1,updated_at=NOW()
           WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND ended_at IS NULL RETURNING id
@@ -659,9 +720,10 @@ async function executeRealtimeTool(input: {
         `);
         return String(log.rows[0].id);
       });
+      await withOwnedAuthority(authority,async () => undefined);
       await adapter.refer(invocation.openAiCallId, `tel:${String(target.phone_e164)}`);
       providerActionConfirmed = true;
-      await db.transaction(async tx => {
+      await withOwnedAuthority(authority,async tx => {
         await tx.execute(sql`
           UPDATE callcommand_transfer_logs SET status='provider_accepted'
           WHERE tenant_id=${authority.tenant_id} AND id=${transferLogId} AND status='requested'
@@ -684,8 +746,8 @@ async function executeRealtimeTool(input: {
         errorCode: safeText((error as any)?.code ?? 'CALLCOMMAND_REALTIME_TRANSFER_FAILED', 80),
       });
       if (!outcomeUnknown) {
-        await db.execute(sql`UPDATE callcommand_transfer_logs SET status='failed',completed_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${transferLogId} AND status='requested'`);
-        await db.execute(sql`UPDATE callcommand_live_sessions SET state='connected',sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND state='transferring' AND ended_at IS NULL`);
+        await withOwnedAuthority(authority,tx => tx.execute(sql`UPDATE callcommand_transfer_logs SET status='failed',completed_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${transferLogId} AND status='requested'`));
+        await withOwnedAuthority(authority,tx => tx.execute(sql`UPDATE callcommand_live_sessions SET state='connected',sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND state='transferring' AND ended_at IS NULL`));
       }
       return { ok: false, action: invocation.name, providerActionConfirmed, outcomeUnknown,
         callerStillActive: !outcomeUnknown, fallback: outcomeUnknown
@@ -705,11 +767,12 @@ async function executeRealtimeTool(input: {
     if (!reservation.claimed) return { ok: reservation.row?.status === 'completed', action: invocation.name, duplicate: true };
     let providerActionConfirmed = false;
     try {
-      await db.execute(sql`UPDATE callcommand_calls SET summary=${summary},updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}`);
+      await withOwnedAuthority(authority,tx => tx.execute(sql`UPDATE callcommand_calls SET summary=${summary},updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}`));
       const notification = await dispatchRealtimeNotifications({ authority, configuration, call, summary });
+      await withOwnedAuthority(authority,async () => undefined);
       await adapter.hangup(invocation.openAiCallId);
       providerActionConfirmed = true;
-      await db.transaction(async tx => {
+      await withOwnedAuthority(authority,async tx => {
         await tx.execute(sql`
           UPDATE callcommand_calls SET status='completed',realtime_status='completed',
             completed_at=COALESCE(completed_at,NOW()),ended_at=COALESCE(ended_at,NOW()),updated_at=NOW()
@@ -719,8 +782,8 @@ async function executeRealtimeTool(input: {
           UPDATE callcommand_live_sessions SET state='completed',ended_at=COALESCE(ended_at,NOW()),sequence=sequence+1,updated_at=NOW()
           WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND ended_at IS NULL
         `);
+        await releaseOwnedLane(tx,sidebandOwner(authority),'realtime_end_tool');
       });
-      await releaseCallCommandLane({ tenantId: String(authority.tenant_id), callId: String(authority.id), reason: 'realtime_end_tool' });
       await finishControlAction(authority, String(reservation.row.id), {
         status: 'completed', safeResult: { providerActionConfirmed: true, notification },
       });
@@ -742,7 +805,8 @@ async function executeRealtimeTool(input: {
 async function persistTranscript(authority: Row, event: CallCommandRealtimeTranscriptEvent): Promise<void> {
   const providerEventId = `${event.openAiCallId}:${event.role}:${event.itemId}`.slice(0, 200);
   const payloadSha256 = sha256(JSON.stringify({ role: event.role, transcript: event.transcript }));
-  await db.transaction(async tx => {
+  await withOwnedAuthority(authority,async (tx,current) => {
+    if (!transcriptPersistenceAllowed(current)) throw new CallCommandRealtimeOwnershipError();
     const claimed = await tx.execute(sql`
       INSERT INTO callcommand_ingestion_events(
         tenant_id,source,provider_event_id,payload_sha256,call_id,status,processed_at
@@ -790,12 +854,13 @@ async function persistUsage(authority: Row, event: CallCommandRealtimeUsageEvent
     tenantId: String(authority.tenant_id), callId: String(authority.id),
     providerEventId: `${event.openAiCallId}:${event.responseId}`.slice(0, 160), model,
     inputTokens: event.inputTokens, outputTokens: event.outputTokens,
+    sidebandOwnership:sidebandOwner(authority),
   });
 }
 
 async function persistProviderError(authority: Row, event: CallCommandRealtimeProviderErrorEvent): Promise<void> {
   const code = safeText(event.code, 80) || 'CALLCOMMAND_REALTIME_PROVIDER_ERROR';
-  await db.transaction(async tx => {
+  await withOwnedAuthority(authority,async tx => {
     await tx.execute(sql`
       UPDATE callcommand_calls SET realtime_status=CASE WHEN ${event.recoverable} THEN realtime_status ELSE 'failed' END,
         realtime_error_code=${code},realtime_last_event_at=NOW(),updated_at=NOW()
@@ -816,7 +881,7 @@ async function persistProviderError(authority: Row, event: CallCommandRealtimePr
 async function persistCallbackFailure(authority: Row, event: { callback: string; code: string }): Promise<void> {
   const callback = safeText(event.callback, 40) || 'unknown';
   const code = safeText(event.code, 80) || 'CALLCOMMAND_REALTIME_CALLBACK_FAILED';
-  await db.transaction(async tx => {
+  await withOwnedAuthority(authority,async tx => {
     await tx.execute(sql`
       UPDATE callcommand_calls SET realtime_error_code=${code},realtime_last_event_at=NOW(),updated_at=NOW()
       WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}
@@ -832,6 +897,245 @@ async function persistCallbackFailure(authority: Row, event: { callback: string;
     `);
   });
 }
+
+export const CALLCOMMAND_RECOVERY_ATTEMPTS = 3;
+export const CALLCOMMAND_RECOVERY_BATCH = 2;
+export const CALLCOMMAND_RECOVERY_BACKOFF_SECONDS = 30;
+const RECOVERY_SOURCE = 'openai_realtime_recovery';
+const CONFIRMATION_SOURCE = 'openai_realtime_proof';
+
+async function confirmationDigest(tx:CallCommandRealtimeTransaction,owner:CallCommandRealtimeOwnership) {
+  const receipt=(await tx.execute(sql`SELECT payload_sha256 FROM callcommand_ingestion_events
+    WHERE tenant_id=${owner.tenantId} AND source='openai_realtime' AND provider_event_id=${owner.eventId} AND call_id=${owner.callId}`)).rows[0];
+  if(!receipt) throw new CallCommandRealtimeOwnershipError();
+  return sha256(JSON.stringify({tenantId:owner.tenantId,callId:owner.callId,eventId:owner.eventId,openAiCallId:owner.openAiCallId,
+    payloadSha256:receipt.payload_sha256,capacityLeaseId:owner.capacityLeaseId,capacityGeneration:owner.capacityGeneration}));
+}
+
+async function hasConfirmedReceipt(tx:CallCommandRealtimeTransaction,owner:CallCommandRealtimeOwnership) {
+  const digest=await confirmationDigest(tx,owner);
+  return Boolean((await tx.execute(sql`SELECT id FROM callcommand_ingestion_events
+    WHERE tenant_id=${owner.tenantId} AND source=${CONFIRMATION_SOURCE} AND provider_event_id=${`confirmed:${owner.callId}`}
+      AND call_id=${owner.callId} AND payload_sha256=${digest} AND status='provider_confirmed'`)).rows[0]);
+}
+
+async function recordConfirmedReceipt(tx:CallCommandRealtimeTransaction,owner:CallCommandRealtimeOwnership) {
+  const digest=await confirmationDigest(tx,owner);
+  await tx.execute(sql`INSERT INTO callcommand_ingestion_events(tenant_id,source,provider_event_id,payload_sha256,call_id,status,processed_at)
+    VALUES(${owner.tenantId},${CONFIRMATION_SOURCE},${`confirmed:${owner.callId}`},${digest},${owner.callId},'provider_confirmed',NOW())
+    ON CONFLICT (tenant_id,source,provider_event_id) DO NOTHING`);
+  if(!await hasConfirmedReceipt(tx,owner)) throw new CallCommandRealtimeOwnershipError();
+}
+
+async function deferOwnedRecovery(authority: Row, code: string, immediate = false) {
+  await withOwnedAuthority(authority,async tx => {
+    const positivelyConfirmed=await hasConfirmedReceipt(tx,sidebandOwner(authority));
+    const session = (await tx.execute(sql`SELECT state FROM callcommand_live_sessions
+      WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} LIMIT 1`)).rows[0];
+    if (session?.state === 'transferring') return;
+    const budget = (await tx.execute(sql`SELECT attempts FROM callcommand_ingestion_events
+      WHERE tenant_id=${authority.tenant_id} AND source=${RECOVERY_SOURCE} AND call_id=${authority.id} LIMIT 1`)).rows[0];
+    const attempts = Number(budget?.attempts ?? 0);
+    const safeCode = attempts >= CALLCOMMAND_RECOVERY_ATTEMPTS ? 'CALLCOMMAND_REALTIME_RECOVERY_EXHAUSTED' : safeText(code,80);
+    const delay = immediate ? 0 : CALLCOMMAND_RECOVERY_BACKOFF_SECONDS * Math.max(1,attempts);
+    await tx.execute(sql`UPDATE callcommand_ingestion_events SET status=${positivelyConfirmed ? 'provider_confirmed':'accepting'},error_code=${safeCode},
+      processing_lease_expires_at=clock_timestamp()+make_interval(secs=>${delay})
+      WHERE tenant_id=${authority.tenant_id} AND source='openai_realtime' AND provider_event_id=${sidebandOwner(authority).eventId}`);
+    await tx.execute(sql`UPDATE callcommand_calls SET realtime_status='connecting',realtime_error_code=${safeCode},updated_at=NOW()
+      WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}`);
+    await tx.execute(sql`UPDATE callcommand_tenant_runtime_settings SET realtime_health_status='degraded',realtime_last_error_code=${safeCode},updated_at=NOW()
+      WHERE tenant_id=${authority.tenant_id}`);
+  });
+}
+
+async function connectOwnedSideband(
+  adapter: RealtimeAdapter, authority: Row,
+  incoming: Pick<VerifiedOpenAiIncomingCall,'eventId'|'openAiCallId'>, greetOnOpen: boolean,
+) {
+  const owner = sidebandOwner(authority);
+  const configuration = await loadRuntimeConfiguration(authority);
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+  let heartbeatRunning = false, silentClose = false;
+  let heartbeatOperation: Promise<unknown> | undefined;
+  let registration:CallCommandRealtimeSidebandSession|undefined;
+  let unregister = () => {};
+  let queue = Promise.resolve();
+  const enqueue = <T>(operation:()=>Promise<T>):Promise<T> => {
+    const next = queue.then(operation); queue=next.then(()=>undefined,()=>undefined); return next;
+  };
+  const settleOwnedWork=async()=>{
+    for(;;){
+      const current=queue,beat=heartbeatOperation;
+      await beat?.catch(()=>undefined);await current;
+      await new Promise<void>(resolve=>setImmediate(resolve));
+      if(current===queue && beat===heartbeatOperation) return;
+    }
+  };
+  const assertEvent = (callId: string) => { if(callId!==owner.openAiCallId) throw new CallCommandRealtimeOwnershipError(); };
+  const ignoreLostOwnership = (error:unknown) => { if(!(error instanceof CallCommandRealtimeOwnershipError)) throw error; };
+  const callbacks: RealtimeSidebandCallbacks = {
+    executeTool:invocation=>enqueue(async()=>{
+      assertEvent(invocation.openAiCallId);
+      await withOwnedAuthority(authority,async()=>undefined);
+      const result=await executeRealtimeTool({adapter,authority,configuration,invocation});
+      // A successful end intentionally made the call terminal and released its
+      // lane. Still require the same receipt owner and exact lane generation.
+      if(invocation.name==='end_call' && result.ok===true && result.providerActionConfirmed===true){
+        await db.transaction(tx=>lockCallCommandRealtimeOwnership(tx,owner,{allowTerminalUsage:true}));
+      }else await withOwnedAuthority(authority,async()=>undefined);
+      return result;
+    }),
+    onUsage:event=>enqueue(async()=>{assertEvent(event.openAiCallId);await persistUsage(authority,event,adapter.readiness.model);}),
+    ...(transcriptPersistenceAllowed(authority) ? {onTranscript:(event:CallCommandRealtimeTranscriptEvent)=>enqueue(async()=>{
+      assertEvent(event.openAiCallId);await persistTranscript(authority,event);
+    })} : {}),
+    onError:event=>enqueue(async()=>{assertEvent(event.openAiCallId);await persistProviderError(authority,event);}),
+    onCallbackError:event=>enqueue(()=>persistCallbackFailure(authority,event)),
+    onClosed:event=>enqueue(async()=>{
+      if(heartbeat) clearInterval(heartbeat); unregister();
+      if(silentClose) return;
+      assertEvent(event.openAiCallId);
+      // A local socket close is not authoritative carrier termination. Keep
+      // the unknown call/capacity and let the bounded recovery cycle try again.
+      await deferOwnedRecovery(authority,'CALLCOMMAND_REALTIME_SOCKET_CLOSED').catch(ignoreLostOwnership);
+    }).finally(()=>{
+      // Do not self-await the closed callback. Keep the retired controller
+      // discoverable by shutdown until its own queued work has actually settled.
+      setImmediate(()=>{void (async()=>{await settleOwnedWork();
+        if(registration)retireCallCommandRealtimeSideband(registration);
+      })();});
+    }),
+  };
+  let sideband: ReturnType<RealtimeAdapter['connectSideband']> | undefined;
+  try {
+    await withOwnedAuthority(authority,async()=>undefined);
+    sideband=adapter.connectSideband({openAiCallId:incoming.openAiCallId,
+      allowedToolNames:configuration.tools.map(tool=>tool.name),callbacks,greetOnOpen:false});
+    registration={
+      close:()=>sideband?.close(),
+      drain:async()=>{
+        silentClose=true;if(heartbeat) clearInterval(heartbeat);unregister();sideband?.close();
+        await settleOwnedWork();
+        await deferOwnedRecovery(authority,'CALLCOMMAND_REALTIME_PROCESS_STOPPED',true).catch(ignoreLostOwnership);
+      },
+    };
+    unregister=registerCallCommandRealtimeSideband(owner.callId,registration);
+    await sideband.waitUntilOpen(8_000);
+    // This rechecks owner, call, current authority and exact capacity in the
+    // same transaction as connected state, including after awaited provider I/O.
+    await markSidebandConnected(authority,incoming);
+    if(greetOnOpen) {
+      const greeting=await withOwnedAuthority(authority,tx=>tx.execute(sql`INSERT INTO callcommand_action_runs(
+        tenant_id,call_id,action_type,status,idempotency_key,provider,safe_result,attempts,reservation_status,reserved_at,lease_expires_at)
+        VALUES(${owner.tenantId},${owner.callId},'greeting','running',${`${owner.callId}:realtime:greeting`},'openai','{}'::jsonb,1,'claimed',NOW(),NOW()+INTERVAL '2 minutes')
+        ON CONFLICT(tenant_id,idempotency_key) DO NOTHING RETURNING id`));
+      if(greeting.rows[0]) {
+        await withOwnedAuthority(authority,async()=>undefined);
+        sideband.greet();
+        await finishControlAction(authority,String(greeting.rows[0].id),{status:'completed',safeResult:{greetingAttempted:true,deliveryConfirmed:false}});
+      }
+    }
+    heartbeat=setInterval(()=>{
+      if(heartbeatRunning) return; heartbeatRunning=true;
+      heartbeatOperation=withOwnedAuthority(authority,async(tx,current)=>{
+        const settings=(await tx.execute(sql`SELECT default_lease_seconds,maximum_lease_seconds FROM callcommand_tenant_runtime_settings
+          WHERE tenant_id=${owner.tenantId}`)).rows[0];
+        const duration=Math.max(30,Math.min(Number(settings?.default_lease_seconds??900),Number(settings?.maximum_lease_seconds??14400)));
+        const maximum=Math.max(30,Number(settings?.maximum_lease_seconds??14400));
+        const renewed=await tx.execute(sql`UPDATE callcommand_lane_leases SET renewed_at=clock_timestamp(),
+          expires_at=LEAST(GREATEST(expires_at,clock_timestamp()+make_interval(secs=>${duration})),acquired_at+make_interval(secs=>${maximum})),updated_at=NOW()
+          WHERE tenant_id=${owner.tenantId} AND id=${owner.capacityLeaseId} AND call_id=${owner.callId}
+            AND provider_call_sid=${current.provider_call_sid} AND status='active' AND expires_at>clock_timestamp()
+            AND acquired_at+make_interval(secs=>${maximum})>clock_timestamp() RETURNING id`);
+        if(!renewed.rows[0]) throw new CallCommandRealtimeOwnershipError();
+        await tx.execute(sql`UPDATE callcommand_ingestion_events SET processing_lease_expires_at=clock_timestamp()+INTERVAL '30 seconds'
+          WHERE tenant_id=${owner.tenantId} AND source='openai_realtime' AND provider_event_id=${owner.eventId}`);
+      }).catch(()=>{
+        silentClose=true;if(heartbeat) clearInterval(heartbeat);unregister();sideband?.close();
+      }).finally(()=>{heartbeatRunning=false;});
+    },10_000);heartbeat.unref();
+  } catch(error) {
+    silentClose=true;if(heartbeat) clearInterval(heartbeat);unregister();
+    try{sideband?.close();}catch{/* Preserve unknown provider state. */}
+    await queue;
+    await deferOwnedRecovery(authority,'CALLCOMMAND_REALTIME_RECOVERY_OPEN_FAILED').catch(ignoreLostOwnership);
+    throw error;
+  }
+}
+
+/** Claims only a durable positively-confirmed signed incoming receipt. */
+async function claimConfirmedRecovery(candidate: Row) {
+  return db.transaction(async tx=>{
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-capacity:${candidate.tenant_id}`},0))`);
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`callcommand-realtime:${candidate.call_id}`},0))`);
+    const call=(await tx.execute(sql`SELECT * FROM callcommand_calls WHERE tenant_id=${candidate.tenant_id} AND id=${candidate.call_id} FOR UPDATE`)).rows[0] as Row|undefined;
+    const receipt=(await tx.execute(sql`SELECT * FROM callcommand_ingestion_events
+      WHERE tenant_id=${candidate.tenant_id} AND id=${candidate.id} AND source='openai_realtime' AND call_id=${candidate.call_id}
+        AND status IN ('provider_confirmed','sideband_connecting','sideband_connected')
+        AND processing_lease_expires_at<=clock_timestamp() AND payload_sha256 ~ '^[a-f0-9]{64}$' FOR UPDATE`)).rows[0] as Row|undefined;
+    if(!call || !receipt || hasCallCommandRealtimeSideband(String(call.id))
+      || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,127}$/.test(String(call.openai_realtime_call_id??''))
+      || !ACTIVE_CALL_STATES.has(String(call.status)) || call.ended_at || call.terminal_reconciled_at) return null;
+    const backoffIneligible=async()=>{await tx.execute(sql`UPDATE callcommand_ingestion_events
+      SET processing_lease_expires_at=clock_timestamp()+INTERVAL '30 seconds',error_code='CALLCOMMAND_REALTIME_RECOVERY_INELIGIBLE'
+      WHERE id=${receipt.id} AND tenant_id=${call.tenant_id} AND processing_lease_expires_at<=clock_timestamp()`);return null;};
+    const snapshot=await loadAuthority(String(call.id),tx,String(call.tenant_id));
+    if(!snapshot?.active_lease_id) return backoffIneligible();
+    const owner:CallCommandRealtimeOwnership={tenantId:String(call.tenant_id),callId:String(call.id),eventId:String(receipt.provider_event_id),
+      openAiCallId:String(call.openai_realtime_call_id),processingOwner:randomUUID(),capacityLeaseId:String(call.capacity_lease_id),
+      capacityGeneration:String(snapshot.active_lease_generation)};
+    let current:Row;
+    try{current=await currentSidebandAuthority(tx,owner);}catch(error){
+      if(error instanceof CallCommandRealtimeOwnershipError) return backoffIneligible();throw error;
+    }
+    if(!await hasConfirmedReceipt(tx,owner)) return backoffIneligible();
+    const originalLease=(await tx.execute(sql`SELECT l.id FROM callcommand_lane_leases l
+      JOIN callcommand_ingestion_events e ON e.tenant_id=l.tenant_id AND e.id=${receipt.id} AND e.call_id=l.call_id
+      WHERE l.tenant_id=${owner.tenantId} AND l.id=${owner.capacityLeaseId} AND l.acquired_at<=e.received_at::timestamptz FOR UPDATE OF l`)).rows[0];
+    if(!originalLease) return null;
+    const session=(await tx.execute(sql`SELECT state FROM callcommand_live_sessions WHERE tenant_id=${owner.tenantId} AND call_id=${owner.callId} LIMIT 1`)).rows[0];
+    if(session?.state==='transferring') return null;
+    const budgetDigest=sha256(JSON.stringify({callId:owner.callId,eventId:owner.eventId,openAiCallId:owner.openAiCallId,payloadSha256:receipt.payload_sha256}));
+    await tx.execute(sql`INSERT INTO callcommand_ingestion_events(tenant_id,source,provider_event_id,payload_sha256,call_id,status,attempts)
+      VALUES(${owner.tenantId},${RECOVERY_SOURCE},${`recovery:${owner.callId}`},${budgetDigest},${owner.callId},'budget',0)
+      ON CONFLICT (tenant_id,source,provider_event_id) DO NOTHING`);
+    const budget=(await tx.execute(sql`SELECT id,attempts,payload_sha256 FROM callcommand_ingestion_events
+      WHERE tenant_id=${owner.tenantId} AND source=${RECOVERY_SOURCE} AND provider_event_id=${`recovery:${owner.callId}`} AND call_id=${owner.callId} FOR UPDATE`)).rows[0];
+    if(!budget || budget.payload_sha256!==budgetDigest || Number(budget.attempts)>=CALLCOMMAND_RECOVERY_ATTEMPTS) return null;
+    await tx.execute(sql`UPDATE callcommand_ingestion_events SET attempts=attempts+1,status='attempting',processed_at=NOW() WHERE id=${budget.id} AND tenant_id=${owner.tenantId}`);
+    await tx.execute(sql`UPDATE callcommand_ingestion_events SET status='sideband_connecting',processing_owner=${owner.processingOwner},
+      processing_lease_expires_at=clock_timestamp()+INTERVAL '30 seconds',attempts=attempts+1,error_code=NULL WHERE id=${receipt.id} AND tenant_id=${owner.tenantId}`);
+    await tx.execute(sql`UPDATE callcommand_calls SET realtime_status='connecting',realtime_error_code=NULL,updated_at=NOW()
+      WHERE tenant_id=${owner.tenantId} AND id=${owner.callId}`);
+    return {...current,sidebandOwnership:owner};
+  });
+}
+
+export async function runCallCommandRealtimeRecoveryBatch():Promise<{examined:number;attached:number;failed:number}> {
+  const adapter=adapterFactory();
+  const candidates=await db.execute(sql`SELECT e.id,e.tenant_id,e.call_id FROM callcommand_ingestion_events e
+    JOIN callcommand_calls c ON c.tenant_id=e.tenant_id AND c.id=e.call_id AND c.provider='twilio' AND c.direction='inbound'
+    JOIN callcommand_lane_leases l ON l.tenant_id=c.tenant_id AND l.id=c.capacity_lease_id AND l.call_id=c.id AND l.provider_call_sid=c.provider_call_sid
+      AND l.status='active' AND l.expires_at>clock_timestamp() AND l.acquired_at<=e.received_at::timestamptz
+    WHERE e.source='openai_realtime' AND e.status IN ('provider_confirmed','sideband_connecting','sideband_connected')
+      AND e.processing_lease_expires_at<=clock_timestamp() AND e.payload_sha256 ~ '^[a-f0-9]{64}$'
+      AND EXISTS(SELECT 1 FROM callcommand_ingestion_events p WHERE p.tenant_id=e.tenant_id AND p.call_id=e.call_id
+        AND p.source=${CONFIRMATION_SOURCE} AND p.provider_event_id='confirmed:'||c.id AND p.status='provider_confirmed')
+      AND c.status IN ('ringing','in_progress','answered','connected') AND c.ended_at IS NULL AND c.terminal_reconciled_at IS NULL
+      AND NOT EXISTS(SELECT 1 FROM callcommand_ingestion_events b WHERE b.tenant_id=c.tenant_id AND b.call_id=c.id AND b.source=${RECOVERY_SOURCE} AND b.attempts>=${CALLCOMMAND_RECOVERY_ATTEMPTS})
+    ORDER BY e.processing_lease_expires_at,e.id LIMIT ${CALLCOMMAND_RECOVERY_BATCH}`);
+  let attached=0,failed=0;
+  for(const candidate of candidates.rows as Row[]) {
+    try {
+      const authority=await claimConfirmedRecovery(candidate);if(!authority) continue;
+      const owner=sidebandOwner(authority);
+      await connectOwnedSideband(adapter,authority,{eventId:owner.eventId,openAiCallId:owner.openAiCallId},false);attached++;
+    } catch(error) { if(!(error instanceof CallCommandRealtimeOwnershipError)) failed++; }
+  }
+  return {examined:candidates.rows.length,attached,failed};
+}
+
+export {drainCallCommandRealtimeSidebands};
 
 export async function registerCallCommandRealtimeRoutes(app: FastifyInstance) {
   app.post(ROUTE, async (request, reply) => {
@@ -874,124 +1178,31 @@ export async function registerCallCommandRealtimeRoutes(app: FastifyInstance) {
       const claim = await claimIncomingEvent({ authority, incoming, payloadSha256: sha256(exactRawBody) });
       if (claim.duplicate) return reply.code(200).send({ ok: true, duplicate: true, status: claim.status });
 
-      const configuration = await loadRuntimeConfiguration(authority);
-      const voice = VOICES.has(String(authority.voice_id) as SupportedRealtimeVoice)
-        ? String(authority.voice_id) as SupportedRealtimeVoice : 'marin';
-      const acceptConfig = buildOpenAiRealtimeAcceptConfig({
-        model: adapter.readiness.model,
-        voice,
-        serverCompiledInstructions: configuration.instructions,
-        allowlistedTools: configuration.tools,
-        enabledToolNames: configuration.tools.map(tool => tool.name),
-        maxOutputTokens: 1_024,
-      });
+      authority.sidebandOwnership={tenantId:String(authority.tenant_id),callId:String(authority.id),eventId:incoming.eventId,
+        openAiCallId:incoming.openAiCallId,processingOwner:claim.processingOwner,capacityLeaseId:String(authority.active_lease_id),
+        capacityGeneration:String(authority.active_lease_generation)} satisfies CallCommandRealtimeOwnership;
       if (claim.mode === 'accept') {
-        await markProviderAccepting(authority,incoming);
+        let acceptSubmitted=false;
         try {
-          await adapter.accept(incoming.openAiCallId, {
-            instructions: acceptConfig.instructions,
-            tools: acceptConfig.tools,
-            voice: acceptConfig.audio.output.voice,
-            maxOutputTokens: acceptConfig.max_output_tokens,
-            transcribeInput: transcriptPersistenceAllowed(authority),
-          });
-        } catch (error) {
-          await safeReject(adapter, incoming.openAiCallId, 480);
-          await markIncomingFailed(authority, incoming, String((error as any)?.code ?? 'CALLCOMMAND_REALTIME_ACCEPT_FAILED'));
+          const configuration = await loadRuntimeConfiguration(authority);
+          const config = buildOpenAiRealtimeAcceptConfig({model:adapter.readiness.model,
+            voice:VOICES.has(String(authority.voice_id) as SupportedRealtimeVoice) ? authority.voice_id : 'marin',
+            serverCompiledInstructions:configuration.instructions,allowlistedTools:configuration.tools,
+            enabledToolNames:configuration.tools.map(tool=>tool.name),maxOutputTokens:1024});
+          await markProviderAccepting(authority,incoming);
+          acceptSubmitted=true;
+          await adapter.accept(incoming.openAiCallId,{instructions:config.instructions,tools:config.tools,
+            voice:config.audio.output.voice,maxOutputTokens:config.max_output_tokens,transcribeInput:transcriptPersistenceAllowed(authority)});
+          await markProviderAccepted(authority,incoming);
+        } catch(error) {
+          const status=Number((error as {providerStatus?:unknown})?.providerStatus);
+          const definitive=!acceptSubmitted || (status>=400 && status<500)
+            || (error instanceof CallCommandRealtimeError && error.code==='CALLCOMMAND_REALTIME_INPUT_INVALID');
+          await markIncomingFailed(authority,incoming,definitive ? 'CALLCOMMAND_REALTIME_ACCEPT_DECLINED':'CALLCOMMAND_REALTIME_ACCEPT_OUTCOME_UNKNOWN',definitive);
           throw error;
         }
-        await markProviderAccepted(authority,incoming);
       }
-      authority = { ...authority, openai_realtime_call_id: incoming.openAiCallId, status: 'in_progress' };
-      let unregisterSideband: () => void = () => {};
-      let heartbeat: ReturnType<typeof setInterval> | undefined;
-      let heartbeatRunning = false;
-      const ownsSideband = async () => Boolean((await db.execute(sql`
-        SELECT id FROM callcommand_ingestion_events WHERE tenant_id=${authority!.tenant_id}
-          AND source='openai_realtime' AND provider_event_id=${incoming!.eventId}
-          AND processing_owner=${claim.processingOwner} AND processing_lease_expires_at>NOW()
-      `)).rows[0]);
-      let callbackQueue = Promise.resolve();
-      const enqueueCallback = <T>(operation: () => Promise<T>): Promise<T> => {
-        const queued = callbackQueue.then(operation);
-        callbackQueue = queued.then(() => undefined, () => undefined);
-        return queued;
-      };
-      const callbacks: RealtimeSidebandCallbacks = {
-        executeTool: invocation => enqueueCallback(async () => {
-          if (!await ownsSideband()) throw new CallCommandRealtimeError('Sideband ownership expired','CALLCOMMAND_REALTIME_OWNER_EXPIRED',409);
-          return executeRealtimeTool({ adapter, authority: authority!, configuration, invocation });
-        }),
-        onUsage: event => enqueueCallback(() => persistUsage(authority!, event, adapter.readiness.model)),
-        ...(transcriptPersistenceAllowed(authority)
-          ? { onTranscript: (event: CallCommandRealtimeTranscriptEvent) => enqueueCallback(() => persistTranscript(authority!, event)) }
-          : {}),
-        onError: event => enqueueCallback(() => persistProviderError(authority!, event)),
-        onCallbackError: event => enqueueCallback(() => persistCallbackFailure(authority!, event)),
-        onClosed: event => enqueueCallback(async () => {
-          if (heartbeat) clearInterval(heartbeat);
-          unregisterSideband();
-          if (!await ownsSideband()) return;
-          const snapshot=(await db.execute(sql`SELECT c.status,session.state FROM callcommand_calls c
-            LEFT JOIN callcommand_live_sessions session ON session.tenant_id=c.tenant_id AND session.call_id=c.id
-            WHERE c.tenant_id=${authority!.tenant_id} AND c.id=${authority!.id} LIMIT 1`)).rows[0] as Row | undefined;
-          if (snapshot && ACTIVE_CALL_STATES.has(String(snapshot.status)) && snapshot.state !== 'transferring') {
-            try { await adapter.hangup(event.openAiCallId); } catch { /* safe provider failure is recorded below */ }
-          }
-          await releaseCallCommandLane({ tenantId: String(authority!.tenant_id), callId: String(authority!.id), reason: 'realtime_sideband_closed' });
-          await db.execute(sql`
-            UPDATE callcommand_calls SET
-              realtime_status=CASE WHEN realtime_status='failed' THEN 'failed' ELSE ${event.clean ? 'completed' : 'failed'} END,
-              realtime_error_code=CASE WHEN realtime_status='failed' THEN realtime_error_code ELSE ${event.clean ? null : 'CALLCOMMAND_REALTIME_SOCKET_CLOSED'} END,
-              realtime_last_event_at=NOW(),updated_at=NOW()
-            WHERE tenant_id=${authority!.tenant_id} AND id=${authority!.id}
-          `);
-          await db.execute(sql`UPDATE callcommand_ingestion_events SET processing_lease_expires_at=NOW()
-            WHERE tenant_id=${authority!.tenant_id} AND source='openai_realtime'
-              AND provider_event_id=${incoming!.eventId} AND processing_owner=${claim.processingOwner}`);
-          await finalizeCallCommandRealtimeNotifications(String(authority!.id));
-        }),
-      };
-      let sideband: ReturnType<RealtimeAdapter['connectSideband']> | null = null;
-      try {
-        sideband = adapter.connectSideband({
-          openAiCallId: incoming.openAiCallId,
-          allowedToolNames: configuration.tools.map(tool => tool.name),
-          callbacks,
-          greetOnOpen: claim.mode === 'accept',
-        });
-        unregisterSideband = registerCallCommandRealtimeSideband(String(authority.id), sideband);
-        await sideband.waitUntilOpen(8_000);
-        await markSidebandConnected(authority,incoming);
-        heartbeat = setInterval(() => {
-          if (heartbeatRunning) return;
-          heartbeatRunning = true;
-          void (async () => {
-            if (!hasCallCommandRealtimeSideband(String(authority!.id))) {
-              if (heartbeat) clearInterval(heartbeat);
-              return;
-            }
-            const renewed = await db.execute(sql`UPDATE callcommand_ingestion_events
-              SET processing_lease_expires_at=NOW()+INTERVAL '30 seconds'
-              WHERE tenant_id=${authority!.tenant_id} AND source='openai_realtime'
-                AND provider_event_id=${incoming!.eventId} AND processing_owner=${claim.processingOwner}
-                AND processing_lease_expires_at>NOW() RETURNING id`);
-            if (!renewed.rows[0]) { if (heartbeat) clearInterval(heartbeat); sideband?.close(); }
-          })().catch(() => { if (heartbeat) clearInterval(heartbeat); sideband?.close(); })
-            .finally(() => { heartbeatRunning = false; });
-        },10_000);
-        heartbeat.unref();
-      } catch (error) {
-        if (heartbeat) clearInterval(heartbeat);
-        unregisterSideband();
-        try { sideband?.close(); } catch { /* database failure state remains authoritative */ }
-        try { await adapter.hangup(incoming.openAiCallId); } catch { /* failure is persisted below */ }
-        const code = String((error as any)?.code ?? 'CALLCOMMAND_REALTIME_SIDEBAND_FAILED');
-        await markIncomingFailed(authority,incoming,code);
-        throw error instanceof CallCommandRealtimeError
-          ? error
-          : new CallCommandRealtimeError('Realtime sideband initialization failed',code,503);
-      }
+      await connectOwnedSideband(adapter,authority,incoming,claim.mode==='accept');
       return reply.code(200).send({ ok: true, duplicate: false, providerActionConfirmed: true });
     } catch (error) {
       return safeFailure(reply, error);

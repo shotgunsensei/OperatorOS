@@ -1,3 +1,29 @@
+## 2026-10-27 - Local quality pass, not production acceptance
+
+All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.
+
+The final exact source/command receipt is external to the immutable commit. Fresh DB-free combined API regression is 103/103; current API/web types, changed-source lint and built rendering are independently recorded. Formal scan MCP, current PostgreSQL engine access, canonical dependency and real tenant/provider/device acceptance remain limitations. Do not call all modules ready except accounts. [Quality review, module coverage and gates](../reviews/2026-10-27/QUALITY_REVIEW.md).
+
+## 2026-10-22 - CallCommand bounded automatic recovery follow-on
+
+The isolated follow-on to `92fd545d` adds positively-confirmed-call automatic
+reattachment, durable bounded retries, callback/effect ownership fencing,
+unresolved-capacity admission safety and finite shutdown drainage. No new
+incoming webhook or repeated accept/greeting is required for eligible calls.
+Real provider/media survival, unknown accept, missed-terminal reconciliation,
+quiet/drained all-replica rollout and production acceptance remain open. Exact
+final local checks are bound to the external candidate manifest. This does not
+promote the module to production accepted or alter other module status.
+[Bounded recovery contract and proof](../callcommand/AUTOMATIC_RECOVERY_2026-10-22.md).
+
+## 2026-10-22 - CallCommand canonical adapter and local restart delta
+
+| Module / goal | Verified delta | Remaining acceptance |
+| --- | --- | --- |
+| CallCommand actual realtime compiler/adapter and process restart | Canonical null-prototype schemas now pass the actual adapter while custom prototypes/banned keys/size/depth remain rejected; affected checks 32/32; new actual PostgreSQL and verified process-kill journey 1/1 with seven checkpoints; strict/lint/API types/SDK and API compilation pass | Reattachment requires a newly signed replay after expiry; no autonomous recovery worker. Real ingress, media survival, serving-runtime interruption/fallback/reconciliation, controlled provider and received-summary acceptance remain open. No publication, deployment, schema or held-operation change. |
+
+[Exact proof, commands and limits](../callcommand/RESTART_PROOF_2026-10-22.md).
+
 ## 2026-10-22 - Local integration preserving the published free hub
 
 Published49b68ed6 is preserved as the base. Bounded reviewed FieldNode, Outcall, PulseDesk, BrandForge and independent tool components are composed locally, with the held SSO file unchanged and unexecuted. Current proof includes corrected fixture72/72, tools141/141, actual commerce SQL41/41 and zero-warning lint; module189/195 has six HTTP reachability skips awaiting the built server. Schema68 was applied only to a new disposable fixture. No publication, production migration or deployment occurred. Build, exact-tree CI, canonical dependency and live acceptance gates remain. [Exact components, failures, cache limits and release gates](../releases/combined-local-2026-10-22.md).

@@ -1,3 +1,40 @@
+## 2026-10-27 - Local quality pass, not production acceptance
+
+All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.
+
+The final exact source/command receipt is external to the immutable commit. Fresh DB-free combined API regression is 103/103; current API/web types, changed-source lint and built rendering are independently recorded. Formal scan MCP, current PostgreSQL engine access, canonical dependency and real tenant/provider/device acceptance remain limitations. Do not call all modules ready except accounts. [Quality review, module coverage and gates](reviews/2026-10-27/QUALITY_REVIEW.md).
+
+## 2026-10-22 - CallCommand bounded automatic recovery candidate
+
+The new local follow-on to `92fd545d` implements positively-confirmed-call
+sideband recovery without another webhook, durable three-attempt/backoff limits,
+atomic owner/generation fencing, stable tool/greeting reservations, unresolved
+capacity holds and bounded callback drainage. Existing unknown accept and
+missed-terminal provider reconciliation remain explicit limits. This supersedes
+the no-autonomous-worker limitation in the earlier proof below only for this
+new isolated candidate; it does not change deployed readiness. Final actual
+test counts and cleanup are bound by the external frozen manifest.
+[Contract, local proof and rollout gates](callcommand/AUTOMATIC_RECOVERY_2026-10-22.md).
+
+## 2026-10-22 - CallCommand canonical adapter and actual local process-kill proof
+
+The actual incoming route exposed a compiler/adapter mismatch: canonical
+null-prototype tool schemas were rejected before provider accept. The bounded
+adapter correction retains custom-prototype, dangerous-key and structural
+guards. Direct compiler-to-adapter and affected number-provider/realtime checks
+pass 32/32. A new actual PostgreSQL 16.14/verified-child-SIGKILL journey passes
+1/1 with seven checkpoints: real SDK signature validation, durable lease expiry,
+signed replay reattachment without repeated accept/greeting, conflict/current
+authority denial and terminal-domain usage/lane idempotency. Strict new-test
+compilation, zero-warning affected lint, complete API types, SDK compile and API
+emitted build pass. Exact owned processes/rows/container are cleaned up.
+
+Recovery still requires a newly signed replay after lease expiry; there is no
+autonomous reattachment worker. This is implementation/local proof, not live
+provider/media survival, the signed Twilio terminal route, a full platform pass
+or deployment acceptance. Published hub, frozen combined candidate and held SSO
+path remain untouched. [Exact commands, failed baselines and recovery gates](callcommand/RESTART_PROOF_2026-10-22.md).
+
 ## 2026-10-22 - Local integration preserving the published free hub
 
 Published49b68ed6 is preserved as the base. Bounded reviewed FieldNode, Outcall, PulseDesk, BrandForge and independent tool components are composed locally, with the held SSO file unchanged and unexecuted. Current proof includes corrected fixture72/72, tools141/141, actual commerce SQL41/41 and zero-warning lint; module189/195 has six HTTP reachability skips awaiting the built server. Schema68 was applied only to a new disposable fixture. No publication, production migration or deployment occurred. Build, exact-tree CI, canonical dependency and live acceptance gates remain. [Exact components, failures, cache limits and release gates](docs/releases/combined-local-2026-10-22.md).

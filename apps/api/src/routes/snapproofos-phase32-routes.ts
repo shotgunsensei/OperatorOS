@@ -23,6 +23,7 @@ import {
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
 import { tenantHasActiveApplicationStackCompanion } from '../lib/product-entitlements.js';
+import { appendCustody } from './snapproofos-routes.js';
 
 const base = '/v1/modules/snapproofos';
 const readGuards = [requireTenantModuleAccess('snapproofos')];
@@ -989,8 +990,29 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
           exifStripped: scrubbed.stripped,
           sourceSha256: scrubbed.sourceSha256,
         };
+        const caption = text(input.caption, 'caption', 500);
+        const sortOrder = integer(input.sortOrder, 'sortOrder', 0, 100000, 0);
+        const captureIntentSha256 = sha256Json({
+          jobId, title: parsed.title, evidenceType: parsed.evidenceType,
+          description: parsed.description, sourceType: parsed.sourceType,
+          sourceReference: parsed.sourceReference, captureContext: parsed.captureContext,
+          capturedAt: input.capturedAt === undefined ? null : parsed.capturedAt.toISOString(),
+          originalName: parsed.originalName, declaredMimeType: parsed.declaredMimeType,
+          caption, sortOrder, privacy,
+        });
         const moduleId = await snapModuleId();
         const saved = await db.transaction(async (tx) => {
+          // Serialize with proof approval/archive before storing a new file.
+          // This alias must honor the same edit states as case evidence capture.
+          const parent = await tx.execute(sql`
+            SELECT status FROM snapproof_cases
+            WHERE tenant_id=${tenant(request)} AND id=${jobId} AND deleted_at IS NULL
+            FOR UPDATE
+          `);
+          if (!parent.rows[0]) throw new InputError('Job not found', 'SNAPPROOF_JOB_NOT_FOUND', 404);
+          if (!['draft', 'collecting', 'rejected'].includes(String(parent.rows[0].status))) {
+            throw new InputError('Proof cannot be added in the current job state', 'SNAPPROOF_CASE_STATE_CONFLICT', 409);
+          }
           if (mutation) {
             await tx.execute(
               sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenant(request)}:${mutation}`},0))`,
@@ -998,7 +1020,24 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
             const replay = await tx.execute(
               sql`SELECT * FROM snapproof_evidence_items WHERE tenant_id=${tenant(request)} AND client_mutation_id=${mutation} LIMIT 1`,
             );
-            if (replay.rows[0]) return { row: replay.rows[0], attachment: null, replayed: true };
+            if (replay.rows[0]) {
+              const previous = replay.rows[0] as Row;
+              const previousPrivacy = previous.privacy_metadata ?? {};
+              const sameIntent = previousPrivacy.clientMutationIntentSha256
+                ? previousPrivacy.clientMutationIntentSha256 === captureIntentSha256
+                : previous.attachment_sha256 === createHash('sha256').update(scrubbed.content).digest('hex')
+                  && previous.title === parsed.title && previous.evidence_type === parsed.evidenceType
+                  && previous.description === parsed.description && previous.source_type === parsed.sourceType
+                  && previous.source_reference === parsed.sourceReference
+                  && sha256Json(previous.capture_context ?? {}) === sha256Json(parsed.captureContext)
+                  && sha256Json(previousPrivacy) === sha256Json(privacy)
+                  && previous.caption === caption && Number(previous.sort_order) === sortOrder
+                  && (input.capturedAt === undefined || new Date(previous.captured_at).getTime() === parsed.capturedAt.getTime());
+              if (previous.case_id !== jobId || previous.deleted_at || !sameIntent) {
+                throw new InputError('Capture key was already used for a different proof payload', 'SNAPPROOF_CAPTURE_IDEMPOTENCY_CONFLICT', 409);
+              }
+              return { row: previous, attachment: null, replayed: true };
+            }
           }
           const attachment = await createAttachment(
             {
@@ -1015,8 +1054,13 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
             tx,
           );
           const result = await tx.execute(
-            sql`INSERT INTO snapproof_evidence_items(tenant_id,case_id,created_by_user_id,attachment_id,title,evidence_type,description,captured_at,source_type,source_reference,capture_context,attachment_sha256,caption,sort_order,privacy_metadata,client_mutation_id) VALUES (${tenant(request)},${jobId},${actor(request)},${attachment.id},${parsed.title},${parsed.evidenceType},${parsed.description},${parsed.capturedAt},${parsed.sourceType},${parsed.sourceReference},${JSON.stringify(parsed.captureContext)}::jsonb,${attachment.sha256},${text(input.caption, 'caption', 500)},${integer(input.sortOrder, 'sortOrder', 0, 100000, 0)},${JSON.stringify(privacy)}::jsonb,${mutation}) RETURNING *`,
+            sql`INSERT INTO snapproof_evidence_items(tenant_id,case_id,created_by_user_id,attachment_id,title,evidence_type,description,captured_at,source_type,source_reference,capture_context,attachment_sha256,caption,sort_order,privacy_metadata,client_mutation_id) VALUES (${tenant(request)},${jobId},${actor(request)},${attachment.id},${parsed.title},${parsed.evidenceType},${parsed.description},${parsed.capturedAt},${parsed.sourceType},${parsed.sourceReference},${JSON.stringify(parsed.captureContext)}::jsonb,${attachment.sha256},${caption},${sortOrder},${JSON.stringify({ ...privacy, clientMutationIntentSha256: captureIntentSha256 })}::jsonb,${mutation}) RETURNING *`,
           );
+          await appendCustody({
+            tenantId: tenant(request), caseId: jobId, evidenceId: String(result.rows[0]!.id),
+            actorUserId: actor(request), eventType: 'evidence_captured',
+            payload: { title: parsed.title, evidenceType: parsed.evidenceType, capturedAt: parsed.capturedAt.toISOString(), sourceType: parsed.sourceType, attachmentSha256: attachment.sha256 },
+          }, tx);
           return { row: result.rows[0]!, attachment, replayed: false };
         });
         if (saved.replayed) return reply.code(200).send({ file: camel(saved.row), replayed: true });

@@ -275,6 +275,12 @@ async function assertDependency(
   return true;
 }
 
+function launchCsvCell(value: unknown): string {
+  const raw = value == null ? '' : String(value);
+  const literal = typeof value === 'string' && /^\s*[=+\-@]/u.test(raw) ? `'${raw}` : raw;
+  return `"${literal.replaceAll('"', '""')}"`;
+}
+
 function launchExport(data: NonNullable<Awaited<ReturnType<typeof workspace>>>, format: string) {
   const safe = {
     launch: data.selected,
@@ -286,10 +292,10 @@ function launchExport(data: NonNullable<Awaited<ReturnType<typeof workspace>>>, 
   };
   if (format === 'json') return { mimeType: 'application/json', content: JSON.stringify(safe, null, 2) };
   if (format === 'csv') {
-    const lines = ['type,title,status,required'];
-    for (const task of data.tasks) lines.push(`task,${JSON.stringify(task.title)},${task.status},${task.required}`);
-    for (const artifact of data.artifacts) lines.push(`artifact,${JSON.stringify(artifact.title)},${artifact.status},${artifact.required}`);
-    return { mimeType: 'text/csv; charset=utf-8', content: lines.join('\n') };
+    const rows: unknown[][] = [['type', 'title', 'status', 'required']];
+    for (const task of data.tasks) rows.push(['task', task.title, task.status, task.required]);
+    for (const artifact of data.artifacts) rows.push(['artifact', artifact.title, artifact.status, artifact.required]);
+    return { mimeType: 'text/csv; charset=utf-8', content: rows.map(row => row.map(launchCsvCell).join(',')).join('\r\n') };
   }
   const content = [
     `# ${data.selected?.title}`,

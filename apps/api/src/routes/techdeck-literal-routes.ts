@@ -266,14 +266,20 @@ async function assignedPortalOrganizations(tenantId: string, userId: string) {
   `);
 }
 
-async function requirePortalAssignment(request: FastifyRequest, reply: FastifyReply, organizationId: string) {
+async function requirePortalAssignment(request: FastifyRequest, reply: FastifyReply, organizationId: string, siteId: string | null, permission?: 'can_comment' | 'can_create_tickets') {
   const assignments = await assignedPortalOrganizations(tenant(request), actor(request));
-  const assignment = (assignments.rows as Dict[]).find(row => String(row.directory_organization_id) === organizationId);
+  const scoped = (assignments.rows as Dict[]).filter(row => String(row.directory_organization_id) === organizationId &&
+    (row.directory_site_id == null || String(row.directory_site_id) === siteId));
+  const assignment = (permission ? scoped.find(row => row[permission] === true) : null) ?? scoped[0];
   if (!assignment) {
     reply.code(404).send({ error: 'Client record not found', code: 'PORTAL_CLIENT_NOT_FOUND' });
     return null;
   }
   return assignment;
+}
+
+function portalRecordScope(assignments: Dict[]) {
+  return sql.join(assignments.map(assignment => sql`(directory_organization_id=${String(assignment.directory_organization_id)} AND (${assignment.directory_site_id == null} OR directory_site_id=${assignment.directory_site_id == null ? null : String(assignment.directory_site_id)}))`), sql` OR `);
 }
 
 async function resolveIntakeRequest(rawToken: string) {
@@ -456,28 +462,32 @@ export async function registerTechDeckLiteralRoutes(app: FastifyInstance): Promi
 
   app.get('/v1/modules/techdeck/portal/me', { preHandler: [...readGuards] }, async request => {
     const tenantId=tenant(request);const userId=actor(request);const assignments=await assignedPortalOrganizations(tenantId,userId);
-    const ids=(assignments.rows as Dict[]).map(row=>String(row.directory_organization_id));
-    if(ids.length===0)return {assignments:[],tickets:[],evidence:[]};
-    const organizationList=sql.join(ids.map(id=>sql`${id}`),sql`,`);
-    const tickets=await db.execute(sql`SELECT * FROM techdeck_tickets WHERE tenant_id=${tenantId} AND directory_organization_id IN (${organizationList}) AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 200`);
-    const evidence=await db.execute(sql`SELECT id,title,evidence_type,summary,observed_at,tags,created_at FROM techdeck_evidence WHERE tenant_id=${tenantId} AND directory_organization_id IN (${organizationList}) AND archived_at IS NULL ORDER BY created_at DESC LIMIT 200`);
+    const grants=assignments.rows as Dict[];
+    if(grants.length===0)return {assignments:[],tickets:[],evidence:[]};
+    const tickets=await db.execute(sql`SELECT * FROM techdeck_tickets WHERE tenant_id=${tenantId} AND (${portalRecordScope(grants)}) AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 200`);
+    const evidenceGrants=grants.filter(grant=>grant.can_view_evidence===true);
+    const evidence=evidenceGrants.length ? await db.execute(sql`SELECT id,title,evidence_type,summary,observed_at,tags,created_at FROM techdeck_evidence WHERE tenant_id=${tenantId} AND (${portalRecordScope(evidenceGrants)}) AND archived_at IS NULL ORDER BY created_at DESC LIMIT 200`) : {rows:[]};
     return {assignments:assignments.rows,tickets:tickets.rows,evidence:evidence.rows};
   });
 
   app.get('/v1/modules/techdeck/portal/tickets/:id/comments', { preHandler: [...readGuards] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const ticket = await db.execute(sql`SELECT id,directory_organization_id FROM techdeck_tickets WHERE tenant_id=${tenant(request)} AND id=${id} AND deleted_at IS NULL LIMIT 1`);
-    const organizationId = String((ticket.rows[0] as Dict | undefined)?.directory_organization_id ?? '');
-    if (!organizationId || !await requirePortalAssignment(request, reply, organizationId)) return;
+    const ticket = await db.execute(sql`SELECT id,directory_organization_id,directory_site_id FROM techdeck_tickets WHERE tenant_id=${tenant(request)} AND id=${id} AND deleted_at IS NULL LIMIT 1`);
+    const record = ticket.rows[0] as Dict | undefined;
+    const organizationId = String(record?.directory_organization_id ?? '');
+    if (!organizationId) return reply.code(404).send({error:'Client record not found',code:'PORTAL_CLIENT_NOT_FOUND'});
+    if (!await requirePortalAssignment(request, reply, organizationId, record?.directory_site_id == null ? null : String(record.directory_site_id))) return;
     return { comments: publicRows(await db.execute(sql`SELECT id,body,author_user_id,version,created_at,updated_at FROM techdeck_ticket_comments WHERE tenant_id=${tenant(request)} AND ticket_id=${id} AND deleted_at IS NULL ORDER BY created_at`)) };
   });
 
   app.post('/v1/modules/techdeck/portal/tickets/:id/comments', { preHandler: [...writeGuards] }, async (request, reply) => {
     try {
       const input = body(request.body); const { id } = request.params as { id: string };
-      const ticket = await db.execute(sql`SELECT id,directory_organization_id FROM techdeck_tickets WHERE tenant_id=${tenant(request)} AND id=${id} AND deleted_at IS NULL LIMIT 1`);
-      const organizationId = String((ticket.rows[0] as Dict | undefined)?.directory_organization_id ?? '');
-      const assignment = organizationId ? await requirePortalAssignment(request, reply, organizationId) : null;
+      const ticket = await db.execute(sql`SELECT id,directory_organization_id,directory_site_id FROM techdeck_tickets WHERE tenant_id=${tenant(request)} AND id=${id} AND deleted_at IS NULL LIMIT 1`);
+      const record = ticket.rows[0] as Dict | undefined;
+      const organizationId = String(record?.directory_organization_id ?? '');
+      if (!organizationId) return reply.code(404).send({error:'Client record not found',code:'PORTAL_CLIENT_NOT_FOUND'});
+      const assignment = await requirePortalAssignment(request, reply, organizationId, record?.directory_site_id == null ? null : String(record.directory_site_id), 'can_comment');
       if (!assignment) return;
       if (!assignment.can_comment) return reply.code(403).send({ error: 'Portal comments are disabled', code: 'PORTAL_COMMENT_DENIED' });
       const result = await db.execute(sql`INSERT INTO techdeck_ticket_comments(tenant_id,ticket_id,author_user_id,body) VALUES (${tenant(request)},${id},${actor(request)},${textValue(input.body,'body',8000,true)}) RETURNING *`);
@@ -486,11 +496,11 @@ export async function registerTechDeckLiteralRoutes(app: FastifyInstance): Promi
   });
 
   app.post('/v1/modules/techdeck/portal/tickets', { preHandler: [...writeGuards] }, async (request,reply)=>{
-    try{const input=body(request.body);const tenantId=tenant(request);const organizationId=textValue(input.directoryOrganizationId,'directoryOrganizationId',36,true)!;
-      const assignment=await requirePortalAssignment(request,reply,organizationId);if(!assignment)return;if(!assignment.can_create_tickets)return reply.code(403).send({error:'Portal ticket creation is disabled',code:'PORTAL_TICKET_CREATE_DENIED'});
+    try{const input=body(request.body);const tenantId=tenant(request);const organizationId=textValue(input.directoryOrganizationId,'directoryOrganizationId',36,true)!;const siteId=textValue(input.directorySiteId,'directorySiteId',36);
+      const assignment=await requirePortalAssignment(request,reply,organizationId,siteId,'can_create_tickets');if(!assignment)return;if(!assignment.can_create_tickets)return reply.code(403).send({error:'Portal ticket creation is disabled',code:'PORTAL_TICKET_CREATE_DENIED'});
       const allocation=await db.execute(sql`INSERT INTO techdeck_ticket_sequences(tenant_id,last_number) VALUES (${tenantId},1) ON CONFLICT(tenant_id) DO UPDATE SET last_number=techdeck_ticket_sequences.last_number+1,updated_at=NOW() RETURNING last_number`);
       const result=await db.execute(sql`INSERT INTO techdeck_tickets(tenant_id,number,created_by_user_id,directory_organization_id,directory_site_id,title,description,priority,status)
-        VALUES (${tenantId},${Number((allocation.rows[0] as Dict).last_number)},${actor(request)},${organizationId},${textValue(input.directorySiteId,'directorySiteId',36)},${textValue(input.title,'title',200,true)},${textValue(input.description,'description',4000)},${textValue(input.priority,'priority',20)??'medium'},'open') RETURNING *`);
+        VALUES (${tenantId},${Number((allocation.rows[0] as Dict).last_number)},${actor(request)},${organizationId},${siteId},${textValue(input.title,'title',200,true)},${textValue(input.description,'description',4000)},${textValue(input.priority,'priority',20)??'medium'},'open') RETURNING *`);
       return reply.code(201).send(result.rows[0]);
     }catch(error){if(sendInputError(reply,error))return;throw error;}
   });
@@ -504,14 +514,40 @@ export async function registerTechDeckLiteralRoutes(app: FastifyInstance): Promi
   app.post('/v1/modules/techdeck/license/products/:productId/keys',{preHandler:[...adminGuards]},async(request,reply)=>{try{const input=body(request.body);const{productId}=request.params as{productId:string};const rawKey=`tdk_${randomBytes(24).toString('base64url')}`;const result=await db.execute(sql`INSERT INTO techdeck_license_keys(tenant_id,product_id,label,key_prefix,key_hash,max_activations,expires_at,created_by_user_id) SELECT ${tenant(request)},id,${textValue(input.label,'label',160)},${rawKey.slice(0,12)},${hash(rawKey)},${integer(input.maxActivations,'maxActivations',1,10000,1)},${dateValue(input.expiresAt,'expiresAt')},${actor(request)} FROM techdeck_license_products WHERE tenant_id=${tenant(request)} AND id=${productId} AND active=TRUE AND archived_at IS NULL RETURNING id,product_id,label,key_prefix,max_activations,expires_at,created_at`);if(!result.rows[0])return reply.code(404).send({error:'License product not found',code:'LICENSE_PRODUCT_NOT_FOUND'});return reply.code(201).send({key:result.rows[0],rawKey});}catch(error){if(sendInputError(reply,error))return;throw error;}});
   app.post('/v1/modules/techdeck/license/keys/:id/revoke',{preHandler:[...adminGuards]},async(request,reply)=>{const{id}=request.params as{id:string};const result=await db.execute(sql`UPDATE techdeck_license_keys SET revoked_at=COALESCE(revoked_at,NOW()) WHERE tenant_id=${tenant(request)} AND id=${id} RETURNING id,revoked_at`);if(!result.rows[0])return reply.code(404).send({error:'License key not found',code:'LICENSE_KEY_NOT_FOUND'});return result.rows[0];});
 
-  app.post('/v1/public/techdeck/license/validate',async(request,reply)=>{try{const input=body(request.body);const rawKey=textValue(input.key,'key',120,true)!;const device=textValue(input.deviceFingerprint,'deviceFingerprint',500,true)!;if(!await consumeDurableLimit('techdeck_license_rate_limits',`license:${request.ip}`,30,60_000))return reply.code(429).send({valid:false,code:'RATE_LIMITED'});
-    const keyHash=hash(rawKey);const deviceHash=hash(device);const result=await db.execute(sql`SELECT key.id,key.tenant_id,key.product_id,key.max_activations,key.expires_at,key.revoked_at,product.name,product.slug,product.active FROM techdeck_license_keys key JOIN techdeck_license_products product ON product.tenant_id=key.tenant_id AND product.id=key.product_id WHERE key.key_hash=${keyHash} LIMIT 1`);const row=result.rows[0] as Dict|undefined;
-    if(!row||row.revoked_at||!row.active||(row.expires_at&&new Date(String(row.expires_at))<=new Date()))return reply.code(200).send({valid:false,code:'LICENSE_INVALID'});
-    const active=await db.execute(sql`SELECT id FROM techdeck_license_activations WHERE tenant_id=${String(row.tenant_id)} AND license_key_id=${String(row.id)} AND revoked_at IS NULL`);const existing=await db.execute(sql`SELECT id FROM techdeck_license_activations WHERE tenant_id=${String(row.tenant_id)} AND license_key_id=${String(row.id)} AND device_fingerprint_hash=${deviceHash} LIMIT 1`);
-    if(!existing.rows[0]&&active.rows.length>=Number(row.max_activations))return reply.code(200).send({valid:false,code:'ACTIVATION_LIMIT_REACHED'});
-    await db.execute(sql`INSERT INTO techdeck_license_activations(tenant_id,license_key_id,device_fingerprint_hash,client_ip_hash,user_agent) VALUES (${String(row.tenant_id)},${String(row.id)},${deviceHash},${hash(request.ip)},${String(request.headers['user-agent']??'').slice(0,300)}) ON CONFLICT(tenant_id,license_key_id,device_fingerprint_hash) DO UPDATE SET last_validated_at=NOW() RETURNING id`);
-    return {valid:true,product:{id:row.product_id,name:row.name,slug:row.slug},expiresAt:row.expires_at??null};
-  }catch(error){if(sendInputError(reply,error))return;throw error;}});
+  app.post('/v1/public/techdeck/license/validate', async (request, reply) => {
+    try {
+      const input = body(request.body);
+      const rawKey = textValue(input.key, 'key', 120, true)!;
+      const device = textValue(input.deviceFingerprint, 'deviceFingerprint', 500, true)!;
+      if (!await consumeDurableLimit('techdeck_license_rate_limits', `license:${request.ip}`, 30, 60_000)) {
+        return reply.code(429).send({ valid: false, code: 'RATE_LIMITED' });
+      }
+      const keyHash = hash(rawKey), deviceHash = hash(device);
+      return await db.transaction(async tx => {
+        // Serialize allocation for this key; capacity cannot be checked outside
+        // the same transaction that creates a new device activation.
+        const result = await tx.execute(sql`
+          SELECT key.id,key.tenant_id,key.product_id,key.max_activations,key.expires_at,key.revoked_at,
+            product.name,product.slug,product.active
+          FROM techdeck_license_keys key
+          JOIN techdeck_license_products product ON product.tenant_id=key.tenant_id AND product.id=key.product_id
+          WHERE key.key_hash=${keyHash} LIMIT 1 FOR UPDATE OF key
+        `);
+        const row = result.rows[0] as Dict | undefined;
+        if (!row || row.revoked_at || !row.active || (row.expires_at && new Date(String(row.expires_at)) <= new Date())) {
+          return { valid: false, code: 'LICENSE_INVALID' };
+        }
+        const existing = await tx.execute(sql`SELECT id,revoked_at FROM techdeck_license_activations WHERE tenant_id=${String(row.tenant_id)} AND license_key_id=${String(row.id)} AND device_fingerprint_hash=${deviceHash} LIMIT 1`);
+        // A revoked fingerprint is not an active same-device retry and must not
+        // bypass capacity or be silently restored by an upsert.
+        if ((existing.rows[0] as Dict | undefined)?.revoked_at) return { valid: false, code: 'LICENSE_INVALID' };
+        const active = await tx.execute(sql`SELECT id FROM techdeck_license_activations WHERE tenant_id=${String(row.tenant_id)} AND license_key_id=${String(row.id)} AND revoked_at IS NULL`);
+        if (!existing.rows[0] && active.rows.length >= Number(row.max_activations)) return { valid: false, code: 'ACTIVATION_LIMIT_REACHED' };
+        await tx.execute(sql`INSERT INTO techdeck_license_activations(tenant_id,license_key_id,device_fingerprint_hash,client_ip_hash,user_agent) VALUES (${String(row.tenant_id)},${String(row.id)},${deviceHash},${hash(request.ip)},${String(request.headers['user-agent'] ?? '').slice(0,300)}) ON CONFLICT(tenant_id,license_key_id,device_fingerprint_hash) DO UPDATE SET last_validated_at=NOW() RETURNING id`);
+        return { valid: true, product: { id: row.product_id, name: row.name, slug: row.slug }, expiresAt: row.expires_at ?? null };
+      });
+    } catch (error) { if (sendInputError(reply, error)) return; throw error; }
+  });
 
   app.get('/v1/modules/techdeck/status/pages',{preHandler:[...readGuards]},async request=>({pages:publicRows(await db.execute(sql`SELECT * FROM techdeck_status_pages WHERE tenant_id=${tenant(request)} AND archived_at IS NULL ORDER BY title`))}));
   app.post('/v1/modules/techdeck/status/pages',{preHandler:[...adminGuards]},async(request,reply)=>{try{const input=body(request.body);const slug=textValue(input.publicSlug,'publicSlug',120,true)!;if(!SLUG.test(slug))throw new InputError('SLUG_INVALID','publicSlug');const result=await db.execute(sql`INSERT INTO techdeck_status_pages(tenant_id,title,public_slug,description,public,created_by_user_id) VALUES (${tenant(request)},${textValue(input.title,'title',160,true)},${slug},${textValue(input.description,'description',4000)},${booleanValue(input.public,'public',false)},${actor(request)}) RETURNING *`);return reply.code(201).send(result.rows[0]);}catch(error){if(sendInputError(reply,error))return;throw error;}});

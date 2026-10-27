@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { authApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import { brand } from '@/lib/brand';
+import AccountFlowFrame from './AccountFlowFrame';
 
 interface ResetPasswordPageProps {
   onSwitch: (page: 'login') => void;
@@ -36,30 +37,10 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
   };
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: brand.bgPrimary, padding: 'clamp(16px, 4vw, 32px)',
-    }}>
-      <div style={{
-        width: '100%', maxWidth: 440, background: brand.bgSecondary,
-        border: `1px solid ${brand.borderSoft}`, borderRadius: 16,
-        padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 12, margin: '0 auto 16px',
-            background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, fontWeight: 800, color: brand.accentInk,
-          }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: brand.textPrimary, margin: 0 }}>Choose a new password</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
-            Paste the reset token from your email, then choose a password.
-          </p>
-        </div>
+    <AccountFlowFrame title="Choose a new password" description="Paste the reset token from your email, then choose a password.">
 
         {error && (
-          <div data-testid="reset-error" style={{
+          <div data-testid="reset-error" role="alert" style={{
             padding: '10px 14px', marginBottom: 16, borderRadius: 8,
             background: 'rgba(248,81,73,0.1)', border: `1px solid ${colors.accentRed}`,
             color: colors.accentRed, fontSize: 13,
@@ -67,7 +48,7 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
         )}
 
         {message && (
-          <div data-testid="reset-success" style={{
+          <div data-testid="reset-success" role="status" style={{
             padding: '10px 14px', marginBottom: 16, borderRadius: 8,
             background: 'rgba(63,185,80,0.1)', border: `1px solid ${colors.accentGreen}`,
             color: colors.accentGreen, fontSize: 13,
@@ -76,9 +57,9 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Reset token</label>
+            <label htmlFor="reset-token" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Reset token</label>
             <input
-              data-testid="input-reset-token"
+              id="reset-token" autoComplete="off" data-testid="input-reset-token"
               type="text"
               value={token}
               onChange={e => setToken(e.target.value)}
@@ -92,9 +73,9 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>New password</label>
+            <label htmlFor="reset-new-password" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>New password</label>
             <input
-              data-testid="input-reset-new-password"
+              id="reset-new-password" autoComplete="new-password" data-testid="input-reset-new-password"
               type="password"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
@@ -108,9 +89,9 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Confirm password</label>
+            <label htmlFor="reset-confirm-password" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Confirm password</label>
             <input
-              data-testid="input-reset-confirm-password"
+              id="reset-confirm-password" autoComplete="new-password" data-testid="input-reset-confirm-password"
               type="password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
@@ -139,10 +120,9 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
           <button
             data-testid="link-login"
             onClick={() => onSwitch('login')}
-            style={{ background: 'none', border: 'none', color: colors.accent, cursor: 'pointer', fontSize: 13 }}
+            style={{ background: 'none', border: 'none', color: '#9cc8ff', cursor: 'pointer', fontSize: 13 }}
           >Back to sign in</button>
         </div>
-      </div>
-    </div>
+    </AccountFlowFrame>
   );
 }

@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, CalendarClock, CheckCircle2, Clock3, Download, Loader2, PhoneCall, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import type { OutCallRouteArea } from './OutCallRoute.contract';
+import styles from './OutCallWorkspace.module.css';
 
 type Row = Record<string, any>;
 type Workspace = {
@@ -26,7 +28,7 @@ const input: React.CSSProperties = {
 };
 const button: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 14px',
-  border: 0, borderRadius: radius.sm, background: semantic.accent,
+  border: 0, borderRadius: radius.sm, background: '#7c3aed',
   color: '#fff', fontWeight: 700, cursor: 'pointer',
 };
 const outCallLink = '#c4b5fd';
@@ -104,6 +106,7 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
   const accepted = !!workspace.settings?.disclaimerAcceptedAt;
   const verified = !!workspace.settings?.phoneVerifiedAt;
   const providerReady = workspace.provider.ready;
+  const completedChecks = [accepted, verified, workspace.profiles.length > 0, providerReady].filter(Boolean).length;
   const calls = [...workspace.calls, ...olderCalls.filter(row => !workspace.calls.some(current => current.id === row.id))];
   const selectedCall = calls.find(item => item.id === recordId) ?? null;
 
@@ -139,9 +142,9 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
   }
 
   return (
-    <section style={{ minWidth: 0, color: semantic.text }} data-testid={`outcall-${view}-route`} data-outcall-view={view}>
+    <section className={styles.workspace} style={{ minWidth: 0, color: semantic.text }} data-testid={`outcall-${view}-route`} data-outcall-view={view}>
       {(error || notice) && (
-        <div role="status" style={{ ...cardStyle, marginBottom: space.lg, borderColor: error ? semantic.accentDanger : semantic.accentSuccess }}>
+        <div role={error ? 'alert' : 'status'} style={{ ...cardStyle, marginBottom: space.lg, borderColor: error ? semantic.accentDanger : semantic.accentSuccess }}>
           {error || notice}
         </div>
       )}
@@ -152,12 +155,13 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
         </div>
       )}
 
-      <section id="outcall-readiness" tabIndex={-1} style={{ ...cardStyle, marginBottom: space.lg }}>
-        <h2 style={{ marginTop: 0, fontSize: 18 }}>Readiness and safety</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
-          <Status ok={accepted} text="Safety disclaimer accepted" />
+      <section id="outcall-readiness" className={styles.readiness} tabIndex={-1} style={{ ...cardStyle, marginBottom: space.lg }}>
+        <header className={styles.readinessHeader}><div><span className={styles.eyebrow}>Verified-self calling</span><h2 style={{ marginTop: 7, fontSize: 20 }}>Readiness and safety</h2></div><span className={styles.checkCount}>{completedChecks} of 4 checks complete</span></header>
+        <progress className={styles.progress} max={4} value={completedChecks} aria-label="Setup checks completed" />
+        <div className={styles.checks}>
+          <Status ok={accepted} text={accepted ? 'Safety acknowledgement saved' : 'Review the safety acknowledgement'} />
           <Status ok={verified} text={verified ? `Verified ${workspace.settings?.phoneMasked}` : 'Mobile verification required'} />
-          <Status ok={workspace.profiles.length > 0} text="Rescue profile configured" />
+          <Status ok={workspace.profiles.length > 0} text={workspace.profiles.length > 0 ? 'Rescue profile configured' : 'Add a rescue profile'} />
           <Status ok={providerReady} text={workspace.provider.name === 'test' ? 'Test mode: no real calls' : providerReady ? 'Calling service connected' : workspace.provider.configured ? 'Calling awaits activation' : 'Calling setup required'} />
         </div>
         {!accepted && (
@@ -169,12 +173,18 @@ export default function OutCallWorkspace({ view, recordId, hrefFor = path => pat
         {!providerReady && <p style={{ color: '#d29922', marginBottom: 0 }}>{workspace.provider.configured ? 'Calling is configured and awaiting controlled activation. Phone verification, calls, and SMS triggers are unavailable until activation is accepted.' : 'Phone verification and calling are not connected yet. You can prepare a profile; contact support to review service setup.'}</p>}
       </section>
 
+      {view === 'overview' && <section className={styles.nextSteps} aria-label="Prepare your callback">
+        <Link href={hrefFor('/verification')}><PhoneCall size={20} aria-hidden="true" /><strong>Verify your mobile</strong><span>Only your independently verified number can receive a call.</span><small>{verified ? 'Review verified destination' : 'Open mobile verification'}</small></Link>
+        <Link href={hrefFor('/contacts')}><ShieldCheck size={20} aria-hidden="true" /><strong>Prepare a private profile</strong><span>Choose the neutral message you want to hear when a callback arrives.</span><small>{workspace.profiles.length ? 'Review rescue profiles' : 'Create a rescue profile'}</small></Link>
+        <Link href={hrefFor('/schedules')}><CalendarClock size={20} aria-hidden="true" /><strong>Review call schedules</strong><span>See planned requests and cancel a scheduled callback before submission.</span><small>Open schedules</small></Link>
+      </section>}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: space.lg }}>
         {view === 'verification' && <section id="outcall-setup" tabIndex={-1} style={cardStyle}>
           <h2 style={{ marginTop: 0, fontSize: 18 }}>Verified mobile</h2>
           {verified ? <p><CheckCircle2 size={16} /> {workspace.settings?.phoneMasked}</p> : (
             <>
-              <label>Mobile number, including country code<input data-testid="input-outcall-phone" style={input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 123 4567" disabled={!canWrite} /></label>
+              <label>Mobile number, including country code<input type="tel" inputMode="tel" autoComplete="tel" data-testid="input-outcall-phone" style={input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 123 4567" disabled={!canWrite} /></label>
               <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>We send a one-time code to confirm this is your number. It is the only destination OutCall can call.</p>
               {workspace.provider.name === 'test' ? (
                 <button data-testid="button-outcall-verify-phone" style={button} disabled={!canWrite || !accepted || !!busy || !providerReady || !phone}
@@ -331,9 +341,9 @@ function callStatus(call: Row): string {
 }
 
 function Status({ ok, text }: { ok: boolean; text: string }) {
-  return <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-    {ok ? <CheckCircle2 size={17} color={semantic.accentSuccess} /> : <AlertTriangle size={17} color="#d29922" />}
-    <span>{text}</span>
+  return <div className={styles.status} data-ready={ok}>
+    {ok ? <CheckCircle2 size={19} color={semantic.accentSuccess} aria-hidden="true" /> : <AlertTriangle size={19} color="#e8b74f" aria-hidden="true" />}
+    <span><small>{ok ? 'Ready' : 'Needs attention'}</small><strong>{text}</strong></span>
   </div>;
 }
 

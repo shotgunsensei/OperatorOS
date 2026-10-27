@@ -4,6 +4,8 @@ const baseUrl = process.env.HELP_CENTER_E2E_URL ?? 'http://127.0.0.1:5000';
 
 test('Help Center searches every product guide and opens the matching page guide', async ({ page }) => {
   await page.goto(`${baseUrl}/help`, { waitUntil: 'networkidle' });
+  await expect(page.getByRole('main')).toHaveCount(1);
+  await expect(page.getByRole('region', { name: 'Selected help guide' })).toBeVisible();
 
   await expect(page.getByRole('heading', { name: 'Find the exact page or function you need.' })).toBeVisible();
   await page.getByLabel('Search all help').fill('TechDeck ticket queue');

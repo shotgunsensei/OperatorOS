@@ -62,7 +62,8 @@ type Executor = Pick<typeof db, 'insert'>;
 
 function csvCell(value: unknown): string {
   const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
+  const safe = typeof value === 'string' && /^\s*[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replaceAll('"', '""')}"`;
 }
 
 function flattenReportSnapshot(

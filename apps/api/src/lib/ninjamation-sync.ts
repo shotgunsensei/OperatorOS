@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { appendActivityEvent } from './shared-usage-activity.js';
+import { resolveTenantModuleAccess } from './tenant-entitlements.js';
+import { tenantRoleToEffective } from './role-aliases.js';
 import {
   NINJAMATION_REPOSITORY,
   normalizeCatalogSnapshot,
@@ -8,6 +10,35 @@ import {
 } from './ninjamation-phase36.js';
 
 type Row = Record<string, any>;
+type SyncAuthority = { tenantId: string; userId: string; moduleId: string };
+
+/** Revalidate the same current admin/write policy used by the enqueue routes. */
+export async function authorizeNinjamationSync(input: SyncAuthority, executor: Pick<typeof db, 'execute'> = db) {
+  const actor = (await executor.execute(sql`
+    SELECT id,status,deleted_at FROM users WHERE id=${input.userId} FOR SHARE
+  `)).rows[0] as Row | undefined;
+  const workspace = (await executor.execute(sql`
+    SELECT id,status FROM tenants WHERE id=${input.tenantId} FOR SHARE
+  `)).rows[0] as Row | undefined;
+  const module = (await executor.execute(sql`
+    SELECT id FROM modules WHERE id=${input.moduleId} AND slug=${'ninjamation'} FOR SHARE
+  `)).rows[0] as Row | undefined;
+  const membership = (await executor.execute(sql`
+    SELECT role FROM tenant_users WHERE tenant_id=${input.tenantId} AND user_id=${input.userId} FOR SHARE
+  `)).rows[0] as Row | undefined;
+  const deny = (): never => {
+    throw Object.assign(new Error('The sync requester no longer has current workspace administrator and module write access'), {
+      code: 'NINJAMATION_SYNC_AUTHORITY_REVOKED',
+    });
+  };
+  if (!actor || actor.status !== 'active' || actor.deleted_at || !workspace || !module) return deny();
+  const access = await resolveTenantModuleAccess(input.userId, input.tenantId, 'ninjamation');
+  if (!access.hasAccess || access.moduleId !== input.moduleId || !['user', 'manager'].includes(access.accessLevel)) deny();
+  // Central platform authority intentionally bypasses tenant membership/status;
+  // it still cannot bypass the central resolver's platform module kill switch.
+  if (!access.viaPlatformRole && (workspace.status !== 'active' || !membership ||
+      !['owner', 'admin'].includes(tenantRoleToEffective(membership.role)))) deny();
+}
 
 function riskFor(analysis: { criticalCount: number; warningCount: number }) {
   return analysis.criticalCount > 0 ? 'high' : analysis.warningCount > 0 ? 'medium' : 'low';
@@ -23,17 +54,21 @@ export async function runNinjamationCatalogSync(input: {
   const normalized = normalizeCatalogSnapshot(input.snapshot);
   try {
     const result = await db.transaction(async (tx) => {
+      // GitHub fetching may have awaited while the requester was revoked. Hold
+      // current identity/role rows through the following catalog transaction.
+      await authorizeNinjamationSync(input, tx);
       const claimed = await tx.execute(sql`
         UPDATE ninjamation_sync_runs SET status='running',started_at=COALESCE(started_at,NOW()),
           resolved_commit=${input.snapshot.commit},snapshot_sha256=${normalized.snapshotSha256},
           error_code=NULL,error_summary=NULL,updated_at=NOW()
-        WHERE tenant_id=${input.tenantId} AND id=${input.runId}
+        WHERE tenant_id=${input.tenantId} AND id=${input.runId} AND requested_by_user_id=${input.userId}
           AND status IN ('queued','failed')
         RETURNING *
       `);
       if (!claimed.rows[0]) {
         const existing = await tx.execute(sql`
-          SELECT * FROM ninjamation_sync_runs WHERE tenant_id=${input.tenantId} AND id=${input.runId} LIMIT 1
+          SELECT * FROM ninjamation_sync_runs WHERE tenant_id=${input.tenantId} AND id=${input.runId}
+            AND requested_by_user_id=${input.userId} LIMIT 1
         `);
         if (existing.rows[0]?.status === 'completed') return existing.rows[0] as Row;
         throw Object.assign(new Error('Script Ops sync run is unavailable or already processing'), { code: 'NINJAMATION_SYNC_NOT_CLAIMABLE' });
@@ -205,11 +240,14 @@ export async function runNinjamationCatalogSync(input: {
     return result;
   } catch (error) {
     const code = error && typeof error === 'object' && 'code' in error ? String((error as any).code) : 'NINJAMATION_SYNC_FAILED';
+    // The shared worker records the failed job. A revoked actor must not make
+    // a catalog/run mutation merely because this authority check rejected it.
+    if (code === 'NINJAMATION_SYNC_AUTHORITY_REVOKED') throw error;
     const summary = error instanceof Error ? error.message.slice(0, 500) : 'Catalog synchronization failed';
     await db.execute(sql`
       UPDATE ninjamation_sync_runs SET status='failed',error_code=${code},error_summary=${summary},
         completed_at=NOW(),updated_at=NOW()
-      WHERE tenant_id=${input.tenantId} AND id=${input.runId} AND status<>'completed'
+      WHERE tenant_id=${input.tenantId} AND id=${input.runId} AND requested_by_user_id=${input.userId} AND status<>'completed'
     `).catch(() => undefined);
     throw error;
   }

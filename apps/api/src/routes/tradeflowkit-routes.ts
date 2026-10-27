@@ -321,7 +321,8 @@ function savedViewResponse(row: typeof tradeflowkitSavedViews.$inferSelect, acto
 
 function csvCell(value: unknown): string {
   const text = value === null || value === undefined ? '' : value instanceof Date ? value.toISOString() : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
+  const safe = typeof value === 'string' && /^\s*[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replaceAll('"', '""')}"`;
 }
 
 function csv(headers: string[], rows: unknown[][]): string {

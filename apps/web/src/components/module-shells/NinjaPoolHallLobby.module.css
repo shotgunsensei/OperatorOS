@@ -1,0 +1,18 @@
+.lobby :global(.nph-home-hero) { padding: clamp(22px,3vw,32px); }
+.lobby :global(.nph-home-hero h2) { font-size: clamp(28px,3.3vw,40px); line-height: 1.2; letter-spacing: -.035em; text-transform: none; margin: 10px 0 12px; }
+.lobby :global(.nph-home-hero p) { max-width: 66ch; font-size: 15px; }
+.lobby :global(.nph-mode-grid) { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.lobby :global(.nph-mode-grid button) { padding: 23px; min-height: 164px; gap: 12px; align-content: start; transition: background 140ms ease,border-color 140ms ease; }
+.lobby :global(.nph-mode-grid button:hover) { transform: none; background: #0d2334; }
+.lobby :global(.nph-mode-grid strong) { font-size: 17px; letter-spacing: -.015em; }
+.lobby :global(.nph-mode-grid span) { font-size: 13px; line-height: 1.65; color: #adc2d3; }
+.lobby :global(.nph-online-disabled) { padding: 20px; align-items: flex-start; }
+.lobby :global(.nph-online-disabled p) { font-size: 13px; line-height: 1.65; }
+.lobby :global(.nph-shell-error) { align-items: flex-start; padding: 20px; line-height: 1.65; flex-wrap: wrap; }
+.lobby :global(.nph-shell-error button) { min-height: 44px; border: 1px solid #a37c85; border-radius: 8px; background: #33212a; color: #ffe4e6; padding: 8px 16px; font: inherit; font-weight: 650; cursor: pointer; }
+.lobby :is(button,a):focus-visible { outline: 3px solid #fbbf24; outline-offset: 4px; }
+.lobby :global(.nph-hidden-detail-link) { min-height: 44px; font: inherit; font-size: 14px; padding: 11px 15px; }
+.lobby :global(.nph-hidden-detail-link:disabled) { opacity: .6; cursor: wait; }
+@media(max-width:1100px) { .lobby :global(.nph-mode-grid) { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:650px) { .lobby :global(.nph-mode-grid) { grid-template-columns: 1fr; gap: 12px; } .lobby :global(.nph-mode-grid button) { min-height: 0; grid-template-columns: 28px minmax(0,1fr); gap: 8px 14px; padding: 21px; } .lobby :global(.nph-mode-grid button svg) { grid-row: span 2; margin-top: 2px; } .lobby :global(.nph-mode-grid span) { grid-column: 2; } .lobby :global(.nph-shell-error button) { margin-left: 0; } }
+@media(prefers-reduced-motion:reduce) { .lobby :global(.nph-mode-grid button) { transition: none; } }

@@ -2,7 +2,7 @@
 
 import CoreSuiteSection from './CoreSuiteSection';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -161,15 +161,20 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const loadVersion = useRef(0);
 
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     setError('');
     const query = new URLSearchParams({ limit: '100' });
     if (search.trim()) query.set('search', search.trim());
     const failures: string[] = [];
     const task = async <T,>(label: string, request: Promise<T>, apply: (value: T) => void) => {
-      try { apply(await request); } catch (next) { failures.push(`${label}: ${formatTorqueShedError(next)}`); }
+      try {
+        const value = await request;
+        if (version === loadVersion.current) apply(value);
+      } catch (next) { failures.push(`${label}: ${formatTorqueShedError(next)}`); }
     };
     const tasks: Array<Promise<void>> = [];
     const needsVehicles = ['dashboard', 'garage', 'service', 'diagnostics', 'live', 'credits'].includes(route.area);
@@ -187,6 +192,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
       tasks.push(task('Vendors', moduleShellApi.torqueshed.listVendors(), value => setVendors(value.vendors)));
     }
     await Promise.allSettled(tasks);
+    if (version !== loadVersion.current) return;
     if (failures.length) setError(failures.join(' '));
     setLoading(false);
   }, [route.area, search]);
@@ -217,6 +223,7 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
 
   useEffect(() => {
     void load();
+    return () => { loadVersion.current++; };
   }, [load]);
 
   useEffect(() => {
@@ -416,6 +423,9 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
         .ts28-row>div { display:grid; gap:4px; min-width:0; } .ts28-row small { color:#8e8880; overflow:hidden; text-overflow:ellipsis; } .ts28-row span { color:#fbbf24; font-size:12px; text-transform:uppercase; }
         .ts28-timeline { display:grid; gap:0; }.ts28-event { display:grid; grid-template-columns:26px 1fr; gap:10px; }.ts28-event i { width:10px;height:10px;border-radius:50%;background:#f59e0b;margin:7px auto;box-shadow:0 0 0 5px rgba(245,158,11,.12);position:relative;}.ts28-event i:after{content:"";width:1px;background:#554020;position:absolute;top:15px;bottom:-120px;left:5px}.ts28-event h4,.ts28-event p{margin:3px 0}.ts28-event span{color:#fbbf24;text-transform:uppercase;font-size:10px;font-weight:900;letter-spacing:.1em}.ts28-event small{color:#78716c}.ts28-event>div{padding-bottom:20px}
         .ts28-alert { grid-column:1/-1; padding:12px; border:1px solid #7f1d1d; color:#fecaca; background:#450a0a55; border-radius:10px; }
+        .ts28-privacy { display:flex; align-items:flex-start; gap:10px; margin-bottom:18px; padding:13px 15px; border:1px solid #383b3e; border-radius:10px; background:#15181b; color:#c1c7cf; font-size:13px; line-height:1.6; }
+        .ts28-privacy>svg { flex:0 0 18px; margin-top:1px; color:#fbbf24; }
+        .ts28-privacy strong { color:#f8fafc; font-weight:650; }
         .ts28-bays button { text-align:left;display:grid;gap:3px;padding:11px;border-radius:10px;border:1px solid #30291f;background:#0c0e10;color:#e7e5e4;cursor:pointer }.ts28-bays button.active{border-color:#f59e0b;background:#f59e0b10}.ts28-bays span{color:#78716c;font-size:11px}
         .ts28-chat { display:grid;grid-template-rows:auto 1fr auto auto;gap:12px;min-height:620px }.ts28-chat header small{color:#78716c}.ts28-messages{overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px;background:#08090a;border-radius:12px;border:1px solid #29241d;max-height:500px}.ts28-message{max-width:82%;padding:10px 12px;border:1px solid #3b3226;border-radius:4px 14px 14px 14px;background:#17191c}.ts28-message>div{display:flex;justify-content:space-between;gap:20px}.ts28-message b{color:#fbbf24}.ts28-message time{font-size:10px;color:#78716c}.ts28-message p{margin:5px 0;white-space:pre-wrap}.ts28-send{display:grid;grid-template-columns:1fr auto;gap:8px}.ts28-safe{display:flex;gap:7px;align-items:center;color:#78716c;font-size:11px;margin:0}.ts28-pulse{animation:ts28-pulse 1.5s infinite}@keyframes ts28-pulse{50%{filter:drop-shadow(0 0 7px #22c55e)}}
         .ts28-report{display:grid;gap:5px;margin-top:12px;padding:12px;background:#0b0d0f;border-radius:10px;border:1px solid #30291f}.ts28-report p{margin:0;color:#a8a29e}.ts28-report small{color:#fbbf24}.ts28-report output{overflow-wrap:anywhere;color:#86efac;margin-top:8px}.ts28-check{display:flex;align-items:center;gap:8px;color:#d6d3d1}.ts28-actions{display:flex;gap:8px;flex-wrap:wrap}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
@@ -424,6 +434,11 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
         @media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } .ts28-three{grid-template-columns:minmax(0,1fr)} }
         @media (max-width: 560px) { [data-testid="torqueshed-garage"] form > div, [data-testid="torqueshed-service"] form > div,.ts28-two { grid-template-columns: minmax(0, 1fr) !important; }.ts28-send{grid-template-columns:1fr}.ts28-send button{width:100%}.ts28-message{max-width:96%}.ts28-stats{grid-template-columns:1fr}.ts28-hero svg{display:none} }
       `}</style>
+      {loading && (
+        <div role="status" aria-live="polite" aria-busy="true" style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: space.sm, color: semantic.textMuted }}>
+          <RefreshCw size={16} aria-hidden="true" /> Loading workshop records…
+        </div>
+      )}
       {error && (
         <div
           role="alert"
@@ -456,23 +471,12 @@ export default function TorqueShedWorkspace({ routePath }: { baseUrl?: string; r
           {notice}
         </div>
       )}
-      <div
-        style={{
-          ...cardStyle,
-          borderColor: '#f59e0b44',
-          background: '#f59e0b0b',
-          color: semantic.textMuted,
-          display: 'flex',
-          gap: 9,
-          marginBottom: space.lg,
-        }}
-      >
-        <ShieldCheck size={18} color="#f59e0b" />
+      <aside className="ts28-privacy" aria-label="Vehicle record privacy">
+        <ShieldCheck size={18} aria-hidden="true" />
         <span>
-          Private by default: VINs are protected and shown only as a masked suffix. Shared build pages never show
-          maintenance costs, files, or private diagnostic notes.
+          <strong>Private by default.</strong> VINs show only a masked suffix. Shared build pages exclude private notes, files, and maintenance costs.
         </span>
-      </div>
+      </aside>
 
       {!canWriteModule && <div role="status" data-testid="torqueshed-read-only" style={{ ...cardStyle, borderColor: '#fbbf24', color: '#fde68a', marginBottom: space.lg }}>Read-only access: you can review garage records, diagnostics, service history, builds, marketplace listings, community discussions, and reports. Creating, changing, sharing, messaging, purchasing, and AI analysis actions are disabled.</div>}
       {route.area === 'marketplace' && <TorqueShedMarketplacePanel listingId={route.recordId} canWrite={canWriteModule} />}

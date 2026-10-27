@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
-import { ssoHandoffTokens, tenantUsers, tenants, users } from '../schema.js';
+import { revokedSessionTokens, ssoHandoffTokens, tenantUsers, tenants, users } from '../schema.js';
 import { authenticate, sanitizeUser, signToken } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
 import { hasPlatformAdminAuthority } from '../lib/rbac.js';
@@ -508,6 +508,15 @@ async function issueSsoHandler(request: FastifyRequest, reply: FastifyReply) {
   reply.header('Pragma', 'no-cache');
   reply.header('Referrer-Policy', 'no-referrer');
   const user = (request as any).user as AuthenticatedUser;
+  const sessionFingerprint = (request as any).authTokenFingerprint as unknown;
+  // This metadata comes only from authenticate, never from the request body.
+  // Old/unbound codes must not acquire the user's authority at redemption time.
+  if (
+    typeof user.tokenVersion !== 'number' || !Number.isSafeInteger(user.tokenVersion) || user.tokenVersion < 0 ||
+    typeof sessionFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(sessionFingerprint)
+  ) {
+    return reply.code(401).send({ error: 'Issuing session could not be verified', code: 'SESSION_INVALID' });
+  }
   const body = (request.body ?? {}) as IssueBody;
   const moduleId = readString(body.moduleId) || readString(body.moduleSlug);
   const ip = getClientIp(request);
@@ -699,6 +708,8 @@ async function issueSsoHandler(request: FastifyRequest, reply: FastifyReply) {
     state: authorization.value.state,
     nonce: authorization.value.nonce,
     codeChallenge: authorization.value.codeChallenge,
+    tokenVersion: user.tokenVersion,
+    sessionFingerprint,
   }, secret);
   const callback = new URL(authorization.value.redirectUri);
   callback.searchParams.set('code', code);
@@ -752,7 +763,8 @@ async function browserExchangeSsoHandler(request: FastifyRequest, reply: Fastify
   const binding = parseSsoExchangeCode(code, secret);
   if (
     !binding?.clientId || !binding.redirectUri || !binding.returnTo || !binding.state ||
-    !binding.nonce || !binding.codeChallenge
+    !binding.nonce || !binding.codeChallenge ||
+    binding.tokenVersion === undefined || !binding.sessionFingerprint
   ) {
     await auditSso(request, {
       actorUserId: null,
@@ -867,6 +879,13 @@ async function browserExchangeSsoHandler(request: FastifyRequest, reply: Fastify
   if (user.status !== 'active') {
     return reply.code(403).send({ error: 'User is not active', code: 'USER_INACTIVE' });
   }
+  const [revokedIssuer] = await db.select({ tokenHash: revokedSessionTokens.tokenHash })
+    .from(revokedSessionTokens)
+    .where(eq(revokedSessionTokens.tokenHash, binding.sessionFingerprint))
+    .limit(1);
+  if (user.tokenVersion !== binding.tokenVersion || revokedIssuer) {
+    return reply.code(401).send({ error: 'Issuing session has been invalidated', code: 'SESSION_REVOKED' });
+  }
 
   let tenantContext: ResolvedSsoTenant | null = null;
   let moduleAccessExpiresAt: Date | null = null;
@@ -913,6 +932,13 @@ async function browserExchangeSsoHandler(request: FastifyRequest, reply: Fastify
   }).where(and(
     eq(ssoHandoffTokens.jti, binding.jti),
     sql`consumed_at IS NULL`,
+    // Recheck revocation at the single-use linearization point, including a
+    // logout/reset that completed while tenant/entitlement reads were pending.
+    sql`${ssoHandoffTokens.expiresAt} > NOW()`,
+    sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${row.userId}
+      AND ${users.tokenVersion} = ${binding.tokenVersion} AND ${users.status} = 'active')`,
+    sql`NOT EXISTS (SELECT 1 FROM ${revokedSessionTokens}
+      WHERE ${revokedSessionTokens.tokenHash} = ${binding.sessionFingerprint})`,
   )).returning();
   if (updated.length === 0) {
     return reply.code(409).send({ error: 'Authorization code was already used', code: 'CODE_REPLAYED' });
@@ -923,7 +949,7 @@ async function browserExchangeSsoHandler(request: FastifyRequest, reply: Fastify
     userId: user.id,
     email: user.email,
     role: user.role,
-    tokenVersion: user.tokenVersion,
+    tokenVersion: binding.tokenVersion,
   }, module, tenantId), { expiresInSeconds: moduleMaxAge });
   reply.setCookie(SESSION_COOKIE_NAME, sessionToken, getSessionCookieOptions({ maxAge: moduleMaxAge }));
   const clearCookieOptions = getSessionClearCookieOptions();

@@ -716,7 +716,7 @@ function ResumeHub({ availability }: { availability: ResumesAvailability }) {
       <p
         data-testid="resume-helper"
         style={{
-          textAlign: 'center', fontSize: 12, color: brand.textMuted,
+          textAlign: 'center', fontSize: 12, color: brand.textSecondary,
           margin: '24px auto 0', maxWidth: 560,
         }}
       >

@@ -28,11 +28,19 @@
 .root[data-lane="pulsedesk"] .fitSection .eyebrow { color: #216e79 !important; }
 @media (max-width: 700px) { .pricePanel, .scenario { grid-template-columns: 1fr; gap: 20px; }.pricePanel { padding: 24px; }.scenario { padding-block: 35px; } }
 .eyebrow { color: var(--lane-accent) !important; font-size: 11px; font-weight: 750; letter-spacing: .17em; margin: 0 0 18px; }
-.homeHero { padding-top: 32px; padding-bottom: 28px; }
-.homeIntro { text-align: center; margin-bottom: 26px; }
-.homeIntro h1 { font-size: clamp(39px, 4.7vw, 66px); line-height: 1.05; margin: 0; font-weight: 760; }
+.homeHero { padding-top: clamp(40px, 5vw, 72px); padding-bottom: 28px; }
+.homeIntro { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); align-items: end; gap: 48px; text-align: left; margin-bottom: 60px; }
+.homeIntro h1 { font-size: clamp(39px, 4.7vw, 66px); line-height: 1.06; margin: 0; font-weight: 760; max-width: 13ch; }
 .homeIntro h1 span { color: #8edfff; }
 .lead { font-size: clamp(16px, 1.5vw, 19px); margin: 20px 0 0; }
+.homePitch .lead { margin: 0; max-width: 39ch; font-size: 17px; }
+.homeActions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.homeActions .primaryButton, .homeActions .secondaryButton { padding: 13px 17px; min-height: 48px; }
+.homeAccessNote { display: flex; align-items: center; gap: 7px; margin: 16px 0 0; color: #aebfd3 !important; font-size: 12px; }
+.homeAccessNote svg { flex-shrink: 0; color: #8edfff; }
+.laneSectionHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; margin-bottom: 18px; }
+.laneSectionHeading h2 { margin: 0; font-size: 22px; letter-spacing: -.025em; }
+.laneSectionHeading p { margin: 0; font-size: 13px; }
 .laneGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .laneCard { position: relative; min-height: 390px; overflow: hidden; border-radius: 16px; background: #101a25; color: #fff; border: 1px solid #31404f; transition: border-color .2s, transform .2s; isolation: isolate; }
 .laneCard:hover { transform: translateY(-4px); border-color: var(--lane-accent); }
@@ -90,4 +98,17 @@
 @media (max-width: 1050px) { .container { padding-inline: 22px; }.laneGrid { gap: 12px; }.cardBody { padding: 20px; }.cardTop { padding: 17px; }.sharedSection { gap: 40px; }.detailHero { gap: 35px; }.detailCopy h1 { font-size: 44px; }.workflow { gap: 45px; }.underCards { align-items: flex-start; }.detailVisual { min-height: 500px; } }
 @media (max-width: 800px) { .detailHero { grid-template-columns: 1fr; }.detailVisual { min-height: 380px; }.detailImage { object-position: center top; }.backLink { margin-bottom: 30px; }.benefits { gap: 22px; }.benefits h2 { font-size: 21px; }.sharedSection { grid-template-columns: 1fr; gap: 25px; padding-block: 60px; }.sharedSection p { max-width: 65ch; }.underCards { flex-direction: column; gap: 12px; }.cardBody h2 { font-size: 24px; }.cardCopy { min-height: 64px; }.laneCard { min-height: 410px; }.cardTop { font-size: 9px; }.cardBody { padding: 17px; }.cardPromise { font-size: 13px; }.cardCopy { font-size: 12px; }.cardLink { font-size: 11px; } }
 @media (max-width: 700px) { .homeHero { padding-top: 35px; }.homeIntro { text-align: left; margin-bottom: 25px; }.homeIntro h1 { font-size: clamp(36px, 8.4vw, 51px); }.homeIntro .lead { max-width: 32ch; }.laneGrid { grid-template-columns: 1fr; gap: 16px; }.laneCard { min-height: 295px; }.cardShade { background: linear-gradient(90deg, #06101ceb, #06101c8a 60%, #06101c1a), linear-gradient(0deg, #07111e, transparent 70%); }.cardTop { padding: 19px 21px; font-size: 10px; }.cardBody { padding: 22px; }.cardBody h2 { font-size: 30px; }.cardPromise { font-size: 14px; }.cardCopy { font-size: 13px; min-height: 0; max-width: 29ch; }.cardLink { font-size: 13px; margin-top: 15px; padding-top: 14px; }.laneImage { object-position: center top; }.foundation { grid-template-columns: 1fr; gap: 23px; padding-bottom: 45px; }.foundation h3 { margin-top: 10px; }.workflow { grid-template-columns: 1fr; gap: 25px; padding-block: 45px; }.benefits { grid-template-columns: 1fr; padding-block: 10px 45px; }.benefits h2 { font-size: 25px; margin-bottom: 10px; }.benefits article { padding-top: 20px; }.companionGrid, .fitGrid { grid-template-columns: 1fr; gap: 18px; }.companions { padding-top: 20px; }.detailCopy h1 { font-size: clamp(39px, 8.5vw, 55px); }.detailVisual { min-height: 350px; }.detailHero { padding-bottom: 36px; }.detailCopy .lead { font-size: 17px; }.detailClose > .textLink, .homeClose > .textLink { display: flex; justify-content: center; margin: 14px 0 0; }.customerRow { gap: 9px; }.sharedExample { padding: 23px; }.savedLabel { font-size: 9px; }.fitSection { padding-block: 20px 40px; }.eyebrow { font-size: 10px; }.otherLanes { justify-content: flex-start; }.otherLanes span { width: 100%; } }
+@media (max-width: 800px) {
+  .homeIntro { grid-template-columns: minmax(0, 1fr); gap: 24px; margin-bottom: 38px; }
+  .homeIntro h1 { max-width: 16ch; }
+  .homePitch .lead { max-width: 48ch; }
+  .laneSectionHeading { align-items: flex-start; flex-direction: column; gap: 7px; }
+}
+@media (max-width: 440px) {
+  .homeIntro h1 { font-size: clamp(38px, 10vw, 44px); }
+  .homeActions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .homeAccessNote { align-items: flex-start; line-height: 1.5; }
+  .homeAccessNote svg { margin-top: 2px; }
+  .laneSectionHeading h2 { font-size: 21px; }
+}
 @media (prefers-reduced-motion: reduce) { .laneCard, .laneImage { transition: none; }.laneCard:hover, .laneCard:hover .laneImage { transform: none; } }
