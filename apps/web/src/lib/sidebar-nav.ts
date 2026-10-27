@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Store, Sparkles, Receipt, Settings as SettingsIcon,
-  Building2, Users as UsersIcon, Boxes, ShieldCheck, Mail, ServerCog, Coffee,
+  Building2, ContactRound, Users as UsersIcon, Boxes, ShieldCheck, Mail, ServerCog, Coffee,
   type LucideIcon,
 } from 'lucide-react';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules/navigation.js';
@@ -32,6 +32,7 @@ export function buildNavSections(opts: SidebarRoleFlags): NavSection[] {
     label: 'Workspace',
     items: [
       { id: 'my-apps', label: 'Home', Icon: LayoutGrid },
+      { id: 'customer-workspace', label: 'Customer Workspace', Icon: ContactRound },
       { id: 'apps', label: 'Browse tools', Icon: Store },
       { id: 'ai-tools', label: 'AI tools', Icon: Sparkles },
       { id: 'lunch-break', label: 'Lunch Break', Icon: Coffee, href: LUNCH_BREAK_PATH },

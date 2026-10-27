@@ -1,3 +1,7 @@
+## 2026-10-27 - Separate Customer Workspace overlay
+
+The shared Customer Workspace uses existing TradeFlow Directory access and the signed TradeFlow-to-SnapProof workflow; it does not grant module access or promote either module to production parity. Local API58/58, UI17/17, complete types and builds pass with synthetic fixtures. PostgreSQL, signed-session and deployed acceptance remain unverified. [Exact overlay and limits](../reviews/2026-10-27/CUSTOMER_WORKSPACE.md).
+
 ## 2026-10-27 - Local quality pass, not production acceptance
 
 All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.

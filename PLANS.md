@@ -1,3 +1,7 @@
+## 2026-10-27 - Separate Customer Workspace local phase
+
+The bounded Customer Workspace phase extends frozen quality base `beaaf1db` on its own branch. Existing Directory references, current module authority and reviewed TradeFlow-to-SnapProof handoffs now support a shared shell workflow. Local combined API58/58, UI17/17, complete API/web types and production compilation/build pass; actual PostgreSQL and live acceptance remain separate. No publication, migration, new grant or provider action occurred. [Scope, evidence and remaining gates](docs/reviews/2026-10-27/CUSTOMER_WORKSPACE.md).
+
 ## 2026-10-27 - Local quality pass, not production acceptance
 
 All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.

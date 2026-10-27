@@ -33,6 +33,7 @@ const colors = {
 
 const pageLabels: Record<string, { section: string; label: string }> = {
   'my-apps': { section: 'Workspace', label: 'Home' },
+  'customer-workspace': { section: 'Workspace', label: 'Customer Workspace' },
   apps: { section: 'Workspace', label: 'Browse tools' },
   'ai-tools': { section: 'Workspace', label: 'AI tools' },
   'command-center': { section: 'Organization', label: 'Overview' },
