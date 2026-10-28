@@ -887,6 +887,8 @@ export interface OpenAiRealtimeAcceptConfig {
         threshold: 0.5;
         prefix_padding_ms: 300;
         silence_duration_ms: 700;
+        create_response: true;
+        interrupt_response: true;
       };
     };
     output: { voice: SupportedRealtimeVoice };
@@ -963,7 +965,7 @@ export function buildOpenAiRealtimeAcceptConfig(input: BuildRealtimeAcceptConfig
     tool_choice: 'auto',
     tools,
     audio: {
-      input: { turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 700 } },
+      input: { turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 700, create_response: true, interrupt_response: true } },
       output: { voice: input.voice },
     },
   };

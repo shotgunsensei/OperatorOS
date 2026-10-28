@@ -297,7 +297,9 @@ function providerCostMinor(value: unknown): number | null {
 export function isRealtimeCallEligible(configuration: Row, now = new Date()): boolean {
   if (configuration.realtime_enabled !== true || !configuration.active_flow_id
     || configuration.profile_status !== 'active'
-    || configuration.product_mode === 'msp' || configuration.routing_mode === 'msp') return false;
+    || ((configuration.product_mode === 'msp' || configuration.routing_mode === 'msp')
+      && (configuration.msp_realtime_association_verified !== true || configuration.realtime_billing_eligible !== true
+        || configuration.lifecycle_state !== 'ACTIVE'))) return false;
   const open = isWithinBusinessHours(configuration.business_hours, now, String(configuration.timezone));
   return open
     ? ['ai_receptionist', 'ai_screen_then_transfer'].includes(String(configuration.live_behavior))
@@ -319,7 +321,7 @@ export function realtimeRecordingEnabled(configuration: Row): boolean {
   return configuration.recording_enabled === true && configuration.recording_policy !== 'disabled';
 }
 
-async function buildRealtimeSipForCall(configuration: Row, call: Row, providerCallSid: string): Promise<string> {
+export async function buildRealtimeSipForCall(configuration: Row, call: Row, providerCallSid: string): Promise<string> {
   const realtimeReadiness = inspectCallCommandRealtimeReadiness();
   const configuredOrigin = String(process.env.TWILIO_PUBLIC_BASE_URL || process.env.APP_URL || '').trim();
   let publicOrigin: URL | null = null;
@@ -346,7 +348,7 @@ async function buildRealtimeSipForCall(configuration: Row, call: Row, providerCa
   });
 }
 
-async function markRealtimeSipPending(configuration: Row, call: Row): Promise<void> {
+export async function markRealtimeSipPending(configuration: Row, call: Row): Promise<void> {
   await db.execute(sql`
     UPDATE callcommand_calls SET realtime_status='pending',realtime_error_code=NULL,updated_at=NOW()
     WHERE tenant_id=${configuration.tenant_id} AND id=${call.id}
@@ -1280,6 +1282,14 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
               WHERE tenant_id=${call.tenant_id} AND id=${call.id}
             `);
           });
+        }
+        if (channel.product_mode === 'msp') {
+          const {prepareAssociatedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
+          const resumed = await prepareAssociatedMspRealtimeIntake({tenantId:String(call.tenant_id),callId:String(call.id),providerCallSid:sid});
+          if (resumed) return sendTwiml(reply,resumed);
+          await releaseCallCommandLane({tenantId:String(call.tenant_id),callId:String(call.id),reason:'msp_realtime_unavailable_after_consent'});
+          await db.execute(sql`UPDATE callcommand_calls SET status='failed',realtime_status='failed',error_code='MSP_REALTIME_UNAVAILABLE',completed_at=NOW(),ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
+          return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>Automated intake is unavailable. Please contact your support provider directly.</Say><Hangup/></Response>');
         }
         const recordingEnabled = realtimeRecordingEnabled(channel);
         let recordingReady = !recordingEnabled || ['pending','ready'].includes(String(call.recording_status));

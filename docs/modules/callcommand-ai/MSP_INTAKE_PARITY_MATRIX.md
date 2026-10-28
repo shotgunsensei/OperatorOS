@@ -1,5 +1,19 @@
 # CallCommand AI MSP intake and Automation Fabric matrix
 
+## 2026-10-28 — Associated MSP Realtime intake, not production acceptance
+
+The local follow-on retains the signed trusted-line/SupportLink association and
+uses existing realtime, managed-number, module, billing, capacity and consent
+gates before SIP. Confirmed intake records one local MSP case and queues the
+configured support email. It does not also invoke BMS or offer device/identity
+actions. General calls retain their existing action/intake behavior. Unrecognized
+A0 callers remain in the existing restricted callback/manual-support flow.
+
+DB-free 93/93, no skips; exact-head compilation/lint receipts are external.
+The prepared actual-PostgreSQL journey is unrun. No parity-count promotion,
+mailbox/PSA acknowledgement, real human connection or deployed acceptance is inferred.
+[Contract and precise outstanding gates](../../callcommand/MSP_REALTIME_INTAKE_2026-10-28.md).
+
 Date: 2026-08-13
 
 Authority: the owner-supplied CallCommand MSP breakdown, ADR-0040, the OperatorOS SSO/ecosystem contracts, and the cumulative OperatorOS release contract.

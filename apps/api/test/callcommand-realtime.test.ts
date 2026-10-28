@@ -269,7 +269,7 @@ test('REST controls use only fixed OpenAI endpoints, bounded payloads, and safe 
     tool_choice: 'auto',
     tools: [{ type: 'function', name: 'transfer_call', description: 'Transfer to a verified target.', parameters: closedSchema() }],
     audio: {
-      input: { turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 700 } },
+      input: { turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 700, create_response: true, interrupt_response: true } },
       output: { voice: 'marin' },
     },
   });

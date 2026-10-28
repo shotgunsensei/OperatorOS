@@ -1,3 +1,12 @@
+## 2026-10-28 — CallCommand MSP voice overlay, local only
+
+Parity totals are unchanged. The separate local candidate adds associated A1
+MSP natural-voice intake, revision-bound caller readback, a durable local case
+and configured support-email queue, without widening Directory/automation authority.
+93 DB-free checks pass; strict tests/API compilation/lint have separate receipts.
+Fresh PostgreSQL, actual voice/PSA/human handoff and deployment remain unverified.
+The earlier source/publication holds are preserved. [Exact scope and limitations](../callcommand/MSP_REALTIME_INTAKE_2026-10-28.md).
+
 ## 2026-10-27 - Local quality pass, not production acceptance
 
 All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.

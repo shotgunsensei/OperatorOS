@@ -1,3 +1,18 @@
+## 2026-10-28 — MSP associated realtime support intake (local candidate)
+
+The isolated follow-on to frozen `beaaf1db` adds an MSP A1/SupportLink-to-Realtime
+handoff, confirmed structured intake, existing local-case/durable-email fulfillment,
+tenant-aware Twilio signatures and explicit interruption behavior. Consent is
+preserved; recording-enabled and unrecognized A0 paths retain their fallback.
+No privileged automation or generic CRM tools are offered to MSP callers.
+
+The final DB-free regression is 93/93 with zero skips. Exact-head strict tests,
+API project compilation and scoped lint are bound by the external candidate
+receipt. The new PostgreSQL journey is prepared but UNRUN. No source publication,
+production data/configuration change, migration, real voice/mail or PSA acceptance
+is claimed. Existing module parity totals and the frozen quality candidate are
+unchanged. [Supported flow, implementation and exact gates](callcommand/MSP_REALTIME_INTAKE_2026-10-28.md).
+
 ## 2026-10-27 - Local quality pass, not production acceptance
 
 All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.

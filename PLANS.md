@@ -1,3 +1,12 @@
+## 2026-10-28 — Bounded MSP voice/intake follow-on
+
+The `codex/callcommand-support-oct28` local branch follows preserved `beaaf1db`.
+It implements associated MSP realtime intake and durable email submission with
+93 DB-free regression checks. Current source/test compilation and lint are
+recorded externally; fresh PostgreSQL, provider/carrier/PSA acceptance and the
+separate source-release holds remain. No production action is authorized or
+performed by this source pass. [Scope and next acceptance](docs/callcommand/MSP_REALTIME_INTAKE_2026-10-28.md).
+
 ## 2026-10-27 - Local quality pass, not production acceptance
 
 All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.

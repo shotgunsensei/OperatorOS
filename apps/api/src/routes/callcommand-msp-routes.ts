@@ -31,7 +31,7 @@ import {
 import { xml } from '../lib/callcommand-phase35.js';
 import { storeEncryptedSecretReference } from '../lib/shared-secret-vault.js';
 import { requireTenantAdmin, requireTenantModuleAccess, requireTenantModuleWriteAccess } from '../lib/tenant-auth.js';
-import { verifyTwilioSignature } from '../lib/telephony.js';
+import { verifyCallCommandTwilioSignature } from '../lib/callcommand-tenant-telephony.js';
 
 const MODULE_SLUG = 'callcommand-ai';
 const base = '/v1/modules/callcommand-ai/product/msp';
@@ -115,7 +115,8 @@ function formBody(request: FastifyRequest): Record<string, string> {
 async function signedTwilio(request: FastifyRequest): Promise<Record<string, string>> {
   const value = formBody(request);
   const signature = request.headers['x-twilio-signature'] as string | undefined;
-  if (!(await verifyTwilioSignature(canonicalWebhookUrl(request), value, signature))) {
+  if (!(await verifyCallCommandTwilioSignature({url:canonicalWebhookUrl(request),params:value,signature,
+      callId:String((request.query as MspRow | undefined)?.call_id ?? '') || null}))) {
     throw new CallCommandMspError('Twilio signature verification failed', 'CALLCOMMAND_SIGNATURE_INVALID', 403);
   }
   return value;
@@ -562,7 +563,12 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
       const value=await signedTwilio(request); const sid=parseTwilioCallSid(value.CallSid); const callId=requiredUuid((request.query as MspRow)?.call_id,'call_id'); const context=await loadPublicContext(sid,callId); const tenantId=String(context.tenant_id); const contextId=String(context.id);
       const receipt=await recordMspWebhookReceipt({tenantId,providerCallId:sid,stage:`support-link-${String(value.SequenceNumber??context.support_link_attempts??0)}`,payload:value,callId});
       if(receipt.duplicate){
-        if(context.contact_id){const contact=await db.execute(sql`SELECT first_name FROM directory_contacts WHERE tenant_id=${tenantId} AND id=${context.contact_id}`);return sendTwiml(reply,intentGather(callId,String((contact.rows[0] as MspRow)?.first_name??'')));}
+        if(context.contact_id){
+          const {prepareAssociatedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
+          const realtime=await prepareAssociatedMspRealtimeIntake({tenantId,callId,providerCallSid:sid});
+          if(realtime)return sendTwiml(reply,realtime);
+          const contact=await db.execute(sql`SELECT first_name FROM directory_contacts WHERE tenant_id=${tenantId} AND id=${context.contact_id}`);return sendTwiml(reply,intentGather(callId,String((contact.rows[0] as MspRow)?.first_name??'')));
+        }
         if(context.state==='LOCKED')return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>We could not verify the information. Please remain on the line for a support callback.</Say></Response>');
         return sendTwiml(reply,supportLinkGather(callId,'That information could not be verified. Re enter your ten digit Support Link I D.'));
       }
@@ -591,6 +597,9 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
       }
       await db.execute(sql`UPDATE callcommand_support_links SET failed_attempts=0,locked_until=NULL,updated_at=NOW() WHERE tenant_id=${tenantId} AND id=${link.id}`);
       await transitionMspCall({tenantId,callContextId:contextId,to:'CONTACT_ASSOCIATED',eventType:'support_link.verified',actorType:'SYSTEM',contactId:String(link.contact_id),assuranceLevel:'A1',evidence:{supportLinkId:String(link.id),organizationMatch:true,firstFactorOnly:true}});
+      const {prepareAssociatedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
+      const realtime=await prepareAssociatedMspRealtimeIntake({tenantId,callId,providerCallSid:sid});
+      if(realtime)return sendTwiml(reply,realtime);
       return sendTwiml(reply,intentGather(callId,String(link.first_name)));
     }catch(error){if((error as any)?.statusCode===403)return reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'});return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>We could not verify the information. Please contact support.</Say><Hangup/></Response>');}
   });
@@ -629,7 +638,7 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
         await transitionMspCall({tenantId,callContextId:contextId,to:'COMPLETED',eventType:'callback.intake.completed',actorType:'SYSTEM',evidence:{reference:String(localCase.reference),automationExecuted:false,bmsQueued:false}});
         return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Say>A callback request was recorded. Your reference is ${xml(String(localCase.reference))}. Goodbye.</Say><Hangup/></Response>`);
       }
-      await transitionMspCall({tenantId,callContextId:contextId,to:'TRANSFERRED',eventType:'general_support.requested',actorType:'CALLER',evidence:{providerTransferConfirmed:false,manualFollowUpRequired:true}});
+      await transitionMspCall({tenantId,callContextId:contextId,to:'COMPLETED',eventType:'general_support.manual_follow_up',actorType:'CALLER',evidence:{providerTransferConfirmed:false,humanConnectionConfirmed:false,manualFollowUpRequired:true}});
       return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>Please contact your managed service provider using the number in your support agreement. No automated action was taken.</Say><Hangup/></Response>');
     }catch(error){if((error as any)?.statusCode===403)return reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'});return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This request is unavailable.</Say><Hangup/></Response>');}
   });

@@ -9,10 +9,12 @@ import {
   type CallCommandRealtimeOwnership,
   type CallCommandRealtimeTransaction,
 } from '../lib/callcommand-realtime-ownership.js';
-import { executeFlowGraph } from '../lib/callcommand-phase35.js';
+import { buildIncomingTwiml, executeFlowGraph } from '../lib/callcommand-phase35.js';
 import {
   authorizeCallCommandTool,
+  acquireCallCommandLane,
   compileCallCommandInstructions,
+  releaseCallCommandLane,
   reconcileCallCommandRealtimeUsage,
   type CallCommandRealtimeModel as MeteredRealtimeModel,
 } from '../lib/callcommand-capacity.js';
@@ -30,6 +32,7 @@ import {
   type RealtimeSidebandCallbacks,
   type RealtimeToolInvocation,
   type VerifiedOpenAiIncomingCall,
+  inspectCallCommandRealtimeReadiness,
 } from '../lib/callcommand-realtime.js';
 import {
   hasCallCommandRealtimeSideband,
@@ -44,7 +47,23 @@ import {
   isRealtimeCallEligible,
   realtimeConsentRequired,
   realtimeRecordingEnabled,
+  buildRealtimeSipForCall,
+  markRealtimeSipPending,
 } from './callcommand-phase35-routes.js';
+import { classifyMspIntake } from '../lib/callcommand-msp.js';
+import { createLocalCase, transitionMspCall } from '../lib/callcommand-msp-service.js';
+import {
+  callCommandVoicePolicy,
+  associatedMspVoiceStage,
+  formatSupportIntake,
+  readSupportIntakeSnapshot,
+  saveSupportIntakeSnapshot,
+  supportDeliveryEvidence,
+  supportIntakeTool,
+  realtimeActionAllowedForProduct,
+  usesMspSupportIntake,
+  mspSupportNotificationReady,
+} from '../lib/callcommand-support-intake.js';
 
 const ROUTE = '/v1/modules/callcommand-ai/openai/realtime/incoming';
 const ACTIVE_CALL_STATES = new Set(['ringing', 'in_progress', 'answered', 'connected']);
@@ -117,10 +136,12 @@ function closedObjectSchema(properties: Row, required: string[] = []): Row {
   return { type: 'object', properties, required, additionalProperties: false };
 }
 
-function buildToolBindings(input: { actions: Row[]; transferTargets: Row[]; transferEnabled: boolean }) {
+function buildToolBindings(input: { actions: Row[]; transferTargets: Row[]; transferEnabled: boolean; productMode: string }) {
   const actionBindings = new Map<string, Row[]>();
   const tools: AllowlistedRealtimeTool[] = [];
   for (const [actionType, mapping] of Object.entries(ACTION_TO_TOOL)) {
+    // MSP voice intake cannot acquire generic CRM/task/automation authority.
+    if (!realtimeActionAllowedForProduct(input.productMode,actionType)) continue;
     const configured = input.actions.filter(action => action.enabled !== false
       && String(action.actionType ?? action.type ?? '') === actionType);
     if (!configured.length) continue;
@@ -128,7 +149,7 @@ function buildToolBindings(input: { actions: Row[]; transferTargets: Row[]; tran
     const createsObject = ['ticket', 'lead', 'task'].includes(actionType);
     tools.push({
       type: 'function',
-      name: mapping.name,
+      name: input.productMode === 'msp' ? 'submit_support_request' : mapping.name,
       description: createsObject
         ? `Create the configured ${actionType} only after the caller has supplied enough information.`
         : `Send the tenant-configured ${actionType} notification. The server owns the destination.`,
@@ -139,6 +160,8 @@ function buildToolBindings(input: { actions: Row[]; transferTargets: Row[]; tran
     });
   }
 
+  const supportIntakeEnabled = usesMspSupportIntake(input.productMode,[...actionBindings.keys()]);
+  if (supportIntakeEnabled) tools.push(supportIntakeTool());
   const targetAliases = new Map<string, string>();
   if (input.transferEnabled && input.transferTargets.length) {
     input.transferTargets.slice(0, 20).forEach((target, index) => targetAliases.set(`target_${index + 1}`, String(target.id)));
@@ -162,7 +185,7 @@ function buildToolBindings(input: { actions: Row[]; transferTargets: Row[]; tran
       summary: { type: 'string', minLength: 1, maxLength: 1_500 },
     }, ['reason', 'summary']) as AllowlistedRealtimeTool['parameters'],
   });
-  return { tools, actionBindings, targetAliases };
+  return { tools, actionBindings, targetAliases, supportIntakeEnabled };
 }
 
 async function loadAuthority(callId: string, executor: Pick<typeof db,'execute'> = db, tenantId?: string): Promise<Row | null> {
@@ -179,6 +202,9 @@ async function loadAuthority(callId: string, executor: Pick<typeof db,'execute'>
       channel.timezone,
       channel.recording_enabled,
       channel.require_recording_consent,
+      channel.acquisition_mode,channel.lifecycle_state,channel.billing_status,channel.billing_grace_expires_at,
+      (channel.billing_status IN ('active','included') OR
+        (channel.billing_status='grace_period' AND channel.billing_grace_expires_at>NOW())) AS realtime_billing_eligible,
       profile.status AS profile_status,
       profile.name AS profile_name,
       profile.business_name,
@@ -231,7 +257,76 @@ async function loadAuthority(callId: string, executor: Pick<typeof db,'execute'>
       AND (${tenantId === undefined} OR c.tenant_id=${tenantId ?? ''})
     LIMIT 1
   `);
-  return (result.rows[0] as Row | undefined) ?? null;
+  const authority = (result.rows[0] as Row | undefined) ?? null;
+  if (authority?.product_mode === 'msp') {
+    const association = await executor.execute(sql`
+      SELECT context.id FROM callcommand_msp_call_contexts context
+      JOIN tenants tenant ON tenant.id=context.tenant_id AND tenant.status='active'
+      JOIN callcommand_organization_profiles organization
+        ON organization.tenant_id=context.tenant_id AND organization.organization_id=context.organization_id
+      JOIN directory_organizations directory_organization
+        ON directory_organization.tenant_id=context.tenant_id AND directory_organization.id=context.organization_id
+      JOIN callcommand_contact_profiles contact_profile
+        ON contact_profile.tenant_id=context.tenant_id AND contact_profile.organization_id=context.organization_id AND contact_profile.contact_id=context.contact_id
+      JOIN directory_contacts contact ON contact.tenant_id=context.tenant_id AND contact.id=context.contact_id
+      JOIN callcommand_trusted_originating_lines line
+        ON line.tenant_id=context.tenant_id AND line.id=context.originating_line_id AND line.organization_id=context.organization_id
+      WHERE context.tenant_id=${authority.tenant_id} AND context.call_id=${authority.id}
+        AND context.provider_call_id=${authority.provider_call_sid} AND context.assurance_level='A1'
+        AND context.state IN ('CONTACT_ASSOCIATED','INTENT_CAPTURED','LOCAL_CASE_CREATED','COMPLETED')
+        AND organization.status IN ('ACTIVE','PILOT') AND organization.support_contract_status='ACTIVE'
+        AND directory_organization.status='active' AND directory_organization.archived_at IS NULL
+        AND contact_profile.status='ACTIVE' AND contact_profile.support_eligible=TRUE
+        AND contact.status='active' AND contact.archived_at IS NULL
+        AND line.status='ACTIVE' AND line.verified_at IS NOT NULL
+        AND (line.cooldown_until IS NULL OR line.cooldown_until<=NOW())
+      LIMIT 1
+    `);
+    authority.msp_realtime_association_verified = Boolean(association.rows[0]);
+  }
+  return authority;
+}
+
+/** Only the already-signed MSP SupportLink route can request this associated-call handoff. */
+export async function prepareAssociatedMspRealtimeIntake(input: {tenantId:string;callId:string;providerCallSid:string}): Promise<string | null> {
+  const authority = await loadAuthority(input.callId,db,input.tenantId);
+  if (!authority || authority.product_mode !== 'msp' || authority.provider_call_sid !== input.providerCallSid
+    ) return null;
+  const configuration = await loadRuntimeConfiguration(authority);
+  const stage = associatedMspVoiceStage({associated:authority.msp_realtime_association_verified===true,
+    channelActive:authority.channel_status==='active',callActive:ACTIVE_CALL_STATES.has(String(authority.status)),
+    providerReady:authority.commercial_realtime_ready===true,eligibleFlow:isRealtimeCallEligible(authority),
+    managedLine:['platform_provisioned','byon'].includes(String(authority.acquisition_mode)),
+    billingEligible:authority.realtime_billing_eligible===true,lifecycleActive:authority.lifecycle_state==='ACTIVE',
+    consentRequired:realtimeConsentRequired(authority) && !authority.consent_id,recordingEnabled:realtimeRecordingEnabled(authority),
+    realtimeConfigured:inspectCallCommandRealtimeReadiness().ready,notificationConfigured:configuration.supportIntakeEnabled});
+  if (stage === 'unavailable') return null;
+  // Construct/validate the fixed SIP target before reserving durable capacity.
+  const sip = await buildRealtimeSipForCall(authority,authority,input.providerCallSid);
+  const admission = await acquireCallCommandLane({tenantId:input.tenantId,callId:input.callId,
+    idempotencyKey:`msp-realtime:${input.providerCallSid}`,providerCallSid:input.providerCallSid});
+  if (!admission.admitted) return null;
+  try {
+    await db.transaction(async tx => {
+      await tx.execute(sql`SELECT id FROM callcommand_calls WHERE tenant_id=${input.tenantId} AND id=${input.callId} FOR UPDATE`);
+      const existing = await tx.execute(sql`SELECT id FROM callcommand_live_sessions WHERE tenant_id=${input.tenantId} AND call_id=${input.callId} AND ended_at IS NULL LIMIT 1`);
+      if (!existing.rows[0]) await tx.execute(sql`
+        INSERT INTO callcommand_live_sessions(tenant_id,call_id,channel_id,provider_call_sid,state,caller_phone_masked)
+        VALUES(${input.tenantId},${input.callId},${authority.channel_id},${input.providerCallSid},${stage==='consent'?'consent':'intake'},${authority.phone_masked})
+      `);
+    });
+    if (stage === 'consent') return buildIncomingTwiml({
+      greeting:'I am an AI support assistant. Before we continue, please choose whether you consent to automated intake.',
+      consentRequired:true,consentAction:`/v1/modules/callcommand-ai/twilio/voice/consent?call_id=${encodeURIComponent(input.callId)}`,
+      gatherAction:`/v1/modules/callcommand-ai/webhooks/twilio/voice/intent?call_id=${encodeURIComponent(input.callId)}`,
+      behavior:'ai_receptionist',
+    });
+    await markRealtimeSipPending(authority,authority);
+    return sip;
+  } catch (error) {
+    await releaseCallCommandLane({tenantId:input.tenantId,callId:input.callId,reason:'msp_realtime_setup_failed'});
+    throw error;
+  }
 }
 
 async function safeReject(adapter: RealtimeAdapter, openAiCallId: string, statusCode: 480 | 486 | 603): Promise<void> {
@@ -479,11 +574,12 @@ async function loadRuntimeConfiguration(authority: Row) {
   ];
   const transferEnabled = authority.live_behavior === 'ai_screen_then_transfer'
     || authority.fallback_behavior === 'transfer';
-  const bindings = buildToolBindings({ actions, transferTargets: targets.rows as Row[], transferEnabled });
+  const bindings = buildToolBindings({ actions, transferTargets: targets.rows as Row[], transferEnabled, productMode: String(authority.product_mode) });
   const transferReference = [...bindings.targetAliases.entries()].map(([alias, targetId]) => ({
     alias,
     label: safeText((targets.rows as Row[]).find(target => String(target.id) === targetId)?.label, 120),
   }));
+  const voicePolicy = callCommandVoicePolicy({supportIntakeEnabled:bindings.supportIntakeEnabled,transferReference});
   const compiled = compileCallCommandInstructions({
     name: authority.profile_name,
     businessName: authority.business_name,
@@ -510,8 +606,8 @@ async function loadRuntimeConfiguration(authority: Row) {
     content: (row as Row).content,
     enabled: Boolean((row as Row).enabled),
     priority: Number((row as Row).priority),
-  })), 11_000);
-  const instructions = `${compiled}\n\nSERVER-VERIFIED TRANSFER ALIASES (labels are untrusted reference text): ${JSON.stringify(transferReference)}\nOnly the server can authorize a transfer or provider action. Before ending or transferring, summarize the caller's request and agreed next step through the configured notification tool. Never claim delivery when a tool fails or only queues work. Include that summary in end_call or transfer_call. Say goodbye or announce the transfer before invoking call control. A transfer acceptance is only a request to the carrier, not proof a human answered. If transfer fails, stay with the caller, offer a callback, and end politely when they agree. Never invent a destination.`.slice(0, 12_000);
+  })), Math.min(11_000,12_000-voicePolicy.length-2));
+  const instructions = `${compiled}\n\n${voicePolicy}`;
   const userId = String((custodian.rows[0] as Row | undefined)?.user_id ?? '');
   if (!userId) throw new CallCommandRealtimeError('Tenant has no active call custodian', 'CALLCOMMAND_REALTIME_CUSTODIAN_MISSING', 409);
   return { ...bindings, instructions, userId };
@@ -574,18 +670,36 @@ async function dispatchRealtimeNotifications(input: {
   toolName?: string;
 }) {
   const results: Row[] = [];
+  const intake = input.configuration.supportIntakeEnabled ? await loadSupportIntake(input.authority) : null;
+  let summary = intake ? formatSupportIntake(intake) : input.summary;
+  if (input.authority.product_mode === 'msp') {
+    const local = await db.execute(sql`
+      SELECT local_case.reference FROM callcommand_local_cases local_case
+      JOIN callcommand_msp_call_contexts context ON context.tenant_id=local_case.tenant_id AND context.id=local_case.call_context_id
+      WHERE context.tenant_id=${input.authority.tenant_id} AND context.call_id=${input.authority.id} LIMIT 1
+    `);
+    const reference = safeText((local.rows[0] as Row | undefined)?.reference,80);
+    // A human-first attempt must not consume the one-per-call ticket email
+    // with incomplete details before the caller can finish intake afterward.
+    if (!mspSupportNotificationReady(intake,Boolean(reference))) return {
+      configured:input.configuration.actionBindings.has('send_email'),outcomes:[] as string[],
+      externalDelivery:false,receiptConfirmed:false,deferred:true,deliveryState:'awaiting_confirmed_msp_case',
+      ticketCreationConfirmed:false,mailboxReceiptConfirmed:false,
+    };
+    summary += reference ? `\nLocal MSP intake reference: ${reference}` : '\nLocal MSP case not yet confirmed; follow-up required.';
+  }
   for (const name of ['send_email', 'send_slack_alert', 'create_webhook_event']) {
     if (input.toolName && input.toolName !== name) continue;
     const actions = input.configuration.actionBindings.get(name);
     if (!actions?.length) continue;
     results.push(...await dispatchCallCommandActions({
       tenantId: String(input.authority.tenant_id), userId: input.configuration.userId,
-      call: { ...input.call, summary: input.summary },
+      call: { ...input.call, summary },
       actions: actions.map(action => ({ ...action, body: [
         safeText(action.body, 4_000),
         `CallCommand call: ${input.authority.id}`,
         `Caller: ${safeText(input.call.phone_masked, 80) || 'unavailable'}`,
-        input.summary,
+        summary,
       ].filter(Boolean).join('\n\n') })),
       correlationId: `realtime:${input.authority.id}`,
       // One configured notification per call, shared by explicit tools and
@@ -601,7 +715,47 @@ async function dispatchRealtimeNotifications(input: {
     outcomes,
     externalDelivery: outcomes.length > 0 && outcomes.every(status => status === 'delivered'),
     receiptConfirmed: false,
+    deferred:false,
+    ...supportDeliveryEvidence(outcomes),
   };
+}
+
+async function loadSupportIntake(authority: Row) {
+  const result = await db.execute(sql`
+    SELECT collected_data FROM callcommand_live_sessions
+    WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id}
+    ORDER BY started_at DESC,id DESC LIMIT 1
+  `);
+  return readSupportIntakeSnapshot((result.rows[0] as Row | undefined)?.collected_data);
+}
+
+async function saveSupportIntake(authority: Row, argumentsValue: unknown) {
+  return withOwnedAuthority(authority,async tx => {
+    const result = await tx.execute(sql`
+      SELECT id,collected_data FROM callcommand_live_sessions
+      WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND ended_at IS NULL
+      ORDER BY started_at DESC,id DESC LIMIT 2 FOR UPDATE
+    `);
+    if (result.rows.length !== 1) throw new CallCommandRealtimeError('Support intake has no unique active session','SUPPORT_INTAKE_SESSION_UNAVAILABLE',409);
+    const session = result.rows[0] as Row;
+    const previous = readSupportIntakeSnapshot(session.collected_data);
+    const snapshot = saveSupportIntakeSnapshot(argumentsValue,previous);
+    await tx.execute(sql`
+      UPDATE callcommand_live_sessions
+      SET collected_data=collected_data || ${JSON.stringify({_operatorosSupportIntakeV1:snapshot})}::jsonb,
+        sequence=sequence+1,updated_at=NOW()
+      WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND id=${session.id} AND ended_at IS NULL
+    `);
+    if (snapshot.status === 'confirmed') await tx.execute(sql`
+      UPDATE callcommand_calls SET customer_name=${snapshot.fields.callerName || null},company_name=${snapshot.fields.company || null},
+        summary=${formatSupportIntake(snapshot)},updated_at=NOW()
+      WHERE tenant_id=${authority.tenant_id} AND id=${authority.id}
+    `);
+    return {ok:true,providerActionConfirmed:false,intakeSaved:true,status:snapshot.status,confirmationRevision:snapshot.revision,
+      readback:snapshot.fields,declinedFields:snapshot.declinedFields,
+      callerConfirmationRequired:snapshot.status !== 'confirmed',associationAssurance:snapshot.associationAssurance,
+      previousNotificationUpdateConfirmed:false,ticketCreationConfirmed:false};
+  });
 }
 
 export async function finalizeCallCommandRealtimeNotifications(callId: string) {
@@ -641,6 +795,33 @@ async function executeRealtimeTool(input: {
   if (!call || !call.active_lease_id || !ACTIVE_CALL_STATES.has(String(call.status))) {
     throw new CallCommandRealtimeError('Call is no longer active', 'CALLCOMMAND_REALTIME_CALL_NOT_ACTIVE', 409);
   }
+  if (invocation.name === 'save_support_intake') {
+    if (!configuration.supportIntakeEnabled) throw new CallCommandRealtimeError('Support intake is no longer offered','SUPPORT_INTAKE_NOT_CONFIGURED',403);
+    return saveSupportIntake(authority,invocation.arguments);
+  }
+  if (invocation.name === 'submit_support_request') {
+    if (authority.product_mode !== 'msp' || !configuration.supportIntakeEnabled) throw new CallCommandRealtimeError('MSP intake is not currently authorized','SUPPORT_INTAKE_NOT_CONFIGURED',403);
+    const snapshot = await loadSupportIntake(authority);
+    if (snapshot?.status !== 'confirmed') return {ok:false,providerActionConfirmed:false,code:'SUPPORT_INTAKE_CONFIRMATION_REQUIRED',ticketCreationConfirmed:false};
+    const localCase = await withOwnedAuthority(authority,async tx => {
+      const contexts = await tx.execute(sql`SELECT * FROM callcommand_msp_call_contexts WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND provider_call_id=${authority.provider_call_sid} AND assurance_level='A1' FOR UPDATE`);
+      const context = contexts.rows[0] as Row | undefined;
+      if (!context) throw new CallCommandRealtimeError('Associated MSP case context is unavailable','SUPPORT_INTAKE_CONTEXT_UNAVAILABLE',409);
+      const existing = await tx.execute(sql`SELECT * FROM callcommand_local_cases WHERE tenant_id=${authority.tenant_id} AND call_context_id=${context.id} LIMIT 1`);
+      if (existing.rows[0]) return existing.rows[0] as Row;
+      const suggestion = classifyMspIntake(formatSupportIntake(snapshot));
+      await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context.id),to:'INTENT_CAPTURED',eventType:'realtime.intake.confirmed',actorType:'CALLER',intent:suggestion.intent,
+        evidence:{confirmationRevision:snapshot.revision,associationAssurance:'A1',automationExecuted:false}},tx);
+      const saved = await createLocalCase({tenantId:String(authority.tenant_id),callContextId:String(context.id),organizationId:String(context.organization_id),contactId:String(context.contact_id),suggestion},tx);
+      await tx.execute(sql`UPDATE callcommand_local_cases SET bms_sync_status='BLOCKED',updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${saved.id}`);
+      await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context.id),to:'LOCAL_CASE_CREATED',eventType:'realtime.local_case.created',evidence:{caseId:String(saved.id)}},tx);
+      await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context.id),to:'COMPLETED',eventType:'realtime.intake.recorded',evidence:{localCaseRecorded:true,externalTicketConfirmed:false,automationExecuted:false,fulfillment:'configured_support_email',bmsQueued:false}},tx);
+      return saved;
+    });
+    const notification = await dispatchRealtimeNotifications({authority,configuration,call,summary:formatSupportIntake(snapshot),toolName:'send_email'});
+    return {ok:notification.configured && !notification.deferred && notification.outcomes.length>0 && notification.outcomes.every(status=>SUCCESSFUL_ACTION_STATES.has(status)),providerActionConfirmed:false,
+      action:invocation.name,localCaseRecorded:true,localReference:String(localCase.reference),...notification};
+  }
   const authorityName = toolAuthority(invocation.name);
   if (!authorityName) throw new CallCommandRealtimeError('Tool is not allowlisted', 'CALLCOMMAND_REALTIME_TOOL_NOT_ALLOWED', 403);
 
@@ -650,7 +831,13 @@ async function executeRealtimeTool(input: {
       tool: authorityName, callState: String(call.status), enabledActions: [authorityName],
     });
     if (!authorization.allowed) throw new CallCommandRealtimeError('Tool is not authorized', authorization.code, 403);
-    const summary = safeText(invocation.arguments.summary, 1_500);
+    const supportIntake = configuration.supportIntakeEnabled && ['send_email','create_ticket'].includes(invocation.name)
+      ? await loadSupportIntake(authority) : null;
+    if (configuration.supportIntakeEnabled && ['send_email','create_ticket'].includes(invocation.name) && supportIntake?.status !== 'confirmed') {
+      return {ok:false,providerActionConfirmed:false,code:'SUPPORT_INTAKE_CONFIRMATION_REQUIRED',ticketCreationConfirmed:false,
+        instruction:'Save support details, read them back and confirm the exact revision before submitting. Human transfer remains available without completing intake.'};
+    }
+    const summary = supportIntake ? formatSupportIntake(supportIntake) : safeText(invocation.arguments.summary, 1_500);
     if (!summary) throw new CallCommandRealtimeError('Tool summary is required', 'CALLCOMMAND_REALTIME_TOOL_ARGUMENT_INVALID', 400);
     await withOwnedAuthority(authority,tx => tx.execute(sql`
       UPDATE callcommand_calls SET summary=${summary},updated_at=NOW()

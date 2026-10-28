@@ -14,7 +14,9 @@ test('MSP Phase 1 exposes exact signed webhook and tenant-authenticated administ
   for (const route of ['/webhooks/twilio/voice/inbound','/webhooks/twilio/voice/support-link','/webhooks/twilio/voice/intent','/webhooks/twilio/voice/unrecognized','/workspace','/settings','/organizations','/trusted-lines','/support-links','/integrations','/action-catalog','/policy/evaluate']) {
     assert.match(routes, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
-  assert.match(routes, /verifyTwilioSignature/);
+  assert.match(routes, /verifyCallCommandTwilioSignature/);
+  assert.match(routes, /callcommand-tenant-telephony\.js/);
+  assert.match(routes, /callId:String\(\(request\.query/);
   assert.match(routes, /WHERE c\.phone_e164=\$\{to\}/);
   assert.match(routes, /c\.product_mode='msp'/);
   assert.match(routes, /requireTenantModuleAccess/);
