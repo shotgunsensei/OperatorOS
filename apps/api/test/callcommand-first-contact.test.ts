@@ -40,19 +40,19 @@ test('realtime admission needs current server proof and retains billing/lifecycl
 });
 
 test('only one unconditional administrator-owned email destination survives; text/CRM actions do not',()=>{
-  const rows=[{conditions_json:{},actions_json:[{actionType:'email',destination:'support@example.test',body:'Private template',subject:'Private subject'},
+  const rows=[{conditions_json:{},actions_json:[{actionType:'email',destination:'support@xodus-is.com',body:'Private template',subject:'Private subject'},
     {actionType:'task'},{actionType:'ticket'},{actionType:'email',destination:'disabled@example.test',enabled:false}]}];
   const result=firstContactEmailActions(rows);
-  assert.equal(result.length,1);assert.equal(result[0].destination,'support@example.test');
+  assert.equal(result.length,1);assert.equal(result[0].destination,'support@xodus-is.com');
   assert.match(String(result[0].subject),/UNVERIFIED/);assert.equal(result[0].body,undefined);
   assert.deepEqual(firstContactEmailActions([{...rows[0],conditions_json:{company:'claimed'}}]),[]);
-  assert.deepEqual(firstContactEmailActions([...rows,{conditions_json:{},actions_json:[{actionType:'email',destination:'other@example.test'}]}]),[]);
+  assert.equal(firstContactEmailActions([...rows,{conditions_json:{},actions_json:[{actionType:'email',destination:'other@example.test'}]}]).length,1);
   for(const destination of ['first@example.test,second@example.test','https://example.test','a@example.test\nBcc:bad@example.test'])assert.deepEqual(firstContactEmailActions([{conditions_json:{},actions_json:[{actionType:'email',destination}]}]),[]);
 });
 
 test('unverified model tools exclude arbitrary CRM/notifications and offer local request before email configuration',()=>{
   const tools=firstContactTools(['create_ticket','create_task','send_email','transfer_call','end_call'].map(name=>({type:'function' as const,name,description:'fixture',parameters:{}})));
-  assert.deepEqual(tools.map(tool=>tool.name),['save_support_intake','submit_unverified_support_request','transfer_call','end_call']);
+  assert.deepEqual(tools.map(tool=>tool.name),['resolve_support_link','save_first_contact_intake','submit_unverified_support_request','transfer_call','end_call']);
   const submit=tools.find(tool=>tool.name==='submit_unverified_support_request')!;
   assert.equal(submit.parameters.additionalProperties,false);assert.deepEqual(submit.parameters.properties,{});
 });
@@ -76,7 +76,7 @@ test('individual human-target schedules and timezone are enforced before offerin
 
 test('first-contact policy discloses AI, prioritizes humans and never treats claims or local references as identity/tickets',()=>{
   const prompt=firstContactVoiceInstructions();
-  for(const evidence of ['AI support intake assistant','UNVERIFIED (A0)','no customer record access','SupportLink IDs spoken aloud','explicit request for a human','not a support-system ticket','five minutes','Incomplete/unconfirmed'])assert.ok(prompt.includes(evidence));
+  for(const evidence of ['AI support intake assistant','UNVERIFIED (A0)','no customer record access','The code is optional','explicit request for a human','not a support-system ticket','five minutes','Incomplete/unconfirmed'])assert.ok(prompt.includes(evidence));
 });
 
 test('caller confirmation is readback only and unverified summary carries manual-association warnings',()=>{

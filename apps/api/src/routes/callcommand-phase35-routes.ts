@@ -470,8 +470,8 @@ export async function dispatchCallCommandActions(input: {
 }) {
   const firstContact=await db.execute(sql`SELECT context.id FROM callcommand_msp_call_contexts context
     WHERE context.tenant_id=${input.tenantId} AND context.call_id=${input.call.id}
-      AND EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
-        AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted') LIMIT 1`);
+      AND (context.assurance_level='A0' OR EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+        AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted')) LIMIT 1`);
   if(firstContact.rows[0] && (!input.durableNotifications || input.idempotencyNamespace!=='realtime-notification:send_email'
     || input.actions.some(action=>String(action.actionType??action.type)!=='email'))){
     throw new CallCommandPhase35Error('Unverified intake cannot dispatch generic actions','UNVERIFIED_AUTOMATION_NOT_ALLOWED',403);
@@ -585,8 +585,8 @@ async function processCall(input: { tenantId: string; userId: string; callId: st
   // A0 first-contact calls never enter generic analysis/CRM/rules/flow/fabric automation, even after opt-out.
   const firstContact=await db.execute(sql`SELECT context.id FROM callcommand_msp_call_contexts context
     WHERE context.tenant_id=${input.tenantId} AND context.call_id=${input.callId}
-      AND EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
-        AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted') LIMIT 1`);
+      AND (context.assurance_level='A0' OR EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+        AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted')) LIMIT 1`);
   if(firstContact.rows[0])return {call:camel(original),actions:[],flow:null,fabric:[],
     provenance:{provider:'none',model:null,mode:'unverified_manual_intake_only'}};
   const resolved = await analyzeTranscript(input.transcript, input.mode);

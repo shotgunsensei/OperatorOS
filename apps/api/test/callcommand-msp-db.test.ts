@@ -82,7 +82,7 @@ before(async () => {
   const channel = await db.execute(sql`INSERT INTO callcommand_channels(tenant_id,created_by_user_id,name,phone_e164,timezone,consent_script,recording_enabled,status,profile_id,product_mode) VALUES (${ownerA.currentTenantId},${ownerA.id},'MSP paid intake',${twilioNumber},'America/New_York','Recording is off for MSP intake.',FALSE,'active',${profileId},'msp') RETURNING id`);
   channelId = String((channel.rows[0] as Row).id);
   app = Fastify(); await app.register(cookie);
-  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_request, raw, done) => {
+  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_request:unknown, raw:string|Buffer, done:(error:Error|null,value?:unknown)=>void) => {
     const parameters = new URLSearchParams(typeof raw === 'string' ? raw : String(raw));
     done(null, Object.fromEntries(parameters.entries()));
   });
@@ -158,8 +158,9 @@ test('signed recognized call reaches A1 association and creates exactly one loca
   const attempts = await db.execute(sql`SELECT support_link_attempts FROM callcommand_msp_call_contexts WHERE tenant_id=${ownerA.currentTenantId} AND call_id=${callId}`);
   assert.equal(Number((attempts.rows[0] as Row).support_link_attempts), 1);
   const linkPayload = { CallSid: inboundPayload.CallSid, Digits: supportLinkId, SequenceNumber: '1' };
-  const associated = await app.inject({ method: 'POST', url: linkPath, headers: signedHeaders(linkPath, linkPayload), payload: form(linkPayload) });
-  assert.equal(associated.statusCode, 200, associated.body); assert.match(associated.body, /Thank you, Jordan/); assert.doesNotMatch(associated.body, new RegExp(supportLinkId));
+  const nextLinkPath=linkPath+'&attempt=1';
+  const associated = await app.inject({ method: 'POST', url: nextLinkPath, headers: signedHeaders(nextLinkPath, linkPayload), payload: form(linkPayload) });
+  assert.equal(associated.statusCode, 200, associated.body); assert.match(associated.body, /Thank you/); assert.doesNotMatch(associated.body,/Jordan/); assert.doesNotMatch(associated.body, new RegExp(supportLinkId));
   const intentPath = `/v1/modules/callcommand-ai/webhooks/twilio/voice/intent?call_id=${callId}`;
   const intentPayload = { CallSid: inboundPayload.CallSid, SpeechResult: 'The office printer spooler is stuck and the user cannot print.', SequenceNumber: '2' };
   const first = await app.inject({ method: 'POST', url: intentPath, headers: signedHeaders(intentPath, intentPayload), payload: form(intentPayload) });

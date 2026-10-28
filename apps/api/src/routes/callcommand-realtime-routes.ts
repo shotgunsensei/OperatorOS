@@ -66,6 +66,9 @@ import {
   mspSupportNotificationReady,
 } from '../lib/callcommand-support-intake.js';
 
+import {loadIntakeIdentity,resolveIntakeIdentity} from '../lib/callcommand-intake-identity-service.js';
+import {formatBmsIntakeEmail,publicFirstContactReadback,readFirstContactSnapshot,saveFirstContactSnapshot} from '../lib/callcommand-intake-identity.js';
+
 const ROUTE = '/v1/modules/callcommand-ai/openai/realtime/incoming';
 const ACTIVE_CALL_STATES = new Set(['ringing', 'in_progress', 'answered', 'connected']);
 const SUCCESSFUL_ACTION_STATES = new Set(['completed', 'delivered', 'queued', 'test_recorded']);
@@ -341,7 +344,7 @@ async function reserveUnverifiedVoice(authority:Row):Promise<boolean> {
       AND call_context_id=${context!.id} AND event_type='unverified.voice.admitted' LIMIT 1`);
     // Retry never extends the five-minute window or consumes another allowance.
     if(admitted.rows[0])return (admitted.rows[0] as Row).active===true;
-    if(context!.state!=='UNRECOGNIZED_LINE')return false;
+    if(!['UNRECOGNIZED_LINE','ORIGINATING_LINE_EVALUATED'].includes(String(context!.state)))return false;
     const tenantLimit=await consumeMspRateLimit({tenantId:String(authority.tenant_id),scope:'voice-a0-tenant',
       subjectHmac:sha256(`voice-a0:${authority.tenant_id}`),limit:FIRST_CONTACT_LIMITS.tenant,
       windowSeconds:FIRST_CONTACT_LIMITS.windowSeconds,blockSeconds:FIRST_CONTACT_LIMITS.windowSeconds},tx);
@@ -378,10 +381,12 @@ async function prepareMspRealtimeIntake(input:MspVoiceInput,unverified:boolean):
   if (stage === 'unavailable') return null;
   // Construct/validate the fixed SIP target before reserving durable capacity.
   const sip = await buildRealtimeSipForCall(authority,authority,input.providerCallSid);
-  if(unverified && !await reserveUnverifiedVoice(authority))return null;
   const admission = await acquireCallCommandLane({tenantId:input.tenantId,callId:input.callId,
     idempotencyKey:`msp-realtime:${input.providerCallSid}`,providerCallSid:input.providerCallSid});
   if (!admission.admitted) return null;
+  if(unverified && !await reserveUnverifiedVoice(authority)){
+    await releaseCallCommandLane({tenantId:input.tenantId,callId:input.callId,reason:'unverified_intake_rate_denied'});return null;
+  }
   try {
     await db.transaction(async tx => {
       await tx.execute(sql`SELECT id FROM callcommand_calls WHERE tenant_id=${input.tenantId} AND id=${input.callId} FOR UPDATE`);
@@ -692,6 +697,7 @@ async function loadRuntimeConfiguration(authority: Row) {
 
 /** A0 never compiles tenant scripts, private knowledge, condition-matched rules or customer fields. */
 async function loadUnverifiedRuntimeConfiguration(authority:Row) {
+  const identity=await db.transaction(tx=>loadIntakeIdentity(tx,authority));
   const [rules,targets,custodian]=await Promise.all([
     db.execute(sql`SELECT conditions_json,actions_json FROM callcommand_automation_rules
       WHERE tenant_id=${authority.tenant_id} AND enabled=TRUE AND deleted_at IS NULL
@@ -713,7 +719,7 @@ async function loadUnverifiedRuntimeConfiguration(authority:Row) {
   const userId=String((custodian.rows[0] as Row|undefined)?.user_id??'');
   if(!userId)throw new CallCommandRealtimeError('Tenant has no active call custodian','CALLCOMMAND_REALTIME_CUSTODIAN_MISSING',409);
   return {...controls,tools:firstContactTools(controls.tools),actionBindings,supportIntakeEnabled:true,userId,
-    instructions:firstContactVoiceInstructions()};
+    instructions:firstContactVoiceInstructions()+`\nCURRENT SERVER INTAKE MODE: ${identity.state.mode}; failed code attempts ${identity.state.failures} of 2. If manual, do not request another code; if code_resolved, never disclose stored details.`};
 }
 
 function toolAuthority(name: string): string | null {
@@ -796,6 +802,21 @@ async function dispatchRealtimeNotifications(input: {
     summary += reference ? `\nLocal MSP intake reference: ${reference}` : '\nLocal MSP case not yet confirmed; follow-up required.';
     if(input.authority.msp_unverified_intake_verified===true)summary=unverifiedSupportSummary(intake!,summary);
   }
+  let firstContactEmail:ReturnType<typeof formatBmsIntakeEmail>|null=null;
+  if(input.authority.msp_unverified_call===true || input.authority.msp_unverified_intake_verified===true){
+    firstContactEmail=await db.transaction(async tx=>{
+      const current=await loadIntakeIdentity(tx,input.authority);
+      const saved=await tx.execute(sql`SELECT collected_data FROM callcommand_live_sessions WHERE tenant_id=${input.authority.tenant_id}
+        AND call_id=${input.authority.id} ORDER BY started_at DESC,id DESC LIMIT 1`);
+      const snapshot=readFirstContactSnapshot((saved.rows[0] as Row|undefined)?.collected_data);
+      if(!snapshot || snapshot.status!=='confirmed' || snapshot.identitySource!==(current.match?'code_resolved':'manual')
+        || snapshot.identityRevision!==(current.match?.revision??'manual'))return null;
+      return formatBmsIntakeEmail({tenantId:String(input.authority.tenant_id),callId:String(input.authority.id),
+        createdAt:new Date(input.authority.created_at).toISOString(),snapshot,match:current.match});
+    });
+    if(!firstContactEmail)return {configured:false,outcomes:[] as string[],externalDelivery:false,receiptConfirmed:false,deferred:true,
+      deliveryState:'first_contact_readback_required',ticketCreationConfirmed:false,mailboxReceiptConfirmed:false};
+  }
   for (const name of ['send_email', 'send_slack_alert', 'create_webhook_event']) {
     if (input.toolName && input.toolName !== name) continue;
     const actions = input.configuration.actionBindings.get(name);
@@ -803,7 +824,7 @@ async function dispatchRealtimeNotifications(input: {
     results.push(...await dispatchCallCommandActions({
       tenantId: String(input.authority.tenant_id), userId: input.configuration.userId,
       call: { ...input.call, summary },
-      actions: actions.map(action => ({ ...action, body: [
+      actions: actions.map(action => firstContactEmail ? {...action,destination:firstContactEmail.destination,subject:firstContactEmail.subject,body:firstContactEmail.body} : ({ ...action, body: [
         safeText(action.body, 4_000),
         `CallCommand call: ${input.authority.id}`,
         `Caller: ${safeText(input.call.phone_masked, 80) || 'unavailable'}`,
@@ -903,6 +924,35 @@ async function executeRealtimeTool(input: {
   if (!call || !call.active_lease_id || !ACTIVE_CALL_STATES.has(String(call.status))) {
     throw new CallCommandRealtimeError('Call is no longer active', 'CALLCOMMAND_REALTIME_CALL_NOT_ACTIVE', 409);
   }
+  if(invocation.name==='resolve_support_link'){
+    if(authority.msp_unverified_intake_verified!==true)throw new CallCommandRealtimeError('Intake identity is unavailable','FIRST_CONTACT_ONLY',403);
+    return withOwnedAuthority(authority,tx=>resolveIntakeIdentity(tx,authority,invocation.toolCallId,invocation.arguments));
+  }
+  if(invocation.name==='save_first_contact_intake'){
+    if(authority.msp_unverified_intake_verified!==true)throw new CallCommandRealtimeError('Intake is unavailable','FIRST_CONTACT_ONLY',403);
+    return withOwnedAuthority(authority,async tx=>{
+      const current=await loadIntakeIdentity(tx,authority);
+      const saved=await tx.execute(sql`SELECT id,collected_data FROM callcommand_live_sessions WHERE tenant_id=${authority.tenant_id}
+        AND call_id=${authority.id} AND ended_at IS NULL ORDER BY started_at DESC,id DESC LIMIT 2 FOR UPDATE`);
+      if(saved.rows.length!==1)throw new CallCommandRealtimeError('Active intake unavailable','SUPPORT_INTAKE_SESSION_UNAVAILABLE',409);
+      const row=saved.rows[0] as Row;
+      const snapshot=saveFirstContactSnapshot(invocation.arguments,readFirstContactSnapshot(row.collected_data),
+        {source:current.match?'code_resolved':'manual',revision:current.match?.revision??'manual'});
+      if(!current.match&&current.state.mode==='offer')await resolveIntakeIdentity(tx,authority,`manual:${invocation.toolCallId}`,{skip:true});
+      const fields=snapshot.fields;
+      const declinedFields:string[]=[];
+      const callerName=[fields.firstName,fields.lastName].filter(Boolean).join(' ').slice(0,120);
+      for(const [key,value] of Object.entries({callerName,company:fields.company,callbackPhone:fields.callbackPhone,issue:fields.issue,impact:fields.impact}))if(!value)declinedFields.push(key);
+      const projected=saveSupportIntakeSnapshot({fields:{callerName,company:fields.company,callbackPhone:fields.callbackPhone,issue:fields.issue,impact:fields.impact},declinedFields,callerConfirmed:false},null);
+      projected.status=snapshot.status;
+      await tx.execute(sql`UPDATE callcommand_live_sessions SET collected_data=collected_data||${JSON.stringify({_operatorosFirstContactV1:snapshot,_operatorosSupportIntakeV1:projected})}::jsonb,
+        sequence=sequence+1,updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${row.id}`);
+      return {ok:true,providerActionConfirmed:false,status:snapshot.status,confirmationRevision:snapshot.revision,
+        readback:publicFirstContactReadback(snapshot),identitySource:snapshot.identitySource,authenticated:false,
+        ticketCreationConfirmed:false,mailboxReceiptConfirmed:false,previousNotificationUpdateConfirmed:false};
+    });
+  }
+  if(authority.msp_unverified_intake_verified===true && invocation.name==='save_support_intake')throw new CallCommandRealtimeError('Use bounded first-contact intake','FIRST_CONTACT_TOOL_REQUIRED',403);
   if (invocation.name === 'save_support_intake') {
     if (!configuration.supportIntakeEnabled) throw new CallCommandRealtimeError('Support intake is no longer offered','SUPPORT_INTAKE_NOT_CONFIGURED',403);
     return saveSupportIntake(authority,invocation.arguments);
@@ -911,6 +961,13 @@ async function executeRealtimeTool(input: {
     if(authority.msp_unverified_intake_verified!==true)throw new CallCommandRealtimeError('Unverified intake is unavailable','UNVERIFIED_INTAKE_NOT_AUTHORIZED',403);
     const snapshot=await loadSupportIntake(authority);
     if(snapshot?.status!=='confirmed')return {ok:false,providerActionConfirmed:false,code:'SUPPORT_INTAKE_CONFIRMATION_REQUIRED',ticketCreationConfirmed:false};
+    const identityReady=await withOwnedAuthority(authority,async tx=>{
+      const current=await loadIntakeIdentity(tx,authority);
+      const result=await tx.execute(sql`SELECT collected_data FROM callcommand_live_sessions WHERE tenant_id=${authority.tenant_id} AND call_id=${authority.id} AND ended_at IS NULL ORDER BY started_at DESC,id DESC LIMIT 1`);
+      const saved=readFirstContactSnapshot((result.rows[0] as Row|undefined)?.collected_data);
+      return saved?.status==='confirmed' && saved.identitySource===(current.match?'code_resolved':'manual') && saved.identityRevision===(current.match?.revision??'manual');
+    });
+    if(!identityReady)return {ok:false,providerActionConfirmed:false,code:'FIRST_CONTACT_READBACK_REQUIRED',manualAssociationRequired:true,ticketCreationConfirmed:false};
     const localCase=await withOwnedAuthority(authority,async tx=>{
       const result=await tx.execute(sql`SELECT * FROM callcommand_msp_call_contexts WHERE tenant_id=${authority.tenant_id}
         AND call_id=${authority.id} AND provider_call_id=${authority.provider_call_sid} FOR UPDATE`);
@@ -918,6 +975,7 @@ async function executeRealtimeTool(input: {
       if(!unverifiedContextAllowed(context))throw new CallCommandRealtimeError('Unverified context changed','UNVERIFIED_INTAKE_CONTEXT_CHANGED',409);
       const existing=await tx.execute(sql`SELECT * FROM callcommand_local_cases WHERE tenant_id=${authority.tenant_id} AND call_context_id=${context!.id} LIMIT 1`);
       if(existing.rows[0])return existing.rows[0] as Row;
+      if(context!.state==='ORIGINATING_LINE_EVALUATED')await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context!.id),to:'UNRECOGNIZED_LINE',eventType:'first_contact.unverified_intake',evidence:{assurance:'A0'}},tx);
       await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context!.id),to:'CALLBACK_REQUESTED',eventType:'unverified.request.confirmed',actorType:'CALLER',evidence:{manualAssociationRequired:true,confirmationRevision:snapshot.revision}},tx);
       const suggestion={...classifyMspIntake(unverifiedSupportSummary(snapshot,formatSupportIntake(snapshot))),requestedActionHint:null,requiresHumanReview:true};
       const saved=await createLocalCase({tenantId:String(authority.tenant_id),callContextId:String(context!.id),suggestion},tx);
@@ -929,7 +987,7 @@ async function executeRealtimeTool(input: {
     const notification=await dispatchRealtimeNotifications({authority,configuration,call,summary:formatSupportIntake(snapshot),toolName:'send_email'});
     return {ok:true,providerActionConfirmed:false,localRequestRecorded:true,localReference:String(localCase.reference),manualAssociationRequired:true,assurance:'A0',previousNotificationUpdateConfirmed:false,...notification};
   }
-  if(authority.msp_unverified_intake_verified===true && !['save_support_intake','transfer_call','end_call'].includes(invocation.name)){
+  if(authority.msp_unverified_intake_verified===true && !['resolve_support_link','save_first_contact_intake','transfer_call','end_call'].includes(invocation.name)){
     throw new CallCommandRealtimeError('Unverified caller has no such capability','UNVERIFIED_TOOL_NOT_ALLOWED',403);
   }
   if (invocation.name === 'submit_support_request') {
@@ -1016,7 +1074,7 @@ async function executeRealtimeTool(input: {
       target: target ? { status: String(target.status), serverVerified: Boolean(target.verified_at) } : null,
     });
     if (!authorization.allowed || !target) throw new CallCommandRealtimeError('Transfer is not authorized', authorization.code, 403);
-    const summary = safeText(invocation.arguments.summary, 1_500);
+    const summary = authority.msp_unverified_call===true ? 'CallCommandAI unverified intake; review the saved structured request.' : safeText(invocation.arguments.summary, 1_500);
     if (!summary) throw new CallCommandRealtimeError('Tool summary is required', 'CALLCOMMAND_REALTIME_TOOL_ARGUMENT_INVALID', 400);
     const reservation = await reserveControlAction(authority, invocation, 'transfer');
     if (!reservation.claimed) return { ok: reservation.row?.status === 'completed', action: invocation.name, duplicate: true };
@@ -1081,7 +1139,7 @@ async function executeRealtimeTool(input: {
       tool: 'call.end', callState: String(call.status), enabledActions: ['call.end'],
     });
     if (!authorization.allowed) throw new CallCommandRealtimeError('Call end is not authorized', authorization.code, 403);
-    const summary = safeText(invocation.arguments.summary, 1_500);
+    const summary = authority.msp_unverified_call===true ? 'CallCommandAI unverified intake; review the saved structured request.' : safeText(invocation.arguments.summary, 1_500);
     if (!summary) throw new CallCommandRealtimeError('Tool summary is required', 'CALLCOMMAND_REALTIME_TOOL_ARGUMENT_INVALID', 400);
     const reservation = await reserveControlAction(authority, invocation, 'end_call');
     if (!reservation.claimed) return { ok: reservation.row?.status === 'completed', action: invocation.name, duplicate: true };
@@ -1161,6 +1219,8 @@ async function persistTranscript(authority: Row, event: CallCommandRealtimeTrans
 }
 
 function transcriptPersistenceAllowed(authority: Row): boolean {
+  // Spoken intake codes must not enter application transcripts. Provider media retention is a separate gate.
+  if(authority.msp_unverified_call===true || authority.msp_unverified_intake_verified===true)return false;
   if (authority.transcription_policy === 'consent_required') return Boolean(authority.consent_id);
   if (authority.transcription_policy === 'recording_only') {
     return ['pending','ready'].includes(String(authority.recording_status));

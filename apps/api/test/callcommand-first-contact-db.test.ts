@@ -34,7 +34,7 @@ test('unverified first contact records one unassociated request/email, denies au
     await db.execute(sql`UPDATE callcommand_channels SET product_mode='msp',routing_mode='msp',acquisition_mode='byon',lifecycle_state='ACTIVE',billing_status='included',live_behavior='ai_screen_then_transfer' WHERE tenant_id=${fixture.tenantId} AND id=${bound.channel_id}`);
     await db.execute(sql`UPDATE callcommand_profiles SET product_mode='msp',transcription_policy='disabled',recording_policy='disabled' WHERE tenant_id=${fixture.tenantId} AND id=${bound.profile_id}`);
     await db.execute(sql`INSERT INTO callcommand_automation_rules(tenant_id,created_by_user_id,name,enabled,conditions_json,actions_json)
-      VALUES(${fixture.tenantId},${fixture.userId},'Owned support mailbox',TRUE,'{}'::jsonb,${JSON.stringify([{actionType:'email',destination:'support@example.test'}])}::jsonb)`);
+      VALUES(${fixture.tenantId},${fixture.userId},'Owned support mailbox',TRUE,'{}'::jsonb,${JSON.stringify([{actionType:'email',destination:'support@xodus-is.com'}])}::jsonb)`);
     process.env.CALLCOMMAND_UNVERIFIED_VOICE_CHANNEL_IDS=String(bound.channel_id);
     const context=(await db.execute(sql`INSERT INTO callcommand_msp_call_contexts(tenant_id,call_id,provider_call_id,state,assurance_level)
       VALUES(${fixture.tenantId},${fixture.callId},${fixture.providerSid},'UNRECOGNIZED_LINE','A0') RETURNING id`)).rows[0];
@@ -73,15 +73,22 @@ test('unverified first contact records one unassociated request/email, denies au
     const response=await app.inject({method:'POST',url:'/v1/modules/callcommand-ai/openai/realtime/incoming',headers:{'webhook-signature':'synthetic-provider-envelope'},payload:{eventId:'evt_'+randomUUID(),createdAt:Math.floor(Date.now()/1000),openAiCallId,internalCallId:fixture.callId,
       routeToken:createCallCommandSipRouteToken({internalCallId:fixture.callId,providerCallSid:fixture.providerSid,routeSecret:secret})}});
     assert.equal(response.statusCode,200);
-    assert.ok(offered.includes('save_support_intake') && offered.includes('submit_unverified_support_request'));
+    assert.ok(offered.includes('save_first_contact_intake') && offered.includes('submit_unverified_support_request'));
     assert.ok(!offered.includes('create_ticket') && !offered.includes('create_task') && !offered.includes('send_email') && !offered.includes('submit_support_request'));
     assert.ok(callbacks);
     const invoke=(name:string,args:RealtimeToolInvocation['arguments'])=>(callbacks as RealtimeSidebandCallbacks).executeTool({openAiCallId,toolCallId:'tool_'+randomUUID(),name,arguments:args}) as Promise<Record<string,any>>;
     const missing=await invoke('submit_unverified_support_request',{});
     assert.equal(missing.ok,false);
-    const draft={fields:{callerName:'Alex Example',company:'Example Workshop',callbackPhone:'+15555550123',issue:'Cannot open the shared drive',impact:'Three people cannot work'},declinedFields:[],callerConfirmed:false};
-    const saved=await invoke('save_support_intake',draft);
-    const confirmed=await invoke('save_support_intake',{...draft,callerConfirmed:true,confirmationRevision:saved.confirmationRevision});
+    const first=await invoke('resolve_support_link',{number:'zero zero one two three four five six',skip:false});
+    assert.equal(first.attemptsRemaining,1);
+    const second=await invoke('resolve_support_link',{number:'zero zero one two three four five seven',skip:false});
+    assert.equal(second.manualIntake,true);assert.equal(second.attemptsRemaining,0);
+    const third=await invoke('resolve_support_link',{number:'zero zero one two three four five eight',skip:false});
+    assert.equal(third.manualIntake,true);
+    assert.equal(Number((await db.execute(sql`SELECT support_link_attempts FROM callcommand_msp_call_contexts WHERE tenant_id=${fixture.tenantId} AND call_id=${fixture.callId}`)).rows[0].support_link_attempts),2);
+    const draft={fields:{firstName:'Alex',lastName:'Example',company:'Example Workshop',contactEmail:'alex@example.test',callbackPhone:'',issue:'Cannot open the shared drive',impact:'Three people cannot work'},declinedFields:['callbackPhone'],callerConfirmed:false};
+    const saved=await invoke('save_first_contact_intake',draft);
+    const confirmed=await invoke('save_first_contact_intake',{...draft,callerConfirmed:true,confirmationRevision:saved.confirmationRevision});
     assert.equal(confirmed.status,'confirmed');
     const submitted=await invoke('submit_unverified_support_request',{});
     assert.equal(submitted.localRequestRecorded,true);assert.equal(submitted.deliveryState,'queued');
@@ -94,17 +101,17 @@ test('unverified first contact records one unassociated request/email, denies au
     assert.match(String(messages.rows[0].body),/Three people cannot work/);
     assert.equal((await db.execute(sql`SELECT id FROM callcommand_integration_outbox WHERE tenant_id=${fixture.tenantId}`)).rows.length,0);
     assert.match(String(messages.rows[0].body),/UNVERIFIED/);
-    assert.match(String(messages.rows[0].body),/MANUAL CUSTOMER ASSOCIATION REQUIRED/);
+    assert.match(String(messages.rows[0].body),/manual association required/);
     await assert.rejects(invoke('submit_support_request',{}));
     await assert.rejects(invoke('create_task',{summary:'must not execute'}));
     const current=(await db.execute(sql`SELECT * FROM callcommand_calls WHERE tenant_id=${fixture.tenantId} AND id=${fixture.callId}`)).rows[0];
     await assert.rejects(dispatchCallCommandActions({tenantId:fixture.tenantId,userId:fixture.userId,call:current,actions:[{actionType:'task'}]}),error=>(error as {code?:string}).code==='UNVERIFIED_AUTOMATION_NOT_ALLOWED');
     delete process.env.CALLCOMMAND_UNVERIFIED_VOICE_CHANNEL_IDS;
-    await assert.rejects(invoke('save_support_intake',draft));
+    await assert.rejects(invoke('save_first_contact_intake',draft));
     assert.equal(await prepareUnverifiedMspRealtimeIntake(input),null);
     process.env.CALLCOMMAND_UNVERIFIED_VOICE_CHANNEL_IDS=String(bound.channel_id);
     await db.execute(sql`UPDATE callcommand_msp_call_events SET created_at=NOW()-INTERVAL '6 minutes' WHERE tenant_id=${fixture.tenantId} AND event_type='unverified.voice.admitted'`);
-    await assert.rejects(invoke('save_support_intake',draft));
+    await assert.rejects(invoke('save_first_contact_intake',draft));
     assert.equal(await prepareUnverifiedMspRealtimeIntake(input),null);
 
   } finally {

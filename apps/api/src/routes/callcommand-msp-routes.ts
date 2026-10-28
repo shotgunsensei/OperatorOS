@@ -9,6 +9,7 @@ import {
   CallCommandMspError,
   classifyMspIntake,
   evaluateMspPolicy,
+  assertCallStateTransition,
   issueSupportLinkId,
   normalizeSupportLinkId,
   redactMspText,
@@ -32,6 +33,8 @@ import { xml } from '../lib/callcommand-phase35.js';
 import { storeEncryptedSecretReference } from '../lib/shared-secret-vault.js';
 import { requireTenantAdmin, requireTenantModuleAccess, requireTenantModuleWriteAccess } from '../lib/tenant-auth.js';
 import { verifyCallCommandTwilioSignature } from '../lib/callcommand-tenant-telephony.js';
+
+import {issueEmailIntakeSupportLink} from '../lib/callcommand-intake-identity-service.js';
 
 const MODULE_SLUG = 'callcommand-ai';
 const base = '/v1/modules/callcommand-ai/product/msp';
@@ -142,8 +145,8 @@ async function loadPublicContext(providerCallId: string, callId: string): Promis
   return result.rows[0] as MspRow;
 }
 
-function supportLinkGather(callId: string, prompt: string): string {
-  const action = publicAction('/v1/modules/callcommand-ai/webhooks/twilio/voice/support-link', callId);
+function supportLinkGather(callId: string, prompt: string, attempt=0): string {
+  const action = publicAction('/v1/modules/callcommand-ai/webhooks/twilio/voice/support-link', callId)+`&attempt=${Math.min(2,Math.max(0,attempt))}`;
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="dtmf" numDigits="10" timeout="8" action="${xml(action)}" method="POST"><Say>${xml(prompt)}</Say></Gather><Redirect method="POST">${xml(action)}</Redirect></Response>`;
 }
 
@@ -172,6 +175,26 @@ async function assertDirectoryContact(tenantId: string, contactId: string): Prom
   return result.rows[0] as MspRow;
 }
 
+async function continueManualIntake(context:MspRow,callId:string,sid:string,reply:FastifyReply){
+  const tenantId=String(context.tenant_id),contextId=String(context.id);
+  await db.transaction(async tx=>{
+    const current=(await tx.execute(sql`SELECT * FROM callcommand_msp_call_contexts WHERE tenant_id=${tenantId}
+      AND id=${contextId} AND call_id=${callId} AND provider_call_id=${sid} FOR UPDATE`)).rows[0] as MspRow|undefined;
+    if(!current||current.contact_id)throw new CallCommandMspError('Manual intake unavailable','MANUAL_INTAKE_UNAVAILABLE',409);
+    if(['SUPPORT_ID_REQUESTED','SUPPORT_ID_INVALID'].includes(String(current.state))){
+      assertCallStateTransition(String(current.state),'UNRECOGNIZED_LINE');
+      await tx.execute(sql`UPDATE callcommand_msp_call_contexts SET state='UNRECOGNIZED_LINE',assurance_level='A0',
+        organization_id=NULL,contact_id=NULL,originating_line_id=NULL,updated_at=NOW() WHERE tenant_id=${tenantId} AND id=${contextId}`);
+      await appendMspCallEvent({tenantId,callContextId:contextId,eventType:'intake.code.skipped',actorType:'SYSTEM',outcome:'MANUAL_FALLBACK',evidence:{assurance:'A0',codeAttemptsComplete:true}},tx);
+    }
+  });
+  const {prepareUnverifiedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
+  const voice=await prepareUnverifiedMspRealtimeIntake({tenantId,callId,providerCallSid:sid});
+  if(voice)return sendTwiml(reply,voice);
+  const action=publicAction('/v1/modules/callcommand-ai/webhooks/twilio/voice/unrecognized',callId);
+  return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="dtmf" numDigits="1" timeout="8" action="${xml(action)}" method="POST"><Say>Let us continue without that number. Press 1 to record a callback request, or press 2 for general support.</Say></Gather><Hangup/></Response>`);
+}
+
 export async function registerCallCommandMspRoutes(app: FastifyInstance) {
   app.get(`${base}/workspace`, { preHandler: reads }, async (request) => {
     const tenantId = tenant(request);
@@ -195,7 +218,7 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
         JOIN directory_organizations o ON o.tenant_id=p.tenant_id AND o.id=p.organization_id
         WHERE p.tenant_id=${tenantId} ORDER BY o.name,d.first_name,d.last_name LIMIT 500
       `),
-      db.execute(sql`SELECT id,organization_id,contact_id,last4,status,issued_at,activated_at,expires_at,locked_until,failed_attempts,replaced_by_id,revoked_at,revoke_reason,created_at,updated_at FROM callcommand_support_links WHERE tenant_id=${tenantId} ORDER BY created_at DESC LIMIT 500`),
+      db.execute(sql`SELECT id,organization_id,contact_id,last4,status,issued_at,activated_at,expires_at,locked_until,failed_attempts,replaced_by_id,revoked_at,revoke_reason,created_at,updated_at,CASE WHEN EXISTS(SELECT 1 FROM shared_secret_references secret WHERE secret.tenant_id=callcommand_support_links.tenant_id AND secret.id=callcommand_support_links.secret_reference_id AND secret.purpose='callcommand.support-link-intake-id') THEN 'intake_8' ELSE 'legacy_10' END AS format FROM callcommand_support_links WHERE tenant_id=${tenantId} ORDER BY created_at DESC LIMIT 500`),
       db.execute(sql`SELECT id,organization_id,provider_type,label,mode,public_config,schema_fingerprint,status,health_reason_code,last_health_at,last_rotated_at,circuit_open_until,kill_switch,version,updated_at FROM automation_fabric_integrations WHERE tenant_id=${tenantId} ORDER BY provider_type,organization_id NULLS FIRST`),
       db.execute(sql`SELECT * FROM automation_fabric_action_catalog WHERE tenant_id=${tenantId} ORDER BY risk_class,display_name LIMIT 500`),
       db.execute(sql`
@@ -245,7 +268,8 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
       readiness: {
         tenantChannel: Number(organizations.rows.length) > 0,
         recognizedOrganization: trustedLines.rows.some((row: any) => row.status === 'ACTIVE'),
-        contactAssociation: supportLinks.rows.some((row: any) => row.status === 'ACTIVE'),
+        contactAssociation: supportLinks.rows.some((row: any) => row.status === 'ACTIVE' && row.format==='legacy_10'),
+        intakeCodeIssuanceEnabled:process.env.CALLCOMMAND_INTAKE_SUPPORTLINK_ISSUANCE_ENABLED==='true',
         ticketOnlySafeDefault: !configuredSettings || configuredSettings.automation_mode === 'TICKET_ONLY' || configuredSettings.automation_mode === 'MANUAL_ONLY',
       },
     };
@@ -404,6 +428,18 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
     } catch(error){ return fail(reply,error); }
   });
 
+  app.post(`${base}/support-links/intake`,{preHandler:admins},async(request,reply)=>{
+    try{
+      const value=body(request);const expiresInDays=Number(value.expiresInDays??365);
+      if(!Number.isInteger(expiresInDays)||expiresInDays<1||expiresInDays>730)throw new CallCommandMspError('expiresInDays must be 1-730');
+      const result=await issueEmailIntakeSupportLink({tenantId:tenant(request),organizationId:requiredUuid(value.organizationId,'organizationId'),
+        contactId:requiredUuid(value.contactId,'contactId'),moduleId:await callCommandModuleId(),actorUserId:actor(request),expiresInDays});
+      const safe=camelMsp(result.row as MspRow);
+      await auditMutation(request,'callcommand_msp.intake_support_link.issue','support_link',String(safe.id),{...safe,displayOnce:true,intakeOnly:true});
+      return reply.code(201).send({...safe,supportLinkId:result.raw,displayOnce:true,intakeOnly:true,format:'intake_8'});
+    }catch(error){return fail(reply,error);}
+  });
+
   app.post(`${base}/support-links/:id/status`, { preHandler: admins }, async (request, reply) => {
     try {
       const supportLinkId=requiredUuid((request.params as MspRow).id,'id'); const value=body(request);
@@ -549,6 +585,10 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
         WHERE l.tenant_id=${tenantId} AND l.lookup_hmac=${indexed.hmac} AND l.status='ACTIVE' AND o.status IN ('ACTIVE','PILOT') AND o.support_contract_status='ACTIVE' LIMIT 1
       `);
       await transitionMspCall({tenantId,callContextId:contextId,to:'ORIGINATING_LINE_EVALUATED',eventType:'originating_line.evaluated',actorType:'SYSTEM',evidence:{matched:Boolean(matched.rows[0]),last4:indexed.last4}});
+      const {prepareUnverifiedMspRealtimeIntake:prepareFirstContact}=await import('./callcommand-realtime-routes.js');
+      const firstContact=await prepareFirstContact({tenantId,callId:String(callRow.id),providerCallSid:sid});
+      if(firstContact)return sendTwiml(reply,firstContact);
+
       if(!matched.rows[0]){
         await transitionMspCall({tenantId,callContextId:contextId,to:'UNRECOGNIZED_LINE',eventType:'originating_line.unrecognized',actorType:'SYSTEM',riskFlags:['UNRECOGNIZED_ORIGINATING_LINE'],evidence:{automationEligible:false}});
         const {prepareUnverifiedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
@@ -567,16 +607,17 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
   app.post('/v1/modules/callcommand-ai/webhooks/twilio/voice/support-link',async(request,reply)=>{
     try{
       const value=await signedTwilio(request); const sid=parseTwilioCallSid(value.CallSid); const callId=requiredUuid((request.query as MspRow)?.call_id,'call_id'); const context=await loadPublicContext(sid,callId); const tenantId=String(context.tenant_id); const contextId=String(context.id);
-      const receipt=await recordMspWebhookReceipt({tenantId,providerCallId:sid,stage:`support-link-${String(value.SequenceNumber??context.support_link_attempts??0)}`,payload:value,callId});
+      if(!context.contact_id && (Number(context.support_link_attempts??0)>=2 || context.state==='UNRECOGNIZED_LINE'))return continueManualIntake(context,callId,sid,reply);
+      const receipt=await recordMspWebhookReceipt({tenantId,providerCallId:sid,stage:`support-link-${String((request.query as MspRow)?.attempt??0)}`,payload:value,callId});
       if(receipt.duplicate){
         if(context.contact_id){
           const {prepareAssociatedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
           const realtime=await prepareAssociatedMspRealtimeIntake({tenantId,callId,providerCallSid:sid});
           if(realtime)return sendTwiml(reply,realtime);
-          const contact=await db.execute(sql`SELECT first_name FROM directory_contacts WHERE tenant_id=${tenantId} AND id=${context.contact_id}`);return sendTwiml(reply,intentGather(callId,String((contact.rows[0] as MspRow)?.first_name??'')));
+          return sendTwiml(reply,intentGather(callId,''));
         }
         if(context.state==='LOCKED')return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>We could not verify the information. Please remain on the line for a support callback.</Say></Response>');
-        return sendTwiml(reply,supportLinkGather(callId,'That information could not be verified. Re enter your ten digit Support Link I D.'));
+        return sendTwiml(reply,supportLinkGather(callId,'That information could not be verified. Re enter your ten digit Support Link I D.',Number(context.support_link_attempts??0)));
       }
       const lineRate=await consumeMspRateLimit({tenantId,scope:'SUPPORT_LINK_LINE',subjectHmac:String(context.phone_fingerprint),limit:10,windowSeconds:900,blockSeconds:900});
       let normalized:string|null=null; try{normalized=normalizeSupportLinkId(value.Digits);}catch{normalized=null;}
@@ -596,17 +637,17 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
       await db.execute(sql`UPDATE callcommand_msp_call_contexts SET support_link_attempts=${attempts},updated_at=NOW() WHERE tenant_id=${tenantId} AND id=${contextId}`);
       if(!link){
         await appendMspCallEvent({tenantId,callContextId:contextId,eventType:'support_link.validation.failed',actorType:'CALLER',outcome:'INVALID',evidence:{attempt:attempts,formatValid:Boolean(normalized),lineRateAllowed:lineRate.allowed}});
-        if(attempts>=3||!lineRate.allowed){await transitionMspCall({tenantId,callContextId:contextId,to:'LOCKED',eventType:'support_link.locked',actorType:'SYSTEM',outcome:'LOCKED',riskFlags:['SUPPORT_LINK_RETRY_LIMIT'],evidence:{attempts}});return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>We could not verify the information. Please remain on the line for a support callback.</Say></Response>');}
+        if(attempts>=2||!lineRate.allowed)return continueManualIntake(context,callId,sid,reply);
         if(context.state==='SUPPORT_ID_REQUESTED')await transitionMspCall({tenantId,callContextId:contextId,to:'SUPPORT_ID_INVALID',eventType:'support_link.invalid',actorType:'SYSTEM',evidence:{attempts}});
         await transitionMspCall({tenantId,callContextId:contextId,to:'SUPPORT_ID_REQUESTED',eventType:'support_link.retry',actorType:'SYSTEM',evidence:{attempts}});
-        return sendTwiml(reply,supportLinkGather(callId,'That information could not be verified. Re enter your ten digit Support Link I D.'));
+        return sendTwiml(reply,supportLinkGather(callId,'That information could not be verified. Re enter your ten digit Support Link I D.',attempts));
       }
       await db.execute(sql`UPDATE callcommand_support_links SET failed_attempts=0,locked_until=NULL,updated_at=NOW() WHERE tenant_id=${tenantId} AND id=${link.id}`);
       await transitionMspCall({tenantId,callContextId:contextId,to:'CONTACT_ASSOCIATED',eventType:'support_link.verified',actorType:'SYSTEM',contactId:String(link.contact_id),assuranceLevel:'A1',evidence:{supportLinkId:String(link.id),organizationMatch:true,firstFactorOnly:true}});
       const {prepareAssociatedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
       const realtime=await prepareAssociatedMspRealtimeIntake({tenantId,callId,providerCallSid:sid});
       if(realtime)return sendTwiml(reply,realtime);
-      return sendTwiml(reply,intentGather(callId,String(link.first_name)));
+      return sendTwiml(reply,intentGather(callId,''));
     }catch(error){if((error as any)?.statusCode===403)return reply.code(403).send({error:'Invalid signature',code:'CALLCOMMAND_SIGNATURE_INVALID'});return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>We could not verify the information. Please contact support.</Say><Hangup/></Response>');}
   });
 

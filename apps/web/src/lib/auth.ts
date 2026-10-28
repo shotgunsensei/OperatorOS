@@ -2681,6 +2681,8 @@ export const moduleShellApi = {
       apiFetch('/modules/callcommand-ai/product/msp/contacts', { method: 'POST', body: JSON.stringify(input) }),
     mspIssueSupportLink: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/msp/support-links', { method: 'POST', body: JSON.stringify(input) }),
+    mspIssueIntakeSupportLink: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/support-links/intake', { method: 'POST', body: JSON.stringify(input) }),
     mspSetSupportLinkStatus: (id: string, input: Record<string, unknown>) =>
       apiFetch(`/modules/callcommand-ai/product/msp/support-links/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify(input) }),
     mspConfigureIntegration: (input: Record<string, unknown>) =>

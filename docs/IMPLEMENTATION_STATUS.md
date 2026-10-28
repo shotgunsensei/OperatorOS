@@ -1,5 +1,15 @@
 ## 2026-10-28 — MSP associated realtime support intake (local candidate)
 
+## Local SupportLink email-intake follow-on — 2026-10-28
+
+Branch `codex/callcommand-supportlink-intake-oct28` follows preserved `c86af167f33a6c691517b5b9c4ce9dd865e24151`. First-contact AI offers optional SupportLink or unverified first/last name/company/contact and incident details. Exactly two failed guesses per call then manual fallback; retries/reconnects preserve the bound. Code-resolved Directory details are server-only for email composition, never voice readback/authentication or privileged access. Eight-digit display-once issuance reuses the existing encrypted SupportLink storage, defaults disabled, preserves active legacy ten-digit codes and does not count as A1 readiness.
+
+Intended mailbox is user-confirmed `support@xodus-is.com`, not a live-delivery proof. The authenticated service sender is preserved. Stable CallCommandAI/call-ID subjects support only server-mapped company routing tags; manual or ambiguous cases are UNVERIFIED. No caller From/Reply-To spoofing, magic BMS fields, direct-adapter activation, automatic Contact association or ticket-created claim. Actual BMS sender/account/contract/SLA/Unknown/workflow behavior requires controlled acceptance.
+
+Final local proof: **113 tests passed, zero failed/skipped across ten DB-free files**; strict test compilation including three PostgreSQL files, API emitted compilation, zero-warning backend lint, focused web TypeScript and web lint pass. Existing installed modules/framework declarations were reused offline; no acquisition, canonical lockfile/full-Next-build or browser acceptance claim. PostgreSQL files are **typechecked, NOT RUN** under the retained engine-access hold. No real codes, credentials, mail/calls, configuration, production data, migration, PR approval, push/CI/merge/deployment. Existing source-publication/PR136 and other holds remain.
+
+See `docs/callcommand/SUPPORTLINK_EMAIL_INTAKE_2026-10-28.md` and `evidence/callcommand-supportlink-oct28/CANDIDATE.json` outside the source checkout for exact source/checks and remaining activation/live gates. Earlier documents remain historical evidence for their own frozen candidates.
+
 ## Local first-contact MSP voice follow-on — 2026-10-28
 
 Branch `codex/callcommand-first-contact-oct28` follows preserved associated-MSP candidate `b1848f2e0910d7a22ccb3b34ef7b5cbf7b4c1351`. Unknown, parseable-number callers can enter bounded A0 AI intake without SupportLink after signed carrier/exact-line routing and required consent. Exact-line allowlist is absent by default; no live activation occurred. No identity/customer association, private knowledge, CRM/BMS/device/account authority or generic post-call automation is granted. One unassociated local request and optional existing unambiguous support mailbox notification remain explicitly unverified/manual-association work. Existing A1 route is preserved.
