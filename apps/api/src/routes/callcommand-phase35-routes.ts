@@ -57,6 +57,7 @@ import { enqueueOutboundWebhook, listOutboundWebhookEndpoints } from '../lib/sha
 import { validateCallCommandAutomationActions } from '../lib/callcommand-automation-policy.js';
 import { appendActivityEvent, recordUsageEvent, summarizeUsage } from '../lib/shared-usage-activity.js';
 import { publishConfiguredCallWorkflows } from '../lib/cross-module-data-fabric.js';
+import {firstContactChannelEnabled} from '../lib/callcommand-first-contact.js';
 import { safeFailureCode } from '../lib/shared-service-safety.js';
 
 const MODULE_SLUG = 'callcommand-ai';
@@ -295,10 +296,11 @@ function providerCostMinor(value: unknown): number | null {
 }
 
 export function isRealtimeCallEligible(configuration: Row, now = new Date()): boolean {
-  if (configuration.realtime_enabled !== true || !configuration.active_flow_id
+  if ((configuration.msp_unverified_call===true && configuration.msp_unverified_intake_verified!==true)
+    || configuration.realtime_enabled !== true || !configuration.active_flow_id
     || configuration.profile_status !== 'active'
     || ((configuration.product_mode === 'msp' || configuration.routing_mode === 'msp')
-      && (configuration.msp_realtime_association_verified !== true || configuration.realtime_billing_eligible !== true
+      && ((configuration.msp_realtime_association_verified !== true && configuration.msp_unverified_intake_verified !== true) || configuration.realtime_billing_eligible !== true
         || configuration.lifecycle_state !== 'ACTIVE'))) return false;
   const open = isWithinBusinessHours(configuration.business_hours, now, String(configuration.timezone));
   return open
@@ -344,6 +346,7 @@ export async function buildRealtimeSipForCall(configuration: Row, call: Row, pro
   return buildOpenAiSipDialTwiml({
     openAiProjectId:String(process.env.OPENAI_PROJECT_ID),callId:String(call.id),routeToken,
     timeoutSeconds:30,statusCallbackUrl,allowedWebhookOrigins:[publicOrigin.origin],
+    ...(configuration.msp_unverified_intake_verified === true ? {timeLimitSeconds:Number(configuration.msp_unverified_time_limit_seconds??300)} : {}),
     referUrl:new URL(`/v1/modules/callcommand-ai/twilio/voice/refer?call_id=${encodeURIComponent(String(call.id))}`,publicOrigin.origin).toString(),
   });
 }
@@ -465,6 +468,14 @@ export async function dispatchCallCommandActions(input: {
   durableNotifications?: boolean;
   authorizeReservation?: (tx: import('../lib/callcommand-realtime-ownership.js').CallCommandRealtimeTransaction) => Promise<void>;
 }) {
+  const firstContact=await db.execute(sql`SELECT context.id FROM callcommand_msp_call_contexts context
+    WHERE context.tenant_id=${input.tenantId} AND context.call_id=${input.call.id}
+      AND EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+        AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted') LIMIT 1`);
+  if(firstContact.rows[0] && (!input.durableNotifications || input.idempotencyNamespace!=='realtime-notification:send_email'
+    || input.actions.some(action=>String(action.actionType??action.type)!=='email'))){
+    throw new CallCommandPhase35Error('Unverified intake cannot dispatch generic actions','UNVERIFIED_AUTOMATION_NOT_ALLOWED',403);
+  }
   const modId = await moduleId();
   const results: Row[] = [];
   for (let index = 0; index < input.actions.length; index += 1) {
@@ -571,6 +582,13 @@ export async function dispatchCallCommandActions(input: {
 
 async function processCall(input: { tenantId: string; userId: string; callId: string; transcript: string; mode: 'auto' | 'ai' | 'deterministic'; correlationId?: string | null }) {
   const original = await loadCall(input.tenantId, input.callId);
+  // A0 first-contact calls never enter generic analysis/CRM/rules/flow/fabric automation, even after opt-out.
+  const firstContact=await db.execute(sql`SELECT context.id FROM callcommand_msp_call_contexts context
+    WHERE context.tenant_id=${input.tenantId} AND context.call_id=${input.callId}
+      AND EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+        AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted') LIMIT 1`);
+  if(firstContact.rows[0])return {call:camel(original),actions:[],flow:null,fabric:[],
+    provenance:{provider:'none',model:null,mode:'unverified_manual_intake_only'}};
   const resolved = await analyzeTranscript(input.transcript, input.mode);
   const analysis = resolved.analysis;
   const updated = await db.transaction(async tx => {
@@ -1284,8 +1302,9 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
           });
         }
         if (channel.product_mode === 'msp') {
-          const {prepareAssociatedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
-          const resumed = await prepareAssociatedMspRealtimeIntake({tenantId:String(call.tenant_id),callId:String(call.id),providerCallSid:sid});
+          const {prepareAssociatedMspRealtimeIntake,prepareUnverifiedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
+          const resumeInput={tenantId:String(call.tenant_id),callId:String(call.id),providerCallSid:sid};
+          const resumed = await prepareAssociatedMspRealtimeIntake(resumeInput) ?? await prepareUnverifiedMspRealtimeIntake(resumeInput);
           if (resumed) return sendTwiml(reply,resumed);
           await releaseCallCommandLane({tenantId:String(call.tenant_id),callId:String(call.id),reason:'msp_realtime_unavailable_after_consent'});
           await db.execute(sql`UPDATE callcommand_calls SET status='failed',realtime_status='failed',error_code='MSP_REALTIME_UNAVAILABLE',completed_at=NOW(),ended_at=NOW(),updated_at=NOW() WHERE tenant_id=${call.tenant_id} AND id=${call.id}`);
@@ -1451,7 +1470,7 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
       const targetPhone = /^tel:\+[1-9][0-9]{7,14}$/.test(value.ReferTransferTarget ?? '')
         ? value.ReferTransferTarget.slice(4) : null;
       const pending = await db.execute(sql`
-        SELECT log.id,target.phone_e164 FROM callcommand_transfer_logs log
+        SELECT log.id,target.phone_e164,target.business_hours AS target_business_hours,channel.business_hours AS channel_business_hours,channel.timezone FROM callcommand_transfer_logs log
         JOIN callcommand_transfer_targets target ON target.tenant_id=log.tenant_id AND target.id=log.target_id
           AND target.kind='external' AND target.status='active' AND target.verified_at IS NOT NULL AND target.deleted_at IS NULL
         JOIN callcommand_channels channel ON channel.tenant_id=log.tenant_id AND channel.id=${call.channel_id}
@@ -1471,10 +1490,19 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
           UPDATE callcommand_transfer_logs SET status='dialing' WHERE tenant_id=${call.tenant_id} AND id=${transfer.id}
         `);
       });
+      const firstContact=await db.execute(sql`SELECT GREATEST(0,FLOOR(EXTRACT(EPOCH FROM event.created_at+INTERVAL '5 minutes'-NOW())))::integer AS remaining_seconds
+        FROM callcommand_msp_call_contexts context JOIN callcommand_msp_call_events event
+          ON event.tenant_id=context.tenant_id AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted'
+        WHERE context.tenant_id=${call.tenant_id} AND context.call_id=${call.id} LIMIT 1`);
+      const remaining=(firstContact.rows[0] as Row|undefined)?.remaining_seconds;
+      if(remaining!==undefined && (!firstContactChannelEnabled(call.channel_id) || Number(remaining)<1 || !isWithinBusinessHours(transfer.target_business_hours,new Date(),String(transfer.timezone)) || !isWithinBusinessHours(transfer.channel_business_hours,new Date(),String(transfer.timezone)))){
+        return sendTwiml(reply,'<?xml version="1.0" encoding="UTF-8"?><Response><Say>This intake session has ended. Please contact support directly.</Say><Hangup/></Response>');
+      }
+      const timeLimit=remaining===undefined ? '' : ` timeLimit="${Math.min(300,Number(remaining))}"`;
       const resultPath = `/v1/modules/callcommand-ai/twilio/voice/transfer-result?call_id=${encodeURIComponent(String(call.id))}&transfer_id=${encodeURIComponent(String(transfer.id))}`;
       // Bounded carrier dialing; a failed/no-answer leg always reaches the
       // signed result callback, speaks a fallback, and hangs up cleanly.
-      return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Dial answerOnBridge="true" timeout="20" action="${xml(resultPath)}" method="POST"><Number>${xml(String(transfer.phone_e164))}</Number></Dial></Response>`);
+      return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Dial answerOnBridge="true" timeout="20"${timeLimit} action="${xml(resultPath)}" method="POST"><Number>${xml(String(transfer.phone_e164))}</Number></Dial></Response>`);
     } catch (error) {
       if ((error as any)?.code === 'CALLCOMMAND_SIGNATURE_INVALID') return reply.code(403).send({code:'CALLCOMMAND_SIGNATURE_INVALID'});
       return reply.code(Number((error as any)?.statusCode) || 503).send({code:safeFailureCode(error,'CALLCOMMAND_TRANSFER_FAILED')});

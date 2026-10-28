@@ -1,5 +1,13 @@
 ## 2026-10-28 — MSP associated realtime support intake (local candidate)
 
+## Local first-contact MSP voice follow-on — 2026-10-28
+
+Branch `codex/callcommand-first-contact-oct28` follows preserved associated-MSP candidate `b1848f2e0910d7a22ccb3b34ef7b5cbf7b4c1351`. Unknown, parseable-number callers can enter bounded A0 AI intake without SupportLink after signed carrier/exact-line routing and required consent. Exact-line allowlist is absent by default; no live activation occurred. No identity/customer association, private knowledge, CRM/BMS/device/account authority or generic post-call automation is granted. One unassociated local request and optional existing unambiguous support mailbox notification remain explicitly unverified/manual-association work. Existing A1 route is preserved.
+
+Final local evidence: **103 passed, zero failed/skipped** across nine DB-free files, strict test compilation including both prepared PostgreSQL journeys, API emitted compilation and zero-warning scoped lint. Checked runtime/test hashes are unchanged. Existing modules were reused with all network blocked and no provider credentials inherited; no install or full frozen-lockfile/monorepo/live acceptance claim. The new actual-PostgreSQL journey is **typechecked, not run** because the retained Docker engine access block remains held. Real voice quality, carrier/consent/transfer behavior, mailbox/PSA receipt and target production schema/recovery remain unverified. No push/PR/approval/CI/deployment, credentials, production data or migrations.
+
+See `docs/callcommand/UNVERIFIED_FIRST_CONTACT_2026-10-28.md` for complete scope, source controls, provider truth and exact remaining gates. The prior source-publication refusal and PR136 hold are unchanged. This section supersedes earlier A0 source-availability statements only for the disabled local candidate, not for production.
+
 The isolated follow-on to frozen `beaaf1db` adds an MSP A1/SupportLink-to-Realtime
 handoff, confirmed structured intake, existing local-case/durable-email fulfillment,
 tenant-aware Twilio signatures and explicit interruption behavior. Consent is

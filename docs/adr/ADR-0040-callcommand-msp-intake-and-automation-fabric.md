@@ -178,3 +178,12 @@ Before production apply, operators must perform a fresh logical backup, checksum
 - **Phase 5:** signed outbound-only broker, protected-group checks, expiry/replay, broker isolation, reconciliation, emergency disable, and independent security review.
 
 No later-phase toggle may be enabled merely because its table or screen exists.
+
+
+## Source-only A0 voice intake addendum — 2026-10-28
+
+The authorized first-contact local follow-on permits a conversational version of existing A0 support/callback intake while preserving A0 assurance and null organization/contact. It does not authorize customer lookup, association, status disclosure, BMS/device/identity/CRM actions, or any later automation phase. The immutable signed carrier/exact-line boundary and existing verified SupportLink path remain required for their respective authorities.
+
+The separate source candidate is disabled by an absent exact-channel allowlist. It adds bounded persistent admission, a non-extending five-minute carrier/server window, fixed no-knowledge AI instructions, confirmed caller-reported intake, one manual-association local request and an optional administrator-owned unambiguous support-email notification. That notification is intake transport, never evidence of identity, ticket creation, support entitlement or BMS execution. Generic post-call automation is stopped. Human transfer requires the existing verified destination and both channel/target hours; ambiguity fails closed.
+
+This is a source/local design addition, not production trust/resource activation. SQL/concurrency, signed carrier/consent, real voice, mailbox/PSA and human-answer acceptance remain unverified. Exact-line activation, existing provider resources/cost envelope, release/schema/recovery and all prior publication/credential holds remain separate. See `docs/callcommand/UNVERIFIED_FIRST_CONTACT_2026-10-28.md`.

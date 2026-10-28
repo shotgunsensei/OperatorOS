@@ -9,7 +9,7 @@ import {
   type CallCommandRealtimeOwnership,
   type CallCommandRealtimeTransaction,
 } from '../lib/callcommand-realtime-ownership.js';
-import { buildIncomingTwiml, executeFlowGraph } from '../lib/callcommand-phase35.js';
+import { buildIncomingTwiml, executeFlowGraph, isWithinBusinessHours } from '../lib/callcommand-phase35.js';
 import {
   authorizeCallCommandTool,
   acquireCallCommandLane,
@@ -51,7 +51,8 @@ import {
   markRealtimeSipPending,
 } from './callcommand-phase35-routes.js';
 import { classifyMspIntake } from '../lib/callcommand-msp.js';
-import { createLocalCase, transitionMspCall } from '../lib/callcommand-msp-service.js';
+import { appendMspCallEvent, consumeMspRateLimit, createLocalCase, transitionMspCall } from '../lib/callcommand-msp-service.js';
+import { FIRST_CONTACT_LIMITS, firstContactChannelEnabled, unverifiedContextAllowed, firstContactEmailActions, firstContactTools, firstContactVoiceInstructions, unverifiedSupportSummary, firstContactHumanTransferAllowed, firstContactAvailableTargets } from '../lib/callcommand-first-contact.js';
 import {
   callCommandVoicePolicy,
   associatedMspVoiceStage,
@@ -283,17 +284,91 @@ async function loadAuthority(callId: string, executor: Pick<typeof db,'execute'>
       LIMIT 1
     `);
     authority.msp_realtime_association_verified = Boolean(association.rows[0]);
+    {
+      const unverified = await executor.execute(sql`
+        SELECT context.*,tenant.status AS tenant_status,
+          EXISTS(SELECT 1 FROM callcommand_flows flow JOIN callcommand_flow_versions version
+            ON version.tenant_id=flow.tenant_id AND version.flow_id=flow.id AND version.version=flow.active_version
+            WHERE flow.tenant_id=context.tenant_id AND flow.id=${authority.active_flow_id} AND flow.status='active') AS published_flow_active,
+          EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+            AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted') AS first_contact_call,
+          EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+            AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted'
+            AND event.created_at>NOW()-INTERVAL '5 minutes') AS voice_admitted,
+          (SELECT GREATEST(0,FLOOR(EXTRACT(EPOCH FROM event.created_at+INTERVAL '5 minutes'-NOW())))::integer
+            FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+            AND event.call_context_id=context.id AND event.event_type='unverified.voice.admitted' LIMIT 1) AS remaining_seconds
+        FROM callcommand_msp_call_contexts context JOIN tenants tenant ON tenant.id=context.tenant_id
+        WHERE context.tenant_id=${authority.tenant_id} AND context.call_id=${authority.id}
+          AND context.provider_call_id=${authority.provider_call_sid}
+          AND EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+            AND event.call_context_id=context.id AND event.event_type='provider.signature.verified')
+          AND EXISTS(SELECT 1 FROM callcommand_msp_call_events event WHERE event.tenant_id=context.tenant_id
+            AND event.call_context_id=context.id AND event.event_type='tenant.resolved.by.exact.to') LIMIT 1
+      `);
+      const context=unverified.rows[0] as Row | undefined;
+      authority.msp_unverified_call=context?.first_contact_call===true;
+      if(authority.msp_unverified_call)authority.msp_realtime_association_verified=false;
+      authority.msp_unverified_context_allowed=unverifiedContextAllowed(context) && context?.tenant_status==='active'
+        && context?.published_flow_active===true && firstContactChannelEnabled(authority.channel_id);
+      authority.msp_unverified_context_id=context?.id;
+      authority.msp_unverified_time_limit_seconds=context?.remaining_seconds;
+      authority.msp_unverified_intake_verified=authority.msp_unverified_context_allowed && context?.voice_admitted===true
+        && Number(context?.remaining_seconds)>=1 && !realtimeRecordingEnabled(authority);
+    }
   }
   return authority;
 }
 
-/** Only the already-signed MSP SupportLink route can request this associated-call handoff. */
-export async function prepareAssociatedMspRealtimeIntake(input: {tenantId:string;callId:string;providerCallSid:string}): Promise<string | null> {
+type MspVoiceInput={tenantId:string;callId:string;providerCallSid:string};
+/** The A1 path is preserved; it cannot silently accept an unassociated caller. */
+export async function prepareAssociatedMspRealtimeIntake(input:MspVoiceInput):Promise<string|null> {
+  return prepareMspRealtimeIntake(input,false);
+}
+/** Called only after the signed carrier route establishes exact tenant/line and A0 unknown context. */
+export async function prepareUnverifiedMspRealtimeIntake(input:MspVoiceInput):Promise<string|null> {
+  return prepareMspRealtimeIntake(input,true);
+}
+
+async function reserveUnverifiedVoice(authority:Row):Promise<boolean> {
+  return db.transaction(async tx=>{
+    const result=await tx.execute(sql`SELECT * FROM callcommand_msp_call_contexts
+      WHERE tenant_id=${authority.tenant_id} AND id=${authority.msp_unverified_context_id}
+        AND call_id=${authority.id} AND provider_call_id=${authority.provider_call_sid} FOR UPDATE`);
+    const context=result.rows[0] as Row|undefined;
+    if(!unverifiedContextAllowed(context))return false;
+    const admitted=await tx.execute(sql`SELECT id,(created_at>NOW()-INTERVAL '5 minutes') AS active FROM callcommand_msp_call_events WHERE tenant_id=${authority.tenant_id}
+      AND call_context_id=${context!.id} AND event_type='unverified.voice.admitted' LIMIT 1`);
+    // Retry never extends the five-minute window or consumes another allowance.
+    if(admitted.rows[0])return (admitted.rows[0] as Row).active===true;
+    if(context!.state!=='UNRECOGNIZED_LINE')return false;
+    const tenantLimit=await consumeMspRateLimit({tenantId:String(authority.tenant_id),scope:'voice-a0-tenant',
+      subjectHmac:sha256(`voice-a0:${authority.tenant_id}`),limit:FIRST_CONTACT_LIMITS.tenant,
+      windowSeconds:FIRST_CONTACT_LIMITS.windowSeconds,blockSeconds:FIRST_CONTACT_LIMITS.windowSeconds},tx);
+    if(!tenantLimit.allowed)return false;
+    const callerLimit=await consumeMspRateLimit({tenantId:String(authority.tenant_id),scope:'voice-a0-caller',
+      subjectHmac:sha256(`voice-a0:${authority.tenant_id}:${authority.phone_fingerprint}`),limit:FIRST_CONTACT_LIMITS.caller,
+      windowSeconds:FIRST_CONTACT_LIMITS.windowSeconds,blockSeconds:FIRST_CONTACT_LIMITS.windowSeconds},tx);
+    if(!callerLimit.allowed)return false;
+    await appendMspCallEvent({tenantId:String(authority.tenant_id),callContextId:String(context!.id),
+      eventType:'unverified.voice.admitted',actorType:'SYSTEM',outcome:'A0_INTAKE_ONLY',
+      evidence:{assurance:'A0',manualAssociationRequired:true,maxSeconds:FIRST_CONTACT_LIMITS.maxSeconds}},tx);
+    return true;
+  });
+}
+
+async function prepareMspRealtimeIntake(input:MspVoiceInput,unverified:boolean):Promise<string|null> {
   const authority = await loadAuthority(input.callId,db,input.tenantId);
   if (!authority || authority.product_mode !== 'msp' || authority.provider_call_sid !== input.providerCallSid
     ) return null;
+  if(unverified){
+    if(authority.msp_unverified_call===true && authority.msp_unverified_intake_verified!==true)return null;
+    if(!authority.msp_unverified_context_allowed || !firstContactChannelEnabled(authority.channel_id))return null;
+    // Local prospective proof is used only for readiness; persist admission before any SIP response.
+    authority.msp_unverified_intake_verified=true;
+  }else if(authority.msp_realtime_association_verified!==true)return null;
   const configuration = await loadRuntimeConfiguration(authority);
-  const stage = associatedMspVoiceStage({associated:authority.msp_realtime_association_verified===true,
+  const stage = associatedMspVoiceStage({associated:unverified || authority.msp_realtime_association_verified===true,
     channelActive:authority.channel_status==='active',callActive:ACTIVE_CALL_STATES.has(String(authority.status)),
     providerReady:authority.commercial_realtime_ready===true,eligibleFlow:isRealtimeCallEligible(authority),
     managedLine:['platform_provisioned','byon'].includes(String(authority.acquisition_mode)),
@@ -303,6 +378,7 @@ export async function prepareAssociatedMspRealtimeIntake(input: {tenantId:string
   if (stage === 'unavailable') return null;
   // Construct/validate the fixed SIP target before reserving durable capacity.
   const sip = await buildRealtimeSipForCall(authority,authority,input.providerCallSid);
+  if(unverified && !await reserveUnverifiedVoice(authority))return null;
   const admission = await acquireCallCommandLane({tenantId:input.tenantId,callId:input.callId,
     idempotencyKey:`msp-realtime:${input.providerCallSid}`,providerCallSid:input.providerCallSid});
   if (!admission.admitted) return null;
@@ -536,6 +612,7 @@ async function markIncomingFailed(authority: Row, incoming: Pick<VerifiedOpenAiI
 }
 
 async function loadRuntimeConfiguration(authority: Row) {
+  if(authority.msp_unverified_call===true || authority.msp_unverified_intake_verified===true)return loadUnverifiedRuntimeConfiguration(authority);
   const [knowledge, rules, flow, targets, custodian] = await Promise.all([
     db.execute(sql`
       SELECT knowledge_type,title,content,enabled,priority FROM callcommand_agent_knowledge
@@ -613,6 +690,32 @@ async function loadRuntimeConfiguration(authority: Row) {
   return { ...bindings, instructions, userId };
 }
 
+/** A0 never compiles tenant scripts, private knowledge, condition-matched rules or customer fields. */
+async function loadUnverifiedRuntimeConfiguration(authority:Row) {
+  const [rules,targets,custodian]=await Promise.all([
+    db.execute(sql`SELECT conditions_json,actions_json FROM callcommand_automation_rules
+      WHERE tenant_id=${authority.tenant_id} AND enabled=TRUE AND deleted_at IS NULL
+        AND conditions_json='{}'::jsonb ORDER BY priority,id LIMIT 100`),
+    db.execute(sql`SELECT id,business_hours FROM callcommand_transfer_targets WHERE tenant_id=${authority.tenant_id}
+      AND kind='external' AND status='active' AND verified_at IS NOT NULL AND phone_e164 IS NOT NULL
+      AND deleted_at IS NULL ORDER BY created_at,id LIMIT 20`),
+    db.execute(sql`SELECT tu.user_id FROM tenant_users tu JOIN users u ON u.id=tu.user_id AND u.status='active'
+      WHERE tu.tenant_id=${authority.tenant_id} ORDER BY CASE tu.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END,tu.joined_at,tu.user_id LIMIT 1`),
+  ]);
+  const now=new Date();
+  const availableTargets=firstContactAvailableTargets(targets.rows as Array<Row & {business_hours?:unknown}>,now,String(authority.timezone));
+  const transferEnabled=firstContactHumanTransferAllowed({businessHoursOpen:isWithinBusinessHours(authority.business_hours,now,String(authority.timezone)),
+    targetCount:availableTargets.length,liveBehavior:String(authority.live_behavior),fallbackBehavior:String(authority.fallback_behavior)});
+  const controls=buildToolBindings({actions:[],transferTargets:availableTargets.length===1 ? availableTargets : [],transferEnabled,productMode:'msp'});
+  const actionBindings=new Map<string,Row[]>();
+  const emails=firstContactEmailActions(rules.rows as Row[]);
+  if(emails.length)actionBindings.set('send_email',emails);
+  const userId=String((custodian.rows[0] as Row|undefined)?.user_id??'');
+  if(!userId)throw new CallCommandRealtimeError('Tenant has no active call custodian','CALLCOMMAND_REALTIME_CUSTODIAN_MISSING',409);
+  return {...controls,tools:firstContactTools(controls.tools),actionBindings,supportIntakeEnabled:true,userId,
+    instructions:firstContactVoiceInstructions()};
+}
+
 function toolAuthority(name: string): string | null {
   const mapping = Object.values(ACTION_TO_TOOL).find(candidate => candidate.name === name);
   if (mapping) return mapping.authority;
@@ -670,6 +773,10 @@ async function dispatchRealtimeNotifications(input: {
   toolName?: string;
 }) {
   const results: Row[] = [];
+  if(input.authority.msp_unverified_call===true && input.authority.msp_unverified_intake_verified!==true)return {
+    configured:false,outcomes:[] as string[],externalDelivery:false,receiptConfirmed:false,deferred:true,
+    deliveryState:'unverified_intake_disabled_or_expired',ticketCreationConfirmed:false,mailboxReceiptConfirmed:false,
+  };
   const intake = input.configuration.supportIntakeEnabled ? await loadSupportIntake(input.authority) : null;
   let summary = intake ? formatSupportIntake(intake) : input.summary;
   if (input.authority.product_mode === 'msp') {
@@ -687,6 +794,7 @@ async function dispatchRealtimeNotifications(input: {
       ticketCreationConfirmed:false,mailboxReceiptConfirmed:false,
     };
     summary += reference ? `\nLocal MSP intake reference: ${reference}` : '\nLocal MSP case not yet confirmed; follow-up required.';
+    if(input.authority.msp_unverified_intake_verified===true)summary=unverifiedSupportSummary(intake!,summary);
   }
   for (const name of ['send_email', 'send_slack_alert', 'create_webhook_event']) {
     if (input.toolName && input.toolName !== name) continue;
@@ -798,6 +906,31 @@ async function executeRealtimeTool(input: {
   if (invocation.name === 'save_support_intake') {
     if (!configuration.supportIntakeEnabled) throw new CallCommandRealtimeError('Support intake is no longer offered','SUPPORT_INTAKE_NOT_CONFIGURED',403);
     return saveSupportIntake(authority,invocation.arguments);
+  }
+  if(invocation.name==='submit_unverified_support_request'){
+    if(authority.msp_unverified_intake_verified!==true)throw new CallCommandRealtimeError('Unverified intake is unavailable','UNVERIFIED_INTAKE_NOT_AUTHORIZED',403);
+    const snapshot=await loadSupportIntake(authority);
+    if(snapshot?.status!=='confirmed')return {ok:false,providerActionConfirmed:false,code:'SUPPORT_INTAKE_CONFIRMATION_REQUIRED',ticketCreationConfirmed:false};
+    const localCase=await withOwnedAuthority(authority,async tx=>{
+      const result=await tx.execute(sql`SELECT * FROM callcommand_msp_call_contexts WHERE tenant_id=${authority.tenant_id}
+        AND call_id=${authority.id} AND provider_call_id=${authority.provider_call_sid} FOR UPDATE`);
+      const context=result.rows[0] as Row|undefined;
+      if(!unverifiedContextAllowed(context))throw new CallCommandRealtimeError('Unverified context changed','UNVERIFIED_INTAKE_CONTEXT_CHANGED',409);
+      const existing=await tx.execute(sql`SELECT * FROM callcommand_local_cases WHERE tenant_id=${authority.tenant_id} AND call_context_id=${context!.id} LIMIT 1`);
+      if(existing.rows[0])return existing.rows[0] as Row;
+      await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context!.id),to:'CALLBACK_REQUESTED',eventType:'unverified.request.confirmed',actorType:'CALLER',evidence:{manualAssociationRequired:true,confirmationRevision:snapshot.revision}},tx);
+      const suggestion={...classifyMspIntake(unverifiedSupportSummary(snapshot,formatSupportIntake(snapshot))),requestedActionHint:null,requiresHumanReview:true};
+      const saved=await createLocalCase({tenantId:String(authority.tenant_id),callContextId:String(context!.id),suggestion},tx);
+      await tx.execute(sql`UPDATE callcommand_local_cases SET status='OPEN',bms_sync_status='BLOCKED',updated_at=NOW() WHERE tenant_id=${authority.tenant_id} AND id=${saved.id}`);
+      await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context!.id),to:'LOCAL_CASE_CREATED',eventType:'unverified.local_request.created',evidence:{manualAssociationRequired:true,assurance:'A0',caseId:String(saved.id)}},tx);
+      await transitionMspCall({tenantId:String(authority.tenant_id),callContextId:String(context!.id),to:'COMPLETED',eventType:'unverified.intake.recorded',evidence:{manualAssociationRequired:true,externalTicketConfirmed:false,bmsQueued:false,automationExecuted:false}},tx);
+      return saved;
+    });
+    const notification=await dispatchRealtimeNotifications({authority,configuration,call,summary:formatSupportIntake(snapshot),toolName:'send_email'});
+    return {ok:true,providerActionConfirmed:false,localRequestRecorded:true,localReference:String(localCase.reference),manualAssociationRequired:true,assurance:'A0',previousNotificationUpdateConfirmed:false,...notification};
+  }
+  if(authority.msp_unverified_intake_verified===true && !['save_support_intake','transfer_call','end_call'].includes(invocation.name)){
+    throw new CallCommandRealtimeError('Unverified caller has no such capability','UNVERIFIED_TOOL_NOT_ALLOWED',403);
   }
   if (invocation.name === 'submit_support_request') {
     if (authority.product_mode !== 'msp' || !configuration.supportIntakeEnabled) throw new CallCommandRealtimeError('MSP intake is not currently authorized','SUPPORT_INTAKE_NOT_CONFIGURED',403);

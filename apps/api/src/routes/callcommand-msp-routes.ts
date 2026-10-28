@@ -533,6 +533,9 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
       const receipt=await recordMspWebhookReceipt({tenantId,providerCallId:sid,stage:'msp-inbound',payload:value,callId:String(callRow.id)});
       if(receipt.duplicate){
         if(context.organization_id)return sendTwiml(reply,supportLinkGather(String(callRow.id),'Enter your ten digit Support Link I D.'));
+        const {prepareUnverifiedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
+        const firstContact=await prepareUnverifiedMspRealtimeIntake({tenantId,callId:String(callRow.id),providerCallSid:sid});
+        if(firstContact)return sendTwiml(reply,firstContact);
         const action=publicAction('/v1/modules/callcommand-ai/webhooks/twilio/voice/unrecognized',String(callRow.id));
         return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="dtmf" numDigits="1" timeout="8" action="${xml(action)}" method="POST"><Say>Press 1 to request a callback, or press 2 for general support.</Say></Gather><Hangup/></Response>`);
       }
@@ -548,6 +551,9 @@ export async function registerCallCommandMspRoutes(app: FastifyInstance) {
       await transitionMspCall({tenantId,callContextId:contextId,to:'ORIGINATING_LINE_EVALUATED',eventType:'originating_line.evaluated',actorType:'SYSTEM',evidence:{matched:Boolean(matched.rows[0]),last4:indexed.last4}});
       if(!matched.rows[0]){
         await transitionMspCall({tenantId,callContextId:contextId,to:'UNRECOGNIZED_LINE',eventType:'originating_line.unrecognized',actorType:'SYSTEM',riskFlags:['UNRECOGNIZED_ORIGINATING_LINE'],evidence:{automationEligible:false}});
+        const {prepareUnverifiedMspRealtimeIntake}=await import('./callcommand-realtime-routes.js');
+        const firstContact=await prepareUnverifiedMspRealtimeIntake({tenantId,callId:String(callRow.id),providerCallSid:sid});
+        if(firstContact)return sendTwiml(reply,firstContact);
         const action=publicAction('/v1/modules/callcommand-ai/webhooks/twilio/voice/unrecognized',String(callRow.id));
         return sendTwiml(reply,`<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="dtmf" numDigits="1" timeout="8" action="${xml(action)}" method="POST"><Say>We could not associate this line. Press 1 to request a callback, or press 2 for general support.</Say></Gather><Hangup/></Response>`);
       }

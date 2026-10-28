@@ -813,6 +813,7 @@ export function escapeTwiml(value: string): string {
 export interface OpenAiSipDialTwimlInput {
   openAiProjectId: string;
   timeoutSeconds?: number;
+  timeLimitSeconds?: number;
   statusCallbackUrl?: string;
   referUrl?: string;
   allowedWebhookOrigins?: readonly string[];
@@ -823,6 +824,8 @@ export interface OpenAiSipDialTwimlInput {
 /** Creates only the fixed OpenAI SIP host; callers cannot supply a SIP URI. */
 export function buildOpenAiSipDialTwiml(input: OpenAiSipDialTwimlInput): string {
   if (!OPENAI_PROJECT_ID.test(input.openAiProjectId)) invalid('OpenAI project ID is invalid');
+  const timeLimit = input.timeLimitSeconds;
+  if (timeLimit !== undefined && (!Number.isInteger(timeLimit) || timeLimit < 1 || timeLimit > 14400)) invalid('SIP time limit must be between 1 and 14400 seconds');
   const timeout = input.timeoutSeconds ?? 30;
   if (!Number.isInteger(timeout) || timeout < 5 || timeout > 120) invalid('SIP dial timeout must be between 5 and 120 seconds');
   let callbackAttributes = '';
@@ -848,7 +851,7 @@ export function buildOpenAiSipDialTwiml(input: OpenAiSipDialTwimlInput): string 
     routeHeaders = `?x-callcommand-call-id=${encodeURIComponent(input.callId)}&x-callcommand-route-token=${input.routeToken}`;
   }
   const sipUri = `sip:${input.openAiProjectId}@sip.api.openai.com;transport=tls${routeHeaders}`;
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial answerOnBridge="true" timeout="${timeout}"${referAttributes}><Sip${callbackAttributes}>${escapeTwiml(sipUri)}</Sip></Dial></Response>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial answerOnBridge="true" timeout="${timeout}"${timeLimit === undefined ? '' : ` timeLimit="${timeLimit}"`}${referAttributes}><Sip${callbackAttributes}>${escapeTwiml(sipUri)}</Sip></Dial></Response>`;
 }
 
 type JsonPrimitive = string | number | boolean | null;
