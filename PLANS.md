@@ -1,4 +1,13 @@
-## 2026-10-28 — Bounded MSP voice/intake follow-on
+## 2026-10-30 - Final local quality follow-through
+
+The separate follow-on to preserved `5d0cfcc3` repairs six CallCommand browser
+defects and renders all fourteen module entries at desktop/mobile widths.
+Browser 19/19, DB-free API 113/113, creative 15/15, source types/lint and API
+compilation pass. No full canonical release, PostgreSQL or live acceptance
+claim. Holds remain; no publication or production change.
+[Evidence and remaining scope](docs/reviews/2026-10-30/FINAL_QUALITY.md).
+
+## 2026-10-28 - Bounded MSP voice/intake follow-on
 
 ## Local SupportLink email-intake follow-on — 2026-10-28
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, AlertOctagon, AlertTriangle, Building2, CheckCircle2, ClipboardCheck,
   FileKey2, Fingerprint, Headset, KeyRound, Link2, Loader2, Network, Phone,
@@ -91,6 +91,11 @@ export default function CallCommandMspWorkspace({ view, canWrite, canManage }: {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [revealedSupportLink, setRevealedSupportLink] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const lifetime = useRef(0);
+  const readSequence = useRef(0);
+  const mounted = useRef(false);
+  const mutationPending = useRef(false);
   const [org, setOrg] = useState({ organizationId: '', supportTier: 'Managed Support', bmsAccountExternalId: '', automationMode: 'TICKET_ONLY' });
   const [line, setLine] = useState({ organizationId: '', phone: '', lineType: 'MAIN', trustMode: 'STRICT' });
   const [contact, setContact] = useState({ organizationId: '', contactId: '', bmsContactExternalId: '' });
@@ -99,20 +104,46 @@ export default function CallCommandMspWorkspace({ view, canWrite, canManage }: {
   const [simulation, setSimulation] = useState({ organizationId: '', contactId: '', description: 'The user cannot print to the office printer and needs technician assistance.' });
 
   const refresh = useCallback(async () => {
-    try { setData(await moduleShellApi.callcommand.mspWorkspace() as MspWorkspace); setError(''); }
-    catch (caught) { setError(errorMessage(caught, 'The MSP intake workspace could not be loaded.')); }
+    const generation = lifetime.current;
+    const sequence = ++readSequence.current;
+    const current = () => mounted.current && lifetime.current === generation && readSequence.current === sequence;
+    setRefreshing(true);
+    try {
+      const result = await moduleShellApi.callcommand.mspWorkspace() as MspWorkspace;
+      if (current()) { setData(result); setError(''); }
+    } catch (caught) {
+      if (current()) setError(errorMessage(caught, 'The MSP intake workspace could not be loaded.'));
+    } finally { if (current()) setRefreshing(false); }
   }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    mounted.current = true;
+    lifetime.current += 1;
+    setRevealedSupportLink(''); setNotice(''); setError(''); setData(null);
+    void refresh();
+    return () => {
+      mounted.current = false;
+      lifetime.current += 1;
+      readSequence.current += 1;
+    };
+  }, [refresh, view, canWrite, canManage]);
 
   const run = useCallback(async (key: string, operation: () => Promise<any>, success: string) => {
+    // React batches state updates: a ref closes the same-turn double-click gap.
+    // This UI lock is not a substitute for server authorization/idempotency.
+    if (!canWrite || mutationPending.current) return null;
+    mutationPending.current = true;
+    const generation = lifetime.current;
+    const current = () => mounted.current && lifetime.current === generation;
     setBusy(key); setError(''); setNotice('');
+    setRevealedSupportLink('');
     try {
       const result = await operation();
+      if (!current()) return null;
       if (result?.supportLinkId) setRevealedSupportLink(String(result.supportLinkId));
       setNotice(success); await refresh(); return result;
-    } catch (caught) { setError(errorMessage(caught, 'The request failed.')); return null; }
-    finally { setBusy(''); }
-  }, [refresh]);
+    } catch (caught) { if (current()) setError(errorMessage(caught, 'The request failed.')); return null; }
+    finally { mutationPending.current = false; if (mounted.current) setBusy(''); }
+  }, [refresh, canWrite]);
 
   const profileContacts = useMemo(() => data?.contacts.filter(item => !link.organizationId || item.organizationId === link.organizationId) ?? [], [data, link.organizationId]);
   const activeCases = data?.cases.filter(item => !['RESOLVED', 'CLOSED'].includes(item.status)) ?? [];
@@ -120,17 +151,22 @@ export default function CallCommandMspWorkspace({ view, canWrite, canManage }: {
 
   const loading = !data && !error;
 
-  return <section aria-label="CallCommand MSP intake and automation fabric" aria-busy={loading} style={{ marginBottom: space.xxl, position: 'relative' }}>
-    {loading && <div role="status" style={{ ...panel, position: 'absolute', inset: '12px 12px auto', zIndex: 2, display: 'flex', gap: 10, alignItems: 'center', color: semantic.textMuted, boxShadow: '0 18px 55px rgba(0,0,0,.42)' }}>
-      <Loader2 size={18} aria-hidden="true"/>Loading the MSP intake command center…
-    </div>}
-    <div inert={loading ? true : undefined} aria-hidden={loading || undefined} style={{ pointerEvents: loading ? 'none' : 'auto' }}>
+  if (!data) return <section aria-label="CallCommand MSP intake and automation fabric" aria-busy={loading} style={{ marginBottom: space.xxl }}>
+    <div role={error ? 'alert' : 'status'} style={{ ...panel, display: 'grid', gap: 12, color: error ? '#fda4af' : semantic.textMuted }}>
+      <strong style={{ color: semantic.text }}>MSP Intake Command Center</strong>
+      {error ? <><span>{error}</span><span style={{ color: semantic.textMuted }}>Configuration stays unavailable until the workspace loads.</span><button style={{ ...quietButton, justifySelf: 'start' }} disabled={refreshing} onClick={() => void refresh()}><RefreshCw size={14}/>Retry workspace</button></>
+        : <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Loader2 size={18} aria-hidden="true"/>Loading the MSP intake command center…</span>}
+    </div>
+  </section>;
+
+  return <section className="callcommand-msp-workspace" aria-label="CallCommand MSP intake and automation fabric" aria-busy={refreshing} style={{ marginBottom: space.xxl, position: 'relative' }}>
+    <style>{`.callcommand-msp-workspace button:disabled { opacity:.5; cursor:not-allowed; } .callcommand-msp-workspace :is(button,input,select,textarea):focus-visible { outline:2px solid #5eead4; outline-offset:3px; }`}</style>
     <div style={{ ...panel, padding: 0, overflow: 'hidden', marginBottom: space.lg, borderColor: 'rgba(52,211,153,.36)' }}>
       <div style={{ padding: '22px 24px', background: 'radial-gradient(circle at 88% 0,rgba(16,185,129,.22),transparent 38%),linear-gradient(135deg,rgba(6,78,59,.3),rgba(5,15,22,.2))' }}>
         <div style={{ display: 'flex', gap: 15, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ width: 47, height: 47, display: 'grid', placeItems: 'center', borderRadius: 15, background: 'linear-gradient(145deg,#0f766e,#34d399)', color: '#02110d' }}><Headset size={25}/></div>
-          <div style={{ flex: 1, minWidth: 240 }}><h2 style={{ margin: 0, fontSize: 22 }}>MSP Intake Command Center</h2><p style={{ color: '#a7c7c5', margin: '5px 0 0', fontSize: 13 }}>Recognize covered callers, open the right customer record, create a ticket first, and require approval before sensitive actions.</p></div>
-          <Badge tone="good">Core intake available</Badge><Badge tone="warn">Sensitive actions require approval</Badge>
+          <div style={{ flex: 1, minWidth: 'min(100%,240px)' }}><h2 style={{ margin: 0, fontSize: 22 }}>MSP Intake Command Center</h2><p style={{ color: '#a7c7c5', margin: '5px 0 0', fontSize: 13 }}>Prepare caller intake, manage customer mappings, and review service readiness. Sensitive actions require separate approval.</p></div>
+          <Badge>Setup and review</Badge><Badge tone="warn">Live service checks required</Badge>
           <button style={quietButton} disabled={!!busy} onClick={() => void refresh()}><RefreshCw size={14}/>Refresh</button>
         </div>
       </div>
@@ -143,6 +179,8 @@ export default function CallCommandMspWorkspace({ view, canWrite, canManage }: {
         ].map(([label, value, Icon]: any) => <div key={label} style={{ padding: '16px 18px', borderRight: '1px solid rgba(94,234,212,.1)' }}><Icon size={16} color="#2dd4bf"/><div style={{ fontSize: 25, fontWeight: 900, marginTop: 6 }}>{value}</div><div style={{ color: semantic.textMuted, fontSize: 12 }}>{label}</div></div>)}
       </div>
     </div>
+
+    {refreshing && <p role="status" style={{ color: semantic.textMuted, fontSize: 13 }}>Refreshing workspace…</p>}
 
     {error && <div role="alert" style={{ ...panel, color: '#fda4af', borderColor: 'rgba(251,113,133,.5)', marginBottom: space.md }}><AlertTriangle size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{error}</div>}
     {notice && <div role="status" style={{ ...panel, color: '#6ee7b7', borderColor: 'rgba(52,211,153,.45)', marginBottom: space.md }}><CheckCircle2 size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{notice}</div>}
@@ -261,6 +299,5 @@ export default function CallCommandMspWorkspace({ view, canWrite, canManage }: {
       ].map(([title,text])=><article key={title} style={{padding:12,border:'1px solid rgba(94,234,212,.13)',borderRadius:10,background:'#07151c'}}><strong>{title}</strong><p style={{color:semantic.textMuted,fontSize:12,lineHeight:1.5,margin:'6px 0 0'}}>{text}</p></article>)}</div>
       <p style={{color:semantic.textMuted,fontSize:11,margin:'14px 0 0'}}>Password reset and remote-management actions are not available yet.</p>
     </section>}
-    </div>
   </section>;
 }

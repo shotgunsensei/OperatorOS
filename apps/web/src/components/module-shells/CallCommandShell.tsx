@@ -63,7 +63,7 @@ export default function CallCommandShell({ routePath }: CallCommandShellProps) {
     dataAttributes={{ 'data-callcommand-route': route.area }}
   >
     <style>{routeCss}</style>
-    {tenantId && <CallCommandWorkspace key={`${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} hrefFor={hrefFor} canWriteModule={canWriteModule} canManageModule={canManageModule}/>}
+    {tenantId && <CallCommandWorkspace key={`${user?.id ?? 'signed-out'}-${tenantId}-${route.area}-${route.recordId ?? ''}`} view={route.area} recordId={route.recordId} hrefFor={hrefFor} canWriteModule={canWriteModule} canManageModule={canManageModule}/>}
   </ModuleApplicationShell>;
 }
 
