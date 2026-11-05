@@ -1,3 +1,31 @@
+## 2026-11-05 - Historical candidate fixture clarity, local only
+
+This isolated cleanup follows frozen `beaaf1db`; it is not verified current
+canonical source. Two optional example key-version assignments are now useful
+comments; runtime defaults and operational configuration are unchanged. Three
+CallCommand test inputs are direct, explicitly synthetic values accepted by the
+unchanged validator. Token comparison confirms assertions/control flow unchanged.
+
+Fresh local checks: 32/32 existing DB-free realtime/provider/composition tests,
+12/12 fixture configuration/negative-path checks, scoped strict TypeScript for
+all three affected tests and zero-warning lint pass using existing installed
+assets. The initial declaration error was resolved by including the existing
+JavaScript parity helper in the check configuration. Recovery/restart PostgreSQL
+journeys are typechecked, NOT EXECUTED under the retained engine hold.
+
+The complete original 261-file publication delta was screened with the retained
+five-rule redacted literal/template screen: three expected synthetic fixture
+matches, no unexplained candidates; held PR136 SSO content was not read/changed.
+This is not a formal Codex Security or comprehensive secret scan.
+
+PUBLICATION STOPPED: current canonical source cannot be verified after the
+permission-denied `C:/Dev/OperatorOS` HEAD read. The denial was not retried or
+bypassed. GitHub main remains `49b68ed6`, which does not prove John's newer local
+or Replit work is represented. No source upload, remote commit/branch/PR, CI,
+merge, deployment, credential, database or provider operation was performed.
+Frozen and later quality/Customer Workspace heads remain intact. External
+receipts are in task `evidence/screening-clarity-nov05`.
+
 ## 2026-10-27 - Local quality pass, not production acceptance
 
 All fourteen modules retain their existing parity while the isolated candidate combines reviewed recovery, current-authority/security repairs and rendered desktop/mobile improvements. Separate companion candidates are locally committed; no publication or deployment occurs in this pass. Approved tool terms are USD $99 once for each entire tenant, OfficeExit all ten current features; Lunch Break/FieldNode remain free. Earlier undecided price/unit notes below are historical.

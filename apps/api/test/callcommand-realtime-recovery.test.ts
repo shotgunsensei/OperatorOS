@@ -58,7 +58,8 @@ class RecoveryWorker {
     const env: NodeJS.ProcessEnv = Object.fromEntries(keptEnvironment.filter(key => process.env[key]).map(key => [key, process.env[key]]));
     for (const key of explicitTestEnvironment) if (process.env[key]) env[key] = process.env[key];
     Object.assign(env, { NODE_ENV: 'test', APP_ENV: 'test', CI: 'true', CALLCOMMAND_RESTART_WORKER_MARKER: this.marker,
-      OPENAI_API_KEY: 'sk-restart-synthetic-fixture-not-a-provider-credential', OPENAI_PROJECT_ID: 'proj_restart_fixture_12345678',
+  // Synthetic adapter configuration only. Fetch and sockets are injected by the test fixture.
+      OPENAI_API_KEY: 'sk-SYNTHETIC-ONLY-CALLCOMMAND-RECOVERY-NO-NETWORK', OPENAI_PROJECT_ID: 'proj_restart_fixture_12345678',
       OPENAI_WEBHOOK_SECRET: `whsec_${webhookBytes.toString('base64')}`, CALLCOMMAND_SIP_ROUTE_SECRET: routeSecret, CALLCOMMAND_REALTIME_MODEL: 'gpt-realtime-2.1-mini' });
     this.child = spawn(process.execPath, ['--import','tsx',childPath], { env, windowsHide: true, stdio: ['ignore','pipe','pipe','ipc'] });
     this.receipt = { pid: this.child.pid, marker: this.marker, script: childPath, launchedAt: new Date().toISOString(), inheritedProviderCredentials: false };

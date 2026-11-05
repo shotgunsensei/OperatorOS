@@ -4,7 +4,8 @@ import { buildOpenAiRealtimeAcceptConfig } from '../src/lib/callcommand-number-p
 import { OpenAiRealtimeSipAdapter } from '../src/lib/callcommand-realtime.js';
 
 const env = {
-  OPENAI_API_KEY: 'sk-composition-synthetic-not-a-provider-credential',
+  // Synthetic adapter configuration only. Fetch and sockets are injected by the test fixture.
+  OPENAI_API_KEY: 'sk-SYNTHETIC-ONLY-CALLCOMMAND-COMPOSITION-NO-NETWORK',
   OPENAI_PROJECT_ID: 'proj_composition_fixture',
   OPENAI_WEBHOOK_SECRET: 'whsec_composition_synthetic_fixture',
   CALLCOMMAND_SIP_ROUTE_SECRET: 'composition-synthetic-fixture-at-least-32-bytes',
