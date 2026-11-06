@@ -1,5 +1,13 @@
 ## 2026-10-30 - Final local quality follow-through
 
+## 2026-11-06 - Reconciled local source candidate
+
+The isolated local candidate combines frozen quality `beaaf1db`, later CallCommand/UI `5ce03a2f`, Customer Workspace `654f15cf`, and screening cleanup `d155a4ea`, while preserving current GitHub main `5e4615a0` as history. Remote publication markers have exactly the same source tree as John's reported clean `49b68ed6` checkout. No canonical-folder read was retried.
+
+Fresh integration verification: 181/181 DB-free tests, full API source plus the three prepared realtime test suites typechecked without executing PostgreSQL, web source plus scoped browser-test/config types checked, and focused zero-warning lint. The sole runtime overlap, `apps/web/src/lib/auth.ts`, retains every changed declaration from both lanes. Documentation history from both sides is retained.
+
+Source requires ordered schema release 68 (`tool_purchase_ledger`); all four retained lanes share byte-identical database migration/schema files. Live database version, migration acceptance, full production build, hosted CI, live voice/email/transfer and target-deployment acceptance were not rerun. Prior source-publication, PR136, database, provider and credential holds remain; this integration performs no GitHub write or deployment.
+
 The separate follow-on to preserved `5d0cfcc3` repairs six CallCommand browser
 defects and renders all fourteen module entries at desktop/mobile widths.
 Browser 19/19, DB-free API 113/113, creative 15/15, source types/lint and API

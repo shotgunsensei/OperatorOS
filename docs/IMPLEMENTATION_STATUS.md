@@ -1,5 +1,13 @@
 ## 2026-10-30 - Final local quality follow-through
 
+## 2026-11-06 - Reconciled local source candidate
+
+The isolated local candidate combines frozen quality `beaaf1db`, later CallCommand/UI `5ce03a2f`, Customer Workspace `654f15cf`, and screening cleanup `d155a4ea`, while preserving current GitHub main `5e4615a0` as history. Remote publication markers have exactly the same source tree as John's reported clean `49b68ed6` checkout. No canonical-folder read was retried.
+
+Fresh integration verification: 181/181 DB-free tests, full API source plus the three prepared realtime test suites typechecked without executing PostgreSQL, web source plus scoped browser-test/config types checked, and focused zero-warning lint. The sole runtime overlap, `apps/web/src/lib/auth.ts`, retains every changed declaration from both lanes. Documentation history from both sides is retained.
+
+Source requires ordered schema release 68 (`tool_purchase_ledger`); all four retained lanes share byte-identical database migration/schema files. Live database version, migration acceptance, full production build, hosted CI, live voice/email/transfer and target-deployment acceptance were not rerun. Prior source-publication, PR136, database, provider and credential holds remain; this integration performs no GitHub write or deployment.
+
 The separate follow-on to preserved `5d0cfcc3` repairs six reproduced CallCommand
 interaction/lifetime issues. Fresh browser 19/19, DB-free CallCommand 113/113,
 creative dashboard/recovery 15/15, all-web source types, scoped lint, strict API
@@ -43,6 +51,33 @@ unchanged. [Supported flow, implementation and exact gates](callcommand/MSP_REAL
 ## 2026-10-27 - Separate Customer Workspace local phase
 
 The bounded Customer Workspace phase extends frozen quality base `beaaf1db` on its own branch. Existing Directory references, current module authority and reviewed TradeFlow-to-SnapProof handoffs now support a shared shell workflow. Local combined API58/58, UI17/17, complete API/web types and production compilation/build pass; actual PostgreSQL and live acceptance remain separate. No publication, migration, new grant or provider action occurred. [Scope, evidence and remaining gates](reviews/2026-10-27/CUSTOMER_WORKSPACE.md).
+## 2026-11-05 - Historical candidate fixture clarity, local only
+
+This isolated cleanup follows frozen `beaaf1db`; it is not verified current
+canonical source. Two optional example key-version assignments are now useful
+comments; runtime defaults and operational configuration are unchanged. Three
+CallCommand test inputs are direct, explicitly synthetic values accepted by the
+unchanged validator. Token comparison confirms assertions/control flow unchanged.
+
+Fresh local checks: 32/32 existing DB-free realtime/provider/composition tests,
+12/12 fixture configuration/negative-path checks, scoped strict TypeScript for
+all three affected tests and zero-warning lint pass using existing installed
+assets. The initial declaration error was resolved by including the existing
+JavaScript parity helper in the check configuration. Recovery/restart PostgreSQL
+journeys are typechecked, NOT EXECUTED under the retained engine hold.
+
+The complete original 261-file publication delta was screened with the retained
+five-rule redacted literal/template screen: three expected synthetic fixture
+matches, no unexplained candidates; held PR136 SSO content was not read/changed.
+This is not a formal Codex Security or comprehensive secret scan.
+
+PUBLICATION STOPPED: current canonical source cannot be verified after the
+permission-denied `C:/Dev/OperatorOS` HEAD read. The denial was not retried or
+bypassed. GitHub main remains `49b68ed6`, which does not prove John's newer local
+or Replit work is represented. No source upload, remote commit/branch/PR, CI,
+merge, deployment, credential, database or provider operation was performed.
+Frozen and later quality/Customer Workspace heads remain intact. External
+receipts are in task `evidence/screening-clarity-nov05`.
 
 ## 2026-10-27 - Local quality pass, not production acceptance
 
