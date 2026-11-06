@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
+import { CustomerWorkspaceError, reuseQualifiedSnapProofCustomer } from './customer-workspace.js';
 import { db } from '../db.js';
 import { createAttachment } from './shared-attachments.js';
 import {
@@ -383,7 +384,7 @@ async function createFaultlineDraft(context: FabricDeliveryContext, source: {
 async function tradeFlowJobToSnapProof(context: FabricDeliveryContext): Promise<FabricAdapterResult> {
   const found = await context.executor.execute(sql`
     SELECT j.*,c.name AS customer_name,c.email AS customer_email,c.phone AS customer_phone,c.address AS customer_address,
-      c.organization_id,c.primary_contact_id,c.primary_site_id
+      c.organization_id,c.primary_contact_id,c.primary_site_id,c.version AS customer_version
     FROM tradeflowkit_jobs j
     JOIN tradeflowkit_customers c ON c.tenant_id=j.tenant_id AND c.id=j.customer_id AND c.deleted_at IS NULL
     WHERE j.tenant_id=${context.tenantId} AND j.id=${context.aggregateId} AND j.deleted_at IS NULL LIMIT 1
@@ -391,7 +392,12 @@ async function tradeFlowJobToSnapProof(context: FabricDeliveryContext): Promise<
   const job = found.rows[0] as Row | undefined;
   if (!job) fabricError('FABRIC_SOURCE_ARCHIVED', 'TradeFlowKit job is unavailable or archived');
   assertExpectedSourceVersion(context, job.version, 'The TradeFlowKit job');
-  const customer = await context.executor.execute(sql`
+  if (context.payload.directoryContext !== undefined && !job.organization_id) {
+    throw new CustomerWorkspaceError('CUSTOMER_CONTEXT_CHANGED', 'The saved customer or job context changed. Reload and review it before continuing.', 409);
+  }
+  const customerId = job.organization_id
+    ? await reuseQualifiedSnapProofCustomer({ tenantId: context.tenantId, actorUserId: context.actorUserId, job, expectedContext: context.payload.directoryContext }, context.executor)
+    : String((await context.executor.execute(sql`
     INSERT INTO snapproof_customers(
       tenant_id,created_by_user_id,name,email,phone,address,notes,
       directory_organization_id,directory_site_id,directory_contact_id
@@ -400,8 +406,7 @@ async function tradeFlowJobToSnapProof(context: FabricDeliveryContext): Promise<
       ${job.customer_email ?? null},${job.customer_phone ?? null},${job.customer_address ?? null},
       ${`Created from TradeFlowKit job ${job.number ?? job.id}.`},${job.organization_id ?? null},${job.primary_site_id ?? null},${job.primary_contact_id ?? null}
     ) RETURNING id
-  `);
-  const customerId = String((customer.rows[0] as Row).id);
+  `)).rows[0].id);
   const caseResult = await context.executor.execute(sql`
     INSERT INTO snapproof_cases(
       tenant_id,created_by_user_id,assigned_to_user_id,customer_id,reference,title,description,
@@ -427,7 +432,7 @@ async function tradeFlowJobToSnapProof(context: FabricDeliveryContext): Promise<
   `);
   const reportId = String((report.rows[0] as Row).id);
   return {
-    summary: 'Created a SnapProofOS customer, field job, and draft report',
+    summary: 'Created a SnapProofOS field job and draft report',
     references: [
       { resourceKind: 'job', resourceType: 'snapproof_case', resourceId: caseId, deepLink: `/modules/snapproofos/jobs/${caseId}`, relationship: 'field_proof_job', metadata: { customerId } },
       { resourceKind: 'report', resourceType: 'snapproof_report', resourceId: reportId, deepLink: `/modules/snapproofos/reports/${reportId}`, relationship: 'draft_field_report', metadata: { caseId } },

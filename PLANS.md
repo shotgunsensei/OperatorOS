@@ -33,6 +33,9 @@ It implements associated MSP realtime intake and durable email submission with
 recorded externally; fresh PostgreSQL, provider/carrier/PSA acceptance and the
 separate source-release holds remain. No production action is authorized or
 performed by this source pass. [Scope and next acceptance](docs/callcommand/MSP_REALTIME_INTAKE_2026-10-28.md).
+## 2026-10-27 - Separate Customer Workspace local phase
+
+The bounded Customer Workspace phase extends frozen quality base `beaaf1db` on its own branch. Existing Directory references, current module authority and reviewed TradeFlow-to-SnapProof handoffs now support a shared shell workflow. Local combined API58/58, UI17/17, complete API/web types and production compilation/build pass; actual PostgreSQL and live acceptance remain separate. No publication, migration, new grant or provider action occurred. [Scope, evidence and remaining gates](docs/reviews/2026-10-27/CUSTOMER_WORKSPACE.md).
 
 ## 2026-10-27 - Local quality pass, not production acceptance
 

@@ -18,6 +18,7 @@ import SettingsPage from '@/components/pages/SettingsPage';
 import AppsPage from '@/components/pages/AppsPage';
 import PlatformPage from '@/components/pages/PlatformPage';
 import MyAppsPage from '@/components/pages/MyAppsPage';
+import CustomerWorkspacePage from '@/components/pages/CustomerWorkspacePage';
 import TenantCommandCenterPage from '@/components/pages/TenantCommandCenterPage';
 import TenantUsersPage from '@/components/pages/TenantUsersPage';
 import TenantModulesPage from '@/components/pages/TenantModulesPage';
@@ -26,9 +27,11 @@ import TenantBillingPage from '@/components/pages/TenantBillingPage';
 import SharedServicesAdminPage from '@/components/pages/SharedServicesAdminPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
+import { CUSTOMER_WORKSPACE_PARAMS } from '@/lib/customer-workspace-route';
 
 const LINKABLE_CONSOLE_PAGES = new Set([
   'my-apps',
+  'customer-workspace',
   'apps',
   'billing',
   'settings',
@@ -123,6 +126,7 @@ function AppContent() {
     }
     if (LINKABLE_CONSOLE_PAGES.has(page)) {
       const url = new URL(window.location.href);
+      if (page !== 'customer-workspace') for (const key of CUSTOMER_WORKSPACE_PARAMS) url.searchParams.delete(key);
       if (page === 'my-apps') url.searchParams.delete('page');
       else url.searchParams.set('page', page);
       const nextRoute = `${url.pathname}${url.search}${url.hash}`;
@@ -135,6 +139,7 @@ function AppContent() {
   const renderPage = () => {
     switch (activePage) {
       case 'my-apps': return <MyAppsPage onNavigate={handleNavigate} />;
+      case 'customer-workspace': return <CustomerWorkspacePage />;
       case 'apps': return <AppsPage onNavigate={handleNavigate} />;
       case 'ai-tools': return <AiToolsPage />;
       case 'billing': return <BillingPage />;

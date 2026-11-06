@@ -3186,3 +3186,67 @@ export const trialApi = {
   status: () => apiFetch('/trials/core-suite') as Promise<{ trial: CoreSuiteTrialStatus }>,
   start: () => apiFetch('/trials/core-suite/start', { method: 'POST' }) as Promise<{ trial: CoreSuiteTrialStatus }>,
 };
+
+
+/** Shared Customer Workspace remains a platform surface. IDs select existing
+ * tenant records; every read/write is authorized again by the API. */
+export interface CustomerWorkspaceOrganization {
+  id: string; name: string; type: string; website: string | null; version: number;
+}
+export interface CustomerWorkspaceDirectoryContext {
+  organizationId: string; siteId: string | null; contactId: string | null; revision: string;
+}
+export interface CustomerWorkspaceJob {
+  id: string; number: number | null; title: string; status: string; version: number;
+  customerId: string;
+  directoryContext: CustomerWorkspaceDirectoryContext | null;
+  handoffBlocker: 'CUSTOMER_CONTEXT_UNAVAILABLE' | null;
+}
+export interface CustomerWorkspaceList {
+  customers: CustomerWorkspaceOrganization[];
+  pagination: { limit: number; offset: number; hasMore: boolean };
+  sourceModule: 'tradeflowkit';
+}
+export interface CustomerWorkspaceDetail {
+  customer: CustomerWorkspaceOrganization;
+  contacts: Array<{ id: string; firstName: string; lastName: string; email: string | null; phone: string | null; title: string | null; version: number; isPrimary: boolean }>;
+  sites: Array<{ id: string; name: string; type: string; timezone: string | null; version: number; address: string | null }>;
+  selection: { organizationId: string; siteId: string | null; contactId: string | null };
+  jobs: CustomerWorkspaceJob[];
+  pagination: { hasMoreJobs: boolean; jobsLimit: 100 };
+  capabilities: { sourceModule: 'tradeflowkit'; destinationModule: 'snapproofos'; canRequestFieldProof: boolean; readOnly: boolean; handoffBlocker: string | null };
+}
+export interface CustomerWorkspaceHandoffInput {
+  jobId: string;
+  expectedSourceVersion: number;
+  directoryContext: CustomerWorkspaceDirectoryContext;
+  idempotencyKey: string;
+}
+export interface CustomerWorkspaceRun {
+  id: string; status: string; last_error_code?: string | null;
+  delivery_status?: string | null; delivery_error_code?: string | null;
+}
+export interface CustomerWorkspaceRunResult {
+  run: CustomerWorkspaceRun;
+  links: Array<{ relationship?: string; destination_type?: string; destination_id?: string; destination_deep_link?: string }>;
+  events?: unknown[]; compensations?: unknown[];
+}
+export const customerWorkspaceApi = {
+  list: (tenantId: string, input: { search?: string; limit?: number; offset?: number } = {}, signal?: AbortSignal): Promise<CustomerWorkspaceList> => {
+    const query = new URLSearchParams();
+    if (input.search) query.set('search', input.search);
+    if (input.limit !== undefined) query.set('limit', String(input.limit));
+    if (input.offset !== undefined) query.set('offset', String(input.offset));
+    return apiFetch(`/customer-workspace/customers${query.size ? `?${query}` : ''}`, { signal, headers: { 'X-Tenant-Id': tenantId } });
+  },
+  detail: (tenantId: string, organizationId: string, input: { siteId?: string | null; contactId?: string | null } = {}, signal?: AbortSignal): Promise<CustomerWorkspaceDetail> => {
+    const query = new URLSearchParams();
+    if (input.siteId) query.set('siteId', input.siteId);
+    if (input.contactId) query.set('contactId', input.contactId);
+    return apiFetch(`/customer-workspace/customers/${encodeURIComponent(organizationId)}${query.size ? `?${query}` : ''}`, { signal, headers: { 'X-Tenant-Id': tenantId } });
+  },
+  requestFieldProof: (tenantId: string, input: CustomerWorkspaceHandoffInput): Promise<{ duplicate: boolean; requeued: boolean; run: CustomerWorkspaceRun }> =>
+    apiFetch('/customer-workspace/field-proof', { method: 'POST', headers: { 'X-Tenant-Id': tenantId }, body: JSON.stringify(input) }),
+  run: (tenantId: string, runId: string, signal?: AbortSignal): Promise<CustomerWorkspaceRunResult> =>
+    apiFetch(`/tenants/${encodeURIComponent(tenantId)}/data-fabric/runs/${encodeURIComponent(runId)}`, { signal, headers: { 'X-Tenant-Id': tenantId } }),
+};

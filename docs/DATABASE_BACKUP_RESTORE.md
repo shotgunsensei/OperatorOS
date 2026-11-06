@@ -32,7 +32,7 @@ Remove-Item Env:OPERATOROS_DATABASE_RELEASE_MODE
 corepack pnpm db:verify
 ```
 
-`db:plan` is read-only and prints the current 67 ordered step identifiers without secrets
+`db:plan` is read-only and prints the exact candidate's ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode and holds a dedicated PostgreSQL advisory lock through final
 verification. Run it only as a reviewed one-shot release operation after the
@@ -45,7 +45,11 @@ The release is idempotent and additive. Do not run imported child migrations,
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
 
-### Release v67 OutCall resource accounting (current local candidate)
+### Historical release v67 OutCall resource accounting
+
+The October27 local quality/Workspace candidate is v68/68, ending in
+`tool_purchase_ledger`. Verify the exact release manifest for any later
+candidate; this historical v67 subsection is not current promotion authority.
 
 The manifest appends `outcall_resource_tables` after unchanged v66. Two additive
 tables store account approvals and tenant/actor/call reservations with constraints

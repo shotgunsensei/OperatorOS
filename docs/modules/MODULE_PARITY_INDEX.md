@@ -33,6 +33,9 @@ and configured support-email queue, without widening Directory/automation author
 93 DB-free checks pass; strict tests/API compilation/lint have separate receipts.
 Fresh PostgreSQL, actual voice/PSA/human handoff and deployment remain unverified.
 The earlier source/publication holds are preserved. [Exact scope and limitations](../callcommand/MSP_REALTIME_INTAKE_2026-10-28.md).
+## 2026-10-27 - Separate Customer Workspace overlay
+
+The shared Customer Workspace uses existing TradeFlow Directory access and the signed TradeFlow-to-SnapProof workflow; it does not grant module access or promote either module to production parity. Local API58/58, UI17/17, complete types and builds pass with synthetic fixtures. PostgreSQL, signed-session and deployed acceptance remain unverified. [Exact overlay and limits](../reviews/2026-10-27/CUSTOMER_WORKSPACE.md).
 
 ## 2026-10-27 - Local quality pass, not production acceptance
 
