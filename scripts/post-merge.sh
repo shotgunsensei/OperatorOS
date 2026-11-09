@@ -3,10 +3,10 @@ set -euo pipefail
 
 # OperatorOS post-merge setup.
 # - This is a pnpm monorepo (apps/api, apps/web, apps/runner-gateway, packages/*).
-# - Database schema is created/updated at server boot by
-#   apps/api/src/lib/saas-db-init.ts (idempotent CREATE TABLE IF NOT EXISTS
-#   + ALTER TABLE ... ADD COLUMN IF NOT EXISTS), so there is no separate
-#   db:push step to run here.
+# - This script installs locked dependencies only; it does not apply schema changes.
+# - The production supervisor verifies the current database release and never
+#   applies migrations while serving. Use the separately authorized release
+#   apply procedure in docs/DATABASE_BACKUP_RESTORE.md before promotion.
 #
 # Determinism notes:
 # - The environment's nix pnpm (10.26.x) does not match the repository's

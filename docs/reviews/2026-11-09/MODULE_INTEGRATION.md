@@ -80,3 +80,4 @@ to b799 and genuine old release 67; it was not integrated or modified and needs
 explicit target reconciliation. Frozen candidates remain untouched. Publication
 remains blocked by the uncertain November 6 create_tree result; Replit activation
 is unverified and the earlier browser enforcement stop is not bypassed.
+Final documentation-only correction: scripts/post-merge.sh now accurately says it installs dependencies only and that the serving supervisor verifies, rather than applies, database releases. Executable shell lines are byte-equivalent after line-ending normalization; no behavior changed. The handoff runbook must be reconciled to this final candidate before database use.
