@@ -1,3 +1,7 @@
+## 2026-11-09 - Combined module candidate verified locally
+
+StudyForge replay binding and TradeFlow historical revenue retrieval are integrated over frozen b79961f8. Fresh local proof: 170 module DB-free tests, six SQLite SQL assertions, 50 Phase39 tests, 49 Chromium component cases, four desktop/mobile spot-check cases, root types/lint, expanded source/test types and production build pass. No database/runtime/provider/deployed acceptance or parity-state promotion. [Exact provenance, commands and limits](../reviews/2026-11-09/MODULE_INTEGRATION.md).
+
 ## 2026-11-09 - StudyForge replay-integrity source repair
 
 StudyForge quiz, flashcard-session and card-review mutation keys now bind existing persisted targets and intent in a separate candidate from `b79961f8`. Exact retries preserve accepted results and accounting; conflicting intent returns generic 409 under current ownership/lifecycle guards. Local proof: 51/51 DB-free tests, expanded API/test types, scoped lint and six in-memory exact-SQL checks. Seven guarded PostgreSQL cases are typechecked only. Inventory counts and production parity state are unchanged. [Evidence and remaining acceptance](../reviews/2026-11-09/STUDYFORGE_REPLAY_BINDING.md).
