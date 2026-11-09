@@ -9,7 +9,9 @@ All fourteen catalog modules have identifiable customer purposes and active
 implementation. Most are substantially more complete than a launcher shell.
 That does not establish deployed, provider-connected or commercially accepted
 functionality. The reviewed source expects schema 68; the separately checked
-public deployment remains on `5e4615a0` and schema 67.
+public deployment remains on `5e4615a0`, whose code advertises required release
+67. Health's release version is compiled metadata, not a measured database
+migration version. The actual production migration state remains unverified.
 
 The useful next step is to release and accept a complete customer workflow,
 not add more module names. Retain imported source snapshots and historical
@@ -202,3 +204,12 @@ Source publication, the production backup/recovery decision, schema 68 apply
 and verify, Replit deployment identity, authenticated tenant/role tests and
 provider acceptance remain separately tracked. Do not mark this audit or
 these isolated repairs as a platform release.
+
+The supported database apply reruns the cumulative 68-step manifest. The final
+tool-purchase ledger step is additive, but earlier catalog/backfill steps consume
+updated inputs, including live OutCall and free/live FieldNode. Inspect the full
+plan and pre/post catalog and entitlement effects under an approved maintenance
+and write pause, after verified backup and recovery preparation. Do not replace
+the supported process with only the final DDL or promise zero-downtime rollout.
+The new supervisor verifies required objects before starting the API; it does
+not automatically apply the migration.
