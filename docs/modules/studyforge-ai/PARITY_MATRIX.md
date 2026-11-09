@@ -1,3 +1,7 @@
+## 2026-11-09 replay-binding repair overlay
+
+The isolated follow-on from `b79961f8` repairs quiz, flashcard-session and card-review key reuse with target/intent checks and generic 409 conflicts. Current ownership, lifecycle, saved scores and first-write-only effects remain enforced. 51/51 local DB-free tests, expanded API/test types, scoped lint and six exact in-memory SQL checks pass. Seven real PostgreSQL regressions are prepared/typechecked only; deployment and concurrency acceptance remain open. No inventory count or parity state changes. See [repair evidence](../../reviews/2026-11-09/STUDYFORGE_REPLAY_BINDING.md).
+
 ## 2026-11-09 current source and readiness overlay
 
 The reviewed baseline is `8b8f9748`. StudyForge AI is an **active catalog entry**.

@@ -109,6 +109,38 @@ function idempotency(value: unknown): string {
   return result;
 }
 
+type QuizAnswer = { questionId: string; selectedIndex: number };
+
+// Bind retries to submitted intent, not question order or a later quiz revision.
+// Project only graded fields so existing rows with extra answer properties remain usable.
+function normalizeQuizAnswers(value: unknown): QuizAnswer[] {
+  if (!Array.isArray(value) || !value.length || value.length > 100) throw new InputError('answers must contain 1-100 items');
+  const seen = new Set<string>();
+  return value.map((answer: unknown) => {
+    if (!answer || typeof answer !== 'object' || Array.isArray(answer)) throw new InputError('Each answer must be an object');
+    const { questionId, selectedIndex } = answer as Row;
+    if (typeof questionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(questionId)) throw new InputError('questionId is invalid');
+    if (seen.has(questionId)) throw new InputError('Every quiz question must be answered exactly once');
+    seen.add(questionId);
+    return { questionId, selectedIndex: integer(selectedIndex, 'selectedIndex', 0, 5) };
+  }).sort((left, right) => left.questionId < right.questionId ? -1 : left.questionId > right.questionId ? 1 : 0);
+}
+
+function quizReplayMatches(row: Row, quizId: string, answers: QuizAnswer[]): boolean {
+  if (row.quiz_id !== quizId) return false;
+  try {
+    return JSON.stringify(normalizeQuizAnswers(row.answers)) === JSON.stringify(answers);
+  } catch (error) {
+    // Old malformed bindings cannot safely authorize a replay; never rewrite them.
+    if (error instanceof InputError) return false;
+    throw error;
+  }
+}
+
+function idempotencyConflict(): InputError {
+  return new InputError('Idempotency key was already used for a different request', 'STUDYFORGE_IDEMPOTENCY_CONFLICT', 409);
+}
+
 function failure(reply: FastifyReply, error: unknown) {
   const value = error as any;
   if (value?.code === 'AI_PROVIDER_DISABLED') {
@@ -149,10 +181,11 @@ function createInput(value: Row) {
   };
 }
 
-async function loadStudySet(tenantId: string, userId: string, id: string, executor: Executor = db): Promise<Row> {
+async function loadStudySet(tenantId: string, userId: string, id: string, executor: Executor = db, lock = false): Promise<Row> {
   const result = await executor.execute(sql`
     SELECT * FROM studyforge_study_sets
     WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${id} AND deleted_at IS NULL LIMIT 1
+    ${lock ? sql`FOR SHARE` : sql``}
   `);
   if (!result.rows[0]) throw new InputError('Study set not found', 'STUDYFORGE_SET_NOT_FOUND', 404);
   return result.rows[0] as Row;
@@ -641,18 +674,21 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
 
   app.post(`${base}/study-sets/:id/quiz-attempts`, { preHandler: writeGuards }, async (request, reply) => {
     try {
-      const tenantId = tenant(request), userId = actor(request), set = await loadStudySet(tenantId, userId, identifier(request));
+      const tenantId = tenant(request), userId = actor(request), setId = identifier(request);
       const input = body(request), key = idempotency(input.idempotencyKey);
-      if (!Array.isArray(input.answers) || !input.answers.length || input.answers.length > 100) throw new InputError('answers must contain 1-100 items');
+      const answers = normalizeQuizAnswers(input.answers);
       const access = await resolveStudyForgeAccess(userId, tenantId);
       const result = await db.transaction(async (tx) => {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}:${userId}:quiz:${key}`},0))`);
+        const set = await loadStudySet(tenantId, userId, setId, tx, true);
         const replay = await tx.execute(sql`SELECT * FROM studyforge_quiz_attempts WHERE tenant_id=${tenantId} AND user_id=${userId} AND idempotency_key=${key} LIMIT 1`);
-        if (replay.rows[0]) return { row: replay.rows[0], replayed: true };
+        if (replay.rows[0]) {
+          if (!quizReplayMatches(replay.rows[0] as Row, String(set.quiz_id), answers)) throw idempotencyConflict();
+          return { row: replay.rows[0], replayed: true };
+        }
         const questions = await tx.execute(sql`SELECT * FROM studyforge_questions WHERE tenant_id=${tenantId} AND quiz_id=${set.quiz_id} AND deleted_at IS NULL ORDER BY position`);
-        const answers = input.answers as Row[];
         if (answers.length !== questions.rows.length) throw new InputError('Every quiz question must be answered');
-        const submitted = new Map(answers.map((answer) => [String(answer.questionId), integer(answer.selectedIndex, 'selectedIndex', 0, 5)]));
+        const submitted = new Map(answers.map((answer) => [answer.questionId, answer.selectedIndex]));
         const review = questions.rows.map((value) => {
           const question = value as Row;
           if (!submitted.has(String(question.id))) throw new InputError('Every quiz question must be answered');
@@ -661,9 +697,12 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
         });
         await consumeStudyForgeUsage({ tenantId, userId, kind: 'quiz_attempt', limit: access.limits.quizAttemptsPerMonth, executor: tx });
         const correct = review.filter((item) => item.correct).length;
-        const created = await tx.execute(sql`INSERT INTO studyforge_quiz_attempts(tenant_id,quiz_id,user_id,answers,correct_count,total_count,score_percent,idempotency_key,review_json) VALUES (${tenantId},${set.quiz_id},${userId},${JSON.stringify(answers)}::jsonb,${correct},${review.length},${Math.round(correct / review.length * 100)},${key},${JSON.stringify(review)}::jsonb) RETURNING *`);
+        const created = await tx.execute(sql`INSERT INTO studyforge_quiz_attempts(tenant_id,quiz_id,user_id,answers,correct_count,total_count,score_percent,idempotency_key,review_json) VALUES (${tenantId},${set.quiz_id},${userId},${JSON.stringify(input.answers)}::jsonb,${correct},${review.length},${Math.round(correct / review.length * 100)},${key},${JSON.stringify(review)}::jsonb) RETURNING *`);
         await recordDaily({ tenantId, userId, executor: tx, quizAttempts: 1, sessionsCompleted: 1 });
-        await recordUsageEvent({ tenantId, moduleId: await moduleId(tx), userId, operation: 'studyforge.quiz_attempt', units: 1, unitKind: 'attempt', idempotencyKey: key, externalReference: String((created.rows[0] as Row).id) }, tx);
+        const attemptId = String((created.rows[0] as Row).id);
+        // Shared usage keys are tenant/module scoped, while request keys are
+        // tenant/user scoped. Bind the event to the server-created attempt.
+        await recordUsageEvent({ tenantId, moduleId: await moduleId(tx), userId, operation: 'studyforge.quiz_attempt', units: 1, unitKind: 'attempt', idempotencyKey: `studyforge.quiz_attempt:${attemptId}`, externalReference: attemptId }, tx);
         return { row: created.rows[0], replayed: false };
       });
       return reply.code(result.replayed ? 200 : 201).send({ attempt: camel(result.row), replayed: result.replayed });
@@ -677,9 +716,21 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
 
   app.post(`${base}/study-sets/:id/flashcard-sessions`, { preHandler: writeGuards }, async (request, reply) => {
     try {
-      const set = await loadStudySet(tenant(request), actor(request), identifier(request));
+      const tenantId = tenant(request), userId = actor(request), setId = identifier(request);
       const key = idempotency(body(request).idempotencyKey);
-      const result = await db.execute(sql`INSERT INTO studyforge_learning_sessions(tenant_id,user_id,study_set_id,session_type,client_mutation_id) VALUES (${tenant(request)},${actor(request)},${set.id},'flashcards',${key}) ON CONFLICT (tenant_id,user_id,client_mutation_id) DO UPDATE SET client_mutation_id=EXCLUDED.client_mutation_id RETURNING *`);
+      const result = await db.transaction(async (tx) => {
+        const set = await loadStudySet(tenantId, userId, setId, tx, true);
+        const inserted = await tx.execute(sql`
+          INSERT INTO studyforge_learning_sessions(tenant_id,user_id,study_set_id,session_type,client_mutation_id)
+          VALUES (${tenantId},${userId},${set.id},'flashcards',${key})
+          ON CONFLICT (tenant_id,user_id,client_mutation_id) DO UPDATE SET client_mutation_id=EXCLUDED.client_mutation_id
+          WHERE studyforge_learning_sessions.study_set_id=EXCLUDED.study_set_id
+            AND studyforge_learning_sessions.session_type=EXCLUDED.session_type
+          RETURNING *
+        `);
+        if (!inserted.rows[0]) throw idempotencyConflict();
+        return inserted;
+      });
       return reply.code(201).send(camel(result.rows[0]));
     } catch (error) { return failure(reply, error); }
   });
@@ -706,10 +757,21 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
       const key = idempotency(input.clientMutationId);
       const access = await resolveStudyForgeAccess(userId, tenantId);
       const result = await db.transaction(async (tx) => {
-        const valid = await tx.execute(sql`SELECT session.id FROM studyforge_learning_sessions session JOIN studyforge_study_sets set ON set.tenant_id=session.tenant_id AND set.id=session.study_set_id JOIN studyforge_cards card ON card.tenant_id=set.tenant_id AND card.deck_id=set.deck_id WHERE session.tenant_id=${tenantId} AND session.user_id=${userId} AND session.id=${sessionId} AND session.completed_at IS NULL AND card.id=${cardId} AND card.deleted_at IS NULL`);
+        // Session creation locks the parent before its session upsert. Keep that
+        // order here too, including when a parent deletion/update is waiting.
+        const ownedSet = await tx.execute(sql`SELECT set.id FROM studyforge_learning_sessions session JOIN studyforge_study_sets set ON set.tenant_id=session.tenant_id AND set.id=session.study_set_id WHERE session.tenant_id=${tenantId} AND session.user_id=${userId} AND session.id=${sessionId} AND session.completed_at IS NULL AND set.user_id=${userId} AND set.deleted_at IS NULL FOR SHARE OF set`);
+        if (!ownedSet.rows[0]) throw new InputError('Session or card not found', 'STUDYFORGE_SESSION_CARD_NOT_FOUND', 404);
+        const valid = await tx.execute(sql`SELECT session.id FROM studyforge_learning_sessions session JOIN studyforge_study_sets set ON set.tenant_id=session.tenant_id AND set.id=session.study_set_id JOIN studyforge_cards card ON card.tenant_id=set.tenant_id AND card.deck_id=set.deck_id WHERE session.tenant_id=${tenantId} AND session.user_id=${userId} AND session.id=${sessionId} AND session.completed_at IS NULL AND set.user_id=${userId} AND set.deleted_at IS NULL AND set.id=${(ownedSet.rows[0] as Row).id} AND card.id=${cardId} AND card.deleted_at IS NULL FOR UPDATE OF session`);
         if (!valid.rows[0]) throw new InputError('Session or card not found', 'STUDYFORGE_SESSION_CARD_NOT_FOUND', 404);
         const inserted = await tx.execute(sql`INSERT INTO studyforge_session_card_reviews(tenant_id,user_id,session_id,card_id,learning_state,client_mutation_id) VALUES (${tenantId},${userId},${sessionId},${cardId},${state},${key}) ON CONFLICT (tenant_id,user_id,client_mutation_id) DO NOTHING RETURNING id`);
-        if (!inserted.rows[0]) return { replayed: true };
+        if (!inserted.rows[0]) {
+          // A separate statement sees the committed conflict winner under READ
+          // COMMITTED, including an insert that was concurrent with this request.
+          const replay = await tx.execute(sql`SELECT session_id,card_id,learning_state FROM studyforge_session_card_reviews WHERE tenant_id=${tenantId} AND user_id=${userId} AND client_mutation_id=${key} LIMIT 1`);
+          const row = replay.rows[0] as Row | undefined;
+          if (!row || row.session_id !== sessionId || row.card_id !== cardId || row.learning_state !== state) throw idempotencyConflict();
+          return { replayed: true };
+        }
         const interval = access.limits.spacedRepetition ? state === 'known' ? 3 : 1 : 0;
         await tx.execute(sql`INSERT INTO studyforge_card_progress(tenant_id,card_id,user_id,repetitions,lapses,interval_days,due_at,last_rating,learning_state) VALUES (${tenantId},${cardId},${userId},${state === 'known' ? 1 : 0},${state === 'learning' ? 1 : 0},${interval},NOW()+(${interval} || ' days')::interval,${state === 'known' ? 'good' : 'again'},${state}) ON CONFLICT (tenant_id,user_id,card_id) DO UPDATE SET repetitions=studyforge_card_progress.repetitions+${state === 'known' ? 1 : 0},lapses=studyforge_card_progress.lapses+${state === 'learning' ? 1 : 0},interval_days=${interval},due_at=NOW()+(${interval} || ' days')::interval,last_rating=${state === 'known' ? 'good' : 'again'},learning_state=${state},version=studyforge_card_progress.version+1,updated_at=NOW()`);
         await tx.execute(sql`UPDATE studyforge_learning_sessions SET cards_seen=cards_seen+1,cards_known=cards_known+${state === 'known' ? 1 : 0},cards_learning=cards_learning+${state === 'learning' ? 1 : 0} WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${sessionId}`);
