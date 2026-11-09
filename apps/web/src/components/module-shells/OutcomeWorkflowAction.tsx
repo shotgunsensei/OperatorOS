@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
+import { useTenant } from '@/components/TenantProvider';
 import { ArrowRight, CheckCircle2, ExternalLink, Loader2, ShieldCheck, X } from 'lucide-react';
 import { getActiveTenantId, sharedPlatformApi } from '@/lib/auth';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -56,6 +58,9 @@ type WorkflowLink = {
 };
 type WorkflowRun = {
   id?: unknown;
+  workflow_key?: unknown;
+  source_resource_id?: unknown;
+  source_module_slug?: unknown;
   status?: unknown;
   delivery_error_code?: unknown;
   deliveryErrorCode?: unknown;
@@ -113,7 +118,9 @@ const POLL_DELAYS = [0, 450, 700, 1_000, 1_400, 2_000, 2_700, 3_500, 4_000, 4_00
 
 function safeDeepLink(value: unknown): string | null {
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null;
-  if (/[\u0000-\u001f\u007f]/.test(value)) return null;
+  if (/[\\\u0000-\u0020\u007f]/.test(value) || /%/i.test(value)) return null;
+  // Workflow adapters emit canonical module record paths, never redirect URLs.
+  if (!/^\/modules\/[a-z0-9-]+\/[a-z0-9-]+\/[a-zA-Z0-9_-]+(?:\?attachment=[a-zA-Z0-9_-]+)?$/.test(value)) return null;
   return value;
 }
 
@@ -166,15 +173,20 @@ function keySegment(value: string | number | undefined, fallback: string) {
   return result || fallback;
 }
 
-function storageKey(
-  tenantId: string,
-  workflowKey: string,
-  aggregateId: string,
-  sourceModuleSlug: string | undefined,
-  sourceVersion: string | number | undefined,
-  idempotencyScope: string | undefined,
-) {
-  return `operatoros:outcome-handoff:${tenantId}:${workflowKey}:${sourceModuleSlug ?? 'contract'}:${aggregateId}:${sourceVersion ?? 'current'}:${idempotencyScope ?? 'default'}`;
+function canonicalIntent(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalIntent).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value).filter(([, item]) => item !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalIntent(item)}`).join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
+function storageKey(intentDigest: string) {
+  // Hash the complete actor/tenant/source/action/intent tuple. Do not persist
+  // payload contents, and never adopt legacy actor-unbound receipts.
+  return `operatoros:outcome-handoff:v2:${intentDigest}`;
 }
 
 function readStoredRun(key: string): { idempotencyKey: string; runId: string | null } | null {
@@ -191,9 +203,11 @@ function readStoredRun(key: string): { idempotencyKey: string; runId: string | n
 function storeRun(key: string, value: { idempotencyKey: string; runId: string | null }) {
   try {
     sessionStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
     // A privacy-restricted browser can disable session storage. Server-side
     // idempotency still protects the accepted request within this component instance.
+    return false;
   }
 }
 
@@ -206,7 +220,38 @@ function clearStoredRun(key: string) {
   }
 }
 
-export default function OutcomeWorkflowAction({
+export default function OutcomeWorkflowAction(props: OutcomeWorkflowActionProps) {
+  const { user, loading } = useAuth();
+  const { activeTenant } = useTenant();
+  const selectedTenantId = activeTenant?.id ?? getActiveTenantId();
+  const tenantId = props.tenantId ?? selectedTenantId;
+  const tenantMismatch = Boolean(props.tenantId && selectedTenantId && props.tenantId !== selectedTenantId);
+  const scope = canonicalIntent([user?.id, tenantId, props.workflowKey, props.aggregateId,
+    props.sourceModuleSlug, props.sourceVersion, props.idempotencyScope,
+    props.sourceType, props.sourceKind, props.sourceDeepLink, props.payload]);
+  const [digestFailure, setDigestFailure] = useState<string | null>(null);
+  const [receiptScope, setReceiptScope] = useState<{ scope: string; digest: string } | null>(null);
+  useEffect(() => {
+    let current = true;
+    void Promise.resolve().then(() => crypto.subtle.digest('SHA-256', new TextEncoder().encode(scope))).then(bytes => {
+      if (current) setReceiptScope({ scope, digest: Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('') });
+    }).catch(() => { if (current) setDigestFailure(scope); });
+    return () => { current = false; };
+  }, [scope]);
+  const currentScope = useRef(scope);
+  currentScope.current = loading || !user || tenantMismatch ? '' : scope;
+  if (loading || !user || !tenantId || tenantMismatch) {
+    return <section style={panel} role="status">Choose an organization and sign in to review connected work.</section>;
+  }
+  if (digestFailure === scope) return <section style={panel} role="alert">Connected work could not be prepared safely. Reload this workspace to try again.</section>;
+  if (receiptScope?.scope !== scope) return <section style={panel} role="status">Preparing a safe connected-work receipt.</section>;
+  return <ScopedOutcomeWorkflowAction {...props} tenantId={tenantId} intentDigest={receiptScope.digest}
+    key={scope} identityCurrent={() => currentScope.current === scope} />;
+}
+
+function ScopedOutcomeWorkflowAction({
+  intentDigest,
+  identityCurrent,
   workflowKey,
   aggregateId,
   sourceDeepLink,
@@ -226,7 +271,10 @@ export default function OutcomeWorkflowAction({
   disabled = false,
   disabledReason,
   testId = 'outcome-workflow-action',
-}: OutcomeWorkflowActionProps) {
+}: OutcomeWorkflowActionProps & { intentDigest: string; identityCurrent: () => boolean }) {
+  const identityCheck = useRef(identityCurrent);
+  identityCheck.current = identityCurrent;
+  const [receiptStorageUnavailable, setReceiptStorageUnavailable] = useState(false);
   const [stage, setStage] = useState<WorkflowStage>('idle');
   const [confirmed, setConfirmed] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
@@ -239,9 +287,14 @@ export default function OutcomeWorkflowAction({
   const [accessCheckAttempt, setAccessCheckAttempt] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const generation = useRef(0);
+  const busy = useRef(false);
+  const terminalFailure = useRef(false);
+  const recoveryChecked = useRef(false);
+  const volatileReceipt = useRef<{ idempotencyKey: string; runId: string | null } | null>(null);
 
   const stopPolling = useCallback(() => {
     generation.current += 1;
+    busy.current = false;
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
   }, []);
@@ -267,7 +320,7 @@ export default function OutcomeWorkflowAction({
     setAccessCheck({ status: 'checking', message: `Checking access to ${destinationLabel}…` });
     void sharedPlatformApi.dataFabricWorkflowReadiness(activeTenantId, workflowKey, sourceModuleSlug)
       .then((result) => {
-        if (!current) return;
+        if (!current || !identityCheck.current()) return;
         const readiness = (result as { readiness?: WorkflowReadiness })?.readiness;
         if (!readiness || typeof readiness.available !== 'boolean') {
           setAccessCheck({ status: 'unavailable', message: 'Application access could not be checked right now.' });
@@ -278,22 +331,29 @@ export default function OutcomeWorkflowAction({
           : { status: 'blocked', message: readinessMessage(readiness, destinationLabel) });
       })
       .catch(() => {
-        if (current) setAccessCheck({ status: 'unavailable', message: 'Application access could not be checked right now.' });
+        if (current && identityCheck.current()) setAccessCheck({ status: 'unavailable', message: 'Application access could not be checked right now.' });
       });
     return () => { current = false; };
   }, [accessCheckAttempt, destinationLabel, sourceModuleSlug, tenantId, workflowKey]);
 
   const pollRun = useCallback((activeTenantId: string, activeRunId: string, pollGeneration: number, attempt = 0): void => {
-    if (pollGeneration !== generation.current) return;
+    if (pollGeneration !== generation.current || !identityCheck.current()) return;
     const delay = POLL_DELAYS[Math.min(attempt, POLL_DELAYS.length - 1)]!;
     timer.current = setTimeout(async () => {
-      if (pollGeneration !== generation.current) return;
+      if (pollGeneration !== generation.current || !identityCheck.current()) return;
       try {
         const result = await sharedPlatformApi.dataFabricRun(activeTenantId, activeRunId) as {
           run?: WorkflowRun;
           links?: WorkflowLink[];
         };
-        if (pollGeneration !== generation.current) return;
+        if (pollGeneration !== generation.current || !identityCheck.current()) return;
+        if (result.run?.id !== activeRunId || result.run.workflow_key !== workflowKey
+          || result.run.source_resource_id !== aggregateId
+          || (sourceModuleSlug && result.run.source_module_slug !== sourceModuleSlug)) {
+          setMessage('The saved workflow does not match this record. Reopen the original record to check its connected work.');
+          setStage('failed');
+          return;
+        }
         const status = String(result.run?.status ?? 'queued');
         if (status === 'completed' || status === 'partial') {
           const destinationLinks = (result.links ?? []).flatMap((link, index) => {
@@ -318,6 +378,7 @@ export default function OutcomeWorkflowAction({
               ? 'The original record changed after this preview was prepared. Refresh it, review the latest details, and confirm again.'
               : 'The connected items could not be created. No publishing, deployment, purchase, or script execution was performed.',
           );
+          terminalFailure.current = true;
           setStage('failed');
           return;
         }
@@ -328,6 +389,7 @@ export default function OutcomeWorkflowAction({
         }
         pollRun(activeTenantId, activeRunId, pollGeneration, attempt + 1);
       } catch (error) {
+        if (pollGeneration !== generation.current || !identityCheck.current()) return;
         const status = Number((error as { status?: unknown })?.status ?? 0);
         if ([401, 403, 404].includes(status)) {
           setMessage(friendlyFailure(error));
@@ -342,9 +404,25 @@ export default function OutcomeWorkflowAction({
         pollRun(activeTenantId, activeRunId, pollGeneration, attempt + 1);
       }
     }, delay);
-  }, [destinationLabel]);
+  }, [destinationLabel, workflowKey, aggregateId, sourceModuleSlug]);
+
+  // Restore only an actor/tenant/record/version-bound receipt. This performs no
+  // mutation and requires a fresh server read before showing destination links.
+  useEffect(() => {
+    if (accessCheck.status !== 'ready' || recoveryChecked.current || !identityCheck.current()) return;
+    recoveryChecked.current = true;
+    const activeTenantId = tenantId ?? getActiveTenantId();
+    if (!activeTenantId) return;
+    const saved = readStoredRun(storageKey(intentDigest));
+    if (saved?.runId) {
+      setRunId(saved.runId);
+      setMessage('Previously submitted work is saved for this record. Check its status to reopen the connected items without creating another copy.');
+      setStage('waiting');
+    }
+  }, [accessCheck.status, intentDigest, tenantId, workflowKey, aggregateId, sourceModuleSlug, sourceVersion, idempotencyScope]);
 
   const start = async () => {
+    if (busy.current || !confirmed || disabled || accessCheck.status !== 'ready' || !identityCheck.current()) return;
     const activeTenantId = tenantId ?? getActiveTenantId();
     if (!activeTenantId) {
       setMessage('Choose an organization before creating these items.');
@@ -353,18 +431,20 @@ export default function OutcomeWorkflowAction({
     }
     stopPolling();
     const pollGeneration = generation.current;
+    busy.current = true;
     setStage('working');
     setMessage(null);
     setLinks([]);
-    const persistedKey = storageKey(activeTenantId, workflowKey, aggregateId, sourceModuleSlug, sourceVersion, idempotencyScope);
-    const stored = readStoredRun(persistedKey);
+    const persistedKey = storageKey(intentDigest);
+    const stored = readStoredRun(persistedKey) ?? volatileReceipt.current;
     if (stored?.runId) {
       setRunId(stored.runId);
       pollRun(activeTenantId, stored.runId, pollGeneration);
       return;
     }
     const idempotencyKey = stored?.idempotencyKey ?? `ui:${keySegment(sourceModuleSlug, 'contract')}:${keySegment(idempotencyScope ?? sourceVersion, 'default')}:${crypto.randomUUID()}`;
-    storeRun(persistedKey, { idempotencyKey, runId: null });
+    volatileReceipt.current = { idempotencyKey, runId: null };
+    if (!storeRun(persistedKey, volatileReceipt.current)) setReceiptStorageUnavailable(true);
     try {
       const result = await sharedPlatformApi.startDataFabricWorkflow(activeTenantId, workflowKey, {
         aggregateId,
@@ -376,24 +456,28 @@ export default function OutcomeWorkflowAction({
         expectedSourceVersion: sourceVersion,
         ...(payload ? { payload } : {}),
       }) as { run?: WorkflowRun };
-      if (pollGeneration !== generation.current) return;
+      if (pollGeneration !== generation.current || !identityCheck.current()) return;
       const nextRunId = typeof result.run?.id === 'string' ? result.run.id : null;
       if (!nextRunId) throw new Error('Missing workflow run');
       setRunId(nextRunId);
-      storeRun(persistedKey, { idempotencyKey, runId: nextRunId });
+      volatileReceipt.current = { idempotencyKey, runId: nextRunId };
+      if (!storeRun(persistedKey, volatileReceipt.current)) setReceiptStorageUnavailable(true);
       pollRun(activeTenantId, nextRunId, pollGeneration);
     } catch (error) {
-      if (pollGeneration !== generation.current) return;
-      setMessage(friendlyFailure(error));
+      if (pollGeneration !== generation.current || !identityCheck.current()) return;
+      const status = Number((error as { status?: unknown })?.status ?? 0);
+      setMessage([400, 401, 403, 404, 409].includes(status) ? friendlyFailure(error)
+        : 'The request outcome could not be confirmed. Review again to retry the same confirmed request safely; it may already have been accepted.');
       setStage('failed');
     }
   };
 
   const checkAgain = () => {
     const activeTenantId = tenantId ?? getActiveTenantId();
-    if (!activeTenantId || !runId) return;
+    if (!activeTenantId || !runId || !identityCheck.current() || accessCheck.status !== 'ready') return;
     stopPolling();
     const pollGeneration = generation.current;
+    busy.current = true;
     setStage('working');
     setMessage(null);
     pollRun(activeTenantId, runId, pollGeneration);
@@ -401,12 +485,16 @@ export default function OutcomeWorkflowAction({
 
   const reset = (forgetFailedRun = false) => {
     stopPolling();
-    if (forgetFailedRun) {
+    // Unknown submission/poll outcomes retain their replay key. Only a server-
+    // observed terminal failure can discard the saved receipt.
+    if (forgetFailedRun && terminalFailure.current) {
       const activeTenantId = tenantId ?? getActiveTenantId();
       if (activeTenantId) {
-        clearStoredRun(storageKey(activeTenantId, workflowKey, aggregateId, sourceModuleSlug, sourceVersion, idempotencyScope));
+        clearStoredRun(storageKey(intentDigest));
+        volatileReceipt.current = null;
       }
     }
+    terminalFailure.current = false;
     setStage('idle');
     setConfirmed(false);
     setRunId(null);
@@ -430,6 +518,11 @@ export default function OutcomeWorkflowAction({
           </button>
         )}
       </div>
+
+      {receiptStorageUnavailable && <p role="status" style={{ color: '#fde68a', margin: '12px 0' }}>
+        This browser cannot save the workflow receipt. Keep this page open while the outcome is uncertain.
+        Leaving or refreshing this page loses this local recovery information; check the source and destination records before confirming again.
+      </p>}
 
       {stage === 'idle' && (
         <div style={{ marginTop: 14 }}>

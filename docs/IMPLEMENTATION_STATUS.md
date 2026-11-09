@@ -2,6 +2,10 @@
 
 The isolated candidate based on 405740c8 removes image-size through supported Expo57/Metro maintenance and now has **0 raw high, 0 critical, 2 moderate** advisories. Its obsolete patch and two exceptions are removed, and the scanner now rejects nonzero raw high counts. Maintained Next/Fastify/Zod/forge updates pass root types/lint/production build, 77 Zod/domain contracts, native units/config and offline Android/iOS export. Full Phase39 final evidence and version inventory are recorded in the [dependency recheck](security/DEPENDENCY_RECHECK_2026-11-09.md). Not all packages are latest; no database, runtime, live provider or deployed acceptance is claimed.
 
+## 2026-11-09 - Cross-app handoff continuity, local candidate
+
+Existing core/companion workflow actions now recover exact actor/tenant/record/intent-bound receipts through status reads, preserve uncertain retry keys and fence stale account/context responses. Explicit creation review remains required. Local proof: 34 Chromium component cases, 15 existing DB-free source contracts, complete web-source/new-test strict types and scoped lint pass. No backend/schema/dependency changes, PostgreSQL/runtime/provider/deployment acceptance or parity-state promotion. The fourteen-module add-on ledger separates implemented handoffs from proposed uses and modules that should remain separate. [Source, acceptance and evidence](reviews/2026-11-09/LATERAL_WORKFLOW_CONTINUITY.md).
+
 ## 2026-11-09 - Combined module candidate verified locally
 
 StudyForge replay binding and TradeFlow historical revenue retrieval are integrated over frozen b79961f8. Fresh local proof: 170 module DB-free tests, six SQLite SQL assertions, 50 Phase39 tests, 49 Chromium component cases, four desktop/mobile spot-check cases, root types/lint, expanded source/test types and production build pass. No database/runtime/provider/deployed acceptance or parity-state promotion. [Exact provenance, commands and limits](reviews/2026-11-09/MODULE_INTEGRATION.md).
