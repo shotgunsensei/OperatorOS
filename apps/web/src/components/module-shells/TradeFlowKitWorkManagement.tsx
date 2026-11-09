@@ -1,5 +1,8 @@
 'use client';
 
+import { useAuth } from '@/components/AuthProvider';
+import TradeFlowKitRecordPicker from './TradeFlowKitRecordPicker';
+
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -20,7 +23,7 @@ import {
 import {
   moduleShellApi,
   type TradeFlowKitActivity,
-  type TradeFlowKitCustomer,
+  getActiveTenantId,
   type TradeFlowKitJob,
   type TradeFlowKitRecurringSchedule,
   type TradeFlowKitTask,
@@ -68,23 +71,30 @@ const viewCopy: Record<TradeFlowKitWorkView, { eyebrow: string; title: string; d
   },
 };
 
-export default function TradeFlowKitWorkManagement({
-  tenantKey,
-  canWrite,
-  canManage,
-  view = 'all',
-  recordId,
-}: {
+type WorkManagementProps = {
   tenantKey: string;
   canWrite: boolean;
   canManage: boolean;
   view?: TradeFlowKitWorkView;
   recordId?: string;
-}) {
+};
+
+export default function TradeFlowKitWorkManagement(props: WorkManagementProps) {
+  const { user, loading, captureIdentity } = useAuth();
+  const current = useMemo(() => {
+    const ownsIdentity = captureIdentity(user);
+    return () => ownsIdentity() && getActiveTenantId() === props.tenantKey;
+  }, [captureIdentity, user, props.tenantKey]);
+  if (loading || !user || !current()) return <p role="status">Waiting for the current account and workspace.</p>;
+  return <WorkManagementWorkspace key={`${user.id}:${props.tenantKey}`} {...props} current={current} />;
+}
+
+function WorkManagementWorkspace({
+  tenantKey, canWrite, canManage, view = 'all', recordId, current,
+}: WorkManagementProps & { current: () => boolean }) {
   const [workflows, setWorkflows] = useState<TradeFlowKitWorkflow[]>([]);
   const [tasks, setTasks] = useState<TradeFlowKitTask[]>([]);
   const [jobs, setJobs] = useState<TradeFlowKitJob[]>([]);
-  const [customers, setCustomers] = useState<TradeFlowKitCustomer[]>([]);
   const [recurringSchedules, setRecurringSchedules] = useState<TradeFlowKitRecurringSchedule[]>([]);
   const [activity, setActivity] = useState<TradeFlowKitActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +110,7 @@ export default function TradeFlowKitWorkManagement({
   const [newStageNames, setNewStageNames] = useState<Record<string, string>>({});
   const [recurringName, setRecurringName] = useState('');
   const [recurringCustomerId, setRecurringCustomerId] = useState('');
+  const [recurringCustomerReady, setRecurringCustomerReady] = useState(false);
   const [recurringTitle, setRecurringTitle] = useState('');
   const [recurringDescription, setRecurringDescription] = useState('');
   const [recurringPriority, setRecurringPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
@@ -108,10 +119,11 @@ export default function TradeFlowKitWorkManagement({
   const [recurringNextRunAt, setRecurringNextRunAt] = useState(() => localDateTimeInput(new Date(Date.now() + 86_400_000)));
 
   const load = useCallback(async () => {
+    if (!current()) return;
     setLoading(true);
     setError(null);
     try {
-      const [workflowRows, taskRows, activityRows, operations, revenue, recurring] = await Promise.all([
+      const [workflowRows, taskRows, activityRows, operations, recurring] = await Promise.all([
         moduleShellApi.tradeflowkit.workflows(),
         moduleShellApi.tradeflowkit.tasks({
           scope: 'team',
@@ -121,39 +133,38 @@ export default function TradeFlowKitWorkManagement({
         }),
         moduleShellApi.tradeflowkit.activity({ limit: 50 }),
         moduleShellApi.tradeflowkit.operations({ limit: 100 }),
-        moduleShellApi.tradeflowkit.revenue(),
         moduleShellApi.tradeflowkit.recurringJobs(),
       ]);
+      if (!current()) return;
       setWorkflows(workflowRows);
       setTasks(taskRows.items);
       setActivity(activityRows.items);
       setJobs(operations.jobs);
-      setCustomers(revenue.customers);
-      setRecurringCustomerId(current => current || revenue.customers[0]?.id || '');
       setRecurringSchedules(recurring.schedules);
     } catch (cause) {
-      setError(errorMessage(cause));
+      if (current()) setError(errorMessage(cause));
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [taskSearch, taskStatus]);
+  }, [taskSearch, taskStatus, current]);
 
   useEffect(() => {
     void load();
   }, [load, tenantKey]);
 
   const run = useCallback(async (operation: () => Promise<unknown>) => {
+    if (!current()) return;
     setPending(true);
     setError(null);
     try {
       await operation();
       await load();
     } catch (cause) {
-      setError(errorMessage(cause));
+      if (current()) setError(errorMessage(cause));
     } finally {
-      setPending(false);
+      if (current()) setPending(false);
     }
-  }, [load]);
+  }, [load, current]);
 
   const createWorkflow = (event: FormEvent) => {
     event.preventDefault();
@@ -186,7 +197,7 @@ export default function TradeFlowKitWorkManagement({
 
   const createRecurringSchedule = (event: FormEvent) => {
     event.preventDefault();
-    if (!canWrite || !recurringName.trim() || !recurringCustomerId || !recurringTitle.trim() || !recurringNextRunAt) {
+    if (!current() || !canWrite || !recurringCustomerReady || !recurringName.trim() || !recurringCustomerId || !recurringTitle.trim() || !recurringNextRunAt) {
       setError('Enter a schedule name, customer, job title, and first run time.');
       return;
     }
@@ -353,18 +364,19 @@ export default function TradeFlowKitWorkManagement({
             {canWrite && (
               <form className="tfk-work-form tfk-recurring-form" onSubmit={createRecurringSchedule} data-testid="tradeflowkit-recurring-job-form">
                 <label>Schedule name<input value={recurringName} onChange={event => setRecurringName(event.target.value)} maxLength={120} required /></label>
-                <label>Customer<select value={recurringCustomerId} onChange={event => setRecurringCustomerId(event.target.value)} required><option value="">Select a customer</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
+                <TradeFlowKitRecordPicker kind="customers" label="Customer" value={recurringCustomerId}
+                  onChange={id => { setRecurringCustomerReady(false); setRecurringCustomerId(id); }}
+                  current={current} disabled={pending} onValidityChange={setRecurringCustomerReady} />
                 <label className="wide">Job title<input value={recurringTitle} onChange={event => setRecurringTitle(event.target.value)} maxLength={200} required /></label>
                 <label className="wide">Description<input value={recurringDescription} onChange={event => setRecurringDescription(event.target.value)} maxLength={4000} /></label>
                 <label>Priority<select value={recurringPriority} onChange={event => setRecurringPriority(event.target.value as typeof recurringPriority)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
                 <label>Repeat every<input type="number" min={1} max={30} value={recurringIntervalDays} onChange={event => setRecurringIntervalDays(Number(event.target.value))} aria-describedby="tfk-recurring-days-help" /><small id="tfk-recurring-days-help">Days, from 1 to 30</small></label>
                 <label>Estimated duration<input type="number" min={15} max={1440} step={15} value={recurringDurationMinutes} onChange={event => setRecurringDurationMinutes(Number(event.target.value))} /><small>Minutes</small></label>
                 <label>First run<input type="datetime-local" value={recurringNextRunAt} onChange={event => setRecurringNextRunAt(event.target.value)} required /></label>
-                <button type="submit" disabled={pending || customers.length === 0}><CalendarClock size={15} />Save recurring job</button>
+                <button type="submit" disabled={pending || !recurringCustomerId || !recurringCustomerReady}><CalendarClock size={15} />Save recurring job</button>
               </form>
             )}
 
-            {customers.length === 0 && canWrite && <div className="tfk-work-state"><AlertTriangle size={17} />Create a customer before scheduling recurring work.</div>}
             {recurringSchedules.length === 0 ? (
               <div className="tfk-work-state"><Repeat2 size={18} /><span>No recurring work is scheduled.</span></div>
             ) : (

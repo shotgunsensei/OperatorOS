@@ -1,3 +1,5 @@
+import { createRevenueReadRepository } from '../lib/tradeflowkit-revenue-reads.js';
+import { registerTradeFlowKitRevenueReadRoutes } from './tradeflowkit-revenue-read-routes.js';
 import { createHash } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { db } from '../db.js';
@@ -845,6 +847,8 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     reply.code(400).send({ error: 'Invalid revenue workflow input', code: err.code, field: err.field });
     return true;
   };
+
+  registerTradeFlowKitRevenueReadRoutes(app, createRevenueReadRepository(db), [...tradeflowkitGuards]);
 
   app.get('/v1/modules/tradeflowkit/revenue', { preHandler: [...tradeflowkitGuards] }, async (request) => {
     const ctx = (request as any).tenantContext;

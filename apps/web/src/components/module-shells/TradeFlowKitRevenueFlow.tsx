@@ -3,11 +3,14 @@
 import SharedCustomerPicker from './SharedCustomerPicker';
 
 import CoreSuiteSection from './CoreSuiteSection';
+import TradeFlowKitRecordPicker from './TradeFlowKitRecordPicker';
+import { useAuth } from '@/components/AuthProvider';
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Archive, BriefcaseBusiness, FileText, FileUp, Link2, Pencil, Plus, Receipt, Trash2, Users, X, type LucideIcon } from 'lucide-react';
 import {
   moduleShellApi,
+  getActiveTenantId,
   type TradeFlowKitCustomer,
   type TradeFlowKitCustomerImportResult,
   type TradeFlowKitCustomerImportRow,
@@ -19,6 +22,8 @@ import {
   type TradeFlowKitQuote,
   type TradeFlowKitRecordImportResult,
   type TradeFlowKitRevenueResponse,
+  type TradeFlowKitRevenueKind,
+  type TradeFlowKitRevenueRelated,
 } from '@/lib/auth';
 
 const c = {
@@ -123,7 +128,35 @@ function parseInvoiceCsv(value: string): TradeFlowKitInvoiceImportRow[] {
 
 export type TradeFlowKitRevenueView = 'all' | 'customers' | 'quotes' | 'invoices' | 'payments';
 
-export default function TradeFlowKitRevenueFlow({
+type RevenueProps = {
+  tenantKey: string; canWrite: boolean; canManage: boolean; view?: TradeFlowKitRevenueView;
+  recordId?: string; intent?: 'new'; routePrefix?: string;
+};
+type PageState = { q: string; cursors: Array<string | undefined> };
+const kinds = ['customers', 'quotes', 'invoices'] as const;
+const initialPages = (): Record<TradeFlowKitRevenueKind, PageState> => ({
+  customers: { q: '', cursors: [undefined] }, jobs: { q: '', cursors: [undefined] },
+  quotes: { q: '', cursors: [undefined] }, invoices: { q: '', cursors: [undefined] },
+});
+const emptyRelated: TradeFlowKitRevenueRelated = { customers: [], jobs: [], invoicedQuoteIds: [] };
+
+export default function TradeFlowKitRevenueFlow(props: RevenueProps) {
+  const { user, loading, captureIdentity } = useAuth();
+  const current = useMemo(() => {
+    const ownsIdentity = captureIdentity(user);
+    return () => ownsIdentity() && getActiveTenantId() === props.tenantKey;
+  }, [captureIdentity, user, props.tenantKey]);
+  const path = typeof window === 'undefined' ? '' : window.location.pathname;
+  const nested = path.match(/\/(customers|quotes|invoices)\/([^/]+)$/);
+  const pathKind = nested?.[1] as 'customers' | 'quotes' | 'invoices' | undefined;
+  const detailKind = props.view === 'payments' ? 'invoices' : props.view === 'all' || !props.view ? pathKind : props.view;
+  const detailId = props.recordId || (pathKind === detailKind && nested?.[2] !== 'new' ? nested?.[2] : undefined);
+  if (loading || !user || !current()) return <p role="status">Waiting for the current account and workspace.</p>;
+  return <RevenueWorkspace key={`${user.id}:${props.tenantKey}:${props.view}:${detailKind}:${detailId}:${props.intent ?? ''}`}
+    {...props} detailKind={detailKind} detailId={detailId} current={current} />;
+}
+
+function RevenueWorkspace({
   tenantKey,
   canWrite,
   canManage,
@@ -131,15 +164,10 @@ export default function TradeFlowKitRevenueFlow({
   recordId,
   intent,
   routePrefix = '',
-}: {
-  tenantKey: string;
-  canWrite: boolean;
-  canManage: boolean;
-  view?: TradeFlowKitRevenueView;
-  recordId?: string;
-  intent?: 'new';
-  routePrefix?: string;
-}) {
+  detailKind,
+  detailId,
+  current,
+}: RevenueProps & { detailKind?: 'customers' | 'quotes' | 'invoices'; detailId?: string; current: () => boolean }) {
   const [data, setData] = useState(empty);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -147,9 +175,12 @@ export default function TradeFlowKitRevenueFlow({
   const [customerName, setCustomerName] = useState('');
   const [sharedCustomerId, setSharedCustomerId] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [customerId, setCustomerId] = useState('');
+  // Seed the route once. A later user choice survives page and mutation reloads.
+  const [customerId, setCustomerId] = useState(detailKind === 'customers' ? detailId ?? '' : '');
   const [jobTitle, setJobTitle] = useState('');
   const [jobId, setJobId] = useState('');
+  const [customerReady, setCustomerReady] = useState(false);
+  const [jobReady, setJobReady] = useState(true);
   const [lineDescription, setLineDescription] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unitPrice, setUnitPrice] = useState('0.00');
@@ -177,42 +208,70 @@ export default function TradeFlowKitRevenueFlow({
   const [bulkPaymentReference, setBulkPaymentReference] = useState('');
   const [paymentProvider, setPaymentProvider] = useState<any>(null);
   const [publicLink, setPublicLink] = useState<string | null>(null);
+  const [pages, setPages] = useState(initialPages);
+  const [nextCursors, setNextCursors] = useState<Partial<Record<TradeFlowKitRevenueKind, string | null>>>({});
+  const [related, setRelated] = useState(emptyRelated);
+  const [loaded, setLoaded] = useState(false);
+  const request = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  const isCurrent = useCallback(() => mounted.current && current(), [current]);
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
+    if (!isCurrent()) return;
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    const valid = () => !controller.signal.aborted && isCurrent();
+    setLoading(true); setLoaded(false); setError(null); setSelectedInvoiceIds(new Set());
     try {
-      const [next, provider] = await Promise.all([
-        moduleShellApi.tradeflowkit.revenue(),
+      const [results, provider] = await Promise.all([
+        Promise.all(kinds.map(async kind => {
+          if (detailId && detailKind === kind) {
+            const result = await moduleShellApi.tradeflowkit.revenueRecord(kind, detailId, controller.signal);
+            return { kind, items: [result.item], related: result.related, nextCursor: null };
+          }
+          const page = pages[kind];
+          const result = await moduleShellApi.tradeflowkit.revenuePage(kind, { q: page.q, cursor: page.cursors[page.cursors.length - 1], limit: 25 }, controller.signal);
+          return { kind, ...result };
+        })),
         moduleShellApi.tradeflowkit.paymentProvider(),
       ]);
+      if (!valid()) return;
+      const next = { ...empty };
+      const references: TradeFlowKitRevenueRelated = { customers: [], jobs: [], invoicedQuoteIds: [] };
+      const cursors: Partial<Record<TradeFlowKitRevenueKind, string | null>> = {};
+      for (const result of results) {
+        Object.assign(next, { [result.kind]: result.items });
+        references.customers.push(...result.related.customers);
+        references.jobs.push(...result.related.jobs);
+        references.invoicedQuoteIds.push(...result.related.invoicedQuoteIds);
+        cursors[result.kind] = result.nextCursor;
+      }
       setData(next);
+      setRelated(references); setNextCursors(cursors); setLoaded(true);
       setPaymentProvider(provider);
-      setSelectedInvoiceIds(new Set());
-      const nestedCustomerId = typeof window === 'undefined'
-        ? ''
-        : window.location.pathname.match(/\/customers\/([a-z0-9-]+)$/i)?.[1] || '';
-      setCustomerId((current) => {
-        const candidate = nestedCustomerId || current;
-        return next.customers.some(customer => customer.id === candidate) ? candidate : next.customers[0]?.id || '';
-      });
     } catch (err: any) {
-      setError(err?.error || err?.message || 'Unable to load revenue workflow');
-    } finally { setLoading(false); }
-  }, []);
+      if (!valid()) return;
+      setData(empty); setRelated(emptyRelated); setPaymentProvider(null);
+      setError(err?.status === 404 ? 'This revenue record is unavailable in the current workspace. It may be archived or no longer accessible.'
+        : err?.status === 401 || err?.status === 403 ? 'Revenue records are not accessible with your current account and workspace.'
+          : err?.error || err?.message || 'Unable to load revenue workflow');
+    } finally { if (valid()) setLoading(false); }
+  }, [isCurrent, pages, detailId, detailKind]);
 
-  useEffect(() => { void load(); }, [load, tenantKey]);
+  useEffect(() => {
+    mounted.current = true; void load();
+    return () => { mounted.current = false; request.current?.abort(); };
+  }, [load, tenantKey]);
 
-  const customerById = useMemo(() => new Map(data.customers.map((row) => [row.id, row])), [data.customers]);
-  const jobById = useMemo(() => new Map(data.jobs.map((row) => [row.id, row])), [data.jobs]);
-  const invoiceQuoteIds = useMemo(() => new Set(data.invoices.map((row) => row.sourceQuoteId).filter(Boolean)), [data.invoices]);
-  const jobsForCustomer = data.jobs.filter((row) => row.customerId === customerId);
-  const pathQuoteId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/quotes\/([a-z0-9-]+)$/i)?.[1] || '';
-  const pathInvoiceId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/invoices\/([a-z0-9-]+)$/i)?.[1] || '';
-  const deepQuoteId = view === 'quotes' && recordId ? recordId : pathQuoteId === 'new' ? '' : pathQuoteId;
-  const deepInvoiceId = (view === 'invoices' || view === 'payments') && recordId ? recordId : pathInvoiceId === 'new' ? '' : pathInvoiceId;
-  const customerRecords = recordId && view === 'customers' ? data.customers.filter(row => row.id === recordId) : data.customers;
-  const quoteRecords = deepQuoteId ? data.quotes.filter(row => row.id === deepQuoteId) : data.quotes;
-  const invoiceRecords = deepInvoiceId ? data.invoices.filter(row => row.id === deepInvoiceId) : data.invoices;
+  const customerById = useMemo(() => new Map([...related.customers, ...data.customers].map(row => [row.id, row])), [data.customers, related.customers]);
+  const jobById = useMemo(() => new Map([...related.jobs, ...data.jobs].map(row => [row.id, row])), [data.jobs, related.jobs]);
+  const invoiceQuoteIds = useMemo(() => new Set(related.invoicedQuoteIds), [related.invoicedQuoteIds]);
+  const deepQuoteId = detailKind === 'quotes' ? detailId : undefined;
+  const deepInvoiceId = detailKind === 'invoices' ? detailId : undefined;
+  const customerRecords = data.customers;
+  const quoteRecords = data.quotes;
+  const invoiceRecords = data.invoices;
 
   useEffect(() => {
     if (view === 'invoices' || view === 'payments') setDocumentKind('invoice');
@@ -220,11 +279,12 @@ export default function TradeFlowKitRevenueFlow({
   }, [intent, view]);
 
   async function run(operation: () => Promise<unknown>) {
-    if (!canWrite) return;
+    if (!canWrite || !isCurrent() || pending) return;
+    const activeRead = request.current;
     setPending(true); setError(null);
-    try { await operation(); await load(); }
-    catch (err: any) { setError(err?.error || err?.message || 'Revenue workflow action failed'); }
-    finally { setPending(false); }
+    try { await operation(); if (isCurrent() && request.current === activeRead) await load(); }
+    catch (err: any) { if (isCurrent()) setError(err?.error || err?.message || 'Revenue workflow action failed'); }
+    finally { if (isCurrent()) setPending(false); }
   }
 
   async function createPublicLink(documentType: 'quotes' | 'invoices' | 'customers', id: string) {
@@ -238,7 +298,7 @@ export default function TradeFlowKitRevenueFlow({
     event.preventDefault();
     void run(async () => {
       const created = await moduleShellApi.tradeflowkit.createCustomer({ directoryOrganizationId: sharedCustomerId || undefined, name: customerName, email: customerEmail || undefined });
-      setCustomerName(''); setCustomerEmail(''); setSharedCustomerId(''); setCustomerId(created.id);
+      setCustomerName(''); setCustomerEmail(''); setSharedCustomerId(''); setCustomerId(created.id); setJobId('');
     });
   }
 
@@ -325,7 +385,7 @@ export default function TradeFlowKitRevenueFlow({
 
   function createJob(event: FormEvent) {
     event.preventDefault();
-    if (!customerId) return;
+    if (!customerId || !customerReady) return;
     void run(async () => {
       const created = await moduleShellApi.tradeflowkit.createJob({ customerId, title: jobTitle });
       setJobTitle(''); setJobId(created.id);
@@ -336,7 +396,7 @@ export default function TradeFlowKitRevenueFlow({
     event.preventDefault();
     const unitPriceCents = Math.round(Number(unitPrice) * 100);
     const taxRateBps = Math.round(Number(taxRate) * 100);
-    if (!customerId || !Number.isFinite(unitPriceCents) || !Number.isFinite(taxRateBps)) return;
+    if (!customerId || !customerReady || !jobReady || !Number.isFinite(unitPriceCents) || !Number.isFinite(taxRateBps)) return;
     void run(async () => {
       const document = {
         customerId, jobId: jobId || undefined, taxRateBps, notes: documentNotes || undefined,
@@ -373,7 +433,7 @@ export default function TradeFlowKitRevenueFlow({
     void run(async () => {
       const result = await moduleShellApi.tradeflowkit.authorizePaymentProvider();
       if (!result.authorizeUrl.startsWith('https://connect.stripe.com/')) throw new Error('Stripe authorization URL was not accepted.');
-      window.location.assign(result.authorizeUrl);
+      if (isCurrent()) window.location.assign(result.authorizeUrl);
     });
   }
 
@@ -390,16 +450,25 @@ export default function TradeFlowKitRevenueFlow({
     <section id="tradeflowkit-revenue-flow" data-testid="tradeflowkit-revenue-flow" data-view={view} data-intent={intent} data-record-id={recordId || undefined} style={panel} tabIndex={-1}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div><div style={{ color: c.primary, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>Native revenue workflow</div><h2 style={{ margin: '4px 0 0', color: c.ink, fontSize: 20 }}>Customer → job → quote → invoice → payment</h2><p style={{ color: c.muted, margin: '6px 0 0', fontSize: 13 }}>Customer payments stay distinct from OperatorOS subscription billing.</p></div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Stat Icon={Users} label="Customers" value={data.customers.length} /><Stat Icon={BriefcaseBusiness} label="Jobs" value={data.jobs.length} /><Stat Icon={FileText} label="Quotes" value={data.quotes.length} /><Stat Icon={Receipt} label="Invoices" value={data.invoices.length} /></div>
+        {loaded && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Stat Icon={Users} label="Customers on page" value={data.customers.length} /><Stat Icon={FileText} label="Quotes on page" value={data.quotes.length} /><Stat Icon={Receipt} label="Invoices on page" value={data.invoices.length} /></div>}
       </div>
 
+      <div aria-label="Revenue record pages" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+        {(['customers', 'quotes', 'invoices'] as const).filter(kind => !detailId || detailKind !== kind).map(kind => <RevenuePageControls
+          key={kind} kind={kind} page={pages[kind]} nextCursor={nextCursors[kind]} disabled={loading || pending}
+          onChange={page => {
+            if (pending) return;
+            request.current?.abort(); setLoading(true); setLoaded(false); setSelectedInvoiceIds(new Set());
+            setPages(previous => ({ ...previous, [kind]: page }));
+          }} />)}
+      </div>
       {error && <div role="alert" style={{ marginTop: 12, padding: 10, borderRadius: 7, color: c.red, background: 'rgba(251,113,133,.10)', border: `1px solid ${c.red}55`, display: 'flex', gap: 8 }}><AlertTriangle size={16} />{error}</div>}
       {publicLink && <div role="status" data-testid="tradeflowkit-public-link" style={{ marginTop: 12, padding: 10, borderRadius: 7, color: c.ink, background: c.soft, border: `1px solid ${c.border}`, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}><span>This newly issued secure link replaces any older link for this record. Share it only with the intended customer.</span><a href={publicLink} target="_blank" rel="noopener noreferrer" style={{ color: c.blue, fontWeight: 800 }}>Open public view</a></div>}
       {canManage && paymentProvider && <div data-testid="tradeflowkit-payment-provider" style={{ ...panel, marginTop: 12, padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
               <div><strong style={{ color: c.ink }}>Business payments · Stripe Connect</strong><div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{paymentProvider.ready ? `Ready for ${paymentProvider.mode} payments` : paymentProvider.account ? `Connected account needs attention: charges ${paymentProvider.account.chargesEnabled ? 'enabled' : 'restricted'}.` : paymentProvider.reason || 'Connect an organization-owned Stripe account to create customer checkout links.'}</div></div>
         <div style={{ display: 'flex', gap: 7 }}>{paymentProvider.account?.status !== 'disconnected' && paymentProvider.account ? <button type="button" disabled={pending} onClick={disconnectPaymentProvider} style={button(c.red)}>Disconnect</button> : <button type="button" disabled={pending || !paymentProvider.configured} onClick={connectPaymentProvider} style={button(c.blue)}>Connect Stripe</button>}</div>
       </div>}
-      {loading ? <div style={{ color: c.muted, padding: '18px 0' }}>Loading revenue records…</div> : (
+      {loading ? <div role="status" style={{ color: c.muted, padding: '18px 0' }}>Loading revenue records.</div> : !loaded ? <button type="button" onClick={() => void load()}>Retry revenue records</button> : (
         <>
           {canWrite ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
             <form data-testid="tradeflowkit-customer-create" onSubmit={createCustomer} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>1. Customer</strong><SharedCustomerPicker moduleSlug="tradeflowkit" value={sharedCustomerId} onSelect={row => { setSharedCustomerId(row?.id ?? ''); setCustomerName(row?.name ?? ''); setCustomerEmail(row?.email ?? ''); }} /><input aria-label="Customer name" readOnly={Boolean(sharedCustomerId)} required maxLength={160} placeholder="Customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={input} /><input aria-label="Customer email" readOnly={Boolean(sharedCustomerId)} type="email" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={input} /><button disabled={pending || customerName.trim().length < 2} style={button()}><Plus size={14} /> {sharedCustomerId ? 'Use shared customer' : 'Add customer'}</button></form>
@@ -428,7 +497,7 @@ export default function TradeFlowKitRevenueFlow({
               </div>}
               <button disabled={pending || jobImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import checked jobs</button>
             </form>
-            <form data-testid="tradeflowkit-job-create" onSubmit={createJob} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>2. Job</strong><select aria-label="Job customer" required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={input}><option value="">Select customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input aria-label="Job title" required maxLength={200} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} style={input} /><button disabled={pending || !customerId || jobTitle.trim().length < 2} style={button(c.blue)}><Plus size={14} /> Add job</button></form>
+            <form data-testid="tradeflowkit-job-create" onSubmit={createJob} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>2. Job</strong><TradeFlowKitRecordPicker kind="customers" label="Job customer" value={customerId} onChange={id => { setCustomerId(id); setJobId(''); }} current={isCurrent} disabled={pending} /><input aria-label="Job title" required maxLength={200} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} style={input} /><button disabled={pending || !customerId || !customerReady || jobTitle.trim().length < 2} style={button(c.blue)}><Plus size={14} /> Add job</button></form>
             <form onSubmit={importInvoices} data-testid="tradeflowkit-invoice-import" style={{ ...panel, flex: '1 1 280px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>Import invoices</strong>
               <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: invoiceRef, customerName, status, dueDate, taxRate, discount, notes, itemDescription, itemQty, itemUnitPrice. Repeat invoiceRef for multiple lines. Imports cannot mark an invoice paid; payments must be recorded in its payment history.</span>
@@ -445,24 +514,24 @@ export default function TradeFlowKitRevenueFlow({
               <strong style={{ color: c.ink }}>{documentKind === 'quote' ? 'Prepare a quote' : 'Prepare an invoice'}</strong>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <select aria-label="Document type" value={documentKind} disabled={view === 'quotes' || view === 'invoices'} onChange={(e) => setDocumentKind(e.target.value as 'quote' | 'invoice')} style={{ ...input, flex: '1 1 120px' }}><option value="quote">Quote</option><option value="invoice">Direct invoice</option></select>
-                <select aria-label="Document customer" required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={{ ...input, flex: '1 1 140px' }}><option value="">Customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
-                <select aria-label="Linked job" value={jobId} onChange={(e) => setJobId(e.target.value)} style={{ ...input, flex: '1 1 140px' }}><option value="">No linked job</option>{jobsForCustomer.map((row) => <option key={row.id} value={row.id}>{row.title}</option>)}</select>
+                <TradeFlowKitRecordPicker kind="customers" label="Document customer" value={customerId} onChange={id => { setCustomerId(id); setJobId(''); }} current={isCurrent} disabled={pending} onValidityChange={setCustomerReady} />
+                <TradeFlowKitRecordPicker kind="jobs" label="Linked job" value={jobId} customerId={customerId} onChange={setJobId} current={isCurrent} disabled={pending} onValidityChange={setJobReady} />
               </div>
               <input aria-label="Line-item description" required maxLength={500} placeholder="Line-item description" value={lineDescription} onChange={(e) => setLineDescription(e.target.value)} style={input} />
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><input aria-label="Quantity" type="number" min="1" max="10000" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...input, flex: '1 1 90px' }} /><input aria-label="Unit price dollars" type="number" min="0" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...input, flex: '1 1 120px' }} /><input aria-label="Tax percent" type="number" min="0" max="100" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} style={{ ...input, flex: '1 1 100px' }} />{documentKind === 'invoice' && <input aria-label="Invoice due date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ ...input, flex: '1 1 150px' }} />}</div>
               <CoreSuiteSection title="Notes (optional)"><input aria-label="Document notes" maxLength={4000} placeholder="Notes (optional)" value={documentNotes} onChange={(e) => setDocumentNotes(e.target.value)} style={input} /></CoreSuiteSection>
-              <button disabled={pending || !customerId || !lineDescription.trim()} style={button(c.gold)}><Plus size={14} /> Create {documentKind}</button>
+              <button disabled={pending || !customerId || !customerReady || !jobReady || !lineDescription.trim()} style={button(c.gold)}><Plus size={14} /> Create {documentKind}</button>
             </form>
           </div> : <div data-testid="tradeflowkit-revenue-readonly" style={{ color: c.muted, background: c.soft, borderRadius: 8, padding: 12, marginTop: 16 }}>Your access is read-only. Creating or changing revenue records requires contributor access.</div>}
 
           <div data-testid="tradeflowkit-customer-records" style={{ display: 'grid', gap: 10, marginTop: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'end', flexWrap: 'wrap' }}>
               <div><strong style={{ color: c.ink }}>Customer records</strong><div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>Edit the shared business profile here. Archiving is blocked while active jobs or revenue documents remain.</div></div>
-              <span style={{ color: c.muted, fontSize: 12 }}>{data.customers.length} active</span>
+              <span style={{ color: c.muted, fontSize: 12 }}>{data.customers.length} active on this page</span>
             </div>
             {data.customers.length === 0
-              ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No customers yet.</div>
-              : customerRecords.map(customer => <CustomerRow key={customer.id} customer={customer} selected={customer.id === customerId} pending={pending} canManage={canWrite} run={run} onSelect={() => setCustomerId(customer.id)} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('customers', customer.id)} />)}
+              ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No matching active customers.</div>
+              : customerRecords.map(customer => <CustomerRow key={customer.id} customer={customer} selected={customer.id === customerId} pending={pending} canManage={canWrite} run={run} onSelect={() => { setCustomerId(customer.id); setJobId(''); }} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('customers', customer.id)} />)}
           </div>
 
           <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
@@ -476,14 +545,30 @@ export default function TradeFlowKitRevenueFlow({
               <button type="button" disabled={pending || selectedInvoiceIds.size === 0} onClick={recordSelectedPayments} style={button(c.blue)}>Record selected balances</button>
               {selectedInvoiceIds.size > 0 && <button type="button" disabled={pending} onClick={() => setSelectedInvoiceIds(new Set())} style={button(c.muted)}>Clear</button>}
             </section>}
-            {data.quotes.length === 0 && data.invoices.length === 0 ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No quotes or invoices yet. Build the first customer revenue flow above.</div> : null}
-            {quoteRecords.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} selected={quote.id === deepQuoteId} pending={pending} canManage={canWrite} run={run} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('quotes', quote.id)} />)}
-            {invoiceRecords.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} selected={invoice.id === deepInvoiceId} batchSelected={selectedInvoiceIds.has(invoice.id)} batchSelectionFull={selectedInvoiceIds.size >= 25} pending={pending} canManage={canWrite} run={run} onToggleBatch={() => toggleInvoice(invoice.id)} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('invoices', invoice.id)} />)}
+            {data.quotes.length === 0 && data.invoices.length === 0 ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No matching active quotes or invoices on these pages.</div> : null}
+            {quoteRecords.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} current={isCurrent} hasInvoice={invoiceQuoteIds.has(quote.id)} selected={quote.id === deepQuoteId} pending={pending} canManage={canWrite} run={run} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('quotes', quote.id)} />)}
+            {invoiceRecords.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} job={invoice.jobId ? jobById.get(invoice.jobId) : undefined} current={isCurrent} selected={invoice.id === deepInvoiceId} batchSelected={selectedInvoiceIds.has(invoice.id)} batchSelectionFull={selectedInvoiceIds.size >= 25} pending={pending} canManage={canWrite} run={run} onToggleBatch={() => toggleInvoice(invoice.id)} routePrefix={routePrefix} onPublicLink={() => void createPublicLink('invoices', invoice.id)} />)}
           </div>
         </>
       )}
     </section>
   );
+}
+
+function RevenuePageControls({ kind, page, nextCursor, disabled, onChange }: {
+  kind: TradeFlowKitRevenueKind; page: PageState; nextCursor?: string | null; disabled: boolean; onChange: (page: PageState) => void;
+}) {
+  const [search, setSearch] = useState(page.q);
+  return <form aria-label={`Browse ${kind}`} onSubmit={event => { event.preventDefault(); if (!disabled) onChange({ q: search.trim(), cursors: [undefined] }); }}
+    style={{ display: 'grid', gap: 6, flex: '1 1 220px', color: c.ink }}>
+    <label>Search {kind}<input aria-label={`Search ${kind}`} type="search" maxLength={160} disabled={disabled} value={search} onChange={event => setSearch(event.target.value)} /></label>
+    <div style={{ display: 'flex', gap: 6 }}>
+      <button disabled={disabled}>Search {kind}</button>
+      <button type="button" disabled={disabled || page.cursors.length === 1} onClick={() => onChange({ ...page, cursors: page.cursors.slice(0, -1) })}>Previous {kind}</button>
+      <button type="button" disabled={disabled || !nextCursor} onClick={() => { if (nextCursor) onChange({ ...page, cursors: [...page.cursors, nextCursor] }); }}>More {kind}</button>
+    </div>
+    <span>Page {page.cursors.length}. Up to 25 active records, newest created first.</span>
+  </form>;
 }
 
 function CustomerRow({ customer, selected, pending, canManage, run, onSelect, routePrefix, onPublicLink }: {
@@ -508,7 +593,7 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect, ro
   const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: c.soft, color: c.ink };
   const frame: React.CSSProperties = { border: `1px solid ${selected ? c.primary : c.border}`, borderRadius: 8, padding: 12, background: selected ? 'hsl(25 95% 95%)' : c.panel, boxShadow: selected ? `inset 3px 0 ${c.primary}` : 'none' };
 
-  if (editing) {
+  if (editing && canManage) {
     return <form data-testid={`tradeflowkit-customer-editor-${customer.id}`} style={{ ...frame, display: 'grid', gap: 8 }} onSubmit={event => {
       event.preventDefault();
       void run(async () => {
@@ -554,14 +639,14 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect, ro
   </article>;
 }
 
-function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, selected, pending, canManage, run, routePrefix, onPublicLink }: {
-  quote: TradeFlowKitQuote; customer?: TradeFlowKitCustomer; job?: TradeFlowKitJob;
-  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; hasInvoice: boolean; selected: boolean;
+function QuoteRow({ quote, customer, job, current, hasInvoice, selected, pending, canManage, run, routePrefix, onPublicLink }: {
+  quote: TradeFlowKitQuote; customer?: Pick<TradeFlowKitCustomer, 'id' | 'name'>; job?: Pick<TradeFlowKitJob, 'id' | 'customerId' | 'title'>;
+  current: () => boolean; hasInvoice: boolean; selected: boolean;
   pending: boolean; canManage: boolean; run: (fn: () => Promise<unknown>) => Promise<void>; routePrefix: string; onPublicLink: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  if (editing) {
-    return <DocumentEditor kind="quote" document={quote} customers={customers} jobs={jobs} pending={pending} onCancel={() => setEditing(false)} onSave={(input) => run(async () => {
+  if (editing && canManage) {
+    return <DocumentEditor kind="quote" document={quote} customer={customer} job={job} current={current} pending={pending} onCancel={() => setEditing(false)} onSave={(input) => run(async () => {
       await moduleShellApi.tradeflowkit.updateQuote(quote.id, { ...input, expectedVersion: quote.version, expiresAt: input.documentDate });
       setEditing(false);
     })} />;
@@ -595,14 +680,14 @@ function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, selected,
   );
 }
 
-function InvoiceRow({ invoice, customer, customers, jobs, selected, batchSelected, batchSelectionFull, pending, canManage, run, onToggleBatch, routePrefix, onPublicLink }: {
-  invoice: TradeFlowKitInvoice; customer?: TradeFlowKitCustomer;
-  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; selected: boolean; batchSelected: boolean; batchSelectionFull: boolean;
+function InvoiceRow({ invoice, customer, job, current, selected, batchSelected, batchSelectionFull, pending, canManage, run, onToggleBatch, routePrefix, onPublicLink }: {
+  invoice: TradeFlowKitInvoice; customer?: Pick<TradeFlowKitCustomer, 'id' | 'name'>; job?: Pick<TradeFlowKitJob, 'id' | 'customerId' | 'title'>;
+  current: () => boolean; selected: boolean; batchSelected: boolean; batchSelectionFull: boolean;
   pending: boolean; canManage: boolean; run: (fn: () => Promise<unknown>) => Promise<void>; onToggleBatch: () => void; routePrefix: string; onPublicLink: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  if (editing) {
-    return <DocumentEditor kind="invoice" document={invoice} customers={customers} jobs={jobs} pending={pending} onCancel={() => setEditing(false)} onSave={(input) => run(async () => {
+  if (editing && canManage) {
+    return <DocumentEditor kind="invoice" document={invoice} customer={customer} job={job} current={current} pending={pending} onCancel={() => setEditing(false)} onSave={(input) => run(async () => {
       await moduleShellApi.tradeflowkit.updateInvoice(invoice.id, { ...input, expectedVersion: invoice.version, dueDate: input.documentDate });
       setEditing(false);
     })} />;
@@ -632,7 +717,7 @@ function InvoiceRow({ invoice, customer, customers, jobs, selected, batchSelecte
         {canManage && payable && <Action disabled={pending} label="Stripe payment link" tone={c.blue} onClick={() => void run(async () => {
           const result = await moduleShellApi.tradeflowkit.createPaymentLink(invoice.id, invoice.version, `payment-link:${crypto.randomUUID()}`);
           if (!result.checkoutUrl?.startsWith('https://')) throw new Error(result.replay ? 'This request was already used. Create a new payment link.' : 'Stripe did not return a checkout URL.');
-          window.location.assign(result.checkoutUrl);
+          if (current()) window.location.assign(result.checkoutUrl);
         })} />}
         {canManage && archivable && <Action disabled={pending} label="Archive" Icon={Archive} tone={c.red} onClick={() => {
           if (window.confirm('Archive this unpaid invoice? It will leave the active revenue workspace.')) void run(() => moduleShellApi.tradeflowkit.archiveInvoice(invoice.id, invoice.version));
@@ -649,13 +734,16 @@ type DocumentEditInput = {
 };
 type EditableLineItem = { description: string; quantity: string; unitPrice: string };
 
-function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, onSave }: {
+function DocumentEditor({ kind, document, customer, job, current, pending, onCancel, onSave }: {
   kind: 'quote' | 'invoice'; document: TradeFlowKitQuote | TradeFlowKitInvoice;
-  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; pending: boolean;
+  customer?: Pick<TradeFlowKitCustomer, 'id' | 'name'>; job?: Pick<TradeFlowKitJob, 'id' | 'customerId' | 'title'>;
+  current: () => boolean; pending: boolean;
   onCancel: () => void; onSave: (input: DocumentEditInput) => Promise<void>;
 }) {
   const [customerId, setCustomerId] = useState(document.customerId);
   const [jobId, setJobId] = useState(document.jobId ?? '');
+  const [customerReady, setCustomerReady] = useState(false);
+  const [jobReady, setJobReady] = useState(!document.jobId);
   const [lineItems, setLineItems] = useState<EditableLineItem[]>(document.lineItems.map((item) => ({
     description: item.description,
     quantity: String(item.quantity),
@@ -666,10 +754,9 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
   const [notes, setNotes] = useState(document.notes ?? '');
   const rawDate = kind === 'quote' ? document.expiresAt : (document as TradeFlowKitInvoice).dueDate;
   const [documentDate, setDocumentDate] = useState(rawDate?.slice(0, 10) ?? '');
-  const availableJobs = jobs.filter((job) => job.customerId === customerId);
   const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: c.soft, color: c.ink };
   const updateLine = (index: number, patch: Partial<EditableLineItem>) => setLineItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
-  const valid = !!customerId && lineItems.length > 0 && lineItems.every((item) =>
+  const valid = customerReady && jobReady && !!customerId && lineItems.length > 0 && lineItems.every((item) =>
     item.description.trim().length > 0 && Number.isInteger(Number(item.quantity)) &&
     Number(item.quantity) >= 1 && Number(item.quantity) <= 10_000 &&
     Number.isFinite(Number(item.unitPrice)) && Number(item.unitPrice) >= 0
@@ -697,8 +784,8 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
         <button type="button" aria-label="Cancel editing" onClick={onCancel} style={{ border: 0, background: 'transparent', color: c.muted, cursor: 'pointer' }}><X size={18} /></button>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <select aria-label="Document customer" value={customerId} onChange={(event) => { setCustomerId(event.target.value); setJobId(''); }} style={{ ...inputStyle, flex: '1 1 180px' }}>{customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
-        <select aria-label="Document job" value={jobId} onChange={(event) => setJobId(event.target.value)} style={{ ...inputStyle, flex: '1 1 180px' }}><option value="">No linked job</option>{availableJobs.map((row) => <option key={row.id} value={row.id}>{row.title}</option>)}</select>
+        <TradeFlowKitRecordPicker kind="customers" label="Document customer" value={customerId} onChange={id => { setCustomerId(id); setJobId(''); }} current={current} disabled={pending} onValidityChange={setCustomerReady} historicalLabel={customerId === document.customerId ? customer?.name : undefined} />
+        <TradeFlowKitRecordPicker kind="jobs" label="Document job" value={jobId} customerId={customerId} onChange={setJobId} current={current} disabled={pending} onValidityChange={setJobReady} historicalLabel={jobId === document.jobId ? job?.title : undefined} />
         <input aria-label={kind === 'quote' ? 'Quote expiration date' : 'Invoice due date'} type="date" value={documentDate} onChange={(event) => setDocumentDate(event.target.value)} style={{ ...inputStyle, flex: '1 1 150px' }} />
       </div>
       {lineItems.map((item, index) => (

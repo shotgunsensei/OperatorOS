@@ -2,6 +2,16 @@
 
 StudyForge quiz, flashcard-session and card-review mutation keys now bind existing persisted targets and intent in a separate candidate from `b79961f8`. Exact retries preserve accepted results and accounting; conflicting intent returns generic 409 under current ownership/lifecycle guards. Local proof: 51/51 DB-free tests, expanded API/test types, scoped lint and six in-memory exact-SQL checks. Seven guarded PostgreSQL cases are typechecked only. Inventory counts and production parity state are unchanged. [Evidence and remaining acceptance](../reviews/2026-11-09/STUDYFORGE_REPLAY_BINDING.md).
 
+## 2026-11-09 - TradeFlow revenue retrieval repair
+
+TradeFlow's RevenueFlow customer/quote/invoice deep links and create/edit customer
+and job selectors, plus recurring-customer selection, now use exact retrieval and
+bounded searchable pages. Fresh local proof: 57 DB-free and 34 Chromium component
+tests, broad API/web and changed-test types, scoped zero-warning lint. Prepared
+PostgreSQL tests were not run; bounded recent dashboard/work-management collections
+and deployed/provider gates remain explicit. No module parity state changes.
+[Evidence](../reviews/2026-11-09/TRADEFLOW_REVENUE_RECORDS.md).
+
 ## 2026-11-09 - Canonical combined-source verification
 
 The dependency and module repair candidate at `864e130c` now passes canonical installed-graph module/browser regressions, expanded source/test types, root lint, Phase 39 and production build. This supersedes the earlier retained-assets and vulnerable-graph limits only for those local checks. Two moderate advisories, existing patch exceptions, four baseline native peer warnings and all database/deployed/provider/device acceptance gates remain explicit. No module parity facet is promoted to production acceptance. [Exact integrated evidence](../security/DEPENDENCY_REMEDIATION_2026-11-09.md).

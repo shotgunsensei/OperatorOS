@@ -2,6 +2,20 @@
 
 The separate candidate from frozen `b79961f8` binds quiz retries to their quiz and normalized answers, flashcard sessions to their study set/server intent, and card reviews to their session/card/state. Original accepted quiz results and response payloads, lifecycle/ownership guards and first-write-only accounting are preserved. No schema, client, dependency, release-baseline or upgrade-harness change. Fresh canonical-graph proof is **51/51 DB-free tests**, expanded API/new-test strict types, scoped zero-warning lint and six exact in-memory session-upsert SQL checks. Seven prepared PostgreSQL cases are **typechecked only, not run**; real concurrency and deployment acceptance remain open. [Source, compatibility, exact commands and limits](reviews/2026-11-09/STUDYFORGE_REPLAY_BINDING.md).
 
+## 2026-11-09 - TradeFlow older revenue records, isolated local repair
+
+The RevenueFlow workspace now retrieves older deep links exactly and uses bounded
+searchable pages for customer, quote, invoice and job-choice workflows, including
+WorkManagement's recurring-customer choice. Tenant/module checks, minimal archived
+history labels, versions and payment controls are preserved. Fresh checks pass:
+57 DB-free regressions, 34 Chromium component cases, complete API/web source plus
+changed-test types, and eleven-file zero-warning lint. Two real PostgreSQL
+regressions are prepared/typechecked only, not run. Existing canonical dependencies
+were used through explicit task-local paths without an install or full-build claim.
+Dashboard summaries and work-management recent-job/task/activity limits remain
+outside this scoped repair. No production or parity-state promotion.
+[Source proof, exact commands, reviews and remaining gates](reviews/2026-11-09/TRADEFLOW_REVENUE_RECORDS.md).
+
 ## 2026-11-09 - Verified combined local candidate
 
 Runtime/dependency HEAD `864e130c98d6a697cb75ac73a9fba9d01ca71876` combines the dependency repair and module boundary fixes. Fresh canonical proof: Phase 39 passes (30 script + 20 API/preflight tests, zero unresolved high/critical), 62 module DB-free tests, 77 Zod/domain/workspace tests, 46 mailbox tests, 15 Chromium cases and 8 native unit tests pass with zero skipped. Root types, zero-warning lint, expanded API/web source and changed-test typing, native config and production build (40/40 pages) pass. Both prepared PostgreSQL tests were typechecked only. Offline frozen reinstall passes with unchanged lock and task-local store/cache. Subsequent finalization changes documentation/SBOM metadata only. Exact receipts and remaining two moderates, existing patch exceptions, four baseline native peer warnings and production gates are in the [remediation report](security/DEPENDENCY_REMEDIATION_2026-11-09.md).

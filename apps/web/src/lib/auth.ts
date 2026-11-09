@@ -1428,6 +1428,18 @@ export interface TradeFlowKitRevenueResponse {
   customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[];
   quotes: TradeFlowKitQuote[]; invoices: TradeFlowKitInvoice[];
 }
+export type TradeFlowKitRevenueKind = keyof TradeFlowKitRevenueResponse;
+export type TradeFlowKitRevenueRecord<K extends TradeFlowKitRevenueKind> = TradeFlowKitRevenueResponse[K][number];
+export interface TradeFlowKitRevenueRelated {
+  customers: Array<Pick<TradeFlowKitCustomer, 'id' | 'name'> & { deletedAt: string | null }>;
+  jobs: Array<Pick<TradeFlowKitJob, 'id' | 'customerId' | 'title'> & { deletedAt: string | null }>;
+  invoicedQuoteIds: string[];
+}
+export interface TradeFlowKitRevenuePage<K extends TradeFlowKitRevenueKind> {
+  items: Array<TradeFlowKitRevenueRecord<K>>;
+  nextCursor: string | null;
+  related: TradeFlowKitRevenueRelated;
+}
 export interface TradeFlowKitSearchResponse {
   query: string;
   leads: Array<{ id: string; name: string; status: string; serviceType: string | null }>;
@@ -2353,6 +2365,13 @@ export const moduleShellApi = {
   tradeflowkit: {
     revenue: (): Promise<TradeFlowKitRevenueResponse> =>
       apiFetch('/modules/tradeflowkit/revenue') as Promise<TradeFlowKitRevenueResponse>,
+    revenuePage: <K extends TradeFlowKitRevenueKind>(kind: K, input: { q?: string; cursor?: string; customerId?: string; limit?: number } = {}, signal?: AbortSignal): Promise<TradeFlowKitRevenuePage<K>> => {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(input)) if (value !== undefined && value !== '') query.set(key, String(value));
+      return apiFetch(`/modules/tradeflowkit/revenue/${kind}?${query}`, { signal }) as Promise<TradeFlowKitRevenuePage<K>>;
+    },
+    revenueRecord: <K extends TradeFlowKitRevenueKind>(kind: K, id: string, signal?: AbortSignal): Promise<{ item: TradeFlowKitRevenueRecord<K>; related: TradeFlowKitRevenueRelated }> =>
+      apiFetch(`/modules/tradeflowkit/revenue/${kind}/${encodeURIComponent(id)}`, { signal }) as Promise<{ item: TradeFlowKitRevenueRecord<K>; related: TradeFlowKitRevenueRelated }>,
     publicLink: (documentType: 'quotes' | 'invoices' | 'customers', id: string): Promise<{ token: string; path: string }> =>
       apiFetch(`/modules/tradeflowkit/${documentType}/${encodeURIComponent(id)}/public-link`, { method: 'POST' }) as Promise<{ token: string; path: string }>,
     search: (query: string): Promise<TradeFlowKitSearchResponse> =>

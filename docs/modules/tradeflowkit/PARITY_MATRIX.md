@@ -1,3 +1,15 @@
+## 2026-11-09 - Older revenue record retrieval overlay
+
+The isolated RevenueFlow repair removes latest-100 dependence from its direct
+customer/quote/invoice links, lists and create/edit customer/job selectors, plus
+WorkManagement recurring-customer selection. Exact reads and 25-record searchable
+pages retain tenant/module authority, minimal historical labels, versions and
+payment controls. Local 57/57 DB-free and 34/34 Chromium component cases, broad
+source/test types and scoped lint pass. Real PostgreSQL cases are prepared and
+typechecked only. Other bounded recent collections, deployed acceptance and
+provider gates remain; no parity-state promotion is implied.
+[Detailed scope and verification](../../reviews/2026-11-09/TRADEFLOW_REVENUE_RECORDS.md).
+
 ## 2026-11-09 current source and readiness overlay
 
 The reviewed baseline is `8b8f9748`. TradeFlowKit is an **active catalog entry**.
