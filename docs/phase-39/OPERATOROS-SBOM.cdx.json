@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:2a9a0206-4647-429e-aada-1f4b6edd858d",
+  "serialNumber": "urn:uuid:cf5e69d3-7745-43f5-ac45-c52171ce73a0",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-09T15:50:41.252Z",
+    "timestamp": "2026-11-09T19:01:18.793Z",
     "component": {
       "type": "application",
       "name": "OperatorOS",
@@ -13,7 +13,7 @@
     "properties": [
       {
         "name": "operatoros:pnpm-lock-sha256",
-        "value": "2a9a02064647029e9ada1f4b6edd858d0883aea97cda1f1a8d8ed244dcf81266"
+        "value": "cf5e69d3774583f5fc45c52171ce73a0250a827fc0cc6c586ed848ddc8a218f3"
       }
     ]
   },
@@ -118,13 +118,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40babel%2Fhelper-create-class-features-plugin@7.29.7",
-      "name": "@babel/helper-create-class-features-plugin",
-      "version": "7.29.7",
-      "purl": "pkg:npm/%40babel%2Fhelper-create-class-features-plugin@7.29.7"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/%40babel%2Fhelper-create-regexp-features-plugin@7.29.7",
       "name": "@babel/helper-create-regexp-features-plugin",
       "version": "7.29.7",
@@ -206,13 +199,6 @@
       "name": "@babel/helper-skip-transparent-expression-wrappers",
       "version": "7.29.13",
       "purl": "pkg:npm/%40babel%2Fhelper-skip-transparent-expression-wrappers@7.29.13"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/%40babel%2Fhelper-skip-transparent-expression-wrappers@7.29.7",
-      "name": "@babel/helper-skip-transparent-expression-wrappers",
-      "version": "7.29.7",
-      "purl": "pkg:npm/%40babel%2Fhelper-skip-transparent-expression-wrappers@7.29.7"
     },
     {
       "type": "library",
@@ -377,13 +363,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40babel%2Fplugin-transform-block-scoping@7.29.7",
-      "name": "@babel/plugin-transform-block-scoping",
-      "version": "7.29.7",
-      "purl": "pkg:npm/%40babel%2Fplugin-transform-block-scoping@7.29.7"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/%40babel%2Fplugin-transform-class-properties@7.29.7",
       "name": "@babel/plugin-transform-class-properties",
       "version": "7.29.7",
@@ -405,24 +384,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40babel%2Fplugin-transform-classes@7.29.7",
-      "name": "@babel/plugin-transform-classes",
-      "version": "7.29.7",
-      "purl": "pkg:npm/%40babel%2Fplugin-transform-classes@7.29.7"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/%40babel%2Fplugin-transform-destructuring@7.29.13",
       "name": "@babel/plugin-transform-destructuring",
       "version": "7.29.13",
       "purl": "pkg:npm/%40babel%2Fplugin-transform-destructuring@7.29.13"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/%40babel%2Fplugin-transform-destructuring@7.29.7",
-      "name": "@babel/plugin-transform-destructuring",
-      "version": "7.29.7",
-      "purl": "pkg:npm/%40babel%2Fplugin-transform-destructuring@7.29.7"
     },
     {
       "type": "library",
@@ -444,13 +409,6 @@
       "name": "@babel/plugin-transform-for-of",
       "version": "7.29.13",
       "purl": "pkg:npm/%40babel%2Fplugin-transform-for-of@7.29.13"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/%40babel%2Fplugin-transform-for-of@7.29.7",
-      "name": "@babel/plugin-transform-for-of",
-      "version": "7.29.7",
-      "purl": "pkg:npm/%40babel%2Fplugin-transform-for-of@7.29.7"
     },
     {
       "type": "library",
@@ -591,13 +549,6 @@
       "name": "@babel/plugin-transform-template-literals",
       "version": "7.29.7",
       "purl": "pkg:npm/%40babel%2Fplugin-transform-template-literals@7.29.7"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/%40babel%2Fplugin-transform-typescript@7.29.7",
-      "name": "@babel/plugin-transform-typescript",
-      "version": "7.29.7",
-      "purl": "pkg:npm/%40babel%2Fplugin-transform-typescript@7.29.7"
     },
     {
       "type": "library",
@@ -1238,10 +1189,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40expo%2Ffingerprint@0.20.13",
+      "bom-ref": "pkg:npm/%40expo%2Ffingerprint@0.20.15",
       "name": "@expo/fingerprint",
-      "version": "0.20.13",
-      "purl": "pkg:npm/%40expo%2Ffingerprint@0.20.13"
+      "version": "0.20.15",
+      "purl": "pkg:npm/%40expo%2Ffingerprint@0.20.15"
     },
     {
       "type": "library",
@@ -1273,17 +1224,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40expo%2Flocal-build-cache-provider@57.0.6",
+      "bom-ref": "pkg:npm/%40expo%2Flocal-build-cache-provider@57.0.10",
       "name": "@expo/local-build-cache-provider",
-      "version": "57.0.6",
-      "purl": "pkg:npm/%40expo%2Flocal-build-cache-provider@57.0.6"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/%40expo%2Flog-box@57.0.2",
-      "name": "@expo/log-box",
-      "version": "57.0.2",
-      "purl": "pkg:npm/%40expo%2Flog-box@57.0.2"
+      "version": "57.0.10",
+      "purl": "pkg:npm/%40expo%2Flocal-build-cache-provider@57.0.10"
     },
     {
       "type": "library",
@@ -1312,13 +1256,6 @@
       "name": "@expo/metro-runtime",
       "version": "57.0.18",
       "purl": "pkg:npm/%40expo%2Fmetro-runtime@57.0.18"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/%40expo%2Fmetro@56.0.0",
-      "name": "@expo/metro",
-      "version": "56.0.0",
-      "purl": "pkg:npm/%40expo%2Fmetro@56.0.0"
     },
     {
       "type": "library",
@@ -1924,66 +1861,66 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fenv@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fenv@15.5.29",
       "name": "@next/env",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fenv@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fenv@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-darwin-arm64@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-darwin-arm64@15.5.29",
       "name": "@next/swc-darwin-arm64",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-darwin-arm64@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-darwin-arm64@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-darwin-x64@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-darwin-x64@15.5.29",
       "name": "@next/swc-darwin-x64",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-darwin-x64@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-darwin-x64@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-linux-arm64-gnu@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-linux-arm64-gnu@15.5.29",
       "name": "@next/swc-linux-arm64-gnu",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-linux-arm64-gnu@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-linux-arm64-gnu@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-linux-arm64-musl@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-linux-arm64-musl@15.5.29",
       "name": "@next/swc-linux-arm64-musl",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-linux-arm64-musl@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-linux-arm64-musl@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-linux-x64-gnu@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-linux-x64-gnu@15.5.29",
       "name": "@next/swc-linux-x64-gnu",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-linux-x64-gnu@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-linux-x64-gnu@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-linux-x64-musl@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-linux-x64-musl@15.5.29",
       "name": "@next/swc-linux-x64-musl",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-linux-x64-musl@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-linux-x64-musl@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-win32-arm64-msvc@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-win32-arm64-msvc@15.5.29",
       "name": "@next/swc-win32-arm64-msvc",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-win32-arm64-msvc@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-win32-arm64-msvc@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40next%2Fswc-win32-x64-msvc@15.5.28",
+      "bom-ref": "pkg:npm/%40next%2Fswc-win32-x64-msvc@15.5.29",
       "name": "@next/swc-win32-x64-msvc",
-      "version": "15.5.28",
-      "purl": "pkg:npm/%40next%2Fswc-win32-x64-msvc@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/%40next%2Fswc-win32-x64-msvc@15.5.29"
     },
     {
       "type": "library",
@@ -2428,10 +2365,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/%40react-native%2Fbabel-plugin-codegen@0.86.2",
+      "bom-ref": "pkg:npm/%40react-native%2Fbabel-plugin-codegen@0.86.3",
       "name": "@react-native/babel-plugin-codegen",
-      "version": "0.86.2",
-      "purl": "pkg:npm/%40react-native%2Fbabel-plugin-codegen@0.86.2"
+      "version": "0.86.3",
+      "purl": "pkg:npm/%40react-native%2Fbabel-plugin-codegen@0.86.3"
     },
     {
       "type": "library",
@@ -2453,6 +2390,13 @@
       "name": "@react-native/codegen",
       "version": "0.86.2",
       "purl": "pkg:npm/%40react-native%2Fcodegen@0.86.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40react-native%2Fcodegen@0.86.3",
+      "name": "@react-native/codegen",
+      "version": "0.86.3",
+      "purl": "pkg:npm/%40react-native%2Fcodegen@0.86.3"
     },
     {
       "type": "library",
@@ -3709,10 +3653,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/babel-preset-expo@57.0.6",
+      "bom-ref": "pkg:npm/babel-preset-expo@57.0.17",
       "name": "babel-preset-expo",
-      "version": "57.0.6",
-      "purl": "pkg:npm/babel-preset-expo@57.0.6"
+      "version": "57.0.17",
+      "purl": "pkg:npm/babel-preset-expo@57.0.17"
     },
     {
       "type": "library",
@@ -3818,13 +3762,6 @@
       "name": "browserslist",
       "version": "4.29.5",
       "purl": "pkg:npm/browserslist@4.29.5"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/bser@2.1.1",
-      "name": "bser",
-      "version": "2.1.1",
-      "purl": "pkg:npm/bser@2.1.1"
     },
     {
       "type": "library",
@@ -4857,10 +4794,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/expo-asset@57.0.10",
+      "bom-ref": "pkg:npm/expo-asset@57.0.21",
       "name": "expo-asset",
-      "version": "57.0.10",
-      "purl": "pkg:npm/expo-asset@57.0.10"
+      "version": "57.0.21",
+      "purl": "pkg:npm/expo-asset@57.0.21"
     },
     {
       "type": "library",
@@ -4882,6 +4819,13 @@
       "name": "expo-file-system",
       "version": "57.0.2",
       "purl": "pkg:npm/expo-file-system@57.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/expo-file-system@57.0.7",
+      "name": "expo-file-system",
+      "version": "57.0.7",
+      "purl": "pkg:npm/expo-file-system@57.0.7"
     },
     {
       "type": "library",
@@ -4913,10 +4857,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/expo-keep-awake@57.0.1",
+      "bom-ref": "pkg:npm/expo-keep-awake@57.0.2",
       "name": "expo-keep-awake",
-      "version": "57.0.1",
-      "purl": "pkg:npm/expo-keep-awake@57.0.1"
+      "version": "57.0.2",
+      "purl": "pkg:npm/expo-keep-awake@57.0.2"
     },
     {
       "type": "library",
@@ -4941,24 +4885,17 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/expo-modules-autolinking@57.0.9",
-      "name": "expo-modules-autolinking",
-      "version": "57.0.9",
-      "purl": "pkg:npm/expo-modules-autolinking@57.0.9"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/expo-modules-core@57.0.10",
+      "bom-ref": "pkg:npm/expo-modules-core@57.0.25",
       "name": "expo-modules-core",
-      "version": "57.0.10",
-      "purl": "pkg:npm/expo-modules-core@57.0.10"
+      "version": "57.0.25",
+      "purl": "pkg:npm/expo-modules-core@57.0.25"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/expo-modules-jsi@57.0.4",
+      "bom-ref": "pkg:npm/expo-modules-jsi@57.1.3",
       "name": "expo-modules-jsi",
-      "version": "57.0.4",
-      "purl": "pkg:npm/expo-modules-jsi@57.0.4"
+      "version": "57.1.3",
+      "purl": "pkg:npm/expo-modules-jsi@57.1.3"
     },
     {
       "type": "library",
@@ -5025,10 +4962,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/expo@57.0.12",
+      "bom-ref": "pkg:npm/expo@57.0.32",
       "name": "expo",
-      "version": "57.0.12",
-      "purl": "pkg:npm/expo@57.0.12"
+      "version": "57.0.32",
+      "purl": "pkg:npm/expo@57.0.32"
     },
     {
       "type": "library",
@@ -5144,10 +5081,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/fastify@5.12.6",
+      "bom-ref": "pkg:npm/fastify@5.12.8",
       "name": "fastify",
-      "version": "5.12.6",
-      "purl": "pkg:npm/fastify@5.12.6"
+      "version": "5.12.8",
+      "purl": "pkg:npm/fastify@5.12.8"
     },
     {
       "type": "library",
@@ -5162,13 +5099,6 @@
       "name": "fb-dotslash",
       "version": "0.5.8",
       "purl": "pkg:npm/fb-dotslash@0.5.8"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/fb-watchman@2.0.2",
-      "name": "fb-watchman",
-      "version": "2.0.2",
-      "purl": "pkg:npm/fb-watchman@2.0.2"
     },
     {
       "type": "library",
@@ -5631,13 +5561,6 @@
       "name": "ignore",
       "version": "7.0.6",
       "purl": "pkg:npm/ignore@7.0.6"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/image-size@1.2.1",
-      "name": "image-size",
-      "version": "1.2.1",
-      "purl": "pkg:npm/image-size@1.2.1"
     },
     {
       "type": "library",
@@ -6481,13 +6404,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/metro-babel-transformer@0.84.4",
-      "name": "metro-babel-transformer",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-babel-transformer@0.84.4"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/metro-babel-transformer@0.84.5",
       "name": "metro-babel-transformer",
       "version": "0.84.5",
@@ -6499,13 +6415,6 @@
       "name": "metro-babel-transformer",
       "version": "0.87.3",
       "purl": "pkg:npm/metro-babel-transformer@0.87.3"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/metro-cache-key@0.84.4",
-      "name": "metro-cache-key",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-cache-key@0.84.4"
     },
     {
       "type": "library",
@@ -6523,13 +6432,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/metro-cache@0.84.4",
-      "name": "metro-cache",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-cache@0.84.4"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/metro-cache@0.84.5",
       "name": "metro-cache",
       "version": "0.84.5",
@@ -6541,13 +6443,6 @@
       "name": "metro-cache",
       "version": "0.87.3",
       "purl": "pkg:npm/metro-cache@0.87.3"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/metro-config@0.84.4",
-      "name": "metro-config",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-config@0.84.4"
     },
     {
       "type": "library",
@@ -6565,13 +6460,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/metro-core@0.84.4",
-      "name": "metro-core",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-core@0.84.4"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/metro-core@0.84.5",
       "name": "metro-core",
       "version": "0.84.5",
@@ -6583,13 +6471,6 @@
       "name": "metro-core",
       "version": "0.87.3",
       "purl": "pkg:npm/metro-core@0.87.3"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/metro-file-map@0.84.4",
-      "name": "metro-file-map",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-file-map@0.84.4"
     },
     {
       "type": "library",
@@ -6607,13 +6488,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/metro-minify-terser@0.84.4",
-      "name": "metro-minify-terser",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-minify-terser@0.84.4"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/metro-minify-terser@0.84.5",
       "name": "metro-minify-terser",
       "version": "0.84.5",
@@ -6625,13 +6499,6 @@
       "name": "metro-minify-terser",
       "version": "0.87.3",
       "purl": "pkg:npm/metro-minify-terser@0.87.3"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/metro-resolver@0.84.4",
-      "name": "metro-resolver",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-resolver@0.84.4"
     },
     {
       "type": "library",
@@ -6712,13 +6579,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/metro-transform-plugins@0.84.4",
-      "name": "metro-transform-plugins",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-transform-plugins@0.84.4"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/metro-transform-plugins@0.84.5",
       "name": "metro-transform-plugins",
       "version": "0.84.5",
@@ -6733,13 +6593,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/metro-transform-worker@0.84.4",
-      "name": "metro-transform-worker",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro-transform-worker@0.84.4"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/metro-transform-worker@0.84.5",
       "name": "metro-transform-worker",
       "version": "0.84.5",
@@ -6751,13 +6604,6 @@
       "name": "metro-transform-worker",
       "version": "0.87.3",
       "purl": "pkg:npm/metro-transform-worker@0.87.3"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/metro@0.84.4",
-      "name": "metro",
-      "version": "0.84.4",
-      "purl": "pkg:npm/metro@0.84.4"
     },
     {
       "type": "library",
@@ -6992,17 +6838,17 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/next@15.5.28",
+      "bom-ref": "pkg:npm/next@15.5.29",
       "name": "next",
-      "version": "15.5.28",
-      "purl": "pkg:npm/next@15.5.28"
+      "version": "15.5.29",
+      "purl": "pkg:npm/next@15.5.29"
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/node-forge@1.4.1",
+      "bom-ref": "pkg:npm/node-forge@1.4.3",
       "name": "node-forge",
-      "version": "1.4.1",
-      "purl": "pkg:npm/node-forge@1.4.1"
+      "version": "1.4.3",
+      "purl": "pkg:npm/node-forge@1.4.3"
     },
     {
       "type": "library",
@@ -7717,13 +7563,6 @@
       "name": "queue-microtask",
       "version": "1.2.3",
       "purl": "pkg:npm/queue-microtask@1.2.3"
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/queue@6.0.2",
-      "name": "queue",
-      "version": "6.0.2",
-      "purl": "pkg:npm/queue@6.0.2"
     },
     {
       "type": "library",
@@ -8749,13 +8588,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/terser@5.50.0",
-      "name": "terser",
-      "version": "5.50.0",
-      "purl": "pkg:npm/terser@5.50.0"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/terser@5.51.2",
       "name": "terser",
       "version": "5.51.2",
@@ -9302,13 +9134,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/yaml@2.9.0",
-      "name": "yaml",
-      "version": "2.9.0",
-      "purl": "pkg:npm/yaml@2.9.0"
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/yaml@2.9.1",
       "name": "yaml",
       "version": "2.9.1",
@@ -9365,10 +9190,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/zod@4.6.6",
+      "bom-ref": "pkg:npm/zod@4.6.7",
       "name": "zod",
-      "version": "4.6.6",
-      "purl": "pkg:npm/zod@4.6.6"
+      "version": "4.6.7",
+      "purl": "pkg:npm/zod@4.6.7"
     }
   ]
 }

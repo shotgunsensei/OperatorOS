@@ -1,39 +1,36 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { compileSbom } from './generate-sbom.mjs';
 
 const require = createRequire(import.meta.url);
+const nativeRoot = join(process.cwd(), 'apps', 'torqueshed-native');
 
-function resolvePatchedImageSizeRoot() {
-  const nativeRoot = join(process.cwd(), 'apps', 'torqueshed-native');
-  const expoPackage = require.resolve('expo/package.json', { paths: [nativeRoot] });
-  const metroPackage = require.resolve('@expo/metro-config/package.json', {
-    paths: [dirname(expoPackage)],
-  });
-  return dirname(require.resolve('image-size/package.json', { paths: [dirname(metroPackage)] }));
-}
-
-const imageSizeRoot = resolvePatchedImageSizeRoot();
-const { ICNS } = require(join(imageSizeRoot, 'dist', 'types', 'icns.js'));
-const { JXL } = require(join(imageSizeRoot, 'dist', 'types', 'jxl.js'));
-
-test('GHSA-w3rx-r6r6-pgpr: zero-length ICNS entries fail without looping', () => {
-  const input = Buffer.alloc(32);
-  input.write('icns', 0, 'ascii');
-  input.writeUInt32BE(input.length, 4);
-  input.write('ic10', 8, 'ascii');
-  input.writeUInt32BE(0, 12);
-  const started = performance.now();
-  assert.throws(() => ICNS.calculate(input), /Invalid ICNS entry length/);
-  assert.ok(performance.now() - started < 250, 'malformed ICNS must be rejected promptly');
+// The vulnerable parser was removed upstream in the supported Metro 0.84.5
+// maintenance release. Test its absence rather than retaining an unused patch
+// or resolving a stale node_modules copy left behind by an earlier install.
+test('GHSA-w3rx-r6r6-pgpr and GHSA-5p2g-fcmc-qvqq: canonical graph excludes image-size', () => {
+  assert.equal(compileSbom().components.some(component => component.name === 'image-size'), false);
+  const workspace = readFileSync('pnpm-workspace.yaml', 'utf8');
+  assert.doesNotMatch(workspace, /GHSA-w3rx-r6r6-pgpr|GHSA-5p2g-fcmc-qvqq|image-size/);
 });
 
-test('GHSA-5p2g-fcmc-qvqq: zero-length JXL partial streams fail without looping', () => {
-  const input = Buffer.alloc(16);
-  input.writeUInt32BE(0, 0);
-  input.write('jxlp', 4, 'ascii');
-  const started = performance.now();
-  assert.throws(() => JXL.calculate(input), /Invalid JXL partial-stream box length/);
-  assert.ok(performance.now() - started < 250, 'malformed JXL must be rejected promptly');
+test('Expo and React Native CLI resolve maintained Metro without vulnerable parsers', () => {
+  const expoRoot = dirname(require.resolve('expo/package.json', { paths: [nativeRoot] }));
+  const expoMetroRoot = dirname(require.resolve('@expo/metro/package.json', { paths: [expoRoot] }));
+  const reactNativeRoot = dirname(require.resolve('react-native/package.json', { paths: [nativeRoot] }));
+  const cliRoot = dirname(require.resolve('@react-native/community-cli-plugin/package.json', { paths: [reactNativeRoot] }));
+  for (const root of [expoMetroRoot, cliRoot]) {
+    const manifest = require(require.resolve('metro/package.json', { paths: [root] }));
+    assert.equal(manifest.version, '0.84.5');
+    assert.equal(manifest.dependencies['image-size'], undefined);
+    const metroRoot = dirname(require.resolve('metro/package.json', { paths: [root] }));
+    for (const name of ['metro-config', 'metro-transform-worker']) {
+      const child = require(require.resolve(`${name}/package.json`, { paths: [metroRoot] }));
+      assert.equal(child.version, '0.84.5');
+      assert.equal(child.dependencies['image-size'], undefined);
+    }
+  }
 });

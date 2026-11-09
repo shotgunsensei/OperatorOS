@@ -9,8 +9,6 @@ auditConfig:
   # ignore list tied to regression fixtures so a future unpatched resolution
   # cannot silently inherit the exception.
   ignoreGhsas:
-    - GHSA-5p2g-fcmc-qvqq
-    - GHSA-w3rx-r6r6-pgpr
     # Locally patched, with installed-package exploit regressions in phase39.
     - GHSA-86w9-cpqp-85rv
     - GHSA-vfj7-8cjw-p6xm
@@ -39,7 +37,7 @@ minimumReleaseAgeExclude:
   - expo@57.0.12
 overrides:
   "@expo/config-plugins": "57.0.12"
-  "@expo/fingerprint": "0.20.13"
+  "@expo/fingerprint": "0.20.15"
   "@expo/metro-config": "57.0.14"
   "@expo/metro-runtime": "57.0.18"
   "expo-font": "57.0.4"
@@ -61,7 +59,10 @@ overrides:
   follow-redirects: "1.16.2"
   "js-yaml@^4": ">=4.3.2 <5"
   "minimatch>brace-expansion": "5.0.12"
-  node-forge: "1.4.1"
+  'metro@^0.84.3': '0.84.5'
+  'metro-config@^0.84.3': '0.84.5'
+  'metro-core@^0.84.3': '0.84.5'
+  node-forge: "1.4.3"
   "next>postcss": ">=8.5.18"
   picomatch: "4.0.5"
   postcss-selector-parser: "7.1.6"
@@ -81,5 +82,4 @@ overrides:
 patchedDependencies:
   '@expo/plist@0.8.2': patches/@expo__plist@0.8.2.patch
   braces@3.0.3: patches/braces@3.0.3.patch
-  'image-size@1.2.1': patches/image-size@1.2.1.patch
-  node-forge@1.4.1: patches/node-forge@1.4.1.patch
+  node-forge@1.4.3: patches/node-forge@1.4.3.patch

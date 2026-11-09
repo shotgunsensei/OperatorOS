@@ -1,5 +1,7 @@
 # Dependency security remediation, 2026-11-09
 
+Historical first-pass evidence. The later [dependency recheck](DEPENDENCY_RECHECK_2026-11-09.md) removes image-size and reaches raw zero high/critical alerts; its counts and graph supersede the current-result statements below.
+
 ## Scope and current result
 
 This isolated candidate starts at frozen `8b8f974891f201335ac7f2d51f1a4c4533a328cf`; the frozen source remains unchanged. Scoped official-registry acquisition, manifest/lock updates and local build/tests with install scripts disabled were authorized. No publication, deployment, production database, migration or live provider action occurred.
