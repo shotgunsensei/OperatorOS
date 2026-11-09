@@ -1,3 +1,16 @@
+## 2026-11-09 current source and readiness overlay
+
+The reviewed baseline is `8b8f9748`. CallCommand AI is an **active catalog entry**.
+Its current JSON source inventory classifies **446 native** and
+**143 shared-equivalent** facets, with **0 blocked** and
+**0 waived** inventory facets. These are implementation mappings,
+not deployed or provider acceptance. Historical phase counts and exclusions
+below are retained as dated evidence; they are not the current inventory.
+
+See the [current module audit](../../reviews/2026-11-09/MODULE_AUDIT.md) for
+source-backed capabilities, remaining engineering, bounded repairs and exact
+verification limits. No fresh production-ready claim is made here.
+
 # CallCommand AI parity matrix
 
 ## Phase 20 truth notice (2026-08-08)

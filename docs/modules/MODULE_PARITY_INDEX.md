@@ -2,6 +2,25 @@
 
 The isolated source candidate now passes the unchanged Phase39 high-severity security gate, full types/lint, production build and offline Android/iOS export on its updated frozen graph. Zero unresolved high/critical advisories remain; two moderate advisories and existing tested patch exceptions are explicit. Zod4 preserves prior UUID and UTF-16 input limits through regression-tested compatibility changes. Module parity states and production acceptance are unchanged. [Exact changes, completed checks and remaining limits](../security/DEPENDENCY_REMEDIATION_2026-11-09.md).
 
+## 2026-11-09 - Current source inventory and purpose audit
+
+All fourteen catalog modules have distinct customer purposes and active source
+implementations. Thirteen existing module matrices now lead with current JSON
+inventory counts and a dated source-readiness distinction; FieldNode retains its
+separate gateway/device contract. No inventory facet count changed, and zero
+blocked inventory facets does not mean zero release or provider gates.
+
+The isolated repair branch follows `8b8f9748`, preserves frozen integration and
+adds a TechDeck module-bound token-revocation repair and SnapProof saved-capture
+ownership plus upload-identity consistency. Local tests, types and scoped lint
+pass; production rollout, PostgreSQL and provider acceptance remain separate.
+The review also records older TradeFlow collection truncation,
+StudyForge idempotency conflicts, missing BrandForge transport and separate
+adjacent-product engineering. Do not replace those with a blanket "only keys
+remain" conclusion.
+
+[Current fourteen-module and adjacent-product ledger, repairs and verification](../reviews/2026-11-09/MODULE_AUDIT.md).
+
 ## 2026-10-30 - Final local quality follow-through
 
 ## 2026-11-06 - Reconciled local source candidate

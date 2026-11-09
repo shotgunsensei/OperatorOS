@@ -291,10 +291,21 @@ export async function createServiceIdentityAndToken(input: {
   return { ...result, rawToken };
 }
 
-export async function revokeApiToken(input: { tenantId: string; tokenId: string }, executor: Executor = db) {
+export async function revokeApiToken(input: { tenantId: string; tokenId: string; moduleId?: string }, executor: Executor = db) {
+  // Module routes must narrow this shared operation to their service identities.
+  // The platform administration route intentionally retains tenant-wide authority.
+  const moduleScope = input.moduleId === undefined ? sql`` : sql`
+    AND EXISTS (
+      SELECT 1 FROM shared_service_identities identity
+      WHERE identity.tenant_id = token.tenant_id
+        AND identity.id = token.service_identity_id
+        AND identity.module_id = ${input.moduleId}
+    )
+  `;
   const result = await executor.execute(sql`
-    UPDATE shared_api_tokens SET revoked_at = COALESCE(revoked_at, NOW())
-    WHERE tenant_id = ${input.tenantId} AND id = ${input.tokenId} AND revoked_at IS NULL
+    UPDATE shared_api_tokens AS token SET revoked_at = COALESCE(token.revoked_at, NOW())
+    WHERE token.tenant_id = ${input.tenantId} AND token.id = ${input.tokenId} AND token.revoked_at IS NULL
+    ${moduleScope}
     RETURNING id, revoked_at
   `);
   return result.rows[0] ?? null;

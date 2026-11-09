@@ -1,3 +1,16 @@
+## 2026-11-09 current source and readiness overlay
+
+The reviewed baseline is `8b8f9748`. TorqueShed is an **active catalog entry**.
+Its current JSON source inventory classifies **502 native** and
+**450 shared-equivalent** facets, with **0 blocked** and
+**0 waived** inventory facets. These are implementation mappings,
+not deployed or provider acceptance. Historical phase counts and exclusions
+below are retained as dated evidence; they are not the current inventory.
+
+See the [current module audit](../../reviews/2026-11-09/MODULE_AUDIT.md) for
+source-backed capabilities, remaining engineering, bounded repairs and exact
+verification limits. No fresh production-ready claim is made here.
+
 # TorqueShed parity matrix
 
 ## Phase 28 current truth (2026-08-11)

@@ -1,3 +1,16 @@
+## 2026-11-09 current source and readiness overlay
+
+The reviewed baseline is `8b8f9748`. OutCall is an **active catalog entry**.
+Its current JSON source inventory classifies **1 native** and
+**0 shared-equivalent** facets, with **0 blocked** and
+**0 waived** inventory facets. These are implementation mappings,
+not deployed or provider acceptance. Historical phase counts and exclusions
+below are retained as dated evidence; they are not the current inventory.
+
+See the [current module audit](../../reviews/2026-11-09/MODULE_AUDIT.md) for
+source-backed capabilities, remaining engineering, bounded repairs and exact
+verification limits. No fresh production-ready claim is made here.
+
 # OutCall parity matrix
 
 ## Production-readiness repair (2026-10-14, local only)

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
+import * as captureIdentity from '../src/lib/snapproof-capture-identity.js';
 import { guards, loadSource, matchingRows, queryOf, routeCollector, type Row } from './creative-route-quality-fixture.js';
 
 const caseId = '10000000-0000-4000-8000-000000000001';
@@ -60,11 +61,11 @@ async function proofFixture(status: string) {
     throw new Error(`Unmodeled proof SQL: ${compiled.sql}`);
   } };
   const attachmentsBoundary = { createAttachment: async (input: Row) => { attachments++; return { id: 'attachment', scan_status: 'pending', sha256: createHash('sha256').update(input.content).digest('hex') }; } };
-  const common = { '../db.js': { db: database }, '../lib/tenant-auth.js': guards, '../lib/shared-customers.js': {}, '../lib/shared-attachments.js': attachmentsBoundary, '../lib/shared-usage-activity.js': { appendActivityEvent: empty, listActivityEvents: empty }, '../lib/snapproofos-exports.js': {}, '../lib/product-entitlements.js': {}, '../lib/snapproofos-import.js': {} };
+  const common = { '../db.js': { db: database }, '../lib/tenant-auth.js': guards, '../lib/snapproof-capture-identity.js': captureIdentity, '../lib/shared-customers.js': {}, '../lib/shared-attachments.js': attachmentsBoundary, '../lib/shared-usage-activity.js': { appendActivityEvent: empty, listActivityEvents: empty }, '../lib/snapproofos-exports.js': {}, '../lib/product-entitlements.js': {}, '../lib/snapproofos-import.js': {} };
   const canonical = loadSource('routes/snapproofos-routes.ts', common, ['appendCustody']);
   const route = loadSource('routes/snapproofos-phase32-routes.ts', { ...common, './snapproofos-routes.js': canonical });
   const collector = routeCollector(); await route.registerSnapProofOsPhase32Routes(collector.app);
-  return { async upload(tenantId = 'tenant-a', overrides: Row = {}, requestedCaseId = caseId) { return collector.invoke('post', '/v1/modules/snapproofos/jobs/:id/files', { params: { id: requestedCaseId }, tenantContext: { tenantId }, body: { title: 'Fixture proof', evidenceType: 'document', originalName: 'proof.txt', declaredMimeType: 'text/plain', contentBase64: Buffer.from('Harmless local proof').toString('base64'), ...overrides } }); }, effects: () => ({ attachments, evidence: evidence.length }), custody, statements, otherCaseId, evidence };
+  return { async upload(tenantId = 'tenant-a', overrides: Row = {}, requestedCaseId = caseId, userId = 'owner-a', access = 'user') { return collector.invoke('post', '/v1/modules/snapproofos/jobs/:id/files', { params: { id: requestedCaseId }, user: { id: userId }, tenantContext: { tenantId }, tenantModuleAccessLevel: access, body: { title: 'Fixture proof', evidenceType: 'document', originalName: 'proof.txt', declaredMimeType: 'text/plain', contentBase64: Buffer.from('Harmless local proof').toString('base64'), expectedCaptureIdentity: { userId, tenantId }, ...overrides } }); }, effects: () => ({ attachments, evidence: evidence.length }), custody, statements, otherCaseId, evidence };
 }
 for (const state of ['approved','archived','in_review']) test(`SnapProof file alias rejects ${state} proof before creating attachment or evidence`, async () => {
   const fixture = await proofFixture(state); const result = await fixture.upload(); assert.equal(result.status, 409); assert.deepEqual(fixture.effects(), { attachments: 0, evidence: 0 });
@@ -126,4 +127,53 @@ test('SnapProof retry without a supplied timestamp remains stable and cannot rev
   assert.equal((await fixture.upload('tenant-a', payload)).status, 201); assert.equal((await fixture.upload('tenant-a', payload)).status, 200);
   fixture.evidence[0].deleted_at = '2026-10-27'; assert.equal((await fixture.upload('tenant-a', payload)).status, 409);
   assert.deepEqual(fixture.effects(), { attachments: 1, evidence: 1 }); assert.equal(fixture.custody.length, 1);
+});
+
+for (const [label, identity, status] of [
+  ['different user', { userId: 'other', tenantId: 'tenant-a' }, 409],
+  ['different tenant', { userId: 'owner-a', tenantId: 'other' }, 409],
+  ['undefined binding', undefined, 400],
+  ['null binding', null, 400],
+  ['extra authority field', { userId: 'owner-a', tenantId: 'tenant-a', role: 'admin' }, 400],
+] as const) test(`SnapProof ${label} is rejected before bytes, lookup or persistence`, async () => {
+  const fixture = await proofFixture('draft');
+  const result = await fixture.upload('tenant-a', { expectedCaptureIdentity: identity, contentBase64: 'invalid bytes' });
+  assert.equal(result.status, status);
+  assert.equal(result.body.code, status === 409 ? 'SNAPPROOF_CAPTURE_IDENTITY_CHANGED' : 'SNAPPROOF_CAPTURE_IDENTITY_REQUIRED');
+  assert.deepEqual(fixture.statements, []);
+  assert.deepEqual(fixture.effects(), { attachments: 0, evidence: 0 });
+  assert.deepEqual(fixture.custody, []);
+  assert.doesNotMatch(JSON.stringify(result.body), /owner-a|tenant-a|other/);
+});
+
+test('SnapProof changed POST actor cannot use a matching-payload cached replay', async () => {
+  const fixture = await proofFixture('draft');
+  const payload = { clientMutationId: 'identity-replay-key', expectedCaptureIdentity: { userId: 'owner-a', tenantId: 'tenant-a' } };
+  assert.equal((await fixture.upload('tenant-a', payload)).status, 201);
+  const before = fixture.statements.length;
+  const changed = await fixture.upload('tenant-a', payload, caseId, 'owner-b');
+  assert.equal(changed.status, 409);
+  assert.equal(changed.body.code, 'SNAPPROOF_CAPTURE_IDENTITY_CHANGED');
+  assert.equal(fixture.statements.length, before);
+  assert.deepEqual(fixture.effects(), { attachments: 1, evidence: 1 });
+  assert.equal(fixture.custody.length, 1);
+  assert.equal((await fixture.upload('tenant-a', payload)).status, 200);
+});
+
+test('SnapProof replay also rejects an existing record owned by another actor', async () => {
+  const fixture = await proofFixture('draft');
+  const payload = { clientMutationId: 'identity-replay-owner' };
+  assert.equal((await fixture.upload('tenant-a', payload)).status, 201);
+  const result = await fixture.upload('tenant-a', payload, caseId, 'owner-b');
+  assert.equal(result.status, 409);
+  assert.equal(result.body.code, 'SNAPPROOF_CAPTURE_IDEMPOTENCY_CONFLICT');
+  assert.deepEqual(fixture.effects(), { attachments: 1, evidence: 1 });
+  assert.equal(fixture.custody.length, 1);
+});
+
+for (const access of ['viewer', 'none']) test(`matching capture identity cannot bypass ${access} write access`, async () => {
+  const fixture = await proofFixture('draft');
+  assert.equal((await fixture.upload('tenant-a', {}, caseId, 'owner-a', access)).status, 403);
+  assert.deepEqual(fixture.statements, []);
+  assert.deepEqual(fixture.effects(), { attachments: 0, evidence: 0 });
 });

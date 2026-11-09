@@ -48,7 +48,7 @@ test('Phase 50 SnapProofOS loads route data narrowly while retaining capture and
   assert.match(workspace, /tab === 'findings'.*<FindingsPanel/s);
   assert.match(field, /const needsJobs = \['jobs', 'capture', 'work', 'costs', 'templates', 'reports', 'share', 'exports'\]/);
   assert.match(field, /tab === 'customers'/);
-  assert.match(field, /tab === 'capture'.*listSnapProofCaptures\(\)/s);
+  assert.match(field, /tab === 'capture'.*listSnapProofCaptures\(captureScope\)/s);
   assert.match(field, /createShareLink/);
   assert.match(field, /createReportExport/);
   assert.match(field, /New secure share URL/);

@@ -1,12 +1,16 @@
 'use client';
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Link2, Plus, RefreshCw, Upload } from 'lucide-react';
-import { moduleShellApi } from '@/lib/auth';
+import { getActiveTenantId, moduleShellApi } from '@/lib/auth';
+import { useAuth } from '@/components/AuthProvider';
+import { useTenant } from '@/components/TenantProvider';
 import {
   listSnapProofCaptures,
   queueSnapProofCapture,
   reconcileSnapProofCaptures,
+  sameSnapProofCaptureScope,
+  type SnapProofCaptureScope,
 } from '@/lib/snapproof-offline-queue';
 import OutcomeWorkflowAction from './OutcomeWorkflowAction';
 import SharedCustomerPicker from './SharedCustomerPicker';
@@ -25,6 +29,7 @@ export type SnapProofFieldTab =
   | 'exports'
   | 'branding';
 type Row = Record<string, any>;
+type CaptureBinding = { scope: SnapProofCaptureScope; current: () => boolean };
 
 const colors = {
   panel: '#17191d',
@@ -118,6 +123,25 @@ export default function SnapProofFieldWorkspace({
   canWrite?: boolean;
   canManage?: boolean;
 }) {
+  const { user, loading: authLoading, captureIdentity } = useAuth();
+  const { activeTenant, loading: tenantLoading } = useTenant();
+  const captureScope = useMemo<SnapProofCaptureScope | null>(() =>
+    !authLoading && !tenantLoading && user?.id && activeTenant?.id
+      ? { userId: user.id, tenantId: activeTenant.id } : null,
+  [authLoading, tenantLoading, user?.id, activeTenant?.id]);
+  const currentScope = useRef(captureScope);
+  currentScope.current = captureScope;
+  const currentWrite = useRef(canWrite);
+  currentWrite.current = canWrite;
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const bindCapture = useCallback((): CaptureBinding | null => {
+    if (!captureScope) return null;
+    const ownsIdentity = captureIdentity(user);
+    return { scope: captureScope, current: () => mounted.current && ownsIdentity()
+      && sameSnapProofCaptureScope(captureScope, currentScope.current)
+      && getActiveTenantId() === captureScope.tenantId };
+  }, [captureIdentity, captureScope, user]);
   const [customers, setCustomers] = useState<Row[]>([]);
   const [jobs, setJobs] = useState<Row[]>([]);
   const [templates, setTemplates] = useState<Row[]>([]);
@@ -130,6 +154,7 @@ export default function SnapProofFieldWorkspace({
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [queued, setQueued] = useState(0);
+  const [heldCaptures, setHeldCaptures] = useState(false);
   const [online, setOnline] = useState(typeof navigator === 'undefined' || navigator.onLine);
   const [lastShare, setLastShare] = useState<string | null>(null);
 
@@ -152,7 +177,11 @@ export default function SnapProofFieldWorkspace({
       if (tab === 'activity') tasks.push(moduleShellApi.snapproofos.activity().then(rows => setEvents(rows.events || [])));
       if (tab === 'branding') tasks.push(moduleShellApi.snapproofos.branding().then(value => setBranding(value.branding || {})));
       if (['reports', 'share', 'exports'].includes(tab)) tasks.push(moduleShellApi.snapproofos.listExports().then(rows => setExports(rows.exports)));
-      if (tab === 'capture') tasks.push(listSnapProofCaptures().then(queue => setQueued(queue.length)));
+      if (tab === 'capture') tasks.push(listSnapProofCaptures(captureScope).then(queue => {
+        if (!sameSnapProofCaptureScope(captureScope, currentScope.current)) return;
+        setQueued(queue.items.length);
+        setHeldCaptures(queue.held);
+      }));
       await Promise.all(tasks);
       const jobRows = loadedJobs as Row[] | null;
       if (!jobRows) return;
@@ -166,7 +195,7 @@ export default function SnapProofFieldWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [selectedJobId, onSelectJob, tab]);
+  }, [selectedJobId, onSelectJob, tab, captureScope]);
   const loadDetail = useCallback(async () => {
     if (!selectedJobId || !['jobs', 'capture', 'work', 'costs', 'templates', 'reports', 'share', 'exports'].includes(tab)) {
       setDetail(null);
@@ -195,16 +224,37 @@ export default function SnapProofFieldWorkspace({
     return () => window.cancelAnimationFrame(frame);
   }, [detail, selectedReportId]);
   const reconcile = useCallback(async () => {
-    if (!canWrite || !navigator.onLine) return;
-    const result = await reconcileSnapProofCaptures((item) =>
-      moduleShellApi.snapproofos.uploadJobFile(item.jobId, item.payload),
-    );
-    setQueued(result.remaining);
-    if (result.completed) {
-      await load();
-      await loadDetail();
+    const binding = bindCapture();
+    if (!binding?.current()) return;
+    try {
+      const queue = await listSnapProofCaptures(binding.scope);
+      if (!binding.current()) return;
+      setQueued(queue.items.length);
+      setHeldCaptures(queue.held);
+      const canWrite = currentWrite.current;
+      if (!canWrite || !navigator.onLine) return;
+      const result = await reconcileSnapProofCaptures(binding.scope, async () => {
+        if (!binding.current() || !currentWrite.current || !navigator.onLine) return false;
+        // Catch a changed cookie/account in another tab as well as React state.
+        // This check does not replace the upload endpoint's authorization.
+        const response = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' });
+        if (!response.ok) return false;
+        const identity = await response.json();
+        return binding.current() && currentWrite.current
+          && identity.user?.id === binding.scope.userId
+          && identity.user?.currentTenantId === binding.scope.tenantId;
+      }, item => moduleShellApi.snapproofos.uploadJobFile(item.jobId, {
+        ...item.payload,
+        expectedCaptureIdentity: item.scope,
+      }));
+      if (!binding.current()) return;
+      setQueued(result.remaining);
+      setHeldCaptures(result.held);
+      if (result.completed) { await load(); await loadDetail(); }
+    } catch (reason) {
+      if (binding.current()) setError(errorText(reason));
     }
-  }, [canWrite, load, loadDetail]);
+  }, [bindCapture, load, loadDetail]);
   useEffect(() => {
     const connected = () => {
       setOnline(true);
@@ -266,6 +316,9 @@ export default function SnapProofFieldWorkspace({
           returns.
         </div>
       )}
+      {heldCaptures && <div role="status" data-testid="snapproof-held-captures" style={{ ...card, marginBottom: 14 }}>
+        Saved captures are held on this device and have not been deleted. Sign in to the original account and workspace to retry. Older captures without a recorded identity need manual recovery and will not upload automatically.
+      </div>}
       {queued > 0 && (
         <div
           role="status"
@@ -305,15 +358,16 @@ export default function SnapProofFieldWorkspace({
       )}{' '}
       {tab === 'capture' && (
         <Capture
+          key={`${captureScope?.tenantId ?? ''}:${captureScope?.userId ?? ''}`}
           jobs={jobs}
           detail={detail}
           selectedJobId={selectedJobId}
           onSelect={onSelectJob}
           saving={saving}
-          queued={queued}
-          setQueued={setQueued}
+          bindCapture={bindCapture}
+          reconcile={reconcile}
           mutate={mutate}
-          canWrite={canWrite}
+          canWrite={canWrite && Boolean(captureScope)}
         />
       )}{' '}
       {tab === 'work' && (
@@ -808,8 +862,8 @@ function Capture({
   selectedJobId,
   onSelect,
   saving,
-  queued,
-  setQueued,
+  bindCapture,
+  reconcile,
   mutate,
   canWrite,
 }: {
@@ -818,70 +872,66 @@ function Capture({
   selectedJobId: string | null;
   onSelect: (id: string) => void;
   saving: boolean;
-  queued: number;
-  setQueued: (value: number) => void;
+  bindCapture: () => CaptureBinding | null;
+  reconcile: () => Promise<void>;
   mutate: (task: () => Promise<unknown>) => void;
   canWrite: boolean;
 }) {
   const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!canWrite || !file || !selectedJobId) return;
-    const clientMutationId = crypto.randomUUID();
-    const payload = {
-      title,
-      caption: caption || null,
-      fileType: file.type.startsWith('image/')
-        ? 'image'
-        : file.type.startsWith('audio/')
-          ? 'audio'
-          : 'document',
-      capturedAt: new Date().toISOString(),
-      sourceType: 'mobile_capture',
-      originalName: file.name,
-      declaredMimeType: file.type,
-      contentBase64: await base64(file),
-      clientMutationId,
-      privacyMetadata: { capture: 'field', exifPolicy: 'strip-app1-before-storage' },
-    };
-    if (!navigator.onLine) {
+    if (!canWrite || capturing || !file || !selectedJobId) return;
+    const binding = bindCapture();
+    if (!binding?.current()) return;
+    setCaptureError(null);
+    setCapturing(true);
+    try {
+      const clientMutationId = crypto.randomUUID();
+      const payload = {
+        title,
+        caption: caption || null,
+        fileType: file.type.startsWith('image/')
+          ? 'image'
+          : file.type.startsWith('audio/')
+            ? 'audio'
+            : 'document',
+        capturedAt: new Date().toISOString(),
+        sourceType: 'mobile_capture',
+        originalName: file.name,
+        declaredMimeType: file.type,
+        contentBase64: await base64(file),
+        clientMutationId,
+        privacyMetadata: { capture: 'field', exifPolicy: 'strip-app1-before-storage' },
+      };
+      // Save immutable bytes with the identity captured before FileReader awaits.
+      // A later login must neither adopt this capture nor upload it as itself.
       await queueSnapProofCapture({
         id: clientMutationId,
         jobId: selectedJobId,
         payload,
         createdAt: new Date().toISOString(),
-      });
-      setQueued(queued + 1);
+      }, binding.scope);
+      if (!binding.current()) return;
       setTitle('');
       setCaption('');
       setFile(null);
-      return;
+      await reconcile();
+    } catch (reason) {
+      if (binding.current()) setCaptureError(errorText(reason));
+    } finally {
+      setCapturing(false);
     }
-    void mutate(async () => {
-      try {
-        await moduleShellApi.snapproofos.uploadJobFile(selectedJobId, payload);
-      } catch (error) {
-        await queueSnapProofCapture({
-          id: clientMutationId,
-          jobId: selectedJobId,
-          payload,
-          createdAt: new Date().toISOString(),
-        });
-        setQueued(queued + 1);
-        throw error;
-      }
-      setTitle('');
-      setCaption('');
-      setFile(null);
-    });
   };
   return (
     <Section
       title="Mobile capture"
       description="Capture photos, documents, and voice notes from the job. Files are checked before upload, photo location metadata is removed, and offline captures safely resume when the connection returns."
     >
+      {captureError && <div role="alert">{captureError}</div>}
       {canWrite && <Form onSubmit={(event) => void submit(event)}>
         <Select
           name="Job"
@@ -903,7 +953,7 @@ function Capture({
             style={input}
           />
         </Label>
-        <Submit saving={saving} label="Secure capture" />
+        <Submit saving={saving || capturing} label="Secure capture" />
       </Form>}
       <State>
         Files remain private. Clean scan state is required before retrieval; infected content is

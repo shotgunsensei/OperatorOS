@@ -534,6 +534,7 @@ test('Phase 32 persists the customer to approved branded export and revocable sh
     declaredMimeType: 'application/pdf',
     contentBase64: pdf.toString('base64'),
     clientMutationId: 'phase32-file-replay-1',
+    expectedCaptureIdentity: { userId: ownerA.id, tenantId: ownerA.currentTenantId },
   };
   const file = await app.inject({
     method: 'POST',

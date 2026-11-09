@@ -2,6 +2,37 @@
 
 The isolated source candidate now passes the unchanged Phase39 high-severity security gate, full types/lint, production build and offline Android/iOS export on its updated frozen graph. Zero unresolved high/critical advisories remain; two moderate advisories and existing tested patch exceptions are explicit. Zod4 preserves prior UUID and UTF-16 input limits through regression-tested compatibility changes. Module parity states and production acceptance are unchanged. [Exact changes, completed checks and remaining limits](security/DEPENDENCY_REMEDIATION_2026-11-09.md).
 
+## 2026-11-09 - Module purpose audit and local boundary repairs
+
+The isolated `codex/module-audit-nov09` branch follows frozen integrated source
+`8b8f9748`. A source-backed ledger now distinguishes all fourteen module
+purposes, eight adjacent products, implemented workflows and missing production
+engineering. Thirteen parity matrices have dated inventory overlays; historical
+counts and exclusions are preserved without presenting them as current facts.
+
+TechDeck token revocation now restricts the mutation to its server-resolved
+module and tenant in one SQL statement. Platform-administrator authority is
+unchanged. SnapProof binds saved capture bytes to their original account and
+workspace, verifies the same identity on the upload POST, preserves held/failed
+captures and refreshes pending counts after overlapping capture/flush work.
+The API and capture UI must roll out together; legacy unbound rows need manual
+recovery and are never automatically reassigned or deleted.
+
+Fresh local checks pass: TechDeck 12/12 DB-free tests and eight generated-SQL
+cases; SnapProof 50/50 DB-free and 15/15 Chromium component/IndexedDB tests;
+complete API/web source types, changed-test types and scoped zero-warning lint.
+Both prepared PostgreSQL regressions are typechecked, not run. Existing installed
+assets and synthetic boundaries do not establish a canonical full build or live
+acceptance. No source-inventory facet was promoted to deployed acceptance.
+
+The fresh dependency audit still has 20 high and 1 critical affected paths,
+covering 18 unresolved high/critical advisory IDs. Package remediation, complete
+build/hosted CI, recoverable production backup, schema 68, deployment identity
+and authenticated/provider acceptance remain separate release gates. This local
+audit does not publish, migrate, activate providers or establish production readiness.
+
+[Current scope, repairs and exact verification limits](reviews/2026-11-09/MODULE_AUDIT.md).
+
 ## 2026-10-30 - Final local quality follow-through
 
 ## 2026-11-06 - Reconciled local source candidate

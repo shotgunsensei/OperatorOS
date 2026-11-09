@@ -230,3 +230,48 @@ test('Phase 26 literal workflows preserve source outcomes behind tenant, scope, 
   assert.equal(foreignWorkspace.json().appointments.length, 0);
   assert.equal(foreignWorkspace.json().portalAssignments.length, 0);
 });
+
+test('TechDeck module sessions cannot revoke platform, other-module, or foreign-tenant tokens', async () => {
+  const { createServiceIdentityAndToken } = await import('../src/lib/shared-platform-control-plane.js');
+  const otherModule = await createTestModule();
+  const created: Array<{ tenantId: string; identityId: string; tokenId: string }> = [];
+  const issue = async (tenantId: string, actorUserId: string, moduleId?: string) => {
+    const value = await createServiceIdentityAndToken({
+      tenantId, actorUserId, moduleId,
+      identityName: 'Revocation scope regression', tokenName: 'Disposable scope fixture',
+      scopes: ['techdeck:read'],
+    });
+    const row = { tenantId, identityId: String(value.identity!.id), tokenId: String(value.token!.id) };
+    created.push(row);
+    return row;
+  };
+  try {
+    const platform = await issue(owner.currentTenantId, owner.id);
+    const other = await issue(owner.currentTenantId, owner.id, otherModule.id);
+    const foreign = await issue(foreignOwner.currentTenantId, foreignOwner.id, moduleRow.id);
+    const own = await issue(owner.currentTenantId, owner.id, moduleRow.id);
+    const headers = { authorization: `Bearer ${signToken({
+      userId: owner.id, email: owner.email, role: owner.role, tokenVersion: owner.tokenVersion,
+      sessionType: 'module', tenantId: owner.currentTenantId, moduleId: moduleRow.id,
+    })}` };
+    for (const fixture of [platform, other, foreign]) {
+      const response = await app.inject({ method: 'DELETE', url: `/v1/modules/techdeck/api-tokens/${fixture.tokenId}`, headers });
+      assert.equal(response.statusCode, 404, response.body);
+      assert.equal(response.json().code, 'API_TOKEN_NOT_FOUND');
+      const unchanged = await db.execute(sql`SELECT revoked_at FROM shared_api_tokens WHERE tenant_id=${fixture.tenantId} AND id=${fixture.tokenId}`);
+      assert.equal(unchanged.rows.length, 1);
+      assert.equal(unchanged.rows[0]!.revoked_at, null);
+    }
+    const revoked = await app.inject({ method: 'DELETE', url: `/v1/modules/techdeck/api-tokens/${own.tokenId}`, headers });
+    assert.equal(revoked.statusCode, 200, revoked.body);
+    const repeated = await app.inject({ method: 'DELETE', url: `/v1/modules/techdeck/api-tokens/${own.tokenId}`, headers });
+    assert.equal(repeated.statusCode, 404, repeated.body);
+  } finally {
+    // This suite's ensureSchemaReady guard requires a disposable test database.
+    for (const fixture of created) {
+      await db.execute(sql`DELETE FROM shared_api_tokens WHERE tenant_id=${fixture.tenantId} AND id=${fixture.tokenId}`);
+      await db.execute(sql`DELETE FROM shared_service_identities WHERE tenant_id=${fixture.tenantId} AND id=${fixture.identityId}`);
+    }
+    await cleanupModule(otherModule.id);
+  }
+});

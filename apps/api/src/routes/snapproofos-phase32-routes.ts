@@ -11,6 +11,7 @@ import {
 import { appendActivityEvent, listActivityEvents } from '../lib/shared-usage-activity.js';
 import { buildSnapProofExport, validateSnapProofArtifact } from '../lib/snapproofos-exports.js';
 import { stripJpegExif } from '../lib/snapproofos-media.js';
+import { snapProofCaptureIdentityStatus } from '../lib/snapproof-capture-identity.js';
 import {
   parseEvidenceInput,
   sanitizeContext,
@@ -961,6 +962,15 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
     async (request, reply) => {
       try {
         const input = body(request);
+        // Bind captured evidence to this POST's trusted identity, not an earlier
+        // browser identity GET. No assertion value supplies authority or grants.
+        const identityStatus = snapProofCaptureIdentityStatus(input, { userId: actor(request), tenantId: tenant(request) });
+        if (identityStatus === 'missing' || identityStatus === 'invalid') {
+          throw new InputError('A valid captured identity is required. Reload the capture workspace before retrying.', 'SNAPPROOF_CAPTURE_IDENTITY_REQUIRED', 400);
+        }
+        if (identityStatus !== 'match') {
+          throw new InputError('Capture identity changed. Sign in to the original account and workspace to retry.', 'SNAPPROOF_CAPTURE_IDENTITY_CHANGED', 409);
+        }
         const jobId = identifier(request);
         const mutation = text(input.clientMutationId, 'clientMutationId', 100);
         const parsed = parseEvidenceInput({
@@ -1033,7 +1043,7 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
                   && sha256Json(previousPrivacy) === sha256Json(privacy)
                   && previous.caption === caption && Number(previous.sort_order) === sortOrder
                   && (input.capturedAt === undefined || new Date(previous.captured_at).getTime() === parsed.capturedAt.getTime());
-              if (previous.case_id !== jobId || previous.deleted_at || !sameIntent) {
+              if (previous.case_id !== jobId || previous.created_by_user_id !== actor(request) || previous.deleted_at || !sameIntent) {
                 throw new InputError('Capture key was already used for a different proof payload', 'SNAPPROOF_CAPTURE_IDEMPOTENCY_CONFLICT', 409);
               }
               return { row: previous, attachment: null, replayed: true };
