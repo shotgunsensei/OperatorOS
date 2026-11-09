@@ -1,3 +1,7 @@
+## 2026-11-09 - Verified combined local candidate
+
+Runtime/dependency HEAD `864e130c98d6a697cb75ac73a9fba9d01ca71876` combines the dependency repair and module boundary fixes. Fresh canonical proof: Phase 39 passes (30 script + 20 API/preflight tests, zero unresolved high/critical), 62 module DB-free tests, 77 Zod/domain/workspace tests, 46 mailbox tests, 15 Chromium cases and 8 native unit tests pass with zero skipped. Root types, zero-warning lint, expanded API/web source and changed-test typing, native config and production build (40/40 pages) pass. Both prepared PostgreSQL tests were typechecked only. Offline frozen reinstall passes with unchanged lock and task-local store/cache. Subsequent finalization changes documentation/SBOM metadata only. Exact receipts and remaining two moderates, existing patch exceptions, four baseline native peer warnings and production gates are in the [remediation report](security/DEPENDENCY_REMEDIATION_2026-11-09.md).
+
 ## 2026-11-09 - Local dependency remediation
 
 The isolated source candidate now passes the unchanged Phase39 high-severity security gate, full types/lint, production build and offline Android/iOS export on its updated frozen graph. Zero unresolved high/critical advisories remain; two moderate advisories and existing tested patch exceptions are explicit. Zod4 preserves prior UUID and UTF-16 input limits through regression-tested compatibility changes. Module parity states and production acceptance are unchanged. [Exact changes, completed checks and remaining limits](security/DEPENDENCY_REMEDIATION_2026-11-09.md).
@@ -25,10 +29,11 @@ Both prepared PostgreSQL regressions are typechecked, not run. Existing installe
 assets and synthetic boundaries do not establish a canonical full build or live
 acceptance. No source-inventory facet was promoted to deployed acceptance.
 
-The fresh dependency audit still has 20 high and 1 critical affected paths,
-covering 18 unresolved high/critical advisory IDs. Package remediation, complete
-build/hosted CI, recoverable production backup, schema 68, deployment identity
-and authenticated/provider acceptance remain separate release gates. This local
+Historical audit baseline: the frozen graph had 20 high and 1 critical affected
+paths, covering 18 unresolved high/critical advisory IDs. The combined candidate
+now clears local package remediation and full build checks as recorded above;
+hosted CI, recoverable production backup, schema 68, deployment identity and
+authenticated/provider acceptance remain separate release gates. This local
 audit does not publish, migrate, activate providers or establish production readiness.
 
 [Current scope, repairs and exact verification limits](reviews/2026-11-09/MODULE_AUDIT.md).

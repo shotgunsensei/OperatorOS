@@ -1,3 +1,7 @@
+## 2026-11-09 - Canonical combined-source verification
+
+The dependency and module repair candidate at `864e130c` now passes canonical installed-graph module/browser regressions, expanded source/test types, root lint, Phase 39 and production build. This supersedes the earlier retained-assets and vulnerable-graph limits only for those local checks. Two moderate advisories, existing patch exceptions, four baseline native peer warnings and all database/deployed/provider/device acceptance gates remain explicit. No module parity facet is promoted to production acceptance. [Exact integrated evidence](../security/DEPENDENCY_REMEDIATION_2026-11-09.md).
+
 ## 2026-11-09 - Local dependency remediation
 
 The isolated source candidate now passes the unchanged Phase39 high-severity security gate, full types/lint, production build and offline Android/iOS export on its updated frozen graph. Zero unresolved high/critical advisories remain; two moderate advisories and existing tested patch exceptions are explicit. Zod4 preserves prior UUID and UTF-16 input limits through regression-tested compatibility changes. Module parity states and production acceptance are unchanged. [Exact changes, completed checks and remaining limits](../security/DEPENDENCY_REMEDIATION_2026-11-09.md).

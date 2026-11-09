@@ -194,11 +194,24 @@ PlayPack API `src/routes/index.ts` and database `schema/index.ts`, Archive
 
 ## Outstanding release gates
 
-The fresh dependency scan reports 20 high and 1 critical affected paths,
-covering 18 unresolved high/critical advisory IDs. The isolated dependency
-branch has a remediation plan, not completed package fixes. The scan's source
-findings are zero and existing exception integrity is preserved; neither fact
-clears the vulnerable dependency graph. Do not suppress the gate.
+Historical baseline, before dependency remediation: the fresh frozen-source
+scan reported 20 high and 1 critical affected paths, covering 18 unresolved
+high/critical advisory IDs. At that point the isolated dependency branch had
+a plan, not completed fixes. Zero source findings and preserved exception
+integrity did not clear that vulnerable graph. This baseline evidence remains
+valid history, not the current combined candidate result.
+
+Current local overlay: the integrated runtime at `864e130c98d6a697cb75ac73a9fba9d01ca71876`
+passes the unchanged Phase 39 gate with **zero unresolved high/critical** IDs,
+two existing tested patch exceptions and two remaining moderate advisories.
+No suppression or gate relaxation was added. Canonical installed-graph checks
+pass: 62 module DB-free tests, 77 Zod/domain/workspace tests, 46 mailbox tests,
+15 Chromium cases, 8 native unit tests, expanded API/web test types, root
+types/lint and the full production build. Both prepared PostgreSQL suites are
+typechecked, not executed. See the [dependency remediation report](../../security/DEPENDENCY_REMEDIATION_2026-11-09.md)
+for exact commits, package changes, receipts, remaining moderate/peer risks
+and offline native export limits. This clears the local dependency/build
+blocker, not the database, deployed identity or live-provider acceptance gates.
 
 Source publication, the production backup/recovery decision, schema 68 apply
 and verify, Replit deployment identity, authenticated tenant/role tests and
