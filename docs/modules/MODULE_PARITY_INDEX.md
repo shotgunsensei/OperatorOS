@@ -1,3 +1,7 @@
+## 2026-11-09 - Workflow/security integration overlay
+
+Combined workflow continuity and security-maintenance source passes fresh local exact-graph checks: 321 DB-free/static/native tests and 83 Chromium component cases, types/lint/build and native export. No inventory or parity-state change; database, live provider and deployed acceptance remain separate. [Evidence](../reviews/2026-11-09/WORKFLOW_SECURITY_INTEGRATION.md).
+
 ## 2026-11-09 - Cross-app handoff continuity, local candidate
 
 Existing core/companion workflow actions now recover exact actor/tenant/record/intent-bound receipts through status reads, preserve uncertain retry keys and fence stale account/context responses. Explicit creation review remains required. Local proof: 34 Chromium component cases, 15 existing DB-free source contracts, complete web-source/new-test strict types and scoped lint pass. No backend/schema/dependency changes, PostgreSQL/runtime/provider/deployment acceptance or parity-state promotion. The fourteen-module add-on ledger separates implemented handoffs from proposed uses and modules that should remain separate. [Source, acceptance and evidence](../reviews/2026-11-09/LATERAL_WORKFLOW_CONTINUITY.md).

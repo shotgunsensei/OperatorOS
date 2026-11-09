@@ -1,3 +1,7 @@
+## 2026-11-09 - Workflow continuity on the raw-high-free graph
+
+A new isolated candidate combines security 509821d8 and workflow b11c8237 over frozen 405740c8. Fresh exact-graph local proof: 321 unique DB-free/static/native tests and 83 Chromium component cases pass, along with expanded source/test types, root types/lint, production build, native config and offline exports. Raw audit remains 0 high/0 critical/2 moderate; all packages latest is not claimed. No database/runtime/provider/deployment acceptance or parity promotion. [Provenance, failed wrapper attempts, final build receipt and remaining gates](reviews/2026-11-09/WORKFLOW_SECURITY_INTEGRATION.md).
+
 ## 2026-11-09 - Dependency recheck removes raw high alerts
 
 The isolated candidate based on 405740c8 removes image-size through supported Expo57/Metro maintenance and now has **0 raw high, 0 critical, 2 moderate** advisories. Its obsolete patch and two exceptions are removed, and the scanner now rejects nonzero raw high counts. Maintained Next/Fastify/Zod/forge updates pass root types/lint/production build, 77 Zod/domain contracts, native units/config and offline Android/iOS export. Full Phase39 final evidence and version inventory are recorded in the [dependency recheck](security/DEPENDENCY_RECHECK_2026-11-09.md). Not all packages are latest; no database, runtime, live provider or deployed acceptance is claimed.
