@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createRequire } from 'node:module';
 import { EventEmitter } from 'node:events';
 import { dirname, join } from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const tailwindRoot = dirname(require.resolve('tailwindcss/package.json'));
@@ -12,6 +13,7 @@ const nativeRoot = join(process.cwd(), 'apps', 'torqueshed-native');
 const expoRoot = dirname(require.resolve('expo/package.json', { paths: [nativeRoot] }));
 const cliRoot = dirname(require.resolve('@expo/cli/package.json', { paths: [expoRoot] }));
 const forge = require(require.resolve('node-forge', { paths: [cliRoot] }));
+const { default: plist } = require(require.resolve('@expo/plist', { paths: [cliRoot] }));
 const expressRoot = dirname(require.resolve('express/package.json'));
 const proxyAddr = require(require.resolve('proxy-addr', { paths: [expressRoot] }));
 const reactNativeRoot = dirname(require.resolve('react-native/package.json', { paths: [nativeRoot] }));
@@ -116,6 +118,20 @@ test('follow-redirects preserves legitimate same-origin relative redirects and p
   });
 });
 
+test('follow-redirects preserves cross-realm sensitive-header policy on redirects', () => {
+  const sensitiveHeaders = runInNewContext('["X-Custom-Credential"]');
+  assert.equal(Array.isArray(sensitiveHeaders), true);
+  assert.equal(sensitiveHeaders instanceof Array, false);
+  for (const location of ['https://other.example.test/target', 'http://other.example.test/target']) {
+    const redirected = followSyntheticRedirect({
+      'X-Custom-Credential': 'synthetic-cross-realm-credential',
+      'X-Public': 'public',
+    }, location, sensitiveHeaders);
+    assert.equal(redirected['x-custom-credential'], undefined);
+    assert.equal(redirected['x-public'], 'public');
+  }
+});
+
 
 test('proxy trust cannot turn a short IPv4-mapped IPv6 subnet into trust for every client', () => {
   for (const subnet of ['::ffff:10.0.0.0/8', '::/1']) {
@@ -180,4 +196,13 @@ test('forge accepts a valid RSA signature and rejects extra nested DigestAlgorit
   ]);
   const signature = keys.privateKey.sign(asn1.toDer(malformed).getBytes(), 'NONE');
   assert.throws(() => keys.publicKey.verify(expected, signature), /valid RSASSA-PKCS1-v1_5 DigestInfo/);
+});
+
+test('rebased Expo plist patch preserves BOM and leading-whitespace XML compatibility', () => {
+  const xml = '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>Example</key><string>value</string></dict></plist>';
+  for (const prefix of ['', '\uFEFF', '\uFEFF \n\t']) {
+    const parsed = plist.parse(prefix + xml);
+    assert.equal(Object.getPrototypeOf(parsed), null);
+    assert.deepEqual(Object.entries(parsed), [['Example', 'value']]);
+  }
 });

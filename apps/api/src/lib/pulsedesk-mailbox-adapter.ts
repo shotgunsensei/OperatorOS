@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type PulseDeskMailboxProvider = 'google' | 'microsoft';
-export const PULSEDESK_MAILBOX_PACKAGES = Object.freeze({ imapflow: '1.3.1', mailparser: '3.9.8' });
+export const PULSEDESK_MAILBOX_PACKAGES = Object.freeze({ imapflow: '1.7.8', mailparser: '3.14.2' });
 const PROVIDERS = {
   google: {
     authorization: 'https://accounts.google.com/o/oauth2/v2/auth',

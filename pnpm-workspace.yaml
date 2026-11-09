@@ -38,28 +38,34 @@ minimumReleaseAgeExclude:
   - expo-splash-screen@57.0.6
   - expo@57.0.12
 overrides:
+  "@expo/config-plugins": "57.0.12"
+  "@expo/fingerprint": "0.20.13"
+  "@expo/metro-config": "57.0.14"
+  "@expo/metro-runtime": "57.0.18"
+  "expo-font": "57.0.4"
   "@esbuild-kit/core-utils>esbuild": ">=0.25.0"
-  "@fastify/ajv-compiler>fast-uri": "4.2.1"
+  "@fastify/ajv-compiler>fast-uri": "4.2.3"
   "@vitejs/plugin-react>@babel/core": "7.29.6"
   "@xmldom/xmldom": ">=0.9.12"
-  "ajv>fast-uri": "4.2.1"
+  "ajv>fast-uri": "4.2.3"
   "axios@^1": "1.20.0"
   compression: "1.8.2"
-  "decode-uri-component": ">=0.5.0"
-  "express>body-parser": ">=2.3.0"
+  "decode-uri-component": "0.5.1"
+  "express>body-parser": "2.4.0"
   "express>proxy-addr": "2.0.8"
   "express>router": ">=2.2.0"
-  "fast-json-stringify>fast-uri": "4.2.1"
+  "fast-json-stringify>fast-uri": "4.2.3"
   "fast-copy@^4": "4.1.0"
   "fastify>find-my-way": ">=9.7.0"
   flatted: ">=3.4.2"
-  follow-redirects: "1.16.1"
+  follow-redirects: "1.16.2"
   "js-yaml@^4": ">=4.3.2 <5"
   "minimatch>brace-expansion": "5.0.12"
+  node-forge: "1.4.1"
   "next>postcss": ">=8.5.18"
   picomatch: "4.0.5"
   postcss-selector-parser: "7.1.6"
-  "qs": ">=6.16.0"
+  "qs": ">=6.16.1"
   "recharts>lodash": ">=4.18.0"
   rollup: ">=4.62.2"
   "router>path-to-regexp": ">=8.4.0"
@@ -73,7 +79,7 @@ overrides:
   "vite>esbuild": ">=0.28.1"
   ws: ">=8.21.1"
 patchedDependencies:
-  '@expo/plist@0.8.1': patches/@expo__plist@0.8.1.patch
+  '@expo/plist@0.8.2': patches/@expo__plist@0.8.2.patch
   braces@3.0.3: patches/braces@3.0.3.patch
   'image-size@1.2.1': patches/image-size@1.2.1.patch
-  node-forge@1.4.0: patches/node-forge@1.4.0.patch
+  node-forge@1.4.1: patches/node-forge@1.4.1.patch

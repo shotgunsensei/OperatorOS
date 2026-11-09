@@ -88,7 +88,7 @@ async function fixture(options:{available?:boolean;mode?:'test'|'live'}={}){
     '../lib/shared-background-jobs.js':{registerSharedJobHandler:(key:string,handler:(context:unknown)=>Promise<void>)=>handlers.set(key,handler),enqueueSharedJob:async(input:unknown)=>{calls.push({kind:'queue',input});return{job:{id:'synthetic-job'},duplicate:false};}},
     '../lib/shared-platform-control-plane.js':{saveProviderConfiguration:async()=>({id:randomUUID()})},
     '../lib/shared-service-safety.js':{isOperatorOSDeterministicProviderTestEnvironment:()=>true},
-    '../lib/pulsedesk-mailbox-adapter.js':{PulseDeskMailboxError,pulseDeskMailboxRuntimeStatus:()=>({available,providers:['google','microsoft'],missingPackages:available?[]:['imapflow@1.3.1','mailparser@3.9.8']}),loadPulseDeskMailboxAdapter:()=>{throw new Error('NO_REAL_PROVIDER_IN_HTTP_MODEL');}},
+    '../lib/pulsedesk-mailbox-adapter.js':{PulseDeskMailboxError,pulseDeskMailboxRuntimeStatus:()=>({available,providers:['google','microsoft'],missingPackages:available?[]:['imapflow@1.7.8','mailparser@3.14.2']}),loadPulseDeskMailboxAdapter:()=>{throw new Error('NO_REAL_PROVIDER_IN_HTTP_MODEL');}},
     '../lib/pulsedesk-mailbox-service.js':{createPulseDeskMailboxService:(input:MailboxDependencies)=>{mailboxDependencies=input;authorizeService=input.authorize;return service;},publicMailboxConfiguration},
   };
   const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;

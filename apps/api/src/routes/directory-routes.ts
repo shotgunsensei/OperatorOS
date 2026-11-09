@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { utf16Length } from '../lib/zod-string-length.js';
 import { listSharedCustomers, updateSharedCustomer } from '../lib/shared-customers.js';
 import {
   archiveContact, archiveOrganization, archiveRelationship, archiveSite,
@@ -15,60 +16,60 @@ import {
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
 
-const idSchema = z.string().uuid();
+const idSchema = z.guid();
 const expectedVersionSchema = z.object({ expectedVersion: z.number().int().positive() });
 const organizationSchema = z.object({
-  name: z.string().trim().min(2).max(200),
+  name: z.string().trim().superRefine(utf16Length(2, 200)),
   type: z.enum(['customer', 'client', 'vendor', 'partner', 'facility', 'other']).optional(),
   status: z.enum(['active', 'inactive']).optional(),
-  website: z.string().trim().url().max(500).nullable().optional(),
-  notes: z.string().trim().max(4000).nullable().optional(),
+  website: z.string().trim().url().superRefine(utf16Length(0, 500)).nullable().optional(),
+  notes: z.string().trim().superRefine(utf16Length(0, 4000)).nullable().optional(),
 });
 const organizationUpdateSchema = organizationSchema.partial().extend({ expectedVersion: z.number().int().positive() });
 const contactSchema = z.object({
-  firstName: z.string().trim().min(1).max(100), lastName: z.string().trim().max(100).optional(),
-  email: z.string().trim().email().max(320).nullable().optional(), phone: z.string().trim().max(40).nullable().optional(),
-  title: z.string().trim().max(160).nullable().optional(), status: z.enum(['active', 'inactive']).optional(),
+  firstName: z.string().trim().superRefine(utf16Length(1, 100)), lastName: z.string().trim().superRefine(utf16Length(0, 100)).optional(),
+  email: z.string().trim().email().superRefine(utf16Length(0, 320)).nullable().optional(), phone: z.string().trim().superRefine(utf16Length(0, 40)).nullable().optional(),
+  title: z.string().trim().superRefine(utf16Length(0, 160)).nullable().optional(), status: z.enum(['active', 'inactive']).optional(),
 });
 const contactUpdateSchema = contactSchema.partial().extend({ expectedVersion: z.number().int().positive() });
 const addressSchema = z.object({
-  label: z.string().trim().max(100).nullable().optional(), line1: z.string().trim().min(2).max(200),
-  line2: z.string().trim().max(200).nullable().optional(), city: z.string().trim().min(1).max(120),
-  region: z.string().trim().min(1).max(120), postalCode: z.string().trim().min(2).max(24),
-  countryCode: z.string().trim().length(2).optional(),
+  label: z.string().trim().superRefine(utf16Length(0, 100)).nullable().optional(), line1: z.string().trim().superRefine(utf16Length(2, 200)),
+  line2: z.string().trim().superRefine(utf16Length(0, 200)).nullable().optional(), city: z.string().trim().superRefine(utf16Length(1, 120)),
+  region: z.string().trim().superRefine(utf16Length(1, 120)), postalCode: z.string().trim().superRefine(utf16Length(2, 24)),
+  countryCode: z.string().trim().superRefine(utf16Length(2, 2)).optional(),
 });
 const siteSchema = z.object({
-  organizationId: idSchema, name: z.string().trim().min(2).max(200),
+  organizationId: idSchema, name: z.string().trim().superRefine(utf16Length(2, 200)),
   type: z.enum(['headquarters', 'office', 'facility', 'service', 'remote', 'other']).optional(),
-  status: z.enum(['active', 'inactive']).optional(), timezone: z.string().trim().max(100).nullable().optional(),
-  notes: z.string().trim().max(4000).nullable().optional(), address: addressSchema.nullable().optional(),
+  status: z.enum(['active', 'inactive']).optional(), timezone: z.string().trim().superRefine(utf16Length(0, 100)).nullable().optional(),
+  notes: z.string().trim().superRefine(utf16Length(0, 4000)).nullable().optional(), address: addressSchema.nullable().optional(),
 });
 const siteUpdateSchema = siteSchema.omit({ organizationId: true }).partial().extend({ expectedVersion: z.number().int().positive() });
-const associationSchema = z.object({ contactId: idSchema, role: z.string().trim().max(120).nullable().optional(), isPrimary: z.boolean().optional() });
+const associationSchema = z.object({ contactId: idSchema, role: z.string().trim().superRefine(utf16Length(0, 120)).nullable().optional(), isPrimary: z.boolean().optional() });
 const relationshipSchema = z.object({
-  fromOrganizationId: idSchema, toOrganizationId: idSchema, type: z.string().trim().min(2).max(100),
-  notes: z.string().trim().max(2000).nullable().optional(),
+  fromOrganizationId: idSchema, toOrganizationId: idSchema, type: z.string().trim().superRefine(utf16Length(2, 100)),
+  notes: z.string().trim().superRefine(utf16Length(0, 2000)).nullable().optional(),
 });
-const tagSchema = z.object({ name: z.string().trim().min(1).max(80), color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional() });
+const tagSchema = z.object({ name: z.string().trim().superRefine(utf16Length(1, 80)), color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional() });
 const tagAssignmentSchema = z.object({ entityType: z.enum(['organization', 'contact', 'site']), entityId: idSchema });
 const profileSchemas = {
   tradeflowkit: z.object({
     expectedVersion: z.number().int().positive().optional(),
-    customerStatus: z.string().trim().min(1).max(80).optional(),
+    customerStatus: z.string().trim().superRefine(utf16Length(1, 80)).optional(),
     paymentTermsDays: z.number().int().min(0).max(365).nullable().optional(),
-    notes: z.string().trim().max(4000).nullable().optional(),
+    notes: z.string().trim().superRefine(utf16Length(0, 4000)).nullable().optional(),
   }).strict(),
   techdeck: z.object({
     expectedVersion: z.number().int().positive().optional(),
-    serviceTier: z.string().trim().min(1).max(100).nullable().optional(),
-    accountCode: z.string().trim().min(1).max(100).nullable().optional(),
-    notes: z.string().trim().max(4000).nullable().optional(),
+    serviceTier: z.string().trim().superRefine(utf16Length(1, 100)).nullable().optional(),
+    accountCode: z.string().trim().superRefine(utf16Length(1, 100)).nullable().optional(),
+    notes: z.string().trim().superRefine(utf16Length(0, 4000)).nullable().optional(),
   }).strict(),
   pulsedesk: z.object({
     expectedVersion: z.number().int().positive().optional(),
-    facilityCategory: z.string().trim().min(1).max(100).nullable().optional(),
+    facilityCategory: z.string().trim().superRefine(utf16Length(1, 100)).nullable().optional(),
     phiRestricted: z.boolean().optional(),
-    notes: z.string().trim().max(4000).nullable().optional(),
+    notes: z.string().trim().superRefine(utf16Length(0, 4000)).nullable().optional(),
   }).strict(),
   // SnapProofOS consumes the canonical organization/site/contact records
   // directly; it intentionally has no duplicate child profile authority.
@@ -109,7 +110,7 @@ function parse<S extends z.ZodTypeAny>(schema: S, value: unknown, reply: Fastify
 function pageQuery(request: FastifyRequest, reply: FastifyReply) {
   const schema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(25), offset: z.coerce.number().int().min(0).default(0),
-    search: z.string().trim().max(200).optional(), status: z.enum(['active', 'inactive']).optional(),
+    search: z.string().trim().superRefine(utf16Length(0, 200)).optional(), status: z.enum(['active', 'inactive']).optional(),
     includeArchived: z.enum(['true', 'false']).transform(v => v === 'true').optional(),
   }).passthrough();
   return parse(schema, request.query ?? {}, reply);
@@ -132,9 +133,9 @@ export async function registerDirectoryRoutes(app: FastifyInstance) {
     reply.header('Cache-Control', 'private, no-store');
     const id = parse(idSchema, request.params.id, reply);
     const input = parse(z.object({
-      expectedRevision: z.string().regex(/^[0-9a-f]{64}$/), name: z.string().trim().min(2).max(160),
-      email: z.string().trim().email().max(320).nullable(), phone: z.string().trim().max(40).nullable(),
-      address: z.string().trim().max(2000).nullable(), website: z.string().url().max(500).nullable(),
+      expectedRevision: z.string().regex(/^[0-9a-f]{64}$/), name: z.string().trim().superRefine(utf16Length(2, 160)),
+      email: z.string().trim().email().superRefine(utf16Length(0, 320)).nullable(), phone: z.string().trim().superRefine(utf16Length(0, 40)).nullable(),
+      address: z.string().trim().superRefine(utf16Length(0, 2000)).nullable(), website: z.string().url().superRefine(utf16Length(0, 500)).nullable(),
     }).strict(), request.body, reply);
     if (!id || !input) return;
     try {
@@ -150,7 +151,7 @@ export async function registerDirectoryRoutes(app: FastifyInstance) {
   // Uses the destination module's existing membership/entitlement/session guard.
   // Access to shared business identity never grants access to the source module.
   app.get('/v1/modules/:moduleSlug/shared-customers', { preHandler: sharedCustomerGuards }, async (request, reply) => {
-    const query = parse(z.object({ search: z.string().trim().max(200).optional(),
+    const query = parse(z.object({ search: z.string().trim().superRefine(utf16Length(0, 200)).optional(),
       limit: z.coerce.number().int().min(1).max(100).default(50),
       offset: z.coerce.number().int().min(0).max(100000).default(0),
     }).strict(), request.query, reply);

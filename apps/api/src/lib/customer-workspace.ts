@@ -9,7 +9,7 @@ export class CustomerWorkspaceError extends Error {
   constructor(readonly code: string, message: string, readonly statusCode = 400) { super(message); }
 }
 export const directoryContextSchema = z.object({
-  organizationId: z.string().uuid(), siteId: z.string().uuid().nullable(), contactId: z.string().uuid().nullable(),
+  organizationId: z.guid(), siteId: z.guid().nullable(), contactId: z.guid().nullable(),
   revision: z.string().regex(/^[0-9a-f]{64}$/),
 }).strict();
 export type QualifiedDirectoryContext = z.infer<typeof directoryContextSchema>;

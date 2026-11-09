@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { utf16Length } from './zod-string-length.js';
 
 export const BRANDFORGE_COPY_MODES = Object.freeze([
   'google_ad', 'meta_ad', 'linkedin_post', 'email', 'landing_page',
@@ -32,9 +33,9 @@ export const BRANDFORGE_INTEGRATION_CATALOG = Object.freeze([
   { provider: 'zapier', name: 'Zapier', category: 'developer', requiredFeature: 'integrations.growth', kind: 'webhook' },
 ] as const);
 
-const id = z.string().uuid();
-const bounded = (max: number) => z.string().trim().min(1).max(max);
-const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
+const id = z.guid();
+const bounded = (max: number) => z.string().trim().superRefine(utf16Length(1, max));
+const optionalText = (max: number) => z.string().trim().superRefine(utf16Length(0, max)).nullable().optional();
 const jsonObject = z.record(z.string(), z.unknown()).default({});
 
 export const offerInput = z.object({

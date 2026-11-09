@@ -124,7 +124,7 @@ export function pulseDeskText(
 export function pulseDeskId(value: unknown, field: string, nullable = true): string | null {
   const text = pulseDeskText(value, field, 36, { nullable, singleLine: true });
   if (!text) return null;
-  if (!z.string().uuid().safeParse(text).success) {
+  if (!z.guid().safeParse(text).success) {
     throw new PulseDeskServiceDeskError(`${field} must be a UUID`, 'PULSEDESK_ID_INVALID', field);
   }
   return text;

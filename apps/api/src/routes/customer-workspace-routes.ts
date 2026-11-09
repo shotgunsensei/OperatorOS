@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { utf16Length } from '../lib/zod-string-length.js';
 import { db } from '../db.js';
 import { requireTenantMember, requireTenantModuleAccess, requireTenantModuleWriteAccess } from '../lib/tenant-auth.js';
 import { DataFabricError, getDataFabricWorkflowReadiness, publishDataFabricWorkflow } from '../lib/cross-module-data-fabric.js';
@@ -9,8 +10,8 @@ import { writeAudit } from '../lib/audit.js';
 const base = '/v1/customer-workspace';
 const reads = [requireTenantMember, requireTenantModuleAccess('tradeflowkit')];
 const writes = [...reads, requireTenantModuleWriteAccess];
-const uuid = z.string().uuid();
-const listQuery = z.object({ search: z.string().trim().max(200).optional(), limit: z.coerce.number().int().min(1).max(100).default(30), offset: z.coerce.number().int().min(0).max(100000).default(0) }).strict();
+const uuid = z.guid();
+const listQuery = z.object({ search: z.string().trim().superRefine(utf16Length(0, 200)).optional(), limit: z.coerce.number().int().min(1).max(100).default(30), offset: z.coerce.number().int().min(0).max(100000).default(0) }).strict();
 const detailQuery = z.object({ siteId: uuid.optional(), contactId: uuid.optional() }).strict();
 const actionBody = z.object({ jobId: uuid, expectedSourceVersion: z.number().int().positive(), directoryContext: directoryContextSchema,
   idempotencyKey: z.string().regex(/^[A-Za-z0-9_.:-]{8,180}$/) }).strict();

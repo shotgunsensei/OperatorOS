@@ -89,13 +89,13 @@ function auditDependencies() {
   const ignoredGhsas = ['GHSA-5p2g-fcmc-qvqq', 'GHSA-w3rx-r6r6-pgpr', 'GHSA-86w9-cpqp-85rv', 'GHSA-vfj7-8cjw-p6xm'];
   const workspace = readFileSync(join(repositoryRoot, 'pnpm-workspace.yaml'), 'utf8');
   const patch = readFileSync(join(repositoryRoot, 'patches', 'image-size@1.2.1.patch'), 'utf8');
-  const forgePatch = readFileSync(join(repositoryRoot, 'patches', 'node-forge@1.4.0.patch'), 'utf8');
+  const forgePatch = readFileSync(join(repositoryRoot, 'patches', 'node-forge@1.4.1.patch'), 'utf8');
   const bracesPatch = readFileSync(join(repositoryRoot, 'patches', 'braces@3.0.3.patch'), 'utf8');
   const exceptionIntegrity = ignoredGhsas.every(id => workspace.includes(id))
     && workspace.includes('patches/image-size@1.2.1.patch')
     && patch.includes('Invalid ICNS entry length')
     && patch.includes('Invalid JXL partial-stream box length')
-    && workspace.includes('patches/node-forge@1.4.0.patch')
+    && workspace.includes('patches/node-forge@1.4.1.patch')
     && workspace.includes('patches/braces@3.0.3.patch')
     && forgePatch.includes('obj.value[0].value.length > 2')
     && bracesPatch.includes('stack.length >= 128');

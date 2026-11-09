@@ -151,9 +151,9 @@ test('production readiness requires canonical declared/pinned maintained depende
 });
 
 test('partial maintained transitive closure cannot advertise a live adapter',()=>{
-  const load=(name:string)=>name.endsWith('/package.json')?{version:name.startsWith('imapflow')?'1.3.1':'3.9.8'}:name==='imapflow'?{ImapFlow:class{}}:{simpleParser:()=>undefined};
+  const load=(name:string)=>name.endsWith('/package.json')?{version:name.startsWith('imapflow')?'1.7.8':'3.14.2'}:name==='imapflow'?{ImapFlow:class{}}:{simpleParser:()=>undefined};
   assert.equal(inspectPulseDeskMailboxRuntime(PULSEDESK_MAILBOX_PACKAGES,load).available,true);
   const missing=inspectPulseDeskMailboxRuntime(PULSEDESK_MAILBOX_PACKAGES,name=>{if(name==='imapflow')throw new Error('SYNTHETIC_MISSING_TRANSITIVE');return load(name);});
-  assert.deepEqual(missing.missingPackages,['imapflow@1.3.1']);assert.equal(missing.available,false);
+  assert.deepEqual(missing.missingPackages,['imapflow@1.7.8']);assert.equal(missing.available,false);
   assert.equal(inspectPulseDeskMailboxRuntime(PULSEDESK_MAILBOX_PACKAGES,name=>name==='mailparser'?{}:load(name)).available,false);
 });

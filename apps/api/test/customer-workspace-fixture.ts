@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { runInNewContext } from 'node:vm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import ts from 'typescript';
+import { utf16Length } from '../src/lib/zod-string-length.js';
 
 const require = createRequire(import.meta.url);
 const dialect = new PgDialect();
@@ -21,6 +22,7 @@ export function loadWorkspaceSource(relative: string, dependencies: Row) {
     fetch() { throw new Error('No network permitted'); },
     require(name: string) {
       if (Object.hasOwn(dependencies, name)) return dependencies[name];
+      if (name === '../lib/zod-string-length.js') return { utf16Length };
       if (['drizzle-orm', 'node:crypto', 'zod'].includes(name)) return require(name);
       throw new Error(`Unmodeled dependency: ${relative} -> ${name}`);
     },

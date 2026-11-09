@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
+import { utf16Length } from '../lib/zod-string-length.js';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { authenticate } from '../lib/auth.js';
@@ -29,25 +30,25 @@ import {
   type TenantMessengerRealtimeEvent,
 } from '../lib/tenant-messenger-realtime.js';
 
-const uuid = z.string().uuid();
+const uuid = z.guid();
 const clientMessageId = z.string().regex(/^[A-Za-z0-9._:-]{8,80}$/);
 const createConversationBody = z.object({
   participantUserIds: z.array(uuid).min(1).max(19),
-  title: z.string().trim().min(1).max(120).optional(),
+  title: z.string().trim().superRefine(utf16Length(1, 120)).optional(),
 }).strict();
 const sendMessageBody = z.object({
-  body: z.string().trim().min(1).max(4000),
+  body: z.string().trim().superRefine(utf16Length(1, 4000)),
   clientMessageId,
   replyToMessageId: uuid.nullish(),
 }).strict();
 const updateMessageBody = z.object({
-  body: z.string().trim().min(1).max(4000),
+  body: z.string().trim().superRefine(utf16Length(1, 4000)),
   expectedVersion: z.number().int().positive(),
 }).strict();
 const deleteMessageQuery = z.object({ expectedVersion: z.coerce.number().int().positive() }).strict();
 const updateConversationBody = z.object({
   muted: z.boolean().optional(),
-  title: z.string().trim().min(1).max(120).optional(),
+  title: z.string().trim().superRefine(utf16Length(1, 120)).optional(),
   expectedVersion: z.number().int().positive().optional(),
 }).strict().refine(value => value.muted !== undefined || value.title !== undefined, {
   message: 'At least one conversation setting is required',
@@ -195,7 +196,7 @@ export async function registerTenantMessengerRoutes(app: FastifyInstance) {
 
   app.get('/v1/messenger/members', { preHandler: [requireTenantMessengerMember] }, async (request, reply) => {
     const { tenantId, userId } = context(request);
-    const parsed = z.object({ search: z.string().max(80).optional() }).safeParse(request.query ?? {});
+    const parsed = z.object({ search: z.string().superRefine(utf16Length(0, 80)).optional() }).safeParse(request.query ?? {});
     if (!parsed.success) return validationError(reply, parsed.error);
     return privateReply(reply).send({ members: await listTenantMessengerMembers(tenantId, userId, parsed.data.search) });
   });

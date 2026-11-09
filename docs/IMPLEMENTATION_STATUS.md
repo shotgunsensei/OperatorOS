@@ -1,3 +1,7 @@
+## 2026-11-09 - Local dependency remediation
+
+The isolated source candidate now passes the unchanged Phase39 high-severity security gate, full types/lint, production build and offline Android/iOS export on its updated frozen graph. Zero unresolved high/critical advisories remain; two moderate advisories and existing tested patch exceptions are explicit. Zod4 preserves prior UUID and UTF-16 input limits through regression-tested compatibility changes. Module parity states and production acceptance are unchanged. [Exact changes, completed checks and remaining limits](security/DEPENDENCY_REMEDIATION_2026-11-09.md).
+
 ## 2026-10-30 - Final local quality follow-through
 
 ## 2026-11-06 - Reconciled local source candidate
