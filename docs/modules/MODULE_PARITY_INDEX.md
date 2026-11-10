@@ -1,3 +1,7 @@
+## 2026-11-10 - Combined module review candidate verified locally
+
+Keyboard/status recovery, Faultline truthful panel reads and StudyForge selection lifetime are combined over the accepted native decoder/security graph. Fresh focused proof: 326 DB-free/static/native tests and 130 Playwright-runner cases (one source-only assertion), expanded types, aggregate lint, and production build pass; build also passes four catalog regressions and generates 40/40 pages. Raw audit: 0 high/critical, 2 moderate. Native export and API/database provenance remain precisely scoped. Fourteen-module ledger records remaining workflows and missing transports; no parity promotion, provider/DB/deployed acceptance or publication. [Source, evidence and release gates](../reviews/2026-11-10/MODULE_REVIEW_INTEGRATION.md).
+
 ## 2026-11-10 - StudyForge selection lifetime
 
 A separate local follow-on fences stale selected-set reads and action refreshes

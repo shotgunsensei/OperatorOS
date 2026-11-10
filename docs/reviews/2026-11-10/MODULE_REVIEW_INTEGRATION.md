@@ -2,7 +2,7 @@
 
 ## Release verdict
 
-Verification in progress. This task-local candidate is not published or deployed.
+Implementation verified locally; deployment unverified. This task-local candidate is ready for the next authorized release gate, not published or deployed.
 Full module parity is not claimed. The fourteen registered applications are an
 inventory, not fourteen production acceptance passes.
 
@@ -136,12 +136,12 @@ root and retains the complete underlying argument array in its receipt.
 | `node .../run.cjs webTypes` and `lint` | Expanded complete web source/relevant tests and zero-warning aggregate lint passed after final repair |
 | `node .../run.cjs apiTypes` | Expanded API/relevant tests passed before final web-only repair; API source/graph unchanged |
 | `node .../run.cjs exports` | Offline Android/iOS Hermes bytecode export passed before StudyForge repair; native/package/lock bytes unchanged |
-| `node .../run.cjs build` | Final production build pending |
+| `node .../run.cjs build` | Passed on clean b11bb309: 88.794 seconds, aggregate types/API/runner/Next build, 40/40 pages, and 4 additional catalog regressions |
 | `node .../run.cjs audit` and `security` | Fresh audit exit 1: 2 moderate, 0 high/critical; scanner exit 0 and no source findings |
 | `graph-match.mjs`, `verify-equivalence.cjs`, `slice-match.cjs` | Exact installed/source lock, reproducible SBOM, frozen API closure and accepted source-blob equality pass |
 
-Unique executed checks: **326 DB-free/static/native tests and 130 Playwright-runner
-cases**, zero failed/skipped in accepted runs. These are layer-specific checks,
+Focused suite totals: **326 DB-free/static/native tests and 130 Playwright-runner
+cases**, zero failed/skipped in accepted runs. The production build additionally passed 4 catalog regressions. These are layer-specific checks,
 not 456 end-to-end customer journeys. The 130 include one source-only assertion.
 Repeated execution, five core/four Faultline/six StudyForge source-slice negative
 controls and earlier candidate receipts are not added to these totals. Those
@@ -156,3 +156,11 @@ unchanged-source/graph evidence rather than a falsely relabeled rerun. Final
 build metadata, full stdout/stderr, elapsed time, source identity and remaining
 gates are recorded in the external final receipt. No source-slice historical
 claim is substituted for a fresh run listed above.
+
+Final build source is `b11bb309bde45cd9a9c08944ef764b5797f4bb98`, buildId
+`0fc3e022cccc5ba557d9fa90`, built at `2026-11-10T15:20:42.619Z`.
+The follow-on final commit changes only this report and status/parity overlays.
+`FINAL_VERIFICATION.json` records its exact final HEAD/tree and asserts that no
+non-documentation file differs from the successfully built commit. Post-build
+source/installed-lock/SBOM and API closure checks are repeated; frozen baseline
+and accepted source blobs remain unchanged.
