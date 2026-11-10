@@ -2,7 +2,7 @@
 
 import CoreSuiteSection from './CoreSuiteSection';
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -27,6 +27,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
+import { useTenant } from '../TenantProvider';
+import { FaultlineReadFeedback, useFaultlineReadPanel } from './FaultlineReadFeedback';
 import {
   moduleShellApi,
   type FaultlineAssignment,
@@ -49,6 +51,8 @@ interface FaultlineLabWorkspaceProps {
   canManage?: boolean;
   canAdmin?: boolean;
 }
+
+const defaultHrefFor = (path: string) => path;
 
 const AUTHOR_TEMPLATE = {
   schemaVersion: 1,
@@ -124,11 +128,19 @@ async function fileBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-export default function FaultlineLabWorkspace({
+export default function FaultlineLabWorkspace(props: FaultlineLabWorkspaceProps) {
+  const { user } = useAuth();
+  const { activeTenant } = useTenant();
+  const scope = JSON.stringify([user?.id, activeTenant?.id ?? user?.currentTenantId,
+    props.view, props.recordId, props.challengeId, props.canWrite, props.canManage, props.canAdmin]);
+  return <FaultlineLabWorkspaceContent key={scope} {...props} />;
+}
+
+function FaultlineLabWorkspaceContent({
   view,
   recordId,
   challengeId,
-  hrefFor = path => path,
+  hrefFor = defaultHrefFor,
   canWrite = false,
   canManage = false,
   canAdmin = false,
@@ -150,12 +162,16 @@ export default function FaultlineLabWorkspace({
   const [assignments, setAssignments] = useState<FaultlineAssignment[]>([]);
   const [progress, setProgress] = useState<Record<string, any>>({});
   const [daily, setDaily] = useState<Record<string, any>>({});
-  const [analytics, setAnalytics] = useState<Record<string, any> | null>(null);
-  const [members, setMembers] = useState<Array<{ id: string; name: string; email: string; role: string }>>([]);
+  const analyticsPanel = useFaultlineReadPanel<Record<string, any> | null>(null);
+  const { value: analytics, read: readAnalytics } = analyticsPanel;
+  const membersPanel = useFaultlineReadPanel<Array<{ id: string; name: string; email: string; role: string }>>([]);
+  const { value: members, read: readMembers } = membersPanel;
   const [challengeDetail, setChallengeDetail] = useState<Record<string, any> | null>(null);
   const [session, setSession] = useState<FaultlineSessionBundle | null>(null);
-  const [attachments, setAttachments] = useState<Array<Record<string, any>>>([]);
-  const [challengeAttachments, setChallengeAttachments] = useState<Array<Record<string, any>>>([]);
+  const attachmentsPanel = useFaultlineReadPanel<Array<Record<string, any>>>([]);
+  const { value: attachments, read: readAttachments, reset: resetAttachments } = attachmentsPanel;
+  const challengeAttachmentsPanel = useFaultlineReadPanel<Array<Record<string, any>>>([]);
+  const { value: challengeAttachments, read: readChallengeAttachments, reset: resetChallengeAttachments } = challengeAttachmentsPanel;
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
   const [authorContent, setAuthorContent] = useState(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
   const [authorValidation, setAuthorValidation] = useState<{
@@ -171,7 +187,16 @@ export default function FaultlineLabWorkspace({
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
+  const lifetime = useRef({ mounted: true, load: 0, draft: 0, session: 0 });
+  useEffect(() => {
+    lifetime.current.mounted = true;
+    const current = lifetime.current;
+    return () => { current.mounted = false; current.load += 1; current.draft += 1; current.session += 1; };
+  }, []);
+
   const load = useCallback(async () => {
+    const request = ++lifetime.current.load;
+    const current = () => lifetime.current.mounted && request === lifetime.current.load;
     setLoading(true);
     setError('');
     try {
@@ -180,43 +205,48 @@ export default function FaultlineLabWorkspace({
       const needsProgress = ['overview', 'runs', 'reports'].includes(view);
       const tasks: Array<Promise<void>> = [];
       if (needsCatalog) tasks.push(moduleShellApi.faultlinelab.listChallenges(true).then(catalog => {
+        if (!current()) return;
         setChallenges(catalog.challenges);
         setCatalogFacets(catalog.facets);
       }));
-      if (needsSessions) tasks.push(moduleShellApi.faultlinelab.listSessions().then(recent => setSessions(recent.sessions)));
-      if (needsProgress) tasks.push(moduleShellApi.faultlinelab.progress().then(next => setProgress(next)));
-      if (view === 'overview' || view === 'assignments') tasks.push(moduleShellApi.faultlinelab.listAssignments().then(next => setAssignments(next.assignments)));
-      if (view === 'overview' || view === 'challenges') tasks.push(moduleShellApi.faultlinelab.daily().then(next => setDaily(next)));
-      if (view === 'overview' || view === 'reports') tasks.push(moduleShellApi.faultlinelab.analytics().then(setAnalytics).catch(() => setAnalytics(null)));
-      if (view === 'assignments' && canAdmin) tasks.push(moduleShellApi.faultlinelab.listMembers().then(next => setMembers(next.members)).catch(() => setMembers([])));
+      if (needsSessions) tasks.push(moduleShellApi.faultlinelab.listSessions().then(recent => { if (current()) setSessions(recent.sessions); }));
+      if (needsProgress) tasks.push(moduleShellApi.faultlinelab.progress().then(next => { if (current()) setProgress(next); }));
+      if (view === 'overview' || view === 'assignments') tasks.push(moduleShellApi.faultlinelab.listAssignments().then(next => { if (current()) setAssignments(next.assignments); }));
+      if (view === 'overview' || view === 'challenges') tasks.push(moduleShellApi.faultlinelab.daily().then(next => { if (current()) setDaily(next); }));
+      if (view === 'overview' || view === 'reports') tasks.push(readAnalytics(() => moduleShellApi.faultlinelab.analytics()));
+      if (view === 'assignments' && canAdmin) tasks.push(readMembers(async () => (await moduleShellApi.faultlinelab.listMembers()).members));
       await Promise.all(tasks);
-      setHasLoaded(true);
+      if (current()) setHasLoaded(true);
     } catch (next) {
-      setError(errorText(next));
+      if (current()) setError(errorText(next));
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [canAdmin, view]);
+  }, [canAdmin, view, readAnalytics, readMembers]);
 
   const openDraft = useCallback(async (id: string) => {
+    const request = ++lifetime.current.draft;
+    const current = () => lifetime.current.mounted && request === lifetime.current.draft;
+    resetChallengeAttachments();
     setBusy('draft');
     setError('');
     try {
       const next = await moduleShellApi.faultlinelab.getAuthoringChallenge(id);
+      if (!current()) return false;
       setDraft(next);
       setAuthorContent(JSON.stringify(next.content, null, 2));
       setAuthorValidation(null);
-      const files = await moduleShellApi.faultlinelab.listChallengeAttachments(id).catch(() => ({ attachments: [] }));
-      setChallengeAttachments(files.attachments);
+      await readChallengeAttachments(async () => (await moduleShellApi.faultlinelab.listChallengeAttachments(id)).attachments);
+      if (!current()) return false;
       if (view !== 'authoring' || challengeId !== id) router.replace(hrefFor(`/authoring/${id}`));
       return true;
     } catch (next) {
-      setError(errorText(next));
+      if (current()) setError(errorText(next));
       return false;
     } finally {
-      setBusy('');
+      if (current()) setBusy('');
     }
-  }, [challengeId, hrefFor, router, view]);
+  }, [challengeId, hrefFor, router, view, readChallengeAttachments, resetChallengeAttachments]);
 
   const openChallenge = useCallback(async (id: string) => {
     setBusy('challenge');
@@ -238,20 +268,23 @@ export default function FaultlineLabWorkspace({
   }, [challengeId, hrefFor, openDraft, router]);
 
   const openSession = useCallback(async (id: string) => {
+    const request = ++lifetime.current.session;
+    const current = () => lifetime.current.mounted && request === lifetime.current.session;
+    resetAttachments();
     setBusy('session');
     setError('');
     try {
       const bundle = await moduleShellApi.faultlinelab.getSession(id);
+      if (!current()) return;
       setSession(bundle);
       if (recordId !== id) router.push(hrefFor(`/sessions/${id}`));
-      const files = await moduleShellApi.faultlinelab.listSessionAttachments(id).catch(() => ({ attachments: [] }));
-      setAttachments(files.attachments);
+      await readAttachments(async () => (await moduleShellApi.faultlinelab.listSessionAttachments(id)).attachments);
     } catch (next) {
-      setError(errorText(next));
+      if (current()) setError(errorText(next));
     } finally {
-      setBusy('');
+      if (current()) setBusy('');
     }
-  }, [hrefFor, recordId, router]);
+  }, [hrefFor, recordId, router, readAttachments, resetAttachments]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -304,7 +337,8 @@ export default function FaultlineLabWorkspace({
         clientStartKey: actionKey('start'),
       });
       setSession(bundle);
-      setAttachments([]);
+      lifetime.current.session += 1;
+      resetAttachments();
       router.push(hrefFor(`/sessions/${bundle.session.id}`));
       setNotice('Investigation started. Your actions, evidence, and score will be saved here.');
       await load();
@@ -378,6 +412,8 @@ export default function FaultlineLabWorkspace({
   async function uploadProof(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canWrite || !session) return;
+    const generation = lifetime.current.session;
+    const current = () => lifetime.current.mounted && generation === lifetime.current.session;
     const form = event.currentTarget;
     const input = form.elements.namedItem('proof') as HTMLInputElement;
     const file = input.files?.[0];
@@ -389,19 +425,22 @@ export default function FaultlineLabWorkspace({
     setBusy('upload');
     setError('');
     try {
+      const contentBase64 = await fileBase64(file);
+      if (!current()) return;
       await moduleShellApi.faultlinelab.uploadSessionAttachment(session.session.id, {
         originalName: file.name,
         declaredMimeType: file.type || 'application/octet-stream',
-        contentBase64: await fileBase64(file),
+        contentBase64,
       });
-      const files = await moduleShellApi.faultlinelab.listSessionAttachments(session.session.id);
-      setAttachments(files.attachments);
+      if (!current()) return;
+      await readAttachments(async () => (await moduleShellApi.faultlinelab.listSessionAttachments(session.session.id)).attachments);
+      if (!current()) return;
       form.reset();
       setNotice('Proof uploaded to private shared storage and queued for scanning.');
     } catch (next) {
-      setError(errorText(next));
+      if (current()) setError(errorText(next));
     } finally {
-      setBusy('');
+      if (current()) setBusy('');
     }
   }
 
@@ -509,7 +548,8 @@ export default function FaultlineLabWorkspace({
     try {
       await moduleShellApi.faultlinelab.retireChallenge(draft.challenge.id, draft.challenge.version);
       setDraft(null);
-      setChallengeAttachments([]);
+      lifetime.current.draft += 1;
+      resetChallengeAttachments();
       setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
       setAuthorValidation(null);
       setNotice('Challenge retired. Existing sessions and scores remain available.');
@@ -531,7 +571,8 @@ export default function FaultlineLabWorkspace({
       const content = value?.content ?? value;
       await moduleShellApi.faultlinelab.validateChallenge(content);
       setDraft(null);
-      setChallengeAttachments([]);
+      lifetime.current.draft += 1;
+      resetChallengeAttachments();
       setAuthorContent(JSON.stringify(content, null, 2));
       setAuthorValidation(null);
       setNotice('Validated challenge file imported into a new draft. Review the details, then save it.');
@@ -545,31 +586,36 @@ export default function FaultlineLabWorkspace({
   async function uploadAuthorAsset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canWrite || !draft) return;
+    const generation = lifetime.current.draft;
+    const current = () => lifetime.current.mounted && generation === lifetime.current.draft;
     const form = event.currentTarget;
     const input = form.elements.namedItem('authorAsset') as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
     setBusy('author-asset');
     try {
+      const contentBase64 = await fileBase64(file);
+      if (!current()) return;
       await moduleShellApi.faultlinelab.uploadChallengeAttachment(draft.challenge.id, {
         originalName: file.name,
         declaredMimeType: file.type || 'application/octet-stream',
-        contentBase64: await fileBase64(file),
+        contentBase64,
       });
-      const files = await moduleShellApi.faultlinelab.listChallengeAttachments(draft.challenge.id);
-      setChallengeAttachments(files.attachments);
+      if (!current()) return;
+      await readChallengeAttachments(async () => (await moduleShellApi.faultlinelab.listChallengeAttachments(draft.challenge.id)).attachments);
+      if (!current()) return;
       form.reset();
       setNotice('Author asset stored privately and queued for malware scanning.');
     } catch (next) {
-      setError(errorText(next));
+      if (current()) setError(errorText(next));
     } finally {
-      setBusy('');
+      if (current()) setBusy('');
     }
   }
 
   async function createAssignment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canAdmin) return;
+    if (!canAdmin || membersPanel.state !== 'ready') return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setBusy('assignment');
@@ -615,6 +661,7 @@ export default function FaultlineLabWorkspace({
 
         {!loading && hasLoaded && tab === 'overview' && (
           <section id="faultlinelab-dashboard" data-testid="faultlinelab-overview-route" className="fl-main">
+            <FaultlineReadFeedback label="Team analytics" panel={analyticsPanel} />
             <header className={workspaceStyles.introduction}>
               <span className={workspaceStyles.mark}><FlaskConical size={26} aria-hidden="true" /></span>
               <div><span className={workspaceStyles.eyebrow}>Learn through investigation</span><h2>Better diagnoses start with evidence.</h2><p>Work through simulated cases, test your reasoning, and review what the evidence proves. Practice here does not grant access to a live system.</p></div>
@@ -743,7 +790,7 @@ export default function FaultlineLabWorkspace({
                 </div>
                 <aside className="fl-side">
                   <article className="fl-card"><span>EVIDENCE LOCKER</span>{session.evidence.map((item) => <div className="fl-evidence" key={item.id}><b>{item.title}</b><small>{item.importance} · {item.category}</small>{item.description && <p>{item.description}</p>}</div>)}{session.evidence.length === 0 && <p>Evidence unlocks only through recorded actions.</p>}</article>
-                  {canWrite ? <form className="fl-card fl-form" onSubmit={uploadProof}><h3>Private proof</h3><input name="proof" aria-label="Private investigation proof" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain" /><button disabled={busy === 'upload'}><Upload size={14} /> Upload for scanning</button>{attachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form> : <article className="fl-card"><ShieldCheck size={20} /><h3>Private proof</h3><p>Existing proof remains visible. Edit access is required to upload another file.</p>{attachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</article>}
+                  {canWrite ? <form className="fl-card fl-form" onSubmit={uploadProof}><h3>Private proof</h3><FaultlineReadFeedback label="Investigation attachments" panel={attachmentsPanel} />{attachmentsPanel.state === 'ready' && attachments.length === 0 && <p>No investigation attachments are saved.</p>}<input name="proof" aria-label="Private investigation proof" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain" /><button disabled={busy === 'upload'}><Upload size={14} /> Upload for scanning</button>{attachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form> : <article className="fl-card"><ShieldCheck size={20} /><h3>Private proof</h3><FaultlineReadFeedback label="Investigation attachments" panel={attachmentsPanel} />{attachmentsPanel.state === 'ready' && attachments.length === 0 && <p>No investigation attachments are saved.</p>}<p>Existing proof remains visible. Edit access is required to upload another file.</p>{attachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</article>}
                 </aside>
               </div>
             )}
@@ -753,14 +800,14 @@ export default function FaultlineLabWorkspace({
         {!loading && hasLoaded && tab === 'assignments' && (
           <section id="faultlinelab-assignments" data-testid="faultlinelab-assignments-route" tabIndex={-1} className="fl-grid">
             <div className="fl-main"><div className="fl-section-head"><div><span>TEAM QUEUE</span><h2>Assignments</h2></div><strong>{assignments.length}</strong></div>{assignments.map((item) => <article className="fl-card fl-row" key={item.id}><div><h3>{item.title || item.challengeTitle}</h3><p>{item.instructions || `${item.challengeTitle} · ${item.status}`}</p><small>{item.dueAt ? `Due ${new Date(item.dueAt).toLocaleString()}` : 'No due date'}</small></div><div className="fl-actions">{canWrite && ['assigned', 'in_progress'].includes(item.status) && item.assigneeUserId === user?.id && <button onClick={() => void startSession({ mode: 'assignment', assignmentId: item.id })}><Play size={14} /> Start</button>}{canAdmin && ['assigned', 'in_progress'].includes(item.status) && <button className="danger" onClick={async () => { await moduleShellApi.faultlinelab.cancelAssignment(item.id, item.version); await load(); }}>Cancel</button>}</div></article>)}{assignments.length === 0 && <div className="fl-card fl-empty">No assignments are waiting.</div>}</div>
-            <aside className="fl-side">{canAdmin ? <form className="fl-card fl-form" onSubmit={createAssignment}><span>MANAGER CONTROL</span><h3>Assign published challenge</h3><label>Challenge<select name="challengeId" required><option value="">Select challenge</option>{allPublished.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Team member<select name="assigneeUserId" required><option value="">Select member</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>Assignment title<input name="title" maxLength={200} /></label><label>Instructions<textarea name="instructions" rows={4} maxLength={5000} /></label><label>Due date<input name="dueAt" type="datetime-local" /></label><button disabled={busy === 'assignment'}><Users size={14} /> Create assignment</button></form> : <div className="fl-card"><ShieldCheck size={20} /><h3>{canWrite ? 'Participant view' : 'Read-only assignment view'}</h3><p>{canWrite ? 'Organization owners and administrators create assignments; participants can focus on completing them.' : 'You can review assigned work and its status. Edit access is required to start it, and organization administration is required to create or cancel assignments.'}</p></div>}</aside>
+            <aside className="fl-side">{canAdmin ? <form className="fl-card fl-form" onSubmit={createAssignment}><span>MANAGER CONTROL</span><h3>Assign published challenge</h3><FaultlineReadFeedback label="Team members" panel={membersPanel} />{membersPanel.state === 'ready' && members.length === 0 && <p>No assignable team members were returned.</p>}<label>Challenge<select name="challengeId" required><option value="">Select challenge</option>{allPublished.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Team member<select name="assigneeUserId" required disabled={membersPanel.state !== 'ready'}><option value="">Select member</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>Assignment title<input name="title" maxLength={200} /></label><label>Instructions<textarea name="instructions" rows={4} maxLength={5000} /></label><label>Due date<input name="dueAt" type="datetime-local" /></label><button disabled={busy === 'assignment' || membersPanel.state !== 'ready'}><Users size={14} /> Create assignment</button></form> : <div className="fl-card"><ShieldCheck size={20} /><h3>{canWrite ? 'Participant view' : 'Read-only assignment view'}</h3><p>{canWrite ? 'Organization owners and administrators create assignments; participants can focus on completing them.' : 'You can review assigned work and its status. Edit access is required to start it, and organization administration is required to create or cancel assignments.'}</p></div>}</aside>
           </section>
         )}
 
         {!loading && hasLoaded && tab === 'progress' && (
           <section id="faultlinelab-progress" data-testid="faultlinelab-runs-route" tabIndex={-1} className="fl-grid">
             <div className="fl-main"><div className="fl-metrics"><article><span>Attempts</span><b>{progress.progress?.attemptsCompleted ?? 0}</b></article><article><span>Solved</span><b>{progress.progress?.challengesSolved ?? 0}</b></article><article><span>Current streak</span><b>{progress.progress?.currentStreak ?? 0}</b></article><article><span>Daily streak</span><b>{progress.dailyStreak ?? 0}</b></article></div><article className="fl-card"><h2>Challenge history</h2>{(progress.challengeProgress ?? []).map((item: any) => <div className="fl-progress-row" key={item.challengeId}><span>{item.title}</span><b>{item.bestPercentage ?? 0}% · {item.bestTier ?? 'No tier'}</b></div>)}{!(progress.challengeProgress ?? []).length && <p>No completed scored attempts yet.</p>}</article><article className="fl-card"><h2>Earned badges</h2><div className="fl-chip-row">{(progress.badges ?? []).map((item: any) => <span key={item.badgeKey}><ShieldCheck size={13} /> {item.badgeKey}</span>)}{!(progress.badges ?? []).length && <p>Complete scored challenges to earn badges.</p>}</div></article></div>
-            <aside className="fl-side"><article className="fl-card"><span>YOUR HISTORY</span><h3>Attempt export</h3><p>Download your attempt history as a CSV. FaultlineLab does not issue certificates.</p><button onClick={() => void exportAttempts()} disabled={busy === 'export'}><Download size={14} /> Download CSV</button></article><article className="fl-card" id="faultlinelab-analytics" tabIndex={-1}><span>TEAM ANALYTICS</span>{analytics ? <><h3>{analytics.summary?.completedAttempts ?? 0} completed</h3><p>{analytics.summary?.passedAttempts ?? 0} passed · {analytics.summary?.averagePercentage ?? 0}% average</p></> : <><h3>Manager access required</h3><p>Your personal progress remains available. Team results are available to workspace owners and managers.</p></>}</article></aside>
+            <aside className="fl-side"><article className="fl-card"><span>YOUR HISTORY</span><h3>Attempt export</h3><p>Download your attempt history as a CSV. FaultlineLab does not issue certificates.</p><button onClick={() => void exportAttempts()} disabled={busy === 'export'}><Download size={14} /> Download CSV</button></article><article className="fl-card" id="faultlinelab-analytics" tabIndex={-1}><span>TEAM ANALYTICS</span><FaultlineReadFeedback label="Team analytics" panel={analyticsPanel} />{analytics ? <><h3>{analytics.summary?.completedAttempts ?? 0} completed</h3><p>{analytics.summary?.passedAttempts ?? 0} passed · {analytics.summary?.averagePercentage ?? 0}% average</p></> : analyticsPanel.state === 'error' || analyticsPanel.state === 'loading' ? null : <><h3>Manager access required</h3><p>Your personal progress remains available. Team results are available to workspace owners and managers.</p></>}</article></aside>
           </section>
         )}
 
@@ -781,7 +828,7 @@ export default function FaultlineLabWorkspace({
               <div className="fl-metrics"><article><span>Completed attempts</span><b>{progress.progress?.attemptsCompleted ?? 0}</b></article><article><span>Solved</span><b>{progress.progress?.challengesSolved ?? 0}</b></article><article><span>Current streak</span><b>{progress.progress?.currentStreak ?? 0}</b></article><article><span>Daily streak</span><b>{progress.dailyStreak ?? 0}</b></article></div>
               <article className="fl-card"><span>PERSONAL REPORT</span><h2>Attempt history</h2><p>Download the same attempt history shown in this workspace. FaultlineLab does not issue certificates.</p><button onClick={() => void exportAttempts()} disabled={busy === 'export'}><Download size={14} />Download attempts CSV</button></article>
             </div>
-            <aside className="fl-side"><article className="fl-card"><span>TEAM OUTCOMES</span>{analytics ? <><h2>{analytics.summary?.completedAttempts ?? 0} completed</h2><p>{analytics.summary?.passedAttempts ?? 0} passed · {analytics.summary?.averagePercentage ?? 0}% average</p></> : <><h2>Manager access required</h2><p>Your personal report remains available. Team-wide results require owner or manager access.</p></>}</article></aside>
+            <aside className="fl-side"><article className="fl-card"><span>TEAM OUTCOMES</span><FaultlineReadFeedback label="Team analytics" panel={analyticsPanel} />{analytics ? <><h2>{analytics.summary?.completedAttempts ?? 0} completed</h2><p>{analytics.summary?.passedAttempts ?? 0} passed · {analytics.summary?.averagePercentage ?? 0}% average</p></> : analyticsPanel.state === 'error' || analyticsPanel.state === 'loading' ? null : <><h2>Manager access required</h2><p>Your personal report remains available. Team-wide results require owner or manager access.</p></>}</article></aside>
           </section>
         )}
 
@@ -802,9 +849,9 @@ export default function FaultlineLabWorkspace({
                 onChange={(value) => { setAuthorContent(value); setAuthorValidation(null); }}
                 serverValidation={authorValidation}
               />
-              <div className="fl-actions"><button disabled={busy === 'save-draft'}><FileJson2 size={14} /> {draft ? 'Save revision' : 'Create draft'}</button><button type="button" onClick={() => void validateDraft()} disabled={busy === 'validate'}><ShieldCheck size={14} /> Run quality check</button>{draft && <button type="button" onClick={() => void previewDraft()} disabled={busy === 'start'}><Eye size={14} /> Test as a learner</button>}{draft && <button type="button" onClick={() => void exportDraft()} disabled={busy === 'export-draft'}><Download size={14} /> Export backup</button>}{draft && canAdmin && <button type="button" onClick={() => void publishDraft()} disabled={busy === 'publish'}><CheckCircle2 size={14} /> Publish current revision</button>}{draft?.challenge?.status === 'published' && canAdmin && <button type="button" className="danger" onClick={() => void retireDraft()} disabled={busy === 'retire'}><Archive size={14} /> Retire</button>}<label className="fl-import"><Upload size={14} /> Import challenge file<input type="file" accept="application/json,.json" onChange={(event) => void importDraftFile(event)} /></label><button type="button" onClick={() => { setDraft(null); setChallengeAttachments([]); setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2)); setAuthorValidation(null); }}>Start a fresh challenge</button></div>
+              <div className="fl-actions"><button disabled={busy === 'save-draft'}><FileJson2 size={14} /> {draft ? 'Save revision' : 'Create draft'}</button><button type="button" onClick={() => void validateDraft()} disabled={busy === 'validate'}><ShieldCheck size={14} /> Run quality check</button>{draft && <button type="button" onClick={() => void previewDraft()} disabled={busy === 'start'}><Eye size={14} /> Test as a learner</button>}{draft && <button type="button" onClick={() => void exportDraft()} disabled={busy === 'export-draft'}><Download size={14} /> Export backup</button>}{draft && canAdmin && <button type="button" onClick={() => void publishDraft()} disabled={busy === 'publish'}><CheckCircle2 size={14} /> Publish current revision</button>}{draft?.challenge?.status === 'published' && canAdmin && <button type="button" className="danger" onClick={() => void retireDraft()} disabled={busy === 'retire'}><Archive size={14} /> Retire</button>}<label className="fl-import"><Upload size={14} /> Import challenge file<input type="file" accept="application/json,.json" onChange={(event) => void importDraftFile(event)} /></label><button type="button" onClick={() => { lifetime.current.draft += 1; resetChallengeAttachments(); setDraft(null); setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2)); setAuthorValidation(null); }}>Start a fresh challenge</button></div>
             </form>
-            <aside className="fl-side"><article className="fl-card"><span>DRAFTS</span>{drafts.map((item) => <button className="fl-list-button" key={item.id} onClick={() => void openDraft(item.id)} data-selected-draft={draft?.challenge?.id === item.id ? 'true' : undefined} aria-current={draft?.challenge?.id === item.id ? 'true' : undefined}><span>{item.title}</span><b>{item.status} · revision {item.currentVersionNumber}</b></button>)}{drafts.length === 0 && <p>No drafts are available.</p>}</article><article className="fl-card"><History size={20} /><h3>Revision history</h3><p>Every save preserves the previous content. Publishing locks the selected revision for active attempts.</p>{(draft?.versions ?? []).map((item: any) => <small key={item.id}>Revision {item.versionNumber} · {item.changeNote || 'No change note'}</small>)}</article>{draft && <form className="fl-card fl-form" onSubmit={uploadAuthorAsset}><span>PRIVATE AUTHOR ASSETS</span><h3>Attach proof material</h3><p>Files remain private to your organization and unavailable until the malware scan passes.</p><input name="authorAsset" aria-label="Private challenge author asset" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json" /><button disabled={busy === 'author-asset'}><Upload size={14} /> Upload for scanning</button>{challengeAttachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form>}</aside>
+            <aside className="fl-side"><article className="fl-card"><span>DRAFTS</span>{drafts.map((item) => <button className="fl-list-button" key={item.id} onClick={() => void openDraft(item.id)} data-selected-draft={draft?.challenge?.id === item.id ? 'true' : undefined} aria-current={draft?.challenge?.id === item.id ? 'true' : undefined}><span>{item.title}</span><b>{item.status} · revision {item.currentVersionNumber}</b></button>)}{drafts.length === 0 && <p>No drafts are available.</p>}</article><article className="fl-card"><History size={20} /><h3>Revision history</h3><p>Every save preserves the previous content. Publishing locks the selected revision for active attempts.</p>{(draft?.versions ?? []).map((item: any) => <small key={item.id}>Revision {item.versionNumber} · {item.changeNote || 'No change note'}</small>)}</article>{draft && <form className="fl-card fl-form" onSubmit={uploadAuthorAsset}><span>PRIVATE AUTHOR ASSETS</span><h3>Attach proof material</h3><FaultlineReadFeedback label="Challenge attachments" panel={challengeAttachmentsPanel} />{challengeAttachmentsPanel.state === 'ready' && challengeAttachments.length === 0 && <p>No challenge attachments are saved.</p>}<p>Files remain private to your organization and unavailable until the malware scan passes.</p><input name="authorAsset" aria-label="Private challenge author asset" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json" /><button disabled={busy === 'author-asset'}><Upload size={14} /> Upload for scanning</button>{challengeAttachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form>}</aside>
           </section>
         )}
       </div>

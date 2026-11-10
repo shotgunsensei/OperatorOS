@@ -1,3 +1,11 @@
+## 2026-11-10 - FaultlineLab truthful read recovery
+
+Isolated local candidate repairs four false-empty reads with scoped, read-only retry
+and late-response fencing, including post-upload dismissal. Fresh 20/20 Chromium
+component checks, four failing frozen-baseline controls, complete web/new-test
+types and scoped zero-warning lint. No parity-state, database/provider/deployment
+acceptance change. [Evidence and limits](reviews/2026-11-10/FAULTLINE_READ_RECOVERY.md).
+
 ## 2026-11-10 - Core workflow keyboard and recovery clarity
 
 TechDeck, TradeFlowKit and PulseDesk existing connected-work actions now retain keyboard position through review, cancellation and retry, and describe GET-only recovery as a status check. Local synthetic proof: 39 Chromium cases and 15 DB-free/static contracts, web-source/test types and scoped lint pass. No backend, decoder, dependency or parity-state change. Full-app visual, persistence and deployed acceptance remain unverified. [Flow ledger, evidence and follow-ups](reviews/2026-11-10/CORE_WORKFLOW_USABILITY.md).
