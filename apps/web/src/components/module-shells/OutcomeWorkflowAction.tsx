@@ -277,6 +277,21 @@ function ScopedOutcomeWorkflowAction({
   const [receiptStorageUnavailable, setReceiptStorageUnavailable] = useState(false);
   const [stage, setStage] = useState<WorkflowStage>('idle');
   const [confirmed, setConfirmed] = useState(false);
+  const [workingMode, setWorkingMode] = useState<'create' | 'check'>('create');
+  const panelRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const reviewRef = useRef<HTMLHeadingElement>(null);
+  const requestedFocus = useRef<{ target: 'review' | 'trigger'; generation: number } | null>(null);
+
+  // Only explicit local navigation requests focus. Async outcomes and receipt
+  // restoration never move it; an identity/context remount discards the request.
+  useEffect(() => {
+    const target = requestedFocus.current;
+    requestedFocus.current = null;
+    if (!target || target.generation !== generation.current || !identityCheck.current()) return;
+    if (target.target === 'review' && stage === 'review') reviewRef.current?.focus();
+    if (target.target === 'trigger' && stage === 'idle') triggerRef.current?.focus();
+  }, [stage]);
   const [runId, setRunId] = useState<string | null>(null);
   const [links, setLinks] = useState<Array<{ href: string; label: string }>>([]);
   const [message, setMessage] = useState<string | null>(null);
@@ -432,12 +447,15 @@ function ScopedOutcomeWorkflowAction({
     stopPolling();
     const pollGeneration = generation.current;
     busy.current = true;
+    panelRef.current?.focus();
+    setWorkingMode('create');
     setStage('working');
     setMessage(null);
     setLinks([]);
     const persistedKey = storageKey(intentDigest);
     const stored = readStoredRun(persistedKey) ?? volatileReceipt.current;
     if (stored?.runId) {
+      setWorkingMode('check');
       setRunId(stored.runId);
       pollRun(activeTenantId, stored.runId, pollGeneration);
       return;
@@ -478,6 +496,8 @@ function ScopedOutcomeWorkflowAction({
     stopPolling();
     const pollGeneration = generation.current;
     busy.current = true;
+    panelRef.current?.focus();
+    setWorkingMode('check');
     setStage('working');
     setMessage(null);
     pollRun(activeTenantId, runId, pollGeneration);
@@ -495,6 +515,7 @@ function ScopedOutcomeWorkflowAction({
       }
     }
     terminalFailure.current = false;
+    requestedFocus.current = { target: 'trigger', generation: generation.current };
     setStage('idle');
     setConfirmed(false);
     setRunId(null);
@@ -503,7 +524,7 @@ function ScopedOutcomeWorkflowAction({
   };
 
   return (
-    <section data-testid={testId} style={panel} aria-label={title}>
+    <section ref={panelRef} tabIndex={-1} data-testid={testId} style={panel} aria-label={title}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: '.12em', fontSize: 11, fontWeight: 900 }}>
@@ -548,7 +569,8 @@ function ScopedOutcomeWorkflowAction({
             type="button"
             style={{ ...button, opacity: disabled || accessCheck.status !== 'ready' ? .5 : 1 }}
             disabled={disabled || accessCheck.status !== 'ready'}
-            onClick={() => setStage('review')}
+            ref={triggerRef}
+            onClick={() => { requestedFocus.current = { target: 'review', generation: generation.current }; setStage('review'); }}
           >
             {actionLabel} <ArrowRight size={16} />
           </button>
@@ -557,7 +579,7 @@ function ScopedOutcomeWorkflowAction({
 
       {stage === 'review' && (
         <div style={{ marginTop: 16 }}>
-          <strong>This will create:</strong>
+          <h4 ref={reviewRef} tabIndex={-1} style={{ margin: 0, fontSize: 'inherit' }}>This will create:</h4>
           <ul style={{ margin: '9px 0 13px', paddingLeft: 20, color: '#dbeafe' }}>
             {previewItems.map(item => (
               <li key={`${item.label}:${item.detail ?? ''}`} style={{ marginBottom: 7 }}>
@@ -586,7 +608,8 @@ function ScopedOutcomeWorkflowAction({
 
       {stage === 'working' && (
         <div role="status" aria-live="polite" style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 15, color: '#bae6fd' }}>
-          <Loader2 size={18} className="spin" /> Creating the confirmed items in {destinationLabel}…
+          <Loader2 size={18} className="spin" aria-hidden="true" />
+          {workingMode === 'check' ? 'Checking the status of previously submitted work. No new request is being created.' : `Creating the confirmed items in ${destinationLabel}.`}
         </div>
       )}
 

@@ -237,3 +237,55 @@ for (const field of ['id', 'workflow_key', 'source_resource_id', 'source_module_
     await expect(page.getByRole('link')).toHaveCount(0); expect(await count(page, 'start')).toBe(1);
   });
 }
+for (const module of ['techdeck', 'tradeflowkit', 'pulsedesk']) {
+  test(`${module} review has a keyboard reading point and restores focus on cancel and close`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 }); await setup(page);
+    await page.evaluate(module => {
+      const w = window as any;
+      w.props.sourceModuleSlug = module;
+      w.props.workflowKey = module === 'tradeflowkit' ? 'tradeflowkit.job_to_snapproof' : 'support.resolved_to_faultlinelab';
+      w.props.sourceDeepLink = `/modules/${module}/tickets/record-a`;
+      w.renderFixture();
+    }, module);
+    const trigger = page.getByRole('button', { name: 'Review what will be created' });
+    await expect(trigger).toBeEnabled(); await trigger.focus(); await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'This will create:' })).toBeFocused();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.keyboard.press('Tab'); await expect(page.getByRole('checkbox')).toBeFocused();
+    await page.keyboard.press('Space'); await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Confirm and create' })).toBeFocused();
+    await page.keyboard.press('Tab'); await page.keyboard.press('Enter'); await expect(trigger).toBeFocused();
+    await page.keyboard.press('Enter'); await page.getByRole('button', { name: 'Close workflow preview' }).click();
+    await expect(trigger).toBeFocused(); expect(await count(page, 'start')).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+test('saved recovery announces a read and async completion never steals focus', async ({ page }) => {
+  await setup(page); await confirm(page); await expect(page.getByText('Items created', { exact: true })).toBeVisible();
+  await revisit(page); await page.evaluate(() => { (window as any).mode.poll = 'hold'; });
+  await page.getByRole('button', { name: 'Check status' }).click();
+  await expect(page.getByRole('status')).toHaveText('Checking the status of previously submitted work. No new request is being created.');
+  await expect(page.getByRole('region', { name: 'Create field proof' })).toBeFocused();
+  await page.screenshot({ path: resolve(root, 'build/lateral-check/checking-after.png') });
+  await page.evaluate(() => { const button = document.createElement('button'); button.textContent = 'Other work'; document.body.append(button); button.focus(); });
+  await expect.poll(() => page.evaluate(() => (window as any).pending.length)).toBe(1);
+  await page.evaluate(() => {
+    const w = window as any; w.pending[0].resolve({ run: { id: 'run-a', status: 'completed', workflow_key: w.props.workflowKey, source_resource_id: w.props.aggregateId }, links: [] });
+  });
+  await expect(page.getByText('Items created', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Other work' })).toBeFocused();
+  expect(await count(page, 'start')).toBe(1);
+});
+
+test('retry returns focus locally but context replacement never focuses the new action', async ({ page }) => {
+  await setup(page); await page.evaluate(() => { (window as any).mode.start = 'fail'; });
+  await confirm(page); await page.getByRole('button', { name: 'Review again' }).click();
+  await expect(page.getByRole('button', { name: 'Review what will be created' })).toBeFocused();
+  await page.evaluate(() => {
+    const w = window as any; const button = document.createElement('button'); button.textContent = 'Other work'; document.body.append(button); button.focus();
+    w.user = { id: 'actor-b' }; w.tenant = 'tenant-b'; w.renderFixture();
+  });
+  await expect(page.getByRole('button', { name: 'Review what will be created' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Other work' })).toBeFocused();
+});

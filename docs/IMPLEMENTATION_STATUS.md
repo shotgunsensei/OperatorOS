@@ -1,3 +1,7 @@
+## 2026-11-10 - Core workflow keyboard and recovery clarity
+
+TechDeck, TradeFlowKit and PulseDesk existing connected-work actions now retain keyboard position through review, cancellation and retry, and describe GET-only recovery as a status check. Local synthetic proof: 39 Chromium cases and 15 DB-free/static contracts, web-source/test types and scoped lint pass. No backend, decoder, dependency or parity-state change. Full-app visual, persistence and deployed acceptance remain unverified. [Flow ledger, evidence and follow-ups](reviews/2026-11-10/CORE_WORKFLOW_USABILITY.md).
+
 ## 2026-11-09 - Isolated native decoder compatibility
 
 The narrow query-string interop patch preserves decoder 0.5.1 and all security gates. Installed API/navigation and native transform controls pass, together with native tests/config and offline Android/iOS export. Ordinary TorqueShed deep-link failure was not established. Root/API/package source and dependency closures are unchanged; prior PostgreSQL receipts retain their original commit identity and are not new runs. No device, provider, publication or deployment acceptance and no parity promotion. [Verification and boundaries](security/DECODER_INTEROP_2026-11-09.md).
