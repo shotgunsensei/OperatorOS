@@ -1,3 +1,12 @@
+## 2026-11-10 - StudyForge selection lifetime
+
+A separate local follow-on fences stale selected-set reads and action refreshes
+after newer navigation, Library dismissal and account/tenant changes. Mutation
+busy state remains locked independently. Explicit prior-set cues avoid misleading
+failed deep links. Fresh 20/20 Chromium, complete web/new-test types and scoped
+zero-warning lint pass; negative controls and visual limits are recorded in the
+[repair evidence](reviews/2026-11-10/STUDYFORGE_SELECTION_LIFETIME.md). No parity-state or deployed acceptance change.
+
 ## 2026-11-10 - FaultlineLab truthful read recovery
 
 Isolated local candidate repairs four false-empty reads with scoped, read-only retry

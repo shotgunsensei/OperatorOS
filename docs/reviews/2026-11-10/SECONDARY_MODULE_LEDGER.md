@@ -88,3 +88,7 @@ Fresh source reproduction: `node evidence/secondary-module-audit-nov10/reproduce
 ## Accepted local follow-on
 
 The frozen-source findings above remain the review baseline. FaultlineLab now has a separately verified local recovery repair described in [FAULTLINE_READ_RECOVERY.md](FAULTLINE_READ_RECOVERY.md). StudyForge selection lifetime remains open. No other module is promoted by this repair.
+
+## Subsequent StudyForge follow-on
+
+The frozen-source selection finding above now has a separately verified local repair in [STUDYFORGE_SELECTION_LIFETIME.md](STUDYFORGE_SELECTION_LIFETIME.md). This does not promote provider, real database or deployed acceptance.

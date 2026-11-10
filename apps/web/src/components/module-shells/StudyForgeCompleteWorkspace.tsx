@@ -2,13 +2,15 @@
 
 import CoreSuiteSection from './CoreSuiteSection';
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive, BookMarked, Brain, CalendarClock, Check, ChevronLeft, ChevronRight,
   ClipboardList, Copy, Download, FileText, FolderPlus, Gauge, GraduationCap,
   Layers3, Play, RefreshCw, RotateCcw, Sparkles, Trash2, Trophy,
 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
+import { useAuth } from '../AuthProvider';
+import { useTenant } from '../TenantProvider';
 import { cardStyle, radius, semantic, space } from '@/lib/design-tokens';
 import CoreSuiteWorkdayBrief from './CoreSuiteWorkdayBrief';
 import { buildStudyForgeWorkflowFocus } from '@/lib/companion-workflow';
@@ -62,19 +64,47 @@ function Panel({ id, eyebrow, title, description, children }: { id: string; eyeb
   </section>;
 }
 
-export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'overview', hrefFor = path => path, canWrite = true }: { routePath?: string; view?: string; hrefFor?: (path: string) => string; canWrite?: boolean }) {
+type StudyForgeCompleteWorkspaceProps = { routePath?: string; view?: string; hrefFor?: (path: string) => string; canWrite?: boolean };
+
+export default function StudyForgeCompleteWorkspace(props: StudyForgeCompleteWorkspaceProps) {
+  const { user } = useAuth();
+  const { activeTenant } = useTenant();
+  const scope = JSON.stringify([user?.id, activeTenant?.id ?? user?.currentTenantId, props.view, props.canWrite]);
+  return <StudyForgeCompleteWorkspaceContent key={scope} {...props} />;
+}
+
+function StudyForgeCompleteWorkspaceContent({ routePath = '', view = 'overview', hrefFor = path => path, canWrite = true }: StudyForgeCompleteWorkspaceProps) {
   const [workspace, setWorkspace] = useState<CompleteWorkspace | null>(null);
   const [selected, setSelected] = useState<Item | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [opening, setOpening] = useState(false);
+  const lifetime = useRef({ mounted: true, selection: 0, load: 0 });
+  useEffect(() => {
+    lifetime.current.mounted = true;
+    const current = lifetime.current;
+    return () => { current.mounted = false; current.selection += 1; current.load += 1; };
+  }, []);
+
+  const closeSelected = () => {
+    lifetime.current.selection += 1;
+    setSelected(null);
+    setOpening(false);
+    setError(null);
+  };
 
   const load = useCallback(async () => {
+    if (!lifetime.current.mounted) return;
+    const request = ++lifetime.current.load;
+    const current = () => lifetime.current.mounted && request === lifetime.current.load;
     setLoading(true);
     setError(null);
-    try { setWorkspace(await moduleShellApi.studyforge.completeWorkspace() as CompleteWorkspace); }
-    catch (cause: any) { setError(cause?.message || 'Could not load the complete learning workspace.'); }
-    finally { setLoading(false); }
+    try {
+      const next = await moduleShellApi.studyforge.completeWorkspace() as CompleteWorkspace;
+      if (current()) setWorkspace(next);
+    } catch (cause: any) { if (current()) setError(cause?.message || 'Could not load the complete learning workspace.'); }
+    finally { if (current()) setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
 
@@ -83,42 +113,61 @@ export default function StudyForgeCompleteWorkspace({ routePath = '', view = 'ov
       setError(READ_ONLY_MESSAGE);
       return;
     }
+    const selection = lifetime.current.selection;
+    const current = () => lifetime.current.mounted && selection === lifetime.current.selection;
     setBusy(true); setError(null);
     try {
       await action();
+      if (!lifetime.current.mounted) return;
       await load();
-      if (options.clearSelected) setSelected(null);
-      else if (options.reloadSelected) setSelected(await moduleShellApi.studyforge.completeSet(options.reloadSelected) as Item);
-    } catch (cause: any) { setError(cause?.message || 'The learning action could not be completed.'); }
-    finally { setBusy(false); }
+      if (!current()) return;
+      if (options.clearSelected) closeSelected();
+      else if (options.reloadSelected) {
+        const next = await moduleShellApi.studyforge.completeSet(options.reloadSelected) as Item;
+        if (current()) setSelected(next);
+      }
+    } catch (cause: any) { if (current()) setError(cause?.message || 'The learning action could not be completed.'); }
+    finally { if (lifetime.current.mounted) setBusy(false); }
   };
 
   const open = async (id: string) => {
-    setBusy(true); setError(null);
+    const selection = ++lifetime.current.selection;
+    const current = () => lifetime.current.mounted && selection === lifetime.current.selection;
+    setOpening(true); setError(null);
     try {
-      setSelected(await moduleShellApi.studyforge.completeSet(id) as Item);
+      const next = await moduleShellApi.studyforge.completeSet(id) as Item;
+      if (!current()) return;
+      setSelected(next);
       document.getElementById('studyforge-set-workspace')?.scrollIntoView({ behavior: 'smooth' });
-    } catch (cause: any) { setError(cause?.message || 'Could not load this study set.'); }
-    finally { setBusy(false); }
+    } catch (cause: any) {
+      if (current()) setError(`${cause?.message || 'Could not load this study set.'} The requested set was not opened.${selected ? ` Still viewing the previously opened set: ${selected.title}.` : ' Choose a study set to retry.'}`);
+    }
+    finally { if (current()) setOpening(false); }
   };
 
   useEffect(() => {
     const match = routePath.match(/^\/sets\/([0-9a-f-]{36})(?:\/|$)/i);
+    lifetime.current.selection += 1;
+    setOpening(false);
+    setError(null);
     if (match && selected?.id !== match[1]) void open(match[1]);
+    else if (!match) setSelected(null);
+    return () => { lifetime.current.selection += 1; };
   // Opening is intentionally keyed only to the canonical deep-link path.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routePath]);
 
   return <div className={quality.workspace} data-testid="studyforge-phase33-complete" data-can-write={canWrite ? 'true' : 'false'} style={{ marginBottom: 28, minHeight: 0 }}>
     {error && workspace && <div role="alert" style={{ ...shellCard, borderColor: 'rgba(248,113,113,.7)', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
+    {opening && <div role="status" aria-live="polite" style={{ ...shellCard, marginBottom: 16 }}>Opening the requested study set.{selected ? ` The previously opened set, ${selected.title}, remains visible with learning actions disabled.` : ''}</div>}
     {!canWrite && <div role="status" data-testid="studyforge-complete-read-only" style={{ ...shellCard, borderColor: 'rgba(196,181,253,.55)', color: '#ddd6fe', marginBottom: 16 }}>Saved study sets, review sheets, flashcards, quiz questions, progress history, and allowed downloads remain available. Read-only access cannot save answers, study sessions, preferences, folders, countdowns, or changes to a set.</div>}
     {!workspace ? error ? <ErrorState title="Study workspace unavailable" description={error} action={<button type="button" style={quiet} disabled={loading} onClick={() => void load()}>Try again</button>} /> : <LoadingState label="Loading complete StudyForge learning records." /> : <>
-      {view === 'settings' && !workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} canWrite={canWrite} />}
+      {view === 'settings' && !workspace.preferences.onboardingComplete && <Onboarding busy={busy || opening} act={act} canWrite={canWrite} />}
       {view === 'overview' && <CompleteDashboard workspace={workspace} hrefFor={hrefFor} />}
-      {view === 'sets' && <Organizer workspace={workspace} busy={busy} act={act} open={open} canWrite={canWrite} />}
-      {view === 'sets' && <SetCreator workspace={workspace} busy={busy} act={act} canWrite={canWrite} />}
-      {view === 'sets' && selected && <SetWorkspace key={selected.id} set={selected} plan={workspace.plan} busy={busy} act={act} close={() => setSelected(null)} canWrite={canWrite} />}
-      {view === 'sessions' && <Countdowns workspace={workspace} busy={busy} act={act} canWrite={canWrite} />}
+      {view === 'sets' && <Organizer workspace={workspace} busy={busy || opening} act={act} open={open} canWrite={canWrite} />}
+      {view === 'sets' && <SetCreator workspace={workspace} busy={busy || opening} act={act} canWrite={canWrite} />}
+      {view === 'sets' && selected && <SetWorkspace key={selected.id} set={selected} plan={workspace.plan} busy={busy || opening} act={act} close={closeSelected} canWrite={canWrite} />}
+      {view === 'sessions' && <Countdowns workspace={workspace} busy={busy || opening} act={act} canWrite={canWrite} />}
       {view === 'settings' && <Account workspace={workspace} />}
     </>}
   </div>;
