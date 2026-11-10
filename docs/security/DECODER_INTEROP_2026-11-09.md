@@ -58,6 +58,15 @@ contains no completion or exit receipt. Its outcome is unverified, not a
 passing production build. Focused successful checks above remain their own
 evidence; no build result is inferred from them.
 
+A separate November 10 attempt on clean commit
+`fd39b51cc61ed311daee3f601c9355058c3681ff` completed `pnpm build:production`
+with exit 0 in 116 seconds, within a 600-second bound. Its required aggregate
+gates, root types, API/runner builds and Next build (40/40 pages) passed.
+Attempt-specific `build-nov10.receipt.json` and stdout/stderr logs retain that
+commit identity. No database URL or provider/GitHub credentials were supplied
+to the build. The final follow-on only records this evidence in documentation;
+it does not relabel either build attempt or PostgreSQL receipts.
+
 All importer entries, resolved package inventory and security overrides are
 unchanged. Recursive lock snapshot closures compare equal for root (763),
 apps/api (238), and packages/agent-runtime, profiles and sdk (one each).
