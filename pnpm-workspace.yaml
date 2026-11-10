@@ -83,3 +83,4 @@ patchedDependencies:
   '@expo/plist@0.8.2': patches/@expo__plist@0.8.2.patch
   braces@3.0.3: patches/braces@3.0.3.patch
   node-forge@1.4.3: patches/node-forge@1.4.3.patch
+  query-string@7.1.3: patches/query-string@7.1.3.patch

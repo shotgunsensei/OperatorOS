@@ -1,3 +1,7 @@
+## 2026-11-09 - Isolated native decoder compatibility
+
+The narrow query-string interop patch preserves decoder 0.5.1 and all security gates. Installed API/navigation and native transform controls pass, together with native tests/config and offline Android/iOS export. Ordinary TorqueShed deep-link failure was not established. Root/API/package source and dependency closures are unchanged; prior PostgreSQL receipts retain their original commit identity and are not new runs. No device, provider, publication or deployment acceptance and no parity promotion. [Verification and boundaries](security/DECODER_INTEROP_2026-11-09.md).
+
 ## 2026-11-09 - Workflow continuity on the raw-high-free graph
 
 A new isolated candidate combines security 509821d8 and workflow b11c8237 over frozen 405740c8. Fresh exact-graph local proof: 321 unique DB-free/static/native tests and 83 Chromium component cases pass, along with expanded source/test types, root types/lint, production build, native config and offline exports. Raw audit remains 0 high/0 critical/2 moderate; all packages latest is not claimed. No database/runtime/provider/deployment acceptance or parity promotion. [Provenance, failed wrapper attempts, final build receipt and remaining gates](reviews/2026-11-09/WORKFLOW_SECURITY_INTEGRATION.md).

@@ -1,0 +1,17 @@
+diff --git a/index.js b/index.js
+--- a/index.js
++++ b/index.js
+@@ -1,6 +1,12 @@
+ 'use strict';
+ const strictUriEncode = require('strict-uri-encode');
+-const decodeComponent = require('decode-uri-component');
++// The security-patched decoder is ESM; Metro and modern Node expose its default.
++const decoderModule = require('decode-uri-component');
++const decodeComponent = typeof decoderModule === 'function'
++	? decoderModule : decoderModule && decoderModule.default;
++if (typeof decodeComponent !== 'function') {
++	throw new TypeError('Unsupported decode-uri-component export shape');
++}
+ const splitOnFirst = require('split-on-first');
+ const filterObject = require('filter-obj');
+ 

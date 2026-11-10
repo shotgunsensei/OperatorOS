@@ -1,3 +1,7 @@
+## 2026-11-09 - TorqueShed native decoder interop
+
+Installed query-string/native navigation compatibility is repaired in an isolated follow-on with the security decoder retained. Native transforms and offline Android/iOS exports pass. No ordinary app-path regression, device acceptance or parity-state promotion is claimed. [Evidence](../security/DECODER_INTEROP_2026-11-09.md).
+
 ## 2026-11-09 - Workflow/security integration overlay
 
 Combined workflow continuity and security-maintenance source passes fresh local exact-graph checks: 321 DB-free/static/native tests and 83 Chromium component cases, types/lint/build and native export. No inventory or parity-state change; database, live provider and deployed acceptance remain separate. [Evidence](../reviews/2026-11-09/WORKFLOW_SECURITY_INTEGRATION.md).

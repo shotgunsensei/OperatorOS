@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:cf5e69d3-7745-43f5-ac45-c52171ce73a0",
+  "serialNumber": "urn:uuid:7d020fd1-976b-447e-a5e8-1ff8af8ee98c",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-09T19:12:16.739Z",
+    "timestamp": "2026-11-09T21:36:42.851Z",
     "component": {
       "type": "application",
       "name": "OperatorOS",
@@ -13,7 +13,7 @@
     "properties": [
       {
         "name": "operatoros:pnpm-lock-sha256",
-        "value": "cf5e69d3774583f5fc45c52171ce73a0250a827fc0cc6c586ed848ddc8a218f3"
+        "value": "7d020fd1976bc47ed5e81ff8af8ee98cc1c4b673de8df58b3e12037ccd7c0a65"
       }
     ]
   },
