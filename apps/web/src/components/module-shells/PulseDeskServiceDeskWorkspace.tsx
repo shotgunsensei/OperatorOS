@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   Activity, AlertTriangle, Archive, BookOpen, Building2, CheckCircle2,
   Clock3, FileUp, Filter, Inbox, PackageCheck, Plus, RefreshCw, Search,
@@ -58,6 +59,8 @@ async function base64File(file: File): Promise<string> {
 }
 
 export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModule, canManageModule, view, requestHref, routeHref, showWorkday = true }: { tenantKey: string; canWriteModule: boolean; canManageModule: boolean; view: PulseDeskServiceView; requestHref: (id: string) => string; routeHref: (path: string) => string; showWorkday?: boolean }) {
+  const pathname = usePathname();
+  const deepLinkIntent = useRef('');
   const [dashboard, setDashboard] = useState<PulseDeskServiceDashboard | null>(null);
   const [configuration, setConfiguration] = useState<PulseDeskServiceConfiguration | null>(null);
   const [tickets, setTickets] = useState<PulseDeskServiceTicket[]>([]);
@@ -83,6 +86,23 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [readError, setReadError] = useState('');
+  const [detailError, setDetailError] = useState('');
+  const [detailLoading, setDetailLoading] = useState(false);
+  const lifetime = useRef({ mounted: true, reads: 0, detail: 0, write: 0, writing: false, selectedId: '' });
+  const scope = JSON.stringify([tenantKey, pathname, view, filters, canWriteModule, canManageModule]);
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  useEffect(() => {
+    lifetime.current.mounted = true;
+    return () => {
+      lifetime.current.mounted = false;
+      deepLinkIntent.current = '';
+      lifetime.current.reads += 1;
+      lifetime.current.detail += 1;
+      lifetime.current.write += 1;
+    };
+  }, []);
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ limit: '100', sort: 'updatedAt', direction: 'desc' });
@@ -93,24 +113,35 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
   }, [filters]);
 
   const loadTicket = useCallback(async (id: string) => {
-    setBusy('ticket-detail'); setError('');
+    const request = ++lifetime.current.detail;
+    const isCurrent = () => lifetime.current.mounted && currentScope.current === scope && lifetime.current.detail === request;
+    lifetime.current.selectedId = id;
+    setDetail(null); setAttachments([]); setDetailLoading(true); setDetailError('');
     try {
       const next = await moduleShellApi.pulsedesk.getServiceTicket(id);
+      if (!isCurrent()) return;
+      const [requesterFiles, internalFiles] = await Promise.all([
+        moduleShellApi.pulsedesk.listTicketAttachments(id, 'requester'),
+        next.capabilities.canViewInternal ? moduleShellApi.pulsedesk.listTicketAttachments(id, 'internal') : Promise.resolve([]),
+      ]);
+      if (!isCurrent()) return;
       setDetail(next);
-      const requesterFiles = await moduleShellApi.pulsedesk.listTicketAttachments(id, 'requester');
-      const internalFiles = next.capabilities.canViewInternal
-        ? await moduleShellApi.pulsedesk.listTicketAttachments(id, 'internal')
-        : [];
       setAttachments([...requesterFiles.map(file => ({ ...file, visibility: 'requester' })), ...internalFiles.map(file => ({ ...file, visibility: 'internal' }))]);
-    } catch (nextError) { setError(errorMessage(nextError, 'Could not load the selected ticket.')); }
-    finally { setBusy(''); }
-  }, []);
+    } catch (nextError) { if (isCurrent()) setDetailError(errorMessage(nextError, 'Could not load the selected ticket.')); }
+    finally { if (isCurrent()) setDetailLoading(false); }
+  }, [scope]);
 
   const loadAll = useCallback(async () => {
-    setLoading(true); setError('');
+    const request = ++lifetime.current.reads;
+    const isCurrent = () => lifetime.current.mounted && currentScope.current === scope && lifetime.current.reads === request;
+    setLoading(true); setReadError('');
+    setTickets([]); setTicketTotal(0); setDashboard(null); setConfiguration(null);
+    setAssets([]); setClients([]); setSites([]); setContacts([]); setVendors([]);
+    setSavedViews([]); setAssignees([]); setSupplyRequests([]); setFacilityRequests([]);
+    setKnowledge([]); setPreferences(null);
     try {
       const tasks: Array<Promise<void>> = [];
-      const apply = <T,>(request: Promise<T>, update: (value: T) => void) => request.then(update);
+      const apply = <T,>(request: Promise<T>, update: (value: T) => void) => request.then(value => { if (isCurrent()) update(value); });
       if (view === 'dashboard') {
         tasks.push(apply(moduleShellApi.pulsedesk.getServiceDeskDashboard(), setDashboard));
         tasks.push(apply(moduleShellApi.pulsedesk.listServiceTickets(query), ticketData => {
@@ -121,7 +152,8 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
         tasks.push(apply(moduleShellApi.pulsedesk.listServiceTickets(query), ticketData => {
           setTickets(ticketData.tickets); setTicketTotal(ticketData.pagination.total);
           setSelected(current => new Set([...current].filter(id => ticketData.tickets.some(ticket => ticket.id === id))));
-          if (detail && !ticketData.tickets.some(ticket => ticket.id === detail.ticket.id)) { setDetail(null); setAttachments([]); }
+          // A filtered, paginated queue cannot invalidate an exact ticket read.
+          // Scope changes retire selection separately; refreshed detail owns its result.
         }));
         tasks.push(apply(moduleShellApi.pulsedesk.getServiceConfiguration(), setConfiguration));
         tasks.push(apply(moduleShellApi.pulsedesk.listServiceAssets(), value => setAssets(value.assets)));
@@ -143,14 +175,24 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
         tasks.push(apply(moduleShellApi.pulsedesk.getServiceConfiguration(), setConfiguration));
         tasks.push(apply(moduleShellApi.pulsedesk.getNotificationPreferences(), setPreferences));
       }
-      await Promise.all(tasks);
-    } catch (nextError) { setError(errorMessage(nextError, 'Could not load the PulseDesk service desk.')); }
-    finally { setLoading(false); }
-  }, [detail, query, view]);
+      const results = await Promise.allSettled(tasks);
+      const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failed) throw failed.reason;
+    } catch (nextError) { if (isCurrent()) setReadError(errorMessage(nextError, 'Could not load the PulseDesk service desk.')); }
+    finally { if (isCurrent()) setLoading(false); }
+  }, [query, scope, view]);
 
-  useEffect(() => { void loadAll(); }, [tenantKey, query]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const path = window.location.pathname;
+    lifetime.current.detail += 1; lifetime.current.selectedId = '';
+    setDetail(null); setAttachments([]); setDetailLoading(false); setDetailError('');
+    setSelected(new Set()); setError(''); setNotice('');
+    void loadAll();
+  }, [loadAll]);
+  useEffect(() => {
+    const intent = JSON.stringify([tenantKey, pathname, view, canWriteModule, canManageModule]);
+    if (deepLinkIntent.current === intent) return;
+    deepLinkIntent.current = intent;
+    const path = pathname;
     const ticketMatch = path.match(/\/(?:tickets|requests)\/([a-z0-9-]+)\/?$/);
     const assetIssueMatch = path.match(/\/assets\/([a-z0-9-]+)\/report-issue\/?$/);
     if (/\/(tickets|requests|submit)(\/|$)/.test(path) || assetIssueMatch) {
@@ -158,22 +200,33 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
       setAssetIssueDeepLink(Boolean(assetIssueMatch));
       if (ticketMatch?.[1] && ticketMatch[1] !== 'new') void loadTicket(ticketMatch[1]);
     }
-  }, [loadTicket, view]);
+  }, [canManageModule, canWriteModule, loadTicket, pathname, tenantKey, view]);
 
   async function mutate(label: string, operation: () => Promise<unknown>, options: { detailId?: string; reset?: HTMLFormElement } = {}) {
     if (!canWriteModule) {
       setError('This access level can review PulseDesk records but cannot change them.');
       return;
     }
+    if (lifetime.current.writing) return;
+    lifetime.current.writing = true;
+    const write = ++lifetime.current.write;
+    const selection = lifetime.current.detail;
+    const reads = lifetime.current.reads;
+    const ownsWrite = () => lifetime.current.mounted && lifetime.current.write === write;
+    const isCurrent = () => ownsWrite() && currentScope.current === scope;
+    const sameSelection = () => lifetime.current.detail === selection;
     setBusy(label); setError(''); setNotice('');
     try {
       await operation();
+      if (!isCurrent() || !sameSelection()) return;
       options.reset?.reset();
       setNotice(`${label} completed.`);
-      await loadAll();
-      if (options.detailId) await loadTicket(options.detailId);
-    } catch (nextError) { setError(errorMessage(nextError, `${label} failed.`)); }
-    finally { setBusy(''); }
+      if (lifetime.current.reads === reads) await loadAll();
+      if (isCurrent() && sameSelection() && options.detailId && lifetime.current.selectedId === options.detailId) await loadTicket(options.detailId);
+    } catch (nextError) { if (isCurrent() && sameSelection()) setError(errorMessage(nextError, `${label} failed.`)); }
+    finally {
+      if (ownsWrite()) { lifetime.current.writing = false; setBusy(''); }
+    }
   }
 
   async function createTicket(event: FormEvent<HTMLFormElement>) {
@@ -269,8 +322,8 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
   async function bulkAction(action: 'archive' | 'status', toStatus?: string) {
     const rows = tickets.filter(ticket => selected.has(ticket.id)).map(ticket => ({ id: ticket.id, expectedVersion: ticket.version }));
     if (!rows.length) { setError('Select at least one ticket.'); return; }
-    await mutate(`Bulk ${action}`, () => moduleShellApi.pulsedesk.bulkServiceTickets({ action, tickets: rows, ...(toStatus ? { toStatus } : {}) }));
     setSelected(new Set());
+    await mutate(`Bulk ${action}`, () => moduleShellApi.pulsedesk.bulkServiceTickets({ action, tickets: rows, ...(toStatus ? { toStatus } : {}) }));
   }
 
   if (loading) return <div className="pds-loading" role="status" aria-busy="true" data-testid="pulsedesk-service-desk-loading"><RefreshCw className="pds-spin" size={18} /> Loading this PulseDesk route…<style>{css}</style></div>;
@@ -283,11 +336,11 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
         <h2 className="pds-route-label">{view === 'dashboard' ? (showWorkday ? 'Today’s work' : 'Operational performance') : view === 'tickets' ? 'Request workspace' : view.replaceAll('_', ' ')}</h2>
         <button type="button" className="pds-secondary" onClick={() => void loadAll()} disabled={loading || Boolean(busy)}><RefreshCw size={14} /> Refresh</button>
       </div>
-      {error && <div className="pds-error" role="alert" data-testid="pulsedesk-service-error"><AlertTriangle size={16} />{error}</div>}
+      {[error, readError, detailError].filter(Boolean).map((message, index) => <div key={index} className="pds-error" role="alert" data-testid="pulsedesk-service-error"><AlertTriangle size={16} />{message}</div>)}
       {notice && <div className="pds-success" role="status"><CheckCircle2 size={16} />{notice}</div>}
       {!canWriteModule && <div className="pds-warning" role="status" data-testid="pulsedesk-service-read-only"><ShieldAlert size={16} /><div><strong>Read-only access</strong><span>You can review operational work, but this access level cannot create or change records.</span></div></div>}
 
-      {view === 'dashboard' && !loading && !error && dashboard && <Dashboard dashboard={dashboard} tickets={tickets} requestHref={requestHref} routeHref={routeHref} canManage={canManageModule} showWorkday={showWorkday} />}
+      {view === 'dashboard' && !loading && dashboard && <Dashboard dashboard={dashboard} tickets={tickets} requestHref={requestHref} routeHref={routeHref} canManage={canManageModule} showWorkday={showWorkday} />}
 
       {view === 'tickets' && <div className="pds-ticket-layout">
         <div className="pds-stack">
@@ -327,7 +380,7 @@ export default function PulseDeskServiceDeskWorkspace({ tenantKey, canWriteModul
             {savedViews.length > 0 && <div className="pds-chips">{savedViews.map(view => <span key={String(view.id)}>{String(view.name)}</span>)}</div>}
           </section>
         </div>
-        <TicketDetail detail={detail} busy={busy} attachments={attachments} configuration={configuration} assignees={assignees} vendors={vendors} canWrite={canWriteModule} canManage={canManageModule} onUpdate={event => void updateTicket(event)} onReply={(event, visibility) => void sendMessage(event, visibility)} onTime={event => void logTime(event)} onAssign={event => void assignTicket(event)} onTransition={action => void transition(action)} onEvaluate={() => detail && void mutate('SLA evaluation', () => moduleShellApi.pulsedesk.evaluateServiceTicketSla(detail.ticket.id), { detailId: detail.ticket.id })} onUpload={event => void uploadAttachment(event)} onVendor={event => {
+        <TicketDetail detailLoading={detailLoading} detail={detail} busy={busy} attachments={attachments} configuration={configuration} assignees={assignees} vendors={vendors} canWrite={canWriteModule} canManage={canManageModule} onUpdate={event => void updateTicket(event)} onReply={(event, visibility) => void sendMessage(event, visibility)} onTime={event => void logTime(event)} onAssign={event => void assignTicket(event)} onTransition={action => void transition(action)} onEvaluate={() => detail && void mutate('SLA evaluation', () => moduleShellApi.pulsedesk.evaluateServiceTicketSla(detail.ticket.id), { detailId: detail.ticket.id })} onUpload={event => void uploadAttachment(event)} onVendor={event => {
           event.preventDefault(); if (!detail) return; const form = event.currentTarget; const data = new FormData(form); void mutate('Vendor coordination', () => moduleShellApi.pulsedesk.addVendorEngagement(detail.ticket.id, { vendorOrganizationId: data.get('vendorOrganizationId'), status: data.get('status'), referenceCode: data.get('referenceCode') }), { detailId: detail.ticket.id, reset: form });
         }} />
       </div>}
@@ -388,11 +441,12 @@ function Dashboard({ dashboard, tickets, requestHref, routeHref, canManage, show
   </div>;
 }
 
-function TicketDetail({ detail, busy, attachments, configuration, assignees, vendors, canWrite, canManage, onUpdate, onReply, onTime, onAssign, onTransition, onEvaluate, onUpload, onVendor }: {
-  detail: PulseDeskServiceTicketDetail | null; busy: string; attachments: Array<Record<string, unknown>>; configuration: PulseDeskServiceConfiguration | null; assignees: PulseDeskAssignee[]; vendors: DirectoryOrganization[];
+function TicketDetail({ detailLoading, detail, busy, attachments, configuration, assignees, vendors, canWrite, canManage, onUpdate, onReply, onTime, onAssign, onTransition, onEvaluate, onUpload, onVendor }: {
+  detailLoading: boolean; detail: PulseDeskServiceTicketDetail | null; busy: string; attachments: Array<Record<string, unknown>>; configuration: PulseDeskServiceConfiguration | null; assignees: PulseDeskAssignee[]; vendors: DirectoryOrganization[];
   canWrite: boolean; canManage: boolean;
   onUpdate: (event: FormEvent<HTMLFormElement>) => void; onReply: (event: FormEvent<HTMLFormElement>, visibility: 'requester' | 'internal') => void; onTime: (event: FormEvent<HTMLFormElement>) => void; onAssign: (event: FormEvent<HTMLFormElement>) => void; onTransition: (action: string) => void; onEvaluate: () => void; onUpload: (event: FormEvent<HTMLFormElement>) => void; onVendor: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  if (detailLoading) return <aside className="pds-card pds-detail" role="status" aria-busy="true">Loading selected ticket and attachments.</aside>;
   if (!detail) return <aside className="pds-card pds-detail"><Empty text="Select a ticket to view its details, history, and next actions." /></aside>;
   const { ticket } = detail;
   return <aside className="pds-card pds-detail" data-testid="pulsedesk-ticket-workspace"><Heading icon={Inbox} title={`${ticket.humanId} · ${ticket.summary}`} subtitle={`${ticket.status.replaceAll('_', ' ')} · ${ticket.priority} · SLA ${ticket.sla.state.replaceAll('_', ' ')}`} /><p className="pds-description">{ticket.description || 'No additional operational description.'}</p><div className="pds-chips"><span>Created {formatDate(ticket.createdAt)}</span><span>Response due {formatDate(ticket.responseDueAt)}</span><span>Resolution due {formatDate(ticket.resolutionDueAt)}</span></div>

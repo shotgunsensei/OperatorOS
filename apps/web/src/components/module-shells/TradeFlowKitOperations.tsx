@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Archive, Bookmark, CheckCircle2, Circle, Clock3, Download, ListChecks, Loader2, Pencil, Plus, RefreshCw, Save, Search, Settings2, Share2, Trash2, Wrench, X } from 'lucide-react';
 import {
   moduleShellApi,
@@ -91,10 +91,13 @@ export default function TradeFlowKitOperations({
   routePrefix?: string;
 }) {
   const [data, setData] = useState(empty);
+  const [dataScope, setDataScope] = useState<string | null>(null);
   const [revenue, setRevenue] = useState(emptyRevenue);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [revenueError, setRevenueError] = useState<string | null>(null);
+  const [savedViewsError, setSavedViewsError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
@@ -113,14 +116,48 @@ export default function TradeFlowKitOperations({
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [attachmentBusy, setAttachmentBusy] = useState<string | null>(null);
 
+  // Reads own their completions; a new intent or unmount retires older work.
+  const mounted = useRef(true);
+  const readSequence = useRef(0);
+  const savedViewSequence = useRef(0);
+  const writeSequence = useRef(0);
+  const viewWriteSequence = useRef(0);
+  const downloadSequence = useRef(0);
+  const writeInFlight = useRef(false);
+  const viewWriteInFlight = useRef(false);
+  const scope = JSON.stringify([tenantKey, view, recordId, canWrite, canManage, search, status]);
+  const savedViewScope = JSON.stringify([tenantKey, view, canWrite, canManage]);
+  const currentSavedViewScope = useRef(savedViewScope);
+  currentSavedViewScope.current = savedViewScope;
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  const currentSelection = useRef(selectedJobId);
+  currentSelection.current = selectedJobId;
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; readSequence.current += 1; savedViewSequence.current += 1; downloadSequence.current += 1; };
+  }, []);
+
   const load = useCallback(async () => {
-    setLoading(true); setError(null); setConflict(false);
+    const sequence = ++readSequence.current;
+    const current = () => mounted.current && currentScope.current === scope && sequence === readSequence.current;
+    if (!current()) return;
+    setLoading(true); setError(null); setRevenueError(null); setConflict(false);
+    setDataScope(null); setData(empty); setRevenue(emptyRevenue); setSettings(null); setSelectedJobIds(new Set());
     try {
-      const [operations, nextRevenue, exactBundle] = await Promise.all([
+      const operationsRead = Promise.all([
         moduleShellApi.tradeflowkit.operations({ search: search || undefined, status: status || undefined }),
-        view === 'dashboard' ? moduleShellApi.tradeflowkit.revenue() : Promise.resolve(null),
         recordId ? moduleShellApi.tradeflowkit.job(recordId) as Promise<{ job: TradeFlowKitJob; tasks?: TradeFlowKitTask[] }> : Promise.resolve(null),
       ]);
+      // Revenue failure must not discard successfully loaded jobs and metrics.
+      const revenueRead = view === 'dashboard'
+        ? moduleShellApi.tradeflowkit.revenue().then(value => { if (current()) setRevenue(value); })
+            .catch(reason => { if (current()) setRevenueError(message(reason)); })
+        : Promise.resolve();
+      const [operationsResult] = await Promise.allSettled([operationsRead, revenueRead]);
+      if (!current()) return;
+      if (operationsResult.status === 'rejected') throw operationsResult.reason;
+      const [operations, exactBundle] = operationsResult.value;
       const next = exactBundle
         ? {
             ...operations,
@@ -131,45 +168,57 @@ export default function TradeFlowKitOperations({
             ],
           }
         : operations;
-      setData(next);
-      if (nextRevenue) setRevenue(nextRevenue);
-      setSelectedJobIds(new Set());
+      setData(next); setDataScope(scope);
       const nestedJobId = recordId || (typeof window === 'undefined' ? '' : window.location.pathname.match(/\/jobs\/([a-z0-9-]+)$/i)?.[1] || '');
       const nestedTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
       const taskJobId = next.tasks.find(task => task.id === nestedTaskId)?.jobId || '';
-      setSelectedJobId(current => {
-        const candidate = nestedJobId || taskJobId || current;
+      setSelectedJobId(selected => {
+        const candidate = nestedJobId || taskJobId || selected;
         if (nestedJobId) return next.jobs.some(job => job.id === nestedJobId) ? nestedJobId : '';
         return next.jobs.some(job => job.id === candidate) ? candidate : next.jobs[0]?.id || '';
       });
       if (canManage) {
-        try { setSettings(await moduleShellApi.tradeflowkit.settings()); } catch { setSettings(next.settings); }
+        try {
+          const nextSettings = await moduleShellApi.tradeflowkit.settings();
+          if (current()) setSettings(nextSettings);
+        } catch { if (current()) setSettings(next.settings); }
       } else setSettings(next.settings);
-    } catch (requestError) { setError(message(requestError)); }
-    finally { setLoading(false); }
-  }, [canManage, recordId, search, status, view]);
+    } catch (requestError) { if (current()) setError(message(requestError)); }
+    finally { if (current()) setLoading(false); }
+  }, [canManage, recordId, scope, search, status, view]);
 
-  useEffect(() => { void load(); }, [load, tenantKey]);
+  useEffect(() => { void load(); return () => { readSequence.current += 1; }; }, [load]);
 
   const loadSavedViews = useCallback(async () => {
+    const sequence = ++savedViewSequence.current;
+    setSavedViewsError(null);
+    const current = () => mounted.current && currentSavedViewScope.current === savedViewScope && sequence === savedViewSequence.current;
+    if (!current()) return;
     try {
       const response = await moduleShellApi.tradeflowkit.savedViews('jobs');
-      setSavedViews(response.savedViews);
+      if (current()) setSavedViews(response.savedViews);
     } catch (requestError) {
-      setError(message(requestError));
+      if (current()) setSavedViewsError(message(requestError));
     }
-  }, []);
+  }, [savedViewScope]);
 
-  useEffect(() => { if (view !== 'dashboard') void loadSavedViews(); }, [loadSavedViews, tenantKey, view]);
+  useEffect(() => {
+    setSavedViews([]);
+    if (view !== 'dashboard') void loadSavedViews();
+    return () => { savedViewSequence.current += 1; };
+  }, [loadSavedViews, view]);
 
-  const selectedJob = data.jobs.find(job => job.id === selectedJobId) ?? null;
+  const selectedJob = dataScope === scope ? data.jobs.find(job => job.id === selectedJobId) ?? null : null;
   const tasks = useMemo(() => data.tasks.filter(task => task.jobId === selectedJobId), [data.tasks, selectedJobId]);
   const workday = useMemo(() => buildTradeFlowKitWorkday(data, revenue), [data, revenue]);
   const deepTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
 
   useEffect(() => {
     let cancelled = false;
-    if (view !== 'jobs' || !selectedJobId) {
+    const current = () => !cancelled && mounted.current && currentScope.current === scope && currentSelection.current === selectedJobId;
+    setAttachments([]); setAttachmentsLoading(false); setAttachmentBusy(null);
+    downloadSequence.current += 1;
+    if (view !== 'jobs' || !selectedJob) {
       setAttachments([]);
       setAttachmentError(null);
       return;
@@ -178,21 +227,21 @@ export default function TradeFlowKitOperations({
     setAttachmentError(null);
     void listJobAttachments(selectedJobId, tenantKey)
       .then(rows => {
-        if (!cancelled) setAttachments(rows);
+        if (current()) setAttachments(rows);
       })
       .catch(reason => {
-        if (!cancelled) {
+        if (current()) {
           setAttachments([]);
           setAttachmentError(message(reason));
         }
       })
       .finally(() => {
-        if (!cancelled) setAttachmentsLoading(false);
+        if (current()) setAttachmentsLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [selectedJobId, tenantKey, view]);
+  }, [scope, selectedJob, selectedJobId, tenantKey, view]);
 
   useEffect(() => {
     if (!highlightedAttachmentId || !attachments.some(item => item.id === highlightedAttachmentId)) return;
@@ -207,6 +256,9 @@ export default function TradeFlowKitOperations({
 
   async function downloadAttachment(item: TradeFlowKitJobAttachment) {
     if (!selectedJobId) return;
+    const selection = selectedJobId;
+    const sequence = ++downloadSequence.current;
+    const current = () => mounted.current && currentScope.current === scope && currentSelection.current === selection && sequence === downloadSequence.current;
     setAttachmentBusy(item.id);
     setAttachmentError(null);
     try {
@@ -214,21 +266,39 @@ export default function TradeFlowKitOperations({
         `/modules/tradeflowkit/jobs/${encodeURIComponent(selectedJobId)}/attachments/${encodeURIComponent(item.id)}/content`,
         tenantKey,
       );
-      saveAttachment(await response.blob(), item.originalName);
+      const blob = await response.blob();
+      if (current()) saveAttachment(blob, item.originalName);
     } catch (reason) {
-      setAttachmentError(message(reason));
+      if (current()) setAttachmentError(message(reason));
     } finally {
-      setAttachmentBusy(null);
+      if (current()) setAttachmentBusy(null);
     }
   }
 
-  async function run(operation: () => Promise<unknown>) {
+  async function run(operation: () => Promise<unknown>, onSuccess?: () => void) {
+    if (writeInFlight.current) return;
+    writeInFlight.current = true;
+    const sequence = ++writeSequence.current;
+    const selection = selectedJobId;
+    const read = readSequence.current;
+    const current = () => mounted.current && currentScope.current === scope && currentSelection.current === selection && sequence === writeSequence.current && read === readSequence.current;
     setPending(true); setError(null); setConflict(false);
-    try { await operation(); await load(); }
-    catch (requestError: any) {
+    try {
+      await operation();
+      if (!current()) return;
+      onSuccess?.();
+      // A filter/navigation/manual refresh is a newer intent than this write.
+      if (read === readSequence.current) await load();
+    } catch (requestError: any) {
+      if (!current()) return;
       if (requestError?.status === 409) setConflict(true);
       setError(message(requestError));
-    } finally { setPending(false); }
+    } finally {
+      if (sequence === writeSequence.current) {
+        writeInFlight.current = false;
+        if (mounted.current) setPending(false);
+      }
+    }
   }
 
   function addTask(event: FormEvent) {
@@ -236,28 +306,30 @@ export default function TradeFlowKitOperations({
     if (!canWrite || !selectedJob || !taskTitle.trim()) return;
     void run(async () => {
       await moduleShellApi.tradeflowkit.createTask(selectedJob.id, { title: taskTitle, priority: taskPriority, sortOrder: tasks.length });
-      setTaskTitle('');
-    });
+    }, () => setTaskTitle(''));
   }
 
   function saveSettings(event: FormEvent) {
     event.preventDefault();
     if (!settings) return;
     void run(async () => {
-      const updated = await moduleShellApi.tradeflowkit.updateSettings({
+      await moduleShellApi.tradeflowkit.updateSettings({
         expectedVersion: settings.version,
         jobPrefix: settings.jobPrefix, quotePrefix: settings.quotePrefix, invoicePrefix: settings.invoicePrefix,
         defaultTaxRateBps: settings.defaultTaxRateBps,
         defaultHourlyRateCents: settings.defaultHourlyRateCents,
         paymentTermsDays: settings.paymentTermsDays, currency: settings.currency, timezone: settings.timezone,
       });
-      setSettings(updated);
     });
   }
 
   async function saveCurrentView(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canWrite || !viewName.trim()) return;
+    if (viewWriteInFlight.current) return;
+    viewWriteInFlight.current = true;
+    const sequence = ++viewWriteSequence.current;
+    const current = () => mounted.current && currentScope.current === scope && sequence === viewWriteSequence.current;
     setViewPending(true); setError(null);
     try {
       await moduleShellApi.tradeflowkit.createSavedView({
@@ -267,10 +339,16 @@ export default function TradeFlowKitOperations({
         sort: { field: 'updatedAt', direction: 'desc' },
         isShared: canManage && shareView,
       });
+      if (!current()) return;
       setViewName(''); setShareView(false);
       await loadSavedViews();
-    } catch (requestError) { setError(message(requestError)); }
-    finally { setViewPending(false); }
+    } catch (requestError) { if (current()) setError(message(requestError)); }
+    finally {
+      if (sequence === viewWriteSequence.current) {
+        viewWriteInFlight.current = false;
+        if (mounted.current) setViewPending(false);
+      }
+    }
   }
 
   function applySavedView(view: TradeFlowKitSavedView) {
@@ -280,12 +358,21 @@ export default function TradeFlowKitOperations({
 
   async function deleteSavedView(view: TradeFlowKitSavedView) {
     if (!canWrite || !view.owned || !window.confirm(`Delete saved view “${view.name}”?`)) return;
+    if (viewWriteInFlight.current) return;
+    viewWriteInFlight.current = true;
+    const sequence = ++viewWriteSequence.current;
+    const current = () => mounted.current && currentScope.current === scope && sequence === viewWriteSequence.current;
     setViewPending(true); setError(null);
     try {
       await moduleShellApi.tradeflowkit.deleteSavedView(view.id);
-      await loadSavedViews();
-    } catch (requestError) { setError(message(requestError)); }
-    finally { setViewPending(false); }
+      if (current()) await loadSavedViews();
+    } catch (requestError) { if (current()) setError(message(requestError)); }
+    finally {
+      if (sequence === viewWriteSequence.current) {
+        viewWriteInFlight.current = false;
+        if (mounted.current) setViewPending(false);
+      }
+    }
   }
 
   function toggleBulkJob(id: string) {
@@ -319,7 +406,7 @@ export default function TradeFlowKitOperations({
           <div className="tfk-workday-slot" aria-busy={loading}>
             {loading
               ? <div className="tfk-workday-loading" role="status"><Loader2 className="spin" size={18} /> Preparing today’s lead-to-cash brief…</div>
-              : error ? <div className="tfk-ops-alert" role="alert" data-testid="tradeflowkit-workday-error"><AlertTriangle size={17} /><span>Today’s priorities could not load. Refresh to try again, or open a section from the menu.</span><button type="button" onClick={() => void load()}>Try again</button></div>
+              : error || revenueError ? <div className="tfk-ops-alert" role="alert" data-testid="tradeflowkit-workday-error"><AlertTriangle size={17} /><span>Today’s priorities could not load. Refresh to try again, or open a section from the menu.</span><button type="button" onClick={() => void load()}>Try again</button></div>
               : <CoreSuiteWorkdayBrief
                   moduleId="tradeflowkit"
                   eyebrow="Today · lead to cash"
@@ -356,7 +443,7 @@ export default function TradeFlowKitOperations({
       )}
 
       {view === "dashboard" && !loading && !error && <CoreSuiteSection title="Business totals" description="Leads, completed work, invoicing, and collections."><div className="tfk-ops-metrics" aria-label="Business totals"><Metric label="Open leads" value={String(data.metrics.leads)} /><Metric label="Jobs" value={String(data.metrics.jobs)} /><Metric label="Tasks complete" value={`${data.metrics.completed_tasks}/${data.metrics.tasks}`} /><Metric label="Invoiced" value={money(data.metrics.invoiced_cents)} /><Metric label="Collected" value={money(data.metrics.collected_cents)} /><Metric label="Outstanding" value={money(data.metrics.outstanding_cents)} /></div></CoreSuiteSection>}
-      {view !== "dashboard" && <div className="tfk-ops-metrics" aria-label="Operational analytics">
+      {view !== "dashboard" && !loading && !error && <div className="tfk-ops-metrics" aria-label="Operational analytics">
         <Metric label="Open leads" value={String(data.metrics.leads)} />
         <Metric label="Jobs" value={String(data.metrics.jobs)} />
         <Metric label="Tasks complete" value={`${data.metrics.completed_tasks}/${data.metrics.tasks}`} />
@@ -385,6 +472,7 @@ export default function TradeFlowKitOperations({
         </select>
       </div>
 
+      {savedViewsError && <div className="tfk-ops-alert" role="alert"><AlertTriangle size={17} /><span>Saved job views could not load: {savedViewsError}</span><button type="button" onClick={() => void loadSavedViews()}>Retry saved views</button></div>}
       <div className="tfk-saved-views" data-testid="tradeflowkit-saved-views">
         {canWrite ? <form onSubmit={saveCurrentView}>
           <Bookmark size={15} />
@@ -417,7 +505,7 @@ export default function TradeFlowKitOperations({
             </aside>
             <div className="tfk-task-board">
               {selectedJob && <>
-                <JobEditor job={selectedJob} settings={settings} pending={pending} canWrite={canWrite} activeTaskCount={tasks.length} run={run} routePrefix={routePrefix} />
+                <JobEditor key={selectedJob.id} job={selectedJob} settings={settings} pending={pending} canWrite={canWrite} activeTaskCount={tasks.length} run={run} routePrefix={routePrefix} />
                 <section className="tfk-attachments" aria-labelledby="tradeflowkit-job-attachments-title" data-testid="tradeflowkit-job-attachments">
                   <div className="tfk-attachments-head">
                     <div><strong id="tradeflowkit-job-attachments-title">Job files</strong><span>Files shared from connected workflows and uploads stay attached to this job.</span></div>
