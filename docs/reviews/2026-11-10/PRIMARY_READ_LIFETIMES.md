@@ -67,13 +67,26 @@ the external receipt. A fresh offline frozen scripts-disabled install added
 Root and installed lock SHA256 are both
 `7d020fd1976bc47ed5e81ff8af8ee98cc1c4b673de8df58b3e12037ccd7c0a65`;
 regenerated SBOM matches all 1,311 components. No dependency versions changed.
-The exact source commit is prepared for its production rebuild; that build is
-pending until the follow-up verification receipt is recorded.
+Fresh sanitized `pnpm build:production` passes on exact runtime commit
+`908126aef8ce941ce29255620f46019e8b79b112` (tree
+`1414a2fb140bddc89c1d2b7f6620a13f281418a0`). It reruns aggregate types,
+passes four Faultline catalog regressions, compiles API/runner/web and generates
+40/40 Next pages. Next's internal types/lint skips are covered by the separate
+successful aggregate commands. No application/provider/DB service was started.
+The final verification commit changes only documentation, with runtime and API
+closure equivalence asserted in the external `FINAL_RECEIPT.json`.
+
+API source tree, database release manifest and dependency lock remain identical
+to the accepted base. Earlier broad DB-free/native/browser suites are inherited,
+not relabeled as freshly run here. External type-harness alias/fixture setup
+failures are retained alongside the passing own-graph reruns. No source fix was
+needed for those harness failures.
 
 Desktop/mobile screenshots use actual local root fonts/theme and module canvas
 or shell tokens with synthetic data. They are component fixtures, not an
-authenticated full-shell acceptance run. Pulse route-heading contrast on its dark
-canvas is a pre-existing visual follow-up, not fixed here. Ordinary Pulse filter
+authenticated full-shell acceptance run. Pulse screenshots omit scoped `PulseDeskShell` CSS and therefore are not
+faithful full-shell contrast/mobile-filter evidence. The shell already sets the
+route heading to light text and supplies responsive filter rules. Ordinary Pulse filter
 keystroke overlap remains constrained by its whole-route loading screen; tests
 must not be represented as proof of a live auth or tenant bypass.
 
@@ -82,11 +95,13 @@ schema and real-user/provider acceptance remain separate held gates. No live
 Replit/user Chrome, production database, remote write, PR, push, merge or deploy
 was performed. Implementation verification does not mean shipped.
 
-## Bounded visual follow-up
+## Visual evidence boundary
 
-The actual-theme fixture `pulse-workspace-390.png` (also 1440px) in external
-`evidence/primary-read-lifetimes-nov10/` shows the route heading inheriting
-`.pds { color:#102033 }` against PulseDesk's `#07111b` canvas. Source anchors:
-`PulseDeskServiceDeskWorkspace.tsx` route-label heading (line 336) and inline
-`.pds` style (line 469), plus `PULSEDESK_THEME.colors.background` in
-`PulseDeskRoute.contract.ts`. This is retained for a separate aesthetics slice.
+The component fixture `pulse-workspace-390.png` (also 1440px) in external
+`evidence/primary-read-lifetimes-nov10/` initially appeared to show low heading
+contrast: `.pds { color:#102033 }` against the applied `#07111b` canvas. Tracing
+the real shell found `PulseDeskShell.tsx` already overrides `.pds-route-label`
+to `#eaf4ff` and supplies the mobile filter grid under its scoped wrapper. Those
+rules were absent from this direct-component fixture. This is a fixture fidelity
+limitation, **not evidence of a production contrast defect**. A separate follow-on
+will reproduce actual scoped-shell styling; no speculative CSS fix is included.

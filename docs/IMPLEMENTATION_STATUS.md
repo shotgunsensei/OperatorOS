@@ -3,7 +3,8 @@
 PulseDesk and TradeFlowKit primary reads now retain latest intent across selection,
 filters, same-area navigation, scope changes and stale mutation refreshes. Fresh
 actual-component browser38/38, seven baseline-negative controls, aggregate types
-and lint pass; exact production rebuild remains pending at this source checkpoint.
+and lint pass; exact production build at `908126ae` passes with four catalog
+regressions and 40/40 generated pages. Final changes are documentation only.
 No server/permission/dependency/DB changes or parity promotion. Existing publication,
 provider and production acceptance holds remain. [Scope, proof and remaining gates](reviews/2026-11-10/PRIMARY_READ_LIFETIMES.md).
 
