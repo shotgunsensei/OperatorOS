@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 const root = resolve(process.env.OPERATOROS_TEST_SOURCE_ROOT ?? resolve(import.meta.dirname, '../../..'));
 const assets = resolve(process.env.OPERATOROS_TEST_ASSET_ROOT ?? root);
@@ -8,6 +9,11 @@ const { build } = require('esbuild') as typeof import('esbuild');
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 let script: string; let css: string;
+// Compose the production route's scoped CSS, not a copied approximation. This
+// remains a workspace crop, not authenticated ModuleApplicationShell coverage.
+const pulseShellSource = readFileSync(resolve(root, 'apps/web/src/components/module-shells/PulseDeskShell.tsx'), 'utf8');
+const pulseRouteCss = pulseShellSource.match(/const pulseDeskRouteCss = `([\s\S]*?)`;/)?.[1];
+if (!pulseRouteCss || pulseRouteCss.includes('${')) throw new Error('Pulse route CSS must be a static production stylesheet');
 test.beforeAll(async () => {
   const result=await build({stdin:{resolveDir:resolve(root,'apps/web'),loader:'tsx',contents:`
     import React from 'react'; import {createRoot} from 'react-dom/client';
@@ -73,6 +79,10 @@ async function setup(page:Page,module:'pulse'|'trade'){
       return new Response(JSON.stringify({attachments:w.files}),{status:200,headers:{'Content-Type':'application/json'}});
     };
   },{A,B,module});
+  if(module==='pulse') {
+    await page.evaluate(()=>document.getElementById('root')!.setAttribute('data-testid','pulsedesk-module-shell'));
+    await page.addStyleTag({content:pulseRouteCss!});
+  }
   await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.evaluate(()=>(window as any).renderFixture());
   await expect(page.getByRole('button',{name:module==='pulse'?/PD-A Alpha request/:/Alpha job/}).first()).toBeVisible();
   expect(await page.evaluate(()=>(window as any).errors)).toEqual([]);
@@ -137,7 +147,34 @@ test('Pulse sibling read failure preserves successful ticket panel',async({page}
 });
 for(const module of ['pulse','trade'] as const)for(const width of [390,1440])test(`${module} actual workspace visual ${width}`,async({page},testInfo)=>{
   await page.setViewportSize({width,height:1000});await setup(page,module);if(module==='pulse')await open(page,B);
-  await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:process.env.OPERATOROS_TEST_EVIDENCE_ROOT?resolve(process.env.OPERATOROS_TEST_EVIDENCE_ROOT,`${module}-workspace-${width}.png`):testInfo.outputPath(`${module}-workspace-${width}.png`),fullPage:true});
+  await page.evaluate(()=>document.fonts.ready);
+  if(module==='pulse') {
+    const measurements=await page.evaluate(()=>{
+      const heading=document.querySelector('.pds-route-label')!;
+      const rgb=(value:string)=>value.match(/[\d.]+/g)!.slice(0,3).map(Number);
+      const luminance=(value:string)=>rgb(value).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[0.2126,0.7152,0.0722][i],0);
+      const color=getComputedStyle(heading).color,background=getComputedStyle(document.body).backgroundColor;
+      const a=luminance(color),b=luminance(background);
+      const controls=Array.from(document.querySelectorAll('.pds-filters input,.pds-filters select')).map(el=>{
+        const rect=el.getBoundingClientRect();return {label:el.getAttribute('aria-label'),x:rect.x,right:rect.right,width:rect.width,height:rect.height,color:getComputedStyle(el).color,background:getComputedStyle(el).backgroundColor};
+      });
+      return {color,background,contrast:(Math.max(a,b)+0.05)/(Math.min(a,b)+0.05),controls,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth};
+    });
+    await testInfo.attach('pulse-style-measurements',{body:JSON.stringify(measurements,null,2),contentType:'application/json'});
+    console.log('Pulse style measurements',width,JSON.stringify(measurements));
+    expect(measurements.color).toBe('rgb(234, 244, 255)');
+    expect(measurements.contrast).toBeGreaterThanOrEqual(4.5);
+    expect(measurements.documentWidth).toBeLessThanOrEqual(width);
+    for(const control of measurements.controls) {
+      expect(control.x).toBeGreaterThanOrEqual(0);expect(control.right).toBeLessThanOrEqual(width);
+      if(width===390) { expect(control.width).toBeGreaterThanOrEqual(280);expect(control.height).toBeGreaterThanOrEqual(44); }
+    }
+    await page.getByRole('textbox',{name:'Search requests'}).focus();
+    await expect(page.getByRole('textbox',{name:'Search requests'})).toBeFocused();
+    await page.keyboard.press('Tab');await expect(page.getByRole('combobox',{name:'Filter requests by status'})).toBeFocused();
+    await page.keyboard.press('Tab');await expect(page.getByRole('combobox',{name:'Filter requests by priority'})).toBeFocused();
+  }
+  await page.screenshot({path:process.env.OPERATOROS_TEST_EVIDENCE_ROOT?resolve(process.env.OPERATOROS_TEST_EVIDENCE_ROOT,`${module}-workspace-${width}.png`):testInfo.outputPath(`${module}-workspace-${width}.png`),fullPage:true});
   expect(await page.evaluate(()=>(window as any).errors)).toEqual([]);
 });
 
