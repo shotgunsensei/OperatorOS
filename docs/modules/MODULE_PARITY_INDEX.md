@@ -1,3 +1,12 @@
+## 2026-11-10 - Primary workspace fixture style fidelity
+
+PulseDesk's apparent dark-heading/mobile-search defect was caused by omitted
+scoped shell CSS in the component fixture. Corrected actual-style composition
+verifies 17.09:1 heading contrast and 334px mobile search with 44px controls;
+38/38 browser cases, two failing omitted-style controls, focused test types and
+lint pass. Production bytes unchanged; no parity or authenticated-shell claim.
+[Evidence and limits](../reviews/2026-11-10/PRIMARY_WORKSPACE_STYLE_FIDELITY.md).
+
 ## 2026-11-10 - Primary read-lifetime follow-on
 
 PulseDesk and TradeFlowKit primary reads now retain latest intent across selection,
