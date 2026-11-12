@@ -1,3 +1,14 @@
+## 2026-11-12 - Shared module navigation refinement
+
+Long module rails now filter their current section manifest with accessible
+no-results/clear recovery. Mobile current-route selection closes predictably;
+completed navigation retains content focus, ordinary dismissal restores the menu
+trigger, and invalid aside/dialog semantics are repaired. Fresh synthetic-shell
+Chromium 31/31, three failing frozen-baseline controls, scoped axe, aggregate types,
+zero-warning lint and production build pass (four catalog regressions, 40/40 pages).
+No auth/API/package/DB/entitlement or parity-state change. Live full-app acceptance
+and publication remain held. [Scope, exact evidence and limits](reviews/2026-11-12/SHARED_MODULE_NAVIGATION.md).
+
 ## 2026-11-10 - Primary workspace fixture style fidelity
 
 PulseDesk's apparent dark-heading/mobile-search defect was caused by omitted

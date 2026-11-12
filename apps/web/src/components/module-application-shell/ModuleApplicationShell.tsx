@@ -5,12 +5,13 @@ import * as Dialog from '@radix-ui/react-dialog';
 import ModulePageGuide from '@/components/module-shells/ModulePageGuide';
 import ModuleWorkflowJourney from '@/components/module-shells/ModuleWorkflowJourney';
 import { MODULE_WORKFLOW_JOURNEYS } from '@/lib/module-workflow-journey';
-import { AlertTriangle, Ban, ChevronDown, CloudOff, Inbox, Menu, RefreshCcw, X, type LucideIcon } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Ban, ChevronDown, CloudOff, Inbox, Menu, RefreshCcw, Search, X, type LucideIcon } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   canAccessModuleRoute,
   findActiveModuleRoute,
   isModuleRouteActive,
+  normalizeModulePath,
   moduleThemeStyle,
   type ModuleRouteAccess,
   type ModuleRouteManifestGroup,
@@ -134,9 +135,28 @@ export default function ModuleApplicationShell<Capability extends string = strin
 ) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [filter, setFilter] = useState({ moduleId: props.moduleId, path: props.currentPath, value: '' });
+  const filterInput = useRef<HTMLInputElement>(null);
+  const contentHeading = useRef<HTMLElement>(null);
+  const focusContentOnClose = useRef(false);
+  const drawerIsOpen = useRef(false);
+  drawerIsOpen.current = drawerOpen;
+  const clearFilter = () => setFilter({ moduleId: props.moduleId, path: props.currentPath, value: '' });
+  const changeDrawer = (open: boolean) => {
+    focusContentOnClose.current = false;
+    clearFilter();
+    setDrawerOpen(open);
+  };
   useEffect(() => {
     const query = window.matchMedia('(max-width: 760px)');
-    const update = () => { setIsMobile(query.matches); setDrawerOpen(false); };
+    const update = () => {
+      // The mobile trigger disappears on desktop. A closing modal must not
+      // restore focus to that hidden control after a breakpoint change.
+      if (drawerIsOpen.current && !query.matches) focusContentOnClose.current = true;
+      setIsMobile(query.matches);
+      setDrawerOpen(false);
+      setFilter(previous => ({ ...previous, value: '' }));
+    };
     update();
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
@@ -152,17 +172,34 @@ export default function ModuleApplicationShell<Capability extends string = strin
   const moduleSlug = props.helpModuleSlug ?? props.moduleId;
   const collapsibleNavigation = props.collapsibleNavigation ?? Object.hasOwn(MODULE_WORKFLOW_JOURNEYS, moduleSlug);
   const useDrawer = mobileMode === 'drawer' || collapsibleNavigation;
-  const allItems = props.navigation.flatMap(group => group.items);
+  const allItems = useMemo(() => props.navigation.flatMap(group => group.items), [props.navigation]);
+  const canFilter = allItems.length > 7;
+  useEffect(() => {
+    if (!canFilter) setFilter(previous => previous.value ? { ...previous, value: '' } : previous);
+  }, [canFilter]);
+  const filterValue = canFilter && filter.moduleId === props.moduleId && filter.path === props.currentPath ? filter.value : '';
+  const filterTerms = filterValue.trim().toLocaleLowerCase().split(/\s+/u).filter(Boolean);
+  const filtering = filterTerms.length > 0;
+  const visibleGroups = props.navigation.map(group => ({
+    ...group,
+    items: filtering ? group.items.filter(item => {
+      const text = `${group.label} ${item.label} ${item.mobileLabel ?? ''} ${item.breadcrumbLabel ?? ''}`.toLocaleLowerCase();
+      return filterTerms.every(term => text.includes(term));
+    }) : group.items,
+  })).filter(group => group.items.length > 0);
+  const matchingCount = visibleGroups.reduce((count, group) => count + group.items.length, 0);
   const mobileItems = props.mobileItemIds?.length
     ? allItems.filter(item => props.mobileItemIds?.includes(item.id))
     : allItems.slice(0, 5);
 
   useEffect(() => {
     setDrawerOpen(false);
+    setFilter({ moduleId: props.moduleId, path: props.currentPath, value: '' });
     const previousPath = lastRenderedRoutes.get(props.moduleId);
     lastRenderedRoutes.set(props.moduleId, props.currentPath);
     if (previousPath && previousPath !== props.currentPath) {
-      document.getElementById(props.contentId || `${props.moduleId}-route-content`)?.focus({ preventScroll: true });
+      if (drawerIsOpen.current) focusContentOnClose.current = true;
+      else contentHeading.current?.focus({ preventScroll: true });
     }
   }, [props.contentId, props.currentPath, props.moduleId]);
 
@@ -207,14 +244,27 @@ export default function ModuleApplicationShell<Capability extends string = strin
         aria-current={active ? 'page' : undefined}
         data-route-capability={item.requiredCapability || undefined}
         data-testid={`${props.moduleId}-${mobile ? 'mobile' : 'sidebar'}-${item.id}`}
+        onClick={event => {
+          // Modified clicks keep native new-tab/window behavior. A new route
+          // closes only when currentPath changes, so interrupted navigation
+          // never dismisses the menu prematurely.
+          if (drawerOpen && normalizeModulePath(item.canonicalPath) === normalizeModulePath(props.currentPath) && !event.defaultPrevented
+            && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+            focusContentOnClose.current = true;
+            clearFilter();
+            setDrawerOpen(false);
+          }
+        }}
       >
         {content}
       </Link>
     );
   };
 
+  // A dialog role is valid on a generic container, not an aside landmark.
+  const Rail = isMobile && useDrawer ? 'div' : 'aside';
   const sidebar = (
-        <aside
+        <Rail
           className={`${classes(props.classNames, 'sideRail')} ${isMobile && useDrawer ? styles.sideRail : ''} ${drawerOpen && useDrawer ? styles.sideRailOpen : ''}`}
           data-testid={`${props.moduleId}-module-sidebar`}
           id={`${props.moduleId}-route-navigation`}
@@ -228,7 +278,36 @@ export default function ModuleApplicationShell<Capability extends string = strin
           {props.organization && (props.classNames?.contextChip
             ? <div className={classes(props.classNames, 'contextChip')} data-testid={props.organization.testId}><span>{props.organization.label}</span><strong title={props.organization.title || props.organization.value}>{props.organization.value}</strong></div>
             : <ContextChip value={props.organization} />)}
-          {props.navigation.map((group, index) => collapsibleNavigation && index > 0 ? (
+          {canFilter && <div className={styles.navFilter} role="search" aria-label={`${props.moduleName} sections`}>
+            <label htmlFor={`${props.moduleId}-section-filter`}>Find a section</label>
+            <div className={styles.navFilterField}>
+              <Search size={16} aria-hidden="true" />
+              <input
+                ref={filterInput}
+                id={`${props.moduleId}-section-filter`}
+                type="search"
+                placeholder="Filter sections"
+                autoComplete="off"
+                spellCheck={false}
+                value={filterValue}
+                aria-describedby={`${props.moduleId}-section-filter-status`}
+                onChange={event => setFilter({ moduleId: props.moduleId, path: props.currentPath, value: event.target.value })}
+                onKeyDown={event => {
+                  if (event.key === 'Escape' && filterValue && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    clearFilter();
+                  }
+                }}
+              />
+              {filterValue && <button type="button" aria-label="Clear section filter" onClick={() => { clearFilter(); filterInput.current?.focus(); }}><X size={16} aria-hidden="true" /></button>}
+            </div>
+            <p id={`${props.moduleId}-section-filter-status`} role="status" aria-live="polite" aria-atomic="true">
+              {filtering ? `${matchingCount} ${matchingCount === 1 ? 'section matches' : 'sections match'}.` : `${allItems.length} sections`}
+            </p>
+          </div>}
+          {filtering && matchingCount === 0 && <p className={styles.navEmpty}>Try a section name or clear the filter to browse all sections.</p>}
+          {visibleGroups.map((group, index) => collapsibleNavigation && index > 0 && !filtering ? (
             <details className={styles.navDisclosure} key={`${group.id}:${props.currentPath}`} open={group.items.some(item => isModuleRouteActive(item, props.currentPath)) || undefined}>
               <summary><span>{group.label}</span><ChevronDown size={15} aria-hidden="true" /></summary>
               <nav className={classes(props.classNames, 'navGroup')} aria-label={`${props.moduleName} ${group.label.toLowerCase()} navigation`}>
@@ -248,14 +327,14 @@ export default function ModuleApplicationShell<Capability extends string = strin
                 : <ContextChip value={props.accessContext} />}
             </div>
           )}
-        </aside>
+        </Rail>
   );
 
   const stateContent = effectiveState === 'ready' ? null : defaultStateCopy[effectiveState];
   const StateIcon = effectiveState === 'ready' ? null : stateIcons[effectiveState];
 
   return (
-    <Dialog.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
+    <Dialog.Root open={drawerOpen} onOpenChange={changeDrawer}>
     <main
       className={`${classes(props.classNames, 'shell')} ${collapsibleNavigation ? styles.coreSuite : ''}`}
       style={moduleThemeStyle(props.theme)}
@@ -272,7 +351,26 @@ export default function ModuleApplicationShell<Capability extends string = strin
           <Dialog.Portal>
             <Dialog.Overlay className={styles.overlay} />
             <div className={classes(props.classNames, 'shell')} data-theme={props.themeMode} style={{ ...moduleThemeStyle(props.theme), display: 'contents' }}>
-            <Dialog.Content asChild aria-describedby={undefined}>{sidebar}</Dialog.Content>
+            <Dialog.Content asChild aria-describedby={undefined}
+              onEscapeKeyDown={event => {
+                if (event.isComposing) {
+                  event.preventDefault();
+                  return;
+                }
+                if (filterValue) {
+                  event.preventDefault();
+                  clearFilter();
+                  filterInput.current?.focus();
+                }
+              }}
+              onCloseAutoFocus={event => {
+                if (focusContentOnClose.current) {
+                  event.preventDefault();
+                  focusContentOnClose.current = false;
+                  contentHeading.current?.focus({ preventScroll: true });
+                }
+              }}
+            >{sidebar}</Dialog.Content>
             </div>
           </Dialog.Portal>
         ) : sidebar}
@@ -308,7 +406,7 @@ export default function ModuleApplicationShell<Capability extends string = strin
           </div>
 
           <section className={classes(props.classNames, 'page')}>
-            <header id={props.contentId || `${props.moduleId}-route-content`} className={classes(props.classNames, 'pageHeader')} tabIndex={-1} data-testid={props.pageHeaderTestId}>
+            <header ref={contentHeading} id={props.contentId || `${props.moduleId}-route-content`} className={classes(props.classNames, 'pageHeader')} tabIndex={-1} data-testid={props.pageHeaderTestId}>
               <div>
                 <div className={classes(props.classNames, 'eyebrow')}>{props.page.eyebrow}</div>
                 <h1>{props.page.title}</h1>
