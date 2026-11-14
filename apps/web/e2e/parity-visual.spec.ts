@@ -87,7 +87,8 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
         accessibility.violations.map(violation => `${violation.id}: ${violation.nodes.length}`),
         `${contract.moduleSlug}/${viewport.name} WCAG violations`,
       ).toEqual([]);
-      await expect(page).toHaveScreenshot(`${contract.moduleSlug}-${viewport.name}.png`, {
+      // Collect every viewport mismatch while keeping the release gate failed.
+      await expect.soft(page).toHaveScreenshot(`${contract.moduleSlug}-${viewport.name}.png`, {
         fullPage: true,
         animations: 'disabled',
         maxDiffPixelRatio: 0.005,

@@ -1,5 +1,16 @@
 ## 2026-11-12 - Shared module navigation refinement
 
+## 2026-11-14 - Release gate fixture reconciliation
+
+Corrected test drift exposed by hosted release run 43623221975 on 7c105891.
+No production behavior, authorization rules, skip policy or visual threshold changed.
+Disposable integration: 108/108 plus required empty-schema release68 proof;
+focused CallCommand/TechDeck: 14/14; UI/static: 44/44; aggregate types pass.
+Exact hosted acceptance remains required before publication.
+[Remediation evidence](reviews/2026-11-14-release-gate-remediation.md) and
+[browser contracts](reviews/2026-11-14-browser-release-contracts.md).
+
+
 Long module rails now filter their current section manifest with accessible
 no-results/clear recovery. Mobile current-route selection closes predictably;
 completed navigation retains content focus, ordinary dismissal restores the menu

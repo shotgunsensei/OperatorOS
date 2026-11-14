@@ -122,7 +122,8 @@ test.describe('Phase 23 TradeFlowKit visual identity and route restoration', () 
         }));
         expect(undersized, 'mobile navigation touch targets').toEqual([]);
       }
-      await expect(page).toHaveScreenshot(`tradeflowkit-${viewport.name}.png`, { fullPage: true, animations: 'disabled', maxDiffPixelRatio: 0.005 });
+      // Collect every viewport mismatch while keeping the release gate failed.
+      await expect.soft(page).toHaveScreenshot(`tradeflowkit-${viewport.name}.png`, { fullPage: true, animations: 'disabled', maxDiffPixelRatio: 0.005 });
     }
   });
 

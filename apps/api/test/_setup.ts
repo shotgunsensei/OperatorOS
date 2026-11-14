@@ -182,6 +182,8 @@ export async function ensureSchemaReady() {
   await ensureTechDeckResolutionTables();
   const { ensureResolutionSemanticTables } = await import('../src/lib/techdeck-resolution-semantic-db.js');
   await ensureResolutionSemanticTables();
+  const { ensureToolPurchaseTables } = await import('../src/lib/tool-purchase-db-init.js');
+  await ensureToolPurchaseTables();
 }
 
 export function uniqueId(prefix: string) {

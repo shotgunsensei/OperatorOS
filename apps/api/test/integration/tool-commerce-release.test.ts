@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { databasePool } from '../src/db.js';
-import { applyOperatorOSDatabaseRelease, verifyOperatorOSDatabaseRelease, DATABASE_RELEASE_CONTRACT } from '../src/lib/database-release.js';
+import { assertDisposableDatabaseEnvironment } from '../../../../scripts/parity/lib/database.mjs';
+import { databasePool } from '../../src/db.js';
+import { applyOperatorOSDatabaseRelease, verifyOperatorOSDatabaseRelease, DATABASE_RELEASE_CONTRACT } from '../../src/lib/database-release.js';
 
 test('review-only release68 applies and verifies twice on an exclusively disposable clean database', async () => {
+  const disposable = assertDisposableDatabaseEnvironment({ ...process.env, DATABASE_URL: databasePool.options.connectionString });
   const { rows } = await databasePool.query<{ database: string; tables: number }>(`SELECT current_database() AS database,
     (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public') AS tables`);
-  assert.equal(rows[0]?.database, 'operatoros_tool_release_test');
+  assert.equal(rows[0]?.database, disposable.database);
   assert.equal(rows[0]?.tables, 0, 'Release proof must start clean and cannot share feature-test fixtures');
   assert.equal(DATABASE_RELEASE_CONTRACT.releaseVersion, 68);
   await applyOperatorOSDatabaseRelease(); await verifyOperatorOSDatabaseRelease();

@@ -61,6 +61,7 @@ const hungUp: string[] = [];
 const transferFailures = new Set<string>();
 const referred: string[] = [];
 const sidebandOpenFailures = new Set<string>();
+const greeted: string[] = [];
 const verifiedRoutes: Array<{ internalCallId: string; sid: string; token: string }> = [];
 const unwrappedCalls: VerifiedOpenAiIncomingCall[] = [];
 const sidebands: Array<{
@@ -369,6 +370,7 @@ before(async () => {
       sidebands.push(input);
       return {
         close() { /* fake sideband has no external socket */ },
+        greet() { greeted.push(input.openAiCallId); },
         async waitUntilOpen() {
           if (sidebandOpenFailures.has(input.openAiCallId)) {
             throw Object.assign(new Error('Synthetic socket open failure'), {
@@ -425,6 +427,7 @@ test('signed incoming call accepts once, replay is idempotent, conflict is fail-
   assert.equal(replay.json().duplicate, true);
   assert.equal(accepted.length, 1, 'an exact replay must not accept the provider call twice');
   assert.equal(sidebands.length, 1, 'an exact replay must not create a second sideband');
+  assert.deepEqual(greeted, [providerCall], 'the initial greeting is durably authorized once, not repeated on replay');
 
   const conflict = await injectSigned({ ...envelope, nonce: 'different-raw-payload' });
   assert.equal(conflict.statusCode, 409, conflict.body);
@@ -516,6 +519,7 @@ test('signed incoming call accepts once, replay is idempotent, conflict is fail-
   assert.deepEqual(recovered.json(), { ok: true, duplicate: false, providerActionConfirmed: true });
   assert.equal(accepted.length, 1, 'a process-recovery replay must reattach without repeating provider acceptance');
   assert.equal(sidebands.length, 2, 'a persisted accepted call must recover one missing sideband');
+  assert.deepEqual(greeted, [providerCall], 'recovery must not repeat the durable initial greeting');
   assert.equal(closeCallCommandRealtimeSideband(primaryCallId), true);
 });
 
@@ -558,7 +562,7 @@ test('inactive, provider-unready, and missing-lane calls are rejected before pro
   assert.equal(rejectedEvents.rows.length, 0, 'rejected requests must not claim ingestion facts or mutate calls');
 });
 
-test('stale claims recover without duplicate provider actions and sideband-open failure terminates safely', async () => {
+test('stale claims recover without duplicate provider actions and sideband-open failure retains capacity for bounded recovery', async () => {
   const recoveredCallId = await createCall({ channelId: activeChannelId, marker: 'stale-processing', withLease: true });
   const recoveredProviderCall = openAiCallId('stale-processing');
   const recoveredEnvelope = signedEnvelope({
@@ -609,19 +613,19 @@ test('stale claims recover without duplicate provider actions and sideband-open 
   sidebandOpenFailures.delete(failingProviderCall);
   assert.equal(failed.statusCode, 503, failed.body);
   assert.equal(failed.json().providerActionConfirmed, false);
-  assert.ok(hungUp.includes(failingProviderCall));
+  assert.equal(hungUp.includes(failingProviderCall), false);
   const failedCall = (await db.execute(sql`
     SELECT status,realtime_status,realtime_error_code FROM callcommand_calls
     WHERE tenant_id=${owner.currentTenantId} AND id=${failingCallId}
   `)).rows[0] as Row;
-  assert.equal(failedCall.status, 'failed');
-  assert.equal(failedCall.realtime_status, 'failed');
-  assert.equal(failedCall.realtime_error_code, 'CALLCOMMAND_REALTIME_SOCKET_OPEN_FAILED');
+  assert.notEqual(failedCall.status, 'failed');
+  assert.equal(failedCall.realtime_status, 'connecting');
+  assert.equal(failedCall.realtime_error_code, 'CALLCOMMAND_REALTIME_RECOVERY_OPEN_FAILED');
   const releasedLease = (await db.execute(sql`
     SELECT status FROM callcommand_lane_leases
     WHERE tenant_id=${owner.currentTenantId} AND call_id=${failingCallId}
   `)).rows[0] as Row;
-  assert.equal(releasedLease.status, 'released');
+  assert.equal(releasedLease.status, 'active');
 });
 
 test('disabled transcript policy exposes no persistence callback', async () => {
@@ -745,9 +749,17 @@ test('provider-confirmed hangup followed by persistence failure remains outcome-
   assert.equal(response.statusCode,200,response.body);
   const callbacks=sidebands.at(-1)!.callbacks;
   const originalTransaction=db.transaction;
-  db.transaction=(async ()=>{throw new Error('Synthetic post-provider persistence failure');}) as typeof db.transaction;
+  let injectedFailure = false;
+  db.transaction=(async (...args: Parameters<typeof db.transaction>)=>{
+    if (!injectedFailure && hungUp.includes(providerCall)) {
+      injectedFailure = true;
+      throw new Error('Synthetic post-provider persistence failure');
+    }
+    return originalTransaction.apply(db, args);
+  }) as typeof db.transaction;
   try {
     const result=await callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_hangup_persistence_failed',name:'end_call',arguments:{summary:'Synthetic callback captured',reason:'Caller agreed to finish'}}) as Row;
+    assert.equal(injectedFailure,true);
     assert.equal(result.ok,false);assert.equal(result.providerActionConfirmed,true);assert.equal(result.outcomeUnknown,true);
   } finally {db.transaction=originalTransaction;}
   const duplicate=await callbacks.executeTool({openAiCallId:providerCall,toolCallId:'tool_hangup_persistence_retry',name:'end_call',arguments:{summary:'Synthetic callback captured',reason:'Caller agreed to finish'}}) as Row;
@@ -774,20 +786,33 @@ test('long call renews the same sideband owner beyond the initial thirty-second 
   closeCallCommandRealtimeSideband(callId);
 });
 
-test('sideband loss hangs up once, releases its lane and queues one incomplete-intake notification', async () => {
+test('sideband loss preserves capacity and reattaches without duplicate provider acceptance', async () => {
   const callId=await createCall({channelId:activeChannelId,marker:'sideband-loss',withLease:true});
   const providerCall=openAiCallId('sideband-loss');
-  const response=await injectSigned(signedEnvelope({eventId:`evt_${PHONE_SEED}_sideband_loss`,openAiCallId:providerCall,internalCallId:callId}));
+  const eventId=`evt_${PHONE_SEED}_sideband_loss`;
+  const envelope=signedEnvelope({eventId,openAiCallId:providerCall,internalCallId:callId});
+  const response=await injectSigned(envelope);
   assert.equal(response.statusCode,200,response.body);
+  const acceptedBefore=accepted.length;
   const callbacks=sidebands.at(-1)!.callbacks;
   await callbacks.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
   await callbacks.onClosed?.({openAiCallId:providerCall,code:1006,clean:false});
-  assert.equal(hungUp.filter(id=>id===providerCall).length,1);
-  const saved=(await db.execute(sql`SELECT c.realtime_status,c.summary,lease.status AS lease_status FROM callcommand_calls c JOIN callcommand_lane_leases lease ON lease.tenant_id=c.tenant_id AND lease.call_id=c.id WHERE c.tenant_id=${owner.currentTenantId} AND c.id=${callId}`)).rows[0];
-  assert.equal(saved.realtime_status,'failed');assert.equal(saved.lease_status,'released');
-  assert.match(String(saved.summary),/disconnected before a summary/);
+  assert.equal(hungUp.filter(id=>id===providerCall).length,0);
+  const saved=(await db.execute(sql`SELECT c.realtime_status,c.realtime_error_code,lease.status AS lease_status FROM callcommand_calls c JOIN callcommand_lane_leases lease ON lease.tenant_id=c.tenant_id AND lease.call_id=c.id WHERE c.tenant_id=${owner.currentTenantId} AND c.id=${callId}`)).rows[0];
+  assert.equal(saved.realtime_status,'connecting');assert.equal(saved.lease_status,'active');
+  assert.equal(saved.realtime_error_code,'CALLCOMMAND_REALTIME_SOCKET_CLOSED');
+  const receipt=(await db.execute(sql`SELECT status,processing_lease_expires_at FROM callcommand_ingestion_events WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`)).rows[0];
+  assert.equal(receipt.status,'provider_confirmed');
+  const remaining=new Date(receipt.processing_lease_expires_at).getTime()-Date.now();
+  assert.ok(remaining>0 && remaining<=60_000,'recovery has a bounded future retry lease');
   const messages=await db.execute(sql`SELECT id FROM shared_outbox_messages WHERE tenant_id=${owner.currentTenantId} AND context_json->>'callId'=${callId}`);
-  assert.equal(messages.rows.length,1);
+  assert.equal(messages.rows.length,0,'local socket loss is not authoritative termination');
+  await db.execute(sql`UPDATE callcommand_ingestion_events SET processing_lease_expires_at=NOW()-INTERVAL '1 second' WHERE tenant_id=${owner.currentTenantId} AND source='openai_realtime' AND provider_event_id=${eventId}`);
+  const recovered=await injectSigned(envelope);
+  assert.equal(recovered.statusCode,200,recovered.body);
+  assert.equal(accepted.length,acceptedBefore);
+  assert.equal(hungUp.filter(id=>id===providerCall).length,0);
+  assert.equal(closeCallCommandRealtimeSideband(callId),true);
 });
 
 test('expired owner stops tools and replay reattaches without accepting or letting the former controller hang up', async () => {

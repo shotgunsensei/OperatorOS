@@ -132,13 +132,14 @@ test('six representative customer workflows expose a plain first action and trus
   assert.match(tradeFlowKit, /CoreSuiteJourney moduleId="tradeflowkit"/);
   assert.match(tradeFlowKitOperations, /<CoreSuiteWorkdayBrief/);
   assert.match(workday, /label: 'Add or import customers', href: '\/customers'/);
-  assert.match(tradeFlowKit, /Protected by OperatorOS/);
+  assert.match(tradeFlowKit, /TradeFlowKit only loads records for the organization validated by OperatorOS/);
+  assert.match(tradeFlowKit, /accessContext=\{\{ label: 'Access', value: roleLabel/);
   assert.match(tradeFlowKitStyles, /\.shell\[data-theme='dark'\][\s\S]*color-scheme:\s*dark/);
   assert.match(tradeFlowKitStyles, /@media \(prefers-color-scheme: dark\)/);
   assert.match(tradeFlowKitRevenue, /panel: 'var\(--tfk-panel\)'/);
   assert.doesNotMatch(tradeFlowKitStyles, /#f6fbf8/);
   assert.match(torqueShed, /Start diagnostic/);
-  assert.match(torqueShed, /maintenance costs, files, or private diagnostic notes/);
+  assert.match(torqueShed, /Shared build pages exclude private notes, files, and maintenance costs/);
   assert.match(pulseDesk, /Open request queue/);
   assert.match(pulseDesk, /Do not store patient charts, clinical records/);
   assert.match(pulseDeskContract, /background: '#07111b'/);

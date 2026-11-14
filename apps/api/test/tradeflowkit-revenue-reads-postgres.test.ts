@@ -71,7 +71,10 @@ test('PostgreSQL real middleware: tenant-shared viewer reads, outsider denial an
       {tenantId:tenant,moduleId:moduleRow.id,status:'enabled',source:'admin',allowAllMembers:false},
       {tenantId:foreign.currentTenantId!,moduleId:moduleRow.id,status:'enabled',source:'admin',allowAllMembers:true},
     ]);
-    await db.insert(tenantUserModuleAccess).values({tenantId:tenant,userId:viewer.id,moduleId:moduleRow.id,accessLevel:'viewer'});
+    await db.insert(tenantUserModuleAccess).values([
+      {tenantId:tenant,userId:owner.id,moduleId:moduleRow.id,accessLevel:'viewer'},
+      {tenantId:tenant,userId:viewer.id,moduleId:moduleRow.id,accessLevel:'viewer'},
+    ]);
     await app.register(cookie);
     registerTradeFlowKitRevenueReadRoutes(app,createRevenueReadRepository(db),[requireTenantMember,requireTenantModuleAccess('tradeflowkit')]);
     const [record] = await db.insert(tradeflowkitCustomers).values({tenantId:tenant,createdByUserId:owner.id,name:'Owned by someone else'}).returning();

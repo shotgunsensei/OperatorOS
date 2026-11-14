@@ -7,10 +7,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop-linux.png",
-      "sha256": "cd2cc718099ff73b6cb585d2a921cf5b85d56dea31ddcb3464a65939ebbda87e",
+      "sha256": "06bd55166053a860931929bfd2b41ccd47e3a6e55c770c7d89c4b53a12e8321a",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.610Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T18:15:03.117Z",
+      "reason": "Reviewed expected and actual full-page images from exact 7c105891 GitHub release run 43623221975, artifact 14124928867. Shared section filter; intentional embedded workspace removes duplicate padding, background and minimum height; contrast-adjusted actions. Existing accessibility gates and 0.005 screenshot threshold retained; this approval covers Linux desktop only."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -727,10 +727,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop-linux.png",
-      "sha256": "0cde7e2617156dd35a3a7e3782073bcf970f5a93a8652450da395834dc4d75ce",
+      "sha256": "8749bfd95f1165ad0c5d405078a97ea89db17056797fa8d3db7a7cc81c98b365",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.835Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T18:15:03.134Z",
+      "reason": "Reviewed expected and actual full-page images from exact 7c105891 GitHub release run 43623221975, artifact 14124928867. Shared section filter; removed duplicate decorative shield/bell actions; current workflow spacing. Existing accessibility gates and 0.005 screenshot threshold retained; this approval covers Linux desktop only."
     },
     {
       "moduleSlug": "tradeflowkit",

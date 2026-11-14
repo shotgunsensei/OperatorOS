@@ -35,7 +35,8 @@ const SHELL_TEST_IDS: Record<string, string> = {
   'ninja-launch-kit': 'launchkit-module-shell',
   'callcommand-ai': 'callcommand-module-shell',
   ninjamation: 'ninjamation-module-shell',
-  outcall: 'shell-outcall',
+  outcall: 'outcall-module-shell',
+  fieldnode: 'fieldnode-management-unavailable',
 };
 
 type BrowserModule = {
@@ -66,8 +67,8 @@ const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
     };
   });
 
-if (ENABLED_MODULES.length !== 12) {
-  throw new Error(`Expected 12 enabled modules while OutCall is source-recovery locked, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 14) {
+  throw new Error(`Expected 14 enabled entitlement-protected modules, found ${ENABLED_MODULES.length}`);
 }
 
 const PUBLIC_AUTH_HEADERS = {
@@ -1628,7 +1629,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(overflow.elements, JSON.stringify(overflow, null, 2)).toEqual([]);
   });
 
-  test('tenant denial and the global OutCall activation lock fail closed without issuing a handoff', async ({ page, request }) => {
+  test('tenant denial includes active OutCall and fails closed without issuing a handoff', async ({ page, request }) => {
     test.setTimeout(90_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -1686,7 +1687,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(denied.tenant.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 
     expect(denied.outcall.status).toBe(403);
-    expect(denied.outcall.body.code).toBe('MODULE_UNAVAILABLE');
+    expect(denied.outcall.body.code).toBe('MODULE_ACCESS_DENIED');
     expect(denied.outcall.body.launchUrl).toBeUndefined();
     expect(denied.outcall.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 

@@ -238,7 +238,7 @@ test('TechDeck module sessions cannot revoke platform, other-module, or foreign-
   const issue = async (tenantId: string, actorUserId: string, moduleId?: string) => {
     const value = await createServiceIdentityAndToken({
       tenantId, actorUserId, moduleId,
-      identityName: 'Revocation scope regression', tokenName: 'Disposable scope fixture',
+      identityName: `Revocation scope regression ${created.length}`, tokenName: 'Disposable scope fixture',
       scopes: ['techdeck:read'],
     });
     const row = { tenantId, identityId: String(value.identity!.id), tokenId: String(value.token!.id) };
@@ -252,7 +252,7 @@ test('TechDeck module sessions cannot revoke platform, other-module, or foreign-
     const own = await issue(owner.currentTenantId, owner.id, moduleRow.id);
     const headers = { authorization: `Bearer ${signToken({
       userId: owner.id, email: owner.email, role: owner.role, tokenVersion: owner.tokenVersion,
-      sessionType: 'module', tenantId: owner.currentTenantId, moduleId: moduleRow.id,
+      sessionType: 'module', tenantId: owner.currentTenantId, moduleId: 'techdeck',
     })}` };
     for (const fixture of [platform, other, foreign]) {
       const response = await app.inject({ method: 'DELETE', url: `/v1/modules/techdeck/api-tokens/${fixture.tokenId}`, headers });

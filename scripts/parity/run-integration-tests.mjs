@@ -31,7 +31,19 @@ const applyEnv = {
   NODE_ENV: 'test',
   OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
 };
-let code = run(PNPM, ['db:apply'], { env: applyEnv });
+// The tool-release proof requires a genuinely empty schema. Run it here,
+// immediately after the guarded disposable reset, not in the shared API fixtures.
+const toolRelease = await runCaptured(PNPM, [
+  '--dir', 'apps/api', 'exec', 'tsx', '--test', '--test-concurrency=1',
+  'test/integration/tool-commerce-release.test.ts',
+], { env: applyEnv });
+const toolSummary = parseNodeTestSummary(`${toolRelease.stdout}\n${toolRelease.stderr}`);
+let code = requiredTestExitCode(toolRelease.status, toolSummary);
+writeJson(join(BUILD_ROOT, 'tool-release-test-summary.json'), {
+  schemaVersion: 1, required: true, summary: toolSummary,
+  processExitCode: toolRelease.status, releaseEligible: code === 0,
+});
+if (code === 0) code = run(PNPM, ['db:apply'], { env: applyEnv });
 if (code === 0) code = run(PNPM, ['db:apply'], { env: applyEnv });
 if (code === 0) code = run(PNPM, ['db:verify'], { env: applyEnv });
 if (code === 0) {

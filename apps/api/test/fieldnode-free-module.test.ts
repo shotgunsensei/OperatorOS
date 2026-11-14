@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../packages/modules/navigation.js';
 import { fieldNodeIntroductionPath, fieldNodeLinks, fieldNodePurchaseUrl } from '../../../packages/modules/fieldnode.js';
 import {
   getModuleById,
@@ -72,7 +73,12 @@ function loadWebComponent<Props>(relativePath: string): (props: Props) => import
     URL,
     require: (specifier: string) => specifier === '../../../../../packages/modules/fieldnode.js'
       ? { fieldNodeIntroductionPath, fieldNodeLinks }
-      : requireFromWeb(specifier),
+      : specifier === '../../../../../packages/modules/navigation.js'
+        ? { DEFAULT_OPERATOROS_NAVIGATION_URLS }
+        : specifier.endsWith('.module.css')
+          // Layout is outside this server-render contract; retain actual stylesheet class names.
+          ? Object.fromEntries([...readFileSync(resolve(dirname(sourcePath), specifier), 'utf8').matchAll(/\.([a-zA-Z][\w-]*)/g)].map(match => [match[1], match[1]]))
+          : requireFromWeb(specifier),
     process: { env: { NODE_ENV: 'test' } },
   }, { filename: sourcePath });
   assert.ok(loaded.exports.default);
@@ -298,9 +304,9 @@ test('the real management shell reports unavailable pairing rather than inventin
   const html = renderToStaticMarkup(createElement(Shell, {}));
   assert.match(html, /Manage my FieldNodes/);
   assert.match(html, /Remote management is not connected yet/);
-  assert.match(html, /approved pairing service must verify device ownership for your organization/);
-  assert.match(html, /application is free with your OperatorOS account/);
-  assert.match(html, /paid plan or software license does not verify hardware ownership/);
+  assert.match(html, /approved pairing service verifies ownership for your organization/);
+  assert.match(html, /application is available to free and paid OperatorOS accounts/);
+  assert.match(html, /paid plan or software license does not replace device pairing and access grants/);
   assert.match(html, /data-testid="fieldnode-management-unavailable"/);
   assert.doesNotMatch(html, /<(?:form|input|button)\b/i);
 });

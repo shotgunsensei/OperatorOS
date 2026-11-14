@@ -392,3 +392,17 @@ test('required Node test summaries fail closed on skips and missing telemetry', 
   assert.equal(requiredTestExitCode(0, skipped), 1);
   assert.equal(requiredTestExitCode(0, null), 1);
 });
+
+test('clean tool-release proof runs after disposable reset and before shared integration fixtures', () => {
+  const runner = readFileSync(join(REPOSITORY_ROOT, 'scripts/parity/run-integration-tests.mjs'), 'utf8');
+  const proof = readFileSync(join(REPOSITORY_ROOT, 'apps/api/test/integration/tool-commerce-release.test.ts'), 'utf8');
+  assert.ok(runner.indexOf('await resetDisposablePublicSchema(client)') < runner.indexOf("'test/integration/tool-commerce-release.test.ts'"));
+  assert.ok(runner.indexOf("'test/integration/tool-commerce-release.test.ts'") < runner.indexOf("['db:apply']"));
+  assert.match(runner, /requiredTestExitCode\(toolRelease.status, toolSummary\)/);
+  assert.match(runner, /if \(code === 0\) code = run\(PNPM, \['db:apply'\]/);
+  assert.match(proof, /assertDisposableDatabaseEnvironment/);
+  assert.match(proof, /DATABASE_URL: databasePool.options.connectionString/);
+  assert.match(proof, /assert.equal\(rows\[0\]\?\.tables, 0/);
+  assert.equal((proof.match(/await applyOperatorOSDatabaseRelease\(\)/g) ?? []).length, 2);
+  assert.equal((proof.match(/await verifyOperatorOSDatabaseRelease\(\)/g) ?? []).length, 2);
+});
