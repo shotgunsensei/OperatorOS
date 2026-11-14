@@ -76,15 +76,21 @@ test.describe('Phase 38 cross-module data fabric', () => {
     expect(polled.status(), await polled.text()).toBe(200);
     await expect(outcome).toContainText('Items created', { timeout:60_000 });
     await expect(outcome.getByRole('link').first()).toHaveAttribute('href', /\/modules\/snapproofos\//);
-    await page.reload({ waitUntil:'networkidle' });
-    await page.getByText('Prepare proof of completed work', { exact:true }).click();
+    // Receipt restoration is read-only: reopening completed work checks its
+    // original run instead of offering another creation confirmation.
     let repeatedSubmissions = 0;
     page.on('request', request => {
       if (request.method() === 'POST' && request.url().endsWith(`${scopedBase}/workflows/tradeflowkit.job_to_snapproof`)) repeatedSubmissions += 1;
     });
-    await outcome.getByRole('button', { name:'Review field-proof package' }).click();
-    await page.getByTestId('tradeflowkit-start-field-proof-confirmation').check();
-    await page.getByTestId('tradeflowkit-start-field-proof-confirm').click();
+    await page.reload({ waitUntil:'networkidle' });
+    await page.getByText('Prepare proof of completed work', { exact:true }).click();
+    await expect(outcome).toContainText('Previously submitted work is saved for this record.');
+    await expect(outcome.getByRole('button', { name:'Review field-proof package' })).toHaveCount(0);
+    const restoredRunResponse = page.waitForResponse(response => response.url().endsWith(`${scopedBase}/runs/${runId}`));
+    await outcome.getByRole('button', { name:'Check status', exact:true }).click();
+    const restoredRun = await restoredRunResponse;
+    expect(restoredRun.status(), await restoredRun.text()).toBe(200);
+    expect((await restoredRun.json()).run.id).toBe(runId);
     await expect(outcome).toContainText('Items created', { timeout:60_000 });
     expect(repeatedSubmissions).toBe(0);
     const verification = new Client({ connectionString:process.env.DATABASE_URL });

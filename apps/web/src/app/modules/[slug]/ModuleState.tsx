@@ -74,7 +74,7 @@ export default function ModuleState({
           {actionLabel}
         </Link>
       </section>
-      <ContactLink />
+      <ContactLink moduleMobileFooter />
     </main>
   );
 }

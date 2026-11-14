@@ -242,7 +242,7 @@ function SettingsRow({ label, value }: { label: string; value: string }) {
 }
 
 const techDeckRouteCss = `
-  @media (max-width:720px) { body:has([data-testid="techdeck-module-shell"]) .operatoros-floating-contact { display:none !important; } }
+  @media (max-width:720px) { body:has([data-testid="techdeck-module-shell"]) aside:not(.operatoros-module-help) > .operatoros-floating-contact { display:none !important; } }
   [data-testid="techdeck-module-shell"] { box-sizing:border-box; width:100%; min-width:0; }
   [data-testid="techdeck-module-shell"] *,[data-testid="techdeck-module-shell"] *:before,[data-testid="techdeck-module-shell"] *:after { box-sizing:border-box; min-width:0; }
   [data-testid="techdeck-module-shell"]:before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(circle at 12% 0%,rgba(56,189,248,.14),transparent 30rem),repeating-linear-gradient(90deg,transparent 0 89px,rgba(56,189,248,.018) 90px 91px); }

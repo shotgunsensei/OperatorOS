@@ -42,7 +42,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   'callcommand-ai': 'callcommand-module-shell',
   ninjamation: 'ninjamation-module-shell',
   outcall: 'outcall-module-shell',
-  fieldnode: 'fieldnode-management-unavailable',
+  fieldnode: 'fieldnode-introduction',
 };
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -119,21 +119,27 @@ test.describe('Phase 17 deployed production acceptance', () => {
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
     await expect(page.getByTestId('button-launch-outcall')).toBeVisible();
 
-    let lastModulePage: Page | null = null;
-    for (const [index, module] of ENABLED_MODULES.entries()) {
+    let lastProtectedModuleUrl = '';
+    for (const module of ENABLED_MODULES) {
       await page.getByTestId(`button-launch-${module.slug}`).click();
       const modulePage = page;
       await expect(modulePage.getByTestId(module.shellTestId)).toBeVisible({ timeout: 30_000 });
       expect(new URL(modulePage.url()).origin).toBe(new URL(module.productionBaseUrl).origin);
       assertNoCredentialQuery(modulePage.url());
       await assertNoBrowserCredentialStorage(modulePage);
-      await assertHostOnlySession(modulePage.context(), new URL(module.productionBaseUrl).hostname);
-      if (index < ENABLED_MODULES.length - 1) {
-        await modulePage.getByRole('link', { name: 'My Apps' }).first().click();
-        await expect(modulePage.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
+      if (module.slug === 'fieldnode') {
+        // The registered launcher is public hardware information, not device access.
+        const cookies = await modulePage.context().cookies();
+        expect(cookies.filter(cookie => cookie.name === 'operatoros_session' && cookie.domain === 'fieldnode.operatoros.net')).toEqual([]);
+        await expect(modulePage.getByRole('region', { name: 'Already own a FieldNode?' })
+          .getByRole('link', { name: 'Manage my FieldNodes', exact: true })).toHaveAttribute('href', 'https://fieldnode.operatoros.net/manage');
+        await modulePage.goBack();
       } else {
-        lastModulePage = modulePage;
+        await assertHostOnlySession(modulePage.context(), new URL(module.productionBaseUrl).hostname);
+        lastProtectedModuleUrl = modulePage.url();
+        await modulePage.getByRole('link', { name: 'My Apps' }).first().click();
       }
+      await expect(modulePage.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
     }
 
     const logoutAll = await page.evaluate(async () => {
@@ -145,10 +151,51 @@ test.describe('Phase 17 deployed production acceptance', () => {
       return { status: response.status, body: await response.text() };
     });
     expect(logoutAll.status, logoutAll.body).toBe(200);
-    expect(lastModulePage).toBeTruthy();
-    await lastModulePage!.reload();
-    await expect(lastModulePage!).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
-    assertNoCredentialQuery(lastModulePage!.url());
+    expect(lastProtectedModuleUrl).toBeTruthy();
+    await page.goto(lastProtectedModuleUrl);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    assertNoCredentialQuery(page.url());
+  });
+
+  test('FieldNode management uses exact-host PKCE and explicitly reports unavailable gateway readiness', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    // This acceptance case validates the documented unavailable service state.
+    // A configured gateway requires its separate appliance/device acceptance.
+    expect(process.env.E2E_PHASE17_FIELDNODE_GATEWAY_STATE,
+      'Explicitly acknowledge unconfigured FieldNode gateway; this is not device-readiness acceptance').toBe('unconfigured');
+    await page.goto('https://fieldnode.operatoros.net/');
+    await expect(page.getByTestId('fieldnode-introduction')).toBeVisible();
+    expect((await page.context().cookies()).filter(cookie => cookie.name === 'operatoros_session')).toEqual([]);
+    await page.getByRole('region', { name: 'Already own a FieldNode?' })
+      .getByRole('link', { name: 'Manage my FieldNodes', exact: true }).click();
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    const authorizationUrl = new URL(page.url());
+    expect(authorizationUrl.searchParams.get('client_id')).toBe('operatoros:fieldnode');
+    expect(authorizationUrl.searchParams.get('redirect_uri')).toBe('https://fieldnode.operatoros.net/sso');
+    expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(authorizationUrl.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(authorizationUrl.searchParams.get('state')).toBeTruthy();
+    expect(authorizationUrl.searchParams.get('nonce')).toBeTruthy();
+    assertNoCredentialQuery(page.url());
+    const callback = page.waitForRequest(request => request.isNavigationRequest()
+      && new URL(request.url()).origin === 'https://fieldnode.operatoros.net' && new URL(request.url()).pathname === '/sso');
+    const management = page.waitForResponse(response => response.request().isNavigationRequest()
+      && response.url() === 'https://fieldnode.operatoros.net/manage' && response.status() !== 307);
+    await page.getByTestId('input-email').fill(ENTITLED.email);
+    await page.getByTestId('input-password').fill(ENTITLED.password);
+    await page.getByTestId('button-login').click();
+    const callbackUrl = new URL((await callback).url());
+    expect([...callbackUrl.searchParams.keys()].sort()).toEqual(['code', 'state']);
+    expect(callbackUrl.searchParams.get('state')).toBe(authorizationUrl.searchParams.get('state'));
+    const response = await management;
+    expect(response.status()).toBe(503);
+    expect(await response.json()).toMatchObject({ code: 'FIELDNODE_GATEWAY_UNCONFIGURED', sign_in_required: true });
+    await assertHostOnlySession(page.context(), 'fieldnode.operatoros.net');
+    await assertNoBrowserCredentialStorage(page);
+    assertNoCredentialQuery(page.url());
+    testInfo.annotations.push({ type: 'service-readiness', description: 'FieldNode gateway UNAVAILABLE; authentication passed, device management not accepted.' });
+    await testInfo.attach('fieldnode-service-readiness', { contentType: 'application/json',
+      body: JSON.stringify({ gatewayReady: false, deviceManagementAccepted: false, code: 'FIELDNODE_GATEWAY_UNCONFIGURED' }) });
   });
 
   test('local logout preserves an authenticated sibling module session', async ({ page }) => {

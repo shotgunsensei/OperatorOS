@@ -17,5 +17,5 @@ Source: [hosted release run 43623221975](https://github.com/shotgunsensei/Operat
 - Complete integration runner: 108/108 with zero skipped/todo/cancelled, plus required clean-schema proof 1/1.
 - Focused CallCommand/TechDeck: 14/14, including 35-second owner renewal, recovery and revocation boundaries.
 - Focused UI/static: 44/44. Visual contract: 13 modules, zero issues. SSO discovery: 15 tests, not an E2E pass.
-- Aggregate typecheck and lint passed after final fixture edits. Full API rerun remains in progress at preparation time.
+- Aggregate typecheck and lint passed after final fixture edits. Full API rerun passed 2,997/2,997 with zero failed/skipped/cancelled/todo. The former 2,998th test is the separately mandatory clean-schema proof.
 - Exact Linux hosted browser/visual acceptance remains required. This report does not claim release eligibility or publication.

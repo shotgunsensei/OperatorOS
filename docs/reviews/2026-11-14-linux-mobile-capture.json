@@ -1,0 +1,182 @@
+{
+  "capturedAt": "2026-11-14T19:48:42.845Z",
+  "baseCommit": "a348d99de1ebaca325f26a7107a3141930521d11",
+  "candidate": "working tree after scoped mobile Help fix",
+  "browser": {
+    "os": "Linux",
+    "playwright": "1.61.1",
+    "chromium": "149.0.7827.55",
+    "revision": "1228",
+    "image": "mcr.microsoft.com/playwright:v1.61.1-noble",
+    "imageId": "sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48"
+  },
+  "runtime": "Windows production build on same source, exact-host localhost proxy443 with API5001 and web5000",
+  "database": "isolated disposable operatoros_nov14_browser_test at localhost55439",
+  "network": "Candidate generation used explicit loopback visual routes without a retained final trace. The later strict comparison independently verified all retained network entries and transport destinations as loopback-only; see strictComparison.",
+  "sourceHashes": [
+    {
+      "path": "apps/web/src/components/ContactLink.tsx",
+      "sha256": "9fd7144791e1012acf4b870e76b38557bf56aee1c3781b0e32ea212c838dbf34"
+    },
+    {
+      "path": "apps/web/src/components/module-shells/TechDeckShell.tsx",
+      "sha256": "884da239cf4c0ed9ddf2e1107ae07200b9e2247104509bdfce5ecde1a349fbbe"
+    },
+    {
+      "path": "apps/web/src/app/apps/[slug]/page.tsx",
+      "sha256": "cacd99d1f4af07999460c3912888e59981c6873c20aa45e8bcc0bdeb2b09f816"
+    },
+    {
+      "path": "apps/web/src/app/modules/[slug]/ModuleState.tsx",
+      "sha256": "7d8a6c8fe34636dbee042ccb82e20678ad52f815659c2274281d8bed0f0ddc76"
+    },
+    {
+      "path": "apps/web/e2e/parity-visual.spec.ts",
+      "sha256": "44cee5d7ce1c95bacddb8fc78b8e9ccfc67666308aed8aeec4257d32742b92b4"
+    }
+  ],
+  "files": [
+    {
+      "name": "brandforgeos-mobile-linux.png",
+      "sha256": "4812053b0ce87350105b64afc7901d2ddecf962dcc4563eed055d579e17fe268",
+      "width": 390,
+      "height": 2085
+    },
+    {
+      "name": "callcommand-ai-mobile-linux.png",
+      "sha256": "5f944ba4e316d895703a11e9f78269e27a4f97f9d5e86c49695a8e25f3bd4af5",
+      "width": 390,
+      "height": 3264
+    },
+    {
+      "name": "faultlinelab-mobile-linux.png",
+      "sha256": "201651cbbc27c5a15ebbb0bafa5895e046cdb6e331a77aff9cf35a36275f4668",
+      "width": 390,
+      "height": 2252
+    },
+    {
+      "name": "ninja-launch-kit-mobile-linux.png",
+      "sha256": "8ade0d9779814bad00080c479e24796ea72d74d2c48e41c7aa97815379c51da1",
+      "width": 390,
+      "height": 2631
+    },
+    {
+      "name": "ninja-pool-hall-mobile-linux.png",
+      "sha256": "3a4ac3101e9ab3f2bd9b1cf754c1cf9c6823a3415f2e13cd23b6a084f1486660",
+      "width": 390,
+      "height": 1961
+    },
+    {
+      "name": "ninjamation-mobile-linux.png",
+      "sha256": "d82914a67e5894c1f135aff4349ece551f53002e02c1c2896e8d744ab2235663",
+      "width": 390,
+      "height": 2678
+    },
+    {
+      "name": "outcall-mobile-linux.png",
+      "sha256": "3eea800bcd10a364a2607566fc024815a5a52651fc25b2a06fb9deefb0d6d5cf",
+      "width": 390,
+      "height": 2178
+    },
+    {
+      "name": "pulsedesk-mobile-linux.png",
+      "sha256": "a7defa91acf0a815111affd19859f65e9196927deb05d7beec6f2de4053f762c",
+      "width": 390,
+      "height": 1751
+    },
+    {
+      "name": "snapproofos-mobile-linux.png",
+      "sha256": "98c4b1ece42850dceedce1d9c4543b737d420112e47403586a2d0e1ed9377269",
+      "width": 390,
+      "height": 2030
+    },
+    {
+      "name": "studyforge-ai-mobile-linux.png",
+      "sha256": "2813d1e3e3d83a0563841a96b247e016da427861538a0319995b35eb4c1a9cfd",
+      "width": 390,
+      "height": 2341
+    },
+    {
+      "name": "techdeck-mobile-linux.png",
+      "sha256": "3f171ab5c3ec2aa58f5a5f646eea264c5b3421170e729d062dea3ad0467ee674",
+      "width": 390,
+      "height": 1417
+    },
+    {
+      "name": "torqueshed-mobile-linux.png",
+      "sha256": "3f63d11a5dd4a830e052f4e81067cad7d0b24f3208aa63ce39a9e86a624f2f6b",
+      "width": 390,
+      "height": 1666
+    },
+    {
+      "name": "tradeflowkit-mobile-linux.png",
+      "sha256": "f34ec36ba02af60115cadb29ec8156515398564b1307ae8dea7802c1a111a0cf",
+      "width": 390,
+      "height": 1860
+    }
+  ],
+  "captureResult": "Candidate generation completed 39 viewports with one passing test and zero skips in 2.0 minutes; geometry, accessibility and console/page/network-error assertions passed. This does not independently prove all response destinations. Strict no-update comparison and retained network trace remain required.",
+  "reviewedAt": "2026-11-14T19:49:54.409Z",
+  "reviewedBy": "Codex visual QA",
+  "comparisonStatus": "PASS: final-source strict 39-viewport comparison with no snapshot updates and original 0.005 threshold.",
+  "networkVerificationStatus": "VERIFIED for the final strict explicit-loopback comparison. Earlier candidate generation lacked retained network trace and is not retrospectively upgraded.",
+  "sourceVerificationStatus": "VERIFIED: current source matches strictComparison.sourceHashes, including final mobile loading-layout reservation. Earlier capture source hashes remain historical.",
+  "strictComparison": {
+    "result": "PASS",
+    "tests": 1,
+    "viewports": 39,
+    "duration": "2.4m",
+    "exitCode": 0,
+    "snapshotUpdates": false,
+    "maxDiffPixelRatio": 0.005,
+    "skipped": 0,
+    "traceSHA256": "b8ae6244587d1e891396a6a13ba5f5c9a07c2b5eb0f25d6eafd34db5bb2f865c",
+    "traceNetworkEntries": 1709,
+    "traceHosts": [
+      "127.0.0.1"
+    ],
+    "traceNonloopbackRequests": 0,
+    "browserRequests": 1666,
+    "browserResponses": 1657,
+    "browserDenied": 0,
+    "externalServerOrViaHeaders": 0,
+    "apiResponsesWithRequestId": 346,
+    "apiResponseIdsAbsentFromLocalRuntime": 0,
+    "transportConnections": 395,
+    "transportDenied": 0,
+    "transportTargets": [
+      "127.0.0.1:443"
+    ],
+    "temporaryServices": "Stopped and removed browser container and deny-default proxy after pass",
+    "scope": "Explicit-loopback visual-only comparison, not the canonical-host remote suite. Original 39 assertions and service workers retained. Deny-default transport enforced loopback; no exposeNetwork.",
+    "sourceHashes": [
+      {
+        "path": "apps/web/src/components/ContactLink.tsx",
+        "sha256": "4c7da1a25eae9cd3f6ab72f2620faf6181ca93d3ff4c2d8e954b9e0d9d238b6b"
+      },
+      {
+        "path": "apps/web/src/components/module-shells/TechDeckShell.tsx",
+        "sha256": "884da239cf4c0ed9ddf2e1107ae07200b9e2247104509bdfce5ecde1a349fbbe"
+      },
+      {
+        "path": "apps/web/src/app/apps/[slug]/page.tsx",
+        "sha256": "33ce805c8f464134e69b900aac759c8690eb83242a7a57e39cc0bc8584da629b"
+      },
+      {
+        "path": "apps/web/src/app/modules/[slug]/ModuleState.tsx",
+        "sha256": "7d8a6c8fe34636dbee042ccb82e20678ad52f815659c2274281d8bed0f0ddc76"
+      },
+      {
+        "path": "apps/web/e2e/parity-visual.spec.ts",
+        "sha256": "44cee5d7ce1c95bacddb8fc78b8e9ccfc67666308aed8aeec4257d32742b92b4"
+      }
+    ],
+    "nonceProof": {
+      "status": 404,
+      "requestId": "req-3",
+      "matchedRuntimeLog": true,
+      "at": "2026-11-14T20:15:13.298Z",
+      "purpose": "Unique explicit-loopback request correlated with the saved local runtime log."
+    }
+  }
+}

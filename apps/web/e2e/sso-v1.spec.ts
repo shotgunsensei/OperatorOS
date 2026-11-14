@@ -36,7 +36,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   'callcommand-ai': 'callcommand-module-shell',
   ninjamation: 'ninjamation-module-shell',
   outcall: 'outcall-module-shell',
-  fieldnode: 'fieldnode-management-unavailable',
+  fieldnode: 'fieldnode-introduction',
 };
 
 type BrowserModule = {
@@ -537,6 +537,18 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       await page.getByTestId(`button-launch-${module.slug}`).click();
       const modulePage = page;
       await expect(modulePage.getByTestId(module.shellTestId)).toBeVisible({ timeout: 30_000 });
+      if (module.slug === 'fieldnode') {
+        // The launcher opens public hardware information. Management alone
+        // requires exact-host SSO and fails closed without an appliance gateway.
+        expect(collection.urls.some(url => new URL(url).pathname === '/sso')).toBe(false);
+        const managementResponse = modulePage.waitForResponse(response => response.request().isNavigationRequest()
+          && response.url() === 'https://fieldnode.operatoros.net/manage' && response.status() !== 307);
+        await modulePage.getByRole('region', { name: 'Already own a FieldNode?' })
+          .getByRole('link', { name: 'Manage my FieldNodes', exact: true }).click();
+        const response = await managementResponse;
+        expect(response.status()).toBe(503);
+        expect(await response.json()).toMatchObject({ code: 'FIELDNODE_GATEWAY_UNCONFIGURED' });
+      }
       await modulePage.waitForLoadState('networkidle', { timeout: 10_000 });
       collection.stop();
 
@@ -570,8 +582,12 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
         );
       }
 
-      lastModuleUrl = modulePage.url();
+      if (module.slug !== 'fieldnode') lastModuleUrl = modulePage.url();
       await modulePage.goBack();
+      if (module.slug === 'fieldnode') {
+        await expect(modulePage.getByTestId('fieldnode-introduction')).toBeVisible();
+        await modulePage.goBack();
+      }
       await expect(modulePage.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
       expect(context.pages()).toHaveLength(initialPageCount);
     }
@@ -747,9 +763,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const connectorLabel = `E2E SendGrid ${Date.now()}`;
     const connectorConsole = sibling.getByTestId('pulsedesk-connector-console');
     await expect(connectorConsole).toBeVisible({ timeout: 30_000 });
-    await connectorConsole.getByLabel('Connection name').fill(connectorLabel);
-    await connectorConsole.getByLabel('Mailbox address').fill(`phase27-${Date.now()}@example.invalid`);
-    await connectorConsole.getByRole('button', { name: 'Add sample connection' }).click();
+    const sampleConnectionForm = connectorConsole.locator('form').filter({ has: sibling.getByRole('button', { name: 'Add sample connection', exact: true }) });
+    await sampleConnectionForm.getByLabel('Connection name', { exact: true }).fill(connectorLabel);
+    await sampleConnectionForm.getByLabel('Mailbox address', { exact: true }).fill(`phase27-${Date.now()}@example.invalid`);
+    await sampleConnectionForm.getByRole('button', { name: 'Add sample connection', exact: true }).click();
     await expect(connectorConsole.getByText(connectorLabel, { exact: true })).toBeVisible({ timeout: 30_000 });
     await connectorConsole.getByRole('button', { name: 'Try sample request' }).click();
     await expect(connectorConsole.locator('.pdc-notice')).toContainText('Sample request completed.', { timeout: 30_000 });

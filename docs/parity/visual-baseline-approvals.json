@@ -27,10 +27,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile-linux.png",
-      "sha256": "1ece82be6c9b186837c6e82ef46d61e04912cf71424329353a239e1c0c076051",
+      "sha256": "4812053b0ce87350105b64afc7901d2ddecf962dcc4563eed055d579e17fe268",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.616Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.394Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -47,10 +47,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet-linux.png",
-      "sha256": "41c038b7ea97d0ab29c5aab9c0f5bbd7bf7aab3bd85201066e62ad0b0b57105e",
+      "sha256": "9bf214bab8a4e2b0705609afd7db4536ac7f9dfbb9953c23bfb3d728b696270f",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.622Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.068Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Embedded workspace removes duplicate inner padding/background; higher-contrast actions and section search. Responsive text wraps remain legible. Linux tablet only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "brandforgeos",
@@ -87,10 +87,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile-linux.png",
-      "sha256": "73f996034e41eb06b7161fa6a2fd7c110748cb5d9cdb0f39740199fada133789",
+      "sha256": "5f944ba4e316d895703a11e9f78269e27a4f97f9d5e86c49695a8e25f3bd4af5",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.637Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.396Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "callcommand-ai",
@@ -127,10 +127,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop-linux.png",
-      "sha256": "cbc44ac6cae536371de2a77e6b6786074472ed05129ef309b670a3f3a128075d",
+      "sha256": "5be2eafbbee6b16116f4e96ccca1dee4d8de39d7410dd72c45cedd29cc2e2b31",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.650Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.074Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Intentional simulated-case introduction hero, source-scoped workspace styling and section search; mobile journey now two columns. Investigation actions and history preserved. Linux desktop only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -147,10 +147,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile-linux.png",
-      "sha256": "532d993f04e805f2f81692a1f138cec8e3d59f9b836ef79d161306304c24c937",
+      "sha256": "201651cbbc27c5a15ebbb0bafa5895e046cdb6e331a77aff9cf35a36275f4668",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.657Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.398Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -167,10 +167,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet-linux.png",
-      "sha256": "f7e0e3640cd45f87f718e57de56c2e5fe7da610d00c5738ba75fc4a94727a691",
+      "sha256": "af866506cffbb432f4ccb0eb2bdf3c7a40881da36c951fae9f89da320a7cc699",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.663Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.075Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Intentional simulated-case introduction hero, source-scoped workspace styling and section search; mobile journey now two columns. Investigation actions and history preserved. Linux tablet only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "faultlinelab",
@@ -187,10 +187,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop-linux.png",
-      "sha256": "a3cfe7fc41e49523989618709328ecd8c1fa811255db2a47b5bf8ab74bf89df3",
+      "sha256": "a6cbecf37ef7a21c289147a9dcfca2c3c671ce2a02760716d078db588ee62516",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.670Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.079Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Embedded workspace removes duplicate padding/background; section search and two-column mobile journey. Existing plan/access copy and export workflow preserved. Linux desktop only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -207,10 +207,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile-linux.png",
-      "sha256": "87092f9316bcf665854cfe87461bfe4f98e46b72985d9f69ed1b87bf1ebfa343",
+      "sha256": "8ade0d9779814bad00080c479e24796ea72d74d2c48e41c7aa97815379c51da1",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.678Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.399Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -227,10 +227,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet-linux.png",
-      "sha256": "f6a7dc5afdc2646b9872cbf0516c3bf0a331cbe91e647f9d0292b97523885b83",
+      "sha256": "2a201a22bdd22551c4106e5917e9292a7f64dece610fd61007afe8fa41aed406",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.684Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.081Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Embedded workspace removes duplicate padding/background; section search and two-column mobile journey. Existing plan/access copy and export workflow preserved. Linux tablet only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "ninja-launch-kit",
@@ -247,10 +247,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop-linux.png",
-      "sha256": "b4c44735d0122aafda535037f136db51a921dbdba9b3251d14b43cd4d721728b",
+      "sha256": "08bb11186b542a4f6c851e4b28858c6965b9d58846c2d5bd9d9f7222b2af834d",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.694Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.084Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Dedicated lobby CSS uses sentence-case title, larger 3/2/1-column mode cards, mobile icon/text rows, readable descriptions and section search. All five modes remain visible. Linux desktop only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -267,10 +267,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile-linux.png",
-      "sha256": "69b01ad95de9031b537c16beb3e650529a50c1ae7e35cf5873063e0c879ccec3",
+      "sha256": "3a4ac3101e9ab3f2bd9b1cf754c1cf9c6823a3415f2e13cd23b6a084f1486660",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.700Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.400Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -287,10 +287,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet-linux.png",
-      "sha256": "2e68aa2964c10934fbadbf41bd573dd18d83d8c72a92a7493022961ce5cc4a5e",
+      "sha256": "7489d758b4c904bf2465fdefc6908405c9751cdfca8d4408c74b96e3d57968b8",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.706Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.085Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Dedicated lobby CSS uses sentence-case title, larger 3/2/1-column mode cards, mobile icon/text rows, readable descriptions and section search. All five modes remain visible. Linux tablet only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "ninja-pool-hall",
@@ -307,10 +307,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop-linux.png",
-      "sha256": "79f1221cae55eee3dc85ee88e2510bdb0fae5aa15c4a2ef2d32ec5a29f532872",
+      "sha256": "394ebb0c85a8b06023f83175eb79b8fa64c09ae49987aeb3ccd15fbb7150aa19",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.713Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.491Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Embedded layout removes duplicate padding/background; quality typography and readable source/workflow sections. Linux desktop only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "ninjamation",
@@ -327,10 +327,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile-linux.png",
-      "sha256": "2daa6ea4e3ad45543cec21d4e1a4416fd04e9f5eea2d7e7f6dd0492ffa1a6c96",
+      "sha256": "d82914a67e5894c1f135aff4349ece551f53002e02c1c2896e8d744ab2235663",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.719Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.401Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "ninjamation",
@@ -347,10 +347,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet-linux.png",
-      "sha256": "c7fb106f21e70ef679f9439503abd0017796489e636f3ef027d3c664dd894ff6",
+      "sha256": "2755157c0a2fa8fe0adc9d75b5b33223fdbe8d16b5bd4ee55547523fad3d779a",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.725Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.494Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Embedded layout removes duplicate padding/background; quality typography and readable source/workflow sections. Linux tablet only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "ninjamation",
@@ -367,10 +367,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop-linux.png",
-      "sha256": "dd2b5b204145978d95ff1df28f4efd2eb4b68188f85de26b1edba0c81ed3c5ec",
+      "sha256": "67a0e5d5ae62b33bfed8c17cb6b59d2160be053b0bd4bb13244c9b56aed44ded",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.732Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.497Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Registry-enabled full workspace intentionally replaces unavailable gate (27589d3b); actual Readiness and safety explicitly states phone verification/calling not connected. Linux desktop only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "outcall",
@@ -387,10 +387,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile-linux.png",
-      "sha256": "79b65ce83a23fc46a9e35899294d5dd8063ae2a9de306b423c7b9189470d4ae4",
+      "sha256": "3eea800bcd10a364a2607566fc024815a5a52651fc25b2a06fb9deefb0d6d5cf",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.736Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.402Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "outcall",
@@ -407,10 +407,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet-linux.png",
-      "sha256": "55ffdb6e4c67698e6adcc6647a24321154cac0c9422fcf041cc3106b4478f5f9",
+      "sha256": "04d4f5d144fc06ede3d408587c5ff6cb0e89d4284db46f52128ecbbadfb67943",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.741Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.498Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Registry-enabled full workspace intentionally replaces unavailable gate (27589d3b); actual Readiness and safety explicitly states phone verification/calling not connected. Linux tablet only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "outcall",
@@ -447,10 +447,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile-linux.png",
-      "sha256": "59e97956c4d915864395d49eea9176b90bbfabea9b838311c5c609a05fd49551",
+      "sha256": "a7defa91acf0a815111affd19859f65e9196927deb05d7beec6f2de4053f762c",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.751Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.403Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -467,10 +467,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet-linux.png",
-      "sha256": "46e20fdfddb222007f5e7bbfa724d127eb2ffddc8e7a1bf6d7215b9272678c8d",
+      "sha256": "890238b2731a9cf20f8096f740953a896360a8d95c39babc342882286933080a",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.757Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.514Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Shared section search and mobile journey geometry; warning icon no longer shrinks. Linux tablet only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "pulsedesk",
@@ -487,10 +487,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop-linux.png",
-      "sha256": "f1901208a2e82f0fcaa3b1005a12f79ea9db92b055c019398d5b96c1f2214b97",
+      "sha256": "eeb0a8db52bd8345add98b8dac7a96f5d8bc15a01e807e91b8ecb30fac958df8",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.762Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.501Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Shared section search and mobile journey geometry; evidence workspace content remains intact. Linux desktop only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "snapproofos",
@@ -507,10 +507,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile-linux.png",
-      "sha256": "56918ad60bec5d8b8f507810a742e389a1d0cf558fd4ffc48d100b7f7f1efdd8",
+      "sha256": "98c4b1ece42850dceedce1d9c4543b737d420112e47403586a2d0e1ed9377269",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.769Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.404Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "snapproofos",
@@ -527,10 +527,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet-linux.png",
-      "sha256": "b9ba98fe7c5c420892d71e9fe6b5a5104cd9ab00d369c93aa91e3c59c4db4155",
+      "sha256": "7fb0a5aa1e081219de743dd8d1f5e7da786f43798560d3c4642f914613aaf264",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.775Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.503Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Shared section search and mobile journey geometry; evidence workspace content remains intact. Linux tablet only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "snapproofos",
@@ -547,10 +547,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop-linux.png",
-      "sha256": "688ee8c312b6d6382f83bc29b5aab3bf83f7a8195bbf03ffdb896e4f048f1fb3",
+      "sha256": "cfd2e8e839386691274815f20b7fb7b42c55423f20b5a1aff82034222207973f",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.781Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.518Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Embedded layout removes duplicate padding/background; quality typography and 150 px auto-fit metrics. Linux desktop only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -567,10 +567,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile-linux.png",
-      "sha256": "7de5f8120758ee441214da10ce66a432ee7145257be36921781f9595c755e8d4",
+      "sha256": "2813d1e3e3d83a0563841a96b247e016da427861538a0319995b35eb4c1a9cfd",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.787Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.405Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -587,10 +587,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet-linux.png",
-      "sha256": "86855461306d4cbf5789690581b60bf277c9c593d4644ba5834c1296622f4ec8",
+      "sha256": "9791b75b42a05d01d4fd1069dba6ed76e4c9afc5d4e218e3022f8957218bcc5d",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.794Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.520Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Embedded layout removes duplicate padding/background; quality typography and 150 px auto-fit metrics. Linux tablet only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "studyforge-ai",
@@ -627,10 +627,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile-linux.png",
-      "sha256": "033ed11d94991a3399ae457695dabe5a8c27019551cca22b76f57edf5fb2d9b1",
+      "sha256": "3f171ab5c3ec2aa58f5a5f646eea264c5b3421170e729d062dea3ad0467ee674",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.807Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.405Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "techdeck",
@@ -647,10 +647,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet-linux.png",
-      "sha256": "3961de78fc6e8c2a4a9b9cf50f50e7b26e1f4cb1e44dbaff5593e3c9b2eeab29",
+      "sha256": "17b0e171e6d184828423b262f8572ad8a19b9d819f8ed34d0897b66f781bb0db",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.814Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.521Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Section search and updated brand font. Linux tablet only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "techdeck",
@@ -667,10 +667,10 @@
       "viewport": "desktop",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop-linux.png",
-      "sha256": "cc41488c7a5f1e4e05c8b407e4ff51d907d42e7479d0bb54f3f1d2d5e937be17",
+      "sha256": "357f67ab013848fac1b5e9de1d1b108fb9310781a6e3ad1593d73f45c302151b",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.819Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.508Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Section search, shared mobile journey, and clear private-data/VIN suffix notice. Linux desktop only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "torqueshed",
@@ -687,10 +687,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile-linux.png",
-      "sha256": "ed9e1b1d40057b753740df7ba01d3dcc59bc6be2bafd6f70477607f6cfe2b19e",
+      "sha256": "3f63d11a5dd4a830e052f4e81067cad7d0b24f3208aa63ce39a9e86a624f2f6b",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.824Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.407Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "torqueshed",
@@ -707,10 +707,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet-linux.png",
-      "sha256": "41f724b87e7a89eace93ec337d2badcb2039be6dbd08ada88cfb7552aeb547f5",
+      "sha256": "e4468430b870198fa001efa1f544b6b8eb854b5b776063126f2fb019efdd1d38",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.829Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:25:31.511Z",
+      "reason": "Independent per-image expected/actual review from a348d99 release 43626320490 artifact 14127836037, traced to beaaf1db/fb35551c/27589d3b. Section search, shared mobile journey, and clear private-data/VIN suffix notice. Linux tablet only; pixel threshold 0.005 and accessibility unchanged."
     },
     {
       "moduleSlug": "torqueshed",
@@ -747,10 +747,10 @@
       "viewport": "mobile",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile-linux.png",
-      "sha256": "098321054c001a1e10cf7cf86dbfcfa7bd67c19041cd6220c31e1f8efb0511a4",
+      "sha256": "f34ec36ba02af60115cadb29ec8156515398564b1307ae8dea7802c1a111a0cf",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.840Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:49:54.408Z",
+      "reason": "Individually reviewed Linux mobile capture on 2026-11-14 after scoped in-flow Help repair. Full content and primary controls remain visible; Help clears headings with a 44 px target. Exact reviewed bytes and source hashes recorded in docs/reviews/2026-11-14-linux-mobile-capture.json. Original 0.005 pixel threshold and accessibility gates retained; approval is not a no-update regression-pass claim."
     },
     {
       "moduleSlug": "tradeflowkit",
@@ -767,10 +767,10 @@
       "viewport": "tablet",
       "platform": "linux",
       "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet-linux.png",
-      "sha256": "a5ebd54c7edbec24d24f6edee11981174ed799f58f83d1f247244ad2d93419e4",
+      "sha256": "e328db21d5ed2662dac74246f0bcb011d2d16695e04c6d3d0de4ea2818781b34",
       "approvedBy": "Codex visual QA",
-      "approvedAt": "2026-09-22T15:21:04.846Z",
-      "reason": "Reviewed PR #102 shared customer header, guided dashboards, collapsed navigation and unavailable-app guidance at desktop, tablet and mobile widths; original accessibility and screenshot thresholds retained."
+      "approvedAt": "2026-11-14T19:24:17.088Z",
+      "reason": "Individually compared old/actual from a348d99 release 43626320490 artifact 14127836037; Section search, removed duplicate decorative shield/bell, settled workday min-height0, responsive toolbar and dashboard spacing. Sidebar remains vertically scrollable; mobile fixed navigation unchanged. Linux tablet only; pixel threshold 0.005 and accessibility gates unchanged."
     },
     {
       "moduleSlug": "tradeflowkit",

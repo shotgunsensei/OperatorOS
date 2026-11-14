@@ -69,7 +69,17 @@ test('TechDeck Resolution Technician V1 imports, searches, reviews and downloads
     await expect(workspace.getByText('Command copied as text. Review risk, elevation, warnings, and actual results before using it.')).toBeVisible();
     await assertAccessible(page); await capture(page, 'detail-desktop.png');
     await page.setViewportSize({ width: 390, height: 844 }); await assertAccessible(page);
-    await expect(page.getByTestId('link-contact-floating')).toBeHidden();
+    const help = page.getByTestId('link-contact-floating');
+    await expect(help).toBeVisible();
+    await expect(help).toHaveCSS('position', 'static');
+    const workspaceBottom = await workspace.evaluate(element => element.getBoundingClientRect().bottom);
+    const helpBounds = await help.evaluate(element => {
+      const { top, width, height } = element.getBoundingClientRect();
+      return { top, width, height };
+    });
+    expect(helpBounds.width, 'Help retains an accessible touch target').toBeGreaterThanOrEqual(44);
+    expect(helpBounds.height, 'Help retains an accessible touch target').toBeGreaterThanOrEqual(44);
+    expect(helpBounds.top, 'in-flow Help must not overlap resolution evidence').toBeGreaterThanOrEqual(workspaceBottom);
     await page.evaluate(() => { (document.activeElement as HTMLElement)?.blur(); window.scrollTo(0, 0); });
     await capture(page, 'detail-mobile.png');
     await workspace.getByRole('link', { name: 'Search', exact: true }).click();

@@ -325,8 +325,10 @@ export default function InternalAppPage() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <InternalAppGate />
-        <ContactLink />
+        <div className="operatoros-module-route-content">
+          <InternalAppGate />
+        </div>
+        <ContactLink moduleMobileFooter />
       </ToastProvider>
     </AuthProvider>
   );

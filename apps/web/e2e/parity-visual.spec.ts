@@ -80,6 +80,23 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
       });
       expect(audit.horizontalOverflow, `${contract.moduleSlug}/${viewport.name} horizontal overflow`).toBeLessThanOrEqual(1);
       expect(audit.unnamedControls, `${contract.moduleSlug}/${viewport.name} unnamed controls`).toBe(0);
+      if (viewport.width <= 720) {
+        const help = page.getByTestId('link-contact-floating');
+        await expect(help).toHaveCSS('position', 'static');
+        const helpLayout = await help.evaluate(element => {
+          const rect = element.getBoundingClientRect();
+          // Closed native disclosures keep their content mounted and can report
+          // nonzero rectangles even though those headings are not painted.
+          const obstructedHeadings = Array.from(document.querySelectorAll('h1,h2,h3'))
+            .filter(heading => heading.checkVisibility({ checkVisibilityCSS: true }))
+            .map(heading => ({ text: heading.textContent?.trim(), bottom: heading.getBoundingClientRect().bottom }))
+            .filter(heading => heading.bottom > rect.top);
+          return { height: rect.height, width: rect.width, top: rect.top, obstructedHeadings };
+        });
+        expect(helpLayout.height, 'mobile Help touch target').toBeGreaterThanOrEqual(44);
+        expect(helpLayout.width, 'mobile Help touch target').toBeGreaterThanOrEqual(44);
+        expect(helpLayout.obstructedHeadings, `in-flow Help at ${helpLayout.top}px must follow painted module headings`).toEqual([]);
+      }
       const accessibility = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
         .analyze();

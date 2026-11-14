@@ -112,7 +112,7 @@ for (const [index, width] of [1440, 390].entries()) {
 
       await page.goto(`${MODULE}/quotes/new`, { waitUntil: 'domcontentloaded' });
       const document = page.getByTestId('tradeflowkit-document-create-form');
-      await document.getByLabel('Document customer').selectOption(customer.id);
+      await document.getByRole('combobox', { name: 'Document customer', exact: true }).selectOption(customer.id);
       await document.getByLabel('Line-item description').fill('Valve replacement and labor');
       await document.getByLabel('Quantity', { exact: true }).fill('2');
       await document.getByLabel('Unit price dollars').fill('125.00');

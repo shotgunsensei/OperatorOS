@@ -41,3 +41,13 @@ test('browser matrix covers direct deep links, back, sibling tabs, local logout,
   assert.match(spec, /denied\.tenant\.body\.code\)\.toBe\('MODULE_ACCESS_DENIED'\)/);
   assert.match(spec, /denied\.outcall\.body\.code\)\.toBe\('MODULE_ACCESS_DENIED'\)/);
 });
+
+
+test('deployed FieldNode distinguishes public introduction from protected unavailable management', () => {
+  const deployed = readFileSync(resolve(repoRoot, 'apps/web/e2e/phase17-deployed-acceptance.spec.ts'), 'utf8');
+  for (const requirement of ['fieldnode-introduction', 'E2E_PHASE17_FIELDNODE_GATEWAY_STATE', 'FIELDNODE_GATEWAY_UNCONFIGURED', 'code_challenge_method', 'S256', 'redirect_uri', 'service-readiness', 'deviceManagementAccepted: false', 'lastProtectedModuleUrl']) {
+    assert.ok(deployed.includes(requirement), requirement);
+  }
+  assert.match(deployed, /denied\.tenant\.body\.code\)\.toBe\('MODULE_ACCESS_DENIED'\)/);
+  assert.match(deployed, /denied\.outcall\.body\.code\)\.toBe\('MODULE_ACCESS_DENIED'\)/);
+});

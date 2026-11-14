@@ -11,9 +11,9 @@ import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules
  */
 export const CONTACT_URL = DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl;
 
-export default function ContactLink() {
+export default function ContactLink({ moduleMobileFooter = false }: { moduleMobileFooter?: boolean }) {
   return (
-    <aside aria-label="Help and support">
+    <aside aria-label="Help and support" className={moduleMobileFooter ? 'operatoros-module-help' : undefined}>
       <a
         href={CONTACT_URL}
         className="operatoros-floating-contact"
@@ -44,7 +44,10 @@ export default function ContactLink() {
         <LifeBuoy size={15} />
         <span>Help</span>
       </a>
-      <style>{`@media (max-width: 720px) { .operatoros-floating-contact { bottom: 76px !important; right: 12px !important; } }`}</style>
+      <style>{`@media (max-width: 720px) { .operatoros-floating-contact { bottom: 76px !important; right: 12px !important; }
+        .operatoros-module-route-content { min-height: 100dvh; }
+        .operatoros-module-help { display: flex; justify-content: flex-end; padding: 16px 16px 92px; }
+        .operatoros-module-help .operatoros-floating-contact { position: static !important; min-height: 44px !important; } }`}</style>
     </aside>
   );
 }

@@ -1,4 +1,12 @@
-## 2026-11-12 - Shared module navigation refinement
+## 2026-11-14 - Exact-host browser and mobile Help correction
+
+Module-mobile Help now stays below content instead of covering headings, with a
+44px target, fixed-navigation clearance and reserved loading space. Fresh Linux
+comparison passes all 39 viewports without updating snapshots; retained traffic
+proof is exclusively loopback. Aggregate build/types/lint pass. Complete native
+browser run: 117 passed, then both corrected cases passed on the final rebuild,
+including all 26 performance/accessibility surfaces. Exact hosted acceptance
+remains the publication gate. [Review and evidence](reviews/2026-11-14-browser-release-contracts.md).
 
 ## 2026-11-14 - Release gate fixture reconciliation
 
@@ -9,6 +17,9 @@ focused CallCommand/TechDeck: 14/14; UI/static: 44/44; aggregate types pass.
 Exact hosted acceptance remains required before publication.
 [Remediation evidence](reviews/2026-11-14-release-gate-remediation.md) and
 [browser contracts](reviews/2026-11-14-browser-release-contracts.md).
+
+
+## 2026-11-12 - Shared module navigation refinement
 
 
 Long module rails now filter their current section manifest with accessible

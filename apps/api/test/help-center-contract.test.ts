@@ -130,3 +130,19 @@ test('every dedicated module shell exposes a context-aware Help action', () => {
     assert.ok(source.includes(`module: '${slug}'`) || source.includes(`module:'${slug}'`), `${slug} targets its guide`);
   }
 });
+
+
+test('module mobile Help stays in flow while other surfaces retain floating support', () => {
+  const help = read('apps/web/src/components/ContactLink.tsx');
+  assert.match(help, /moduleMobileFooter = false/);
+  assert.match(help, /moduleMobileFooter \? 'operatoros-module-help' : undefined/);
+  assert.match(help, /@media \(max-width: 720px\)/);
+  assert.ok(help.includes('.operatoros-module-route-content { min-height: 100dvh; }'));
+  assert.match(read('apps/web/src/app/apps/[slug]/page.tsx'), /<div className="operatoros-module-route-content">\s*<InternalAppGate \/>\s*<\/div>/);
+  assert.match(help, /\.operatoros-module-help \.operatoros-floating-contact \{ position: static !important; min-height: 44px !important;/);
+  for (const path of ['apps/web/src/app/modules/[slug]/ModuleState.tsx', 'apps/web/src/app/apps/[slug]/page.tsx']) {
+    assert.match(read(path), /<ContactLink moduleMobileFooter \/>/);
+  }
+  assert.match(read('apps/web/src/app/login/page.tsx'), /<ContactLink \/>/);
+  assert.ok(read('apps/web/src/components/module-shells/TechDeckShell.tsx').includes('aside:not(.operatoros-module-help) > .operatoros-floating-contact { display:none !important; }'));
+});
