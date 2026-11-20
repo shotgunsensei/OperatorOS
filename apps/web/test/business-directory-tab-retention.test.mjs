@@ -62,3 +62,84 @@ test('directory refresh, search and save retain the chosen tab after a scoped lo
   await pendingLoad;
   assert.equal(tab, 'sites', 'deep links still initialize from the current route');
 });
+
+test('directory contact and site drafts reset only after a confirmed create', async (t) => {
+  const source = readFileSync(new URL('../src/components/module-shells/BusinessDirectory.tsx', import.meta.url), 'utf8');
+  const run = source.match(/async function run[^\n]*\{\r?\n([\s\S]*?)\r?\n  \}/)?.[1];
+  assert.ok(run, 'Expected the existing directory mutation runner');
+
+  for (const [editor, resource, status, draft] of [
+    ['ContactEditor', 'contacts', 422, { firstName: 'Test', lastName: 'Contact', email: 'test@example.invalid', phone: '+12025550100', title: 'Lead' }],
+    ['SiteEditor', 'sites', 503, { name: 'Test site' }],
+  ]) {
+    await t.test(resource, async () => {
+      const editorStart = source.indexOf('function ' + editor + '(');
+      assert.notEqual(editorStart, -1);
+      const save = source.slice(editorStart).match(/^  const save = ([\s\S]*?);\r?\n  return /m)?.[1];
+      assert.ok(save, 'Expected the editor save callback');
+      const attempts = [];
+      const resets = [];
+      const form = { ...draft };
+      const existingId = 'existing-record';
+      let failing = true;
+      let lastError;
+      let refreshes = 0;
+      const sandbox = {
+        ...form,
+        moduleSlug: 'tradeflowkit',
+        row: undefined,
+        organizationId: 'test-organization',
+        address: { line1: '1 Test Street', city: 'Test City', region: 'NC', postalCode: '00000', countryCode: 'US' },
+        directoryApi: {
+          [resource]: {
+            create: async (slug, payload) => {
+              attempts.push(['create', slug, payload]);
+              if (failing) throw Object.assign(new Error('Create rejected'), { status });
+            },
+            update: async (slug, id, payload) => { attempts.push(['update', slug, id, payload]); },
+          },
+        },
+        selectedId: '',
+        search: '',
+        setError: (value) => { lastError = value; },
+        setDenied: () => {},
+        setSaving: () => {},
+        errorMessage: (error) => error.message,
+        load: async () => { refreshes += 1; },
+      };
+      for (const field of Object.keys(form)) {
+        sandbox['set' + field[0].toUpperCase() + field.slice(1)] = (value) => {
+          form[field] = value;
+          resets.push(field);
+        };
+      }
+      const saveDraft = runInNewContext(
+        'async function run(action, after) {' + run.replaceAll(' as ApiError', '') + '} (' + save + ')',
+        sandbox, { timeout: 1000, contextCodeGeneration: { strings: false, wasm: false } },
+      );
+
+      await saveDraft();
+      assert.equal(lastError, 'Create rejected');
+      assert.equal(attempts.length, 1, 'no automatic retry');
+      assert.equal(refreshes, 0, 'a failed create does not reload the form');
+      assert.deepEqual(form, draft, 'failed create retains the draft');
+      assert.deepEqual(resets, []);
+
+      failing = false;
+      await saveDraft();
+      assert.equal(attempts.length, 2);
+      assert.deepEqual(attempts[1], attempts[0], 'manual retry sends the same draft');
+      assert.equal(lastError, '');
+      assert.equal(refreshes, 1);
+      assert.deepEqual(resets.sort(), Object.keys(draft).sort(), 'one reset per field on success');
+      assert.ok(Object.values(form).every((value) => value === ''));
+
+      sandbox.row = { id: existingId, version: 7 };
+      await saveDraft();
+      assert.equal(attempts.length, 3);
+      assert.deepEqual(attempts[2].slice(0, 3), ['update', 'tradeflowkit', existingId]);
+      assert.equal(attempts[2][3].expectedVersion, 7);
+      assert.equal(resets.length, Object.keys(draft).length, 'updates do not reset create fields');
+    });
+  }
+});
