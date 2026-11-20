@@ -60,7 +60,6 @@ export default function BusinessDirectory({
       ]);
       setOrganizations(orgs.organizations); setContacts(people.contacts); setSites(locations.sites);
       const requested = routeSelection(moduleSlug);
-      setTab(requested.tab);
       setSelectedId(current => requested.organizationId && orgs.organizations.some(row => row.id === requested.organizationId)
         ? requested.organizationId
         : current && orgs.organizations.some(row => row.id === current) ? current : orgs.organizations[0]?.id ?? '');
@@ -75,7 +74,10 @@ export default function BusinessDirectory({
     catch (requestError) { setError(errorMessage(requestError)); }
   }, [moduleSlug]);
 
-  useEffect(() => { void load(''); }, [tenantKey, moduleSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setTab(routeSelection(moduleSlug).tab);
+    void load('');
+  }, [tenantKey, moduleSlug]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void loadDetail(selectedId); }, [loadDetail, selectedId]);
 
   async function run(action: () => Promise<unknown>, after?: () => void) {
