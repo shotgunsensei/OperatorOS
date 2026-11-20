@@ -41,3 +41,9 @@ build/
 /apps/modules/*/source/**/pnpm-lock*.yaml
 # Local Lunch Break browser evidence; keep screenshots/traces out of source PRs.
 /apps/web/output/playwright/lunch-break/
+
+# Tool Products browser artifacts when Playwright runs from apps/web.
+/apps/web/output/playwright/tool-products/
+
+# Untracked generated CI investigation bundles; preserve historical evidence.
+/output/callcommand-investigation/ci-*/
