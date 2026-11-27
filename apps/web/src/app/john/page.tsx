@@ -1,23 +1,19 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import PortfolioPage from '@/components/portfolio/PortfolioPage';
-import { getResumesAvailability } from '@/lib/portfolio-resumes';
+import JohnPortfolioPage from '@/components/portfolio/JohnPortfolioPage';
 
 const PAGE_TITLE =
-  'John Travis Williams Jr. — Senior Infrastructure & Security Engineer';
+  'John Williams — Systems Engineering, Automation & Applied AI';
 const PAGE_DESC =
-  'Infrastructure • Security • Automation • Healthcare IT • Cloud / Solutions Architecture. Twenty-plus years of hands-on IT, MSP escalation, and operator-grade product engineering.';
+  'Senior Support Engineer and software builder. Explore John Williams’s systems experience, AI-assisted engineering projects, source-linked evidence and résumé.';
 const SITE_ORIGIN = 'https://operatoros.net';
 
-// Task #113 + refinement pass — short-alias route for the portfolio.
-// Renders the exact same component as /portfolio. Kept as a separate
-// route (not a redirect) so the URL the user shares in person stays
-// exactly what they typed. Canonical points back to /portfolio so
-// search engines treat them as one document.
+// Dedicated employment portfolio. Preserve the existing no-index policy;
+// /portfolio retains its earlier content and is no longer this page's canonical.
 export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESC,
-  alternates: { canonical: `${SITE_ORIGIN}/portfolio` },
+  alternates: { canonical: `${SITE_ORIGIN}/john` },
   robots: {
     index: false,
     follow: false,
@@ -39,6 +35,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  const resumesAvailability = getResumesAvailability();
-  return <PortfolioPage resumesAvailability={resumesAvailability} />;
+  return <JohnPortfolioPage />;
 }
