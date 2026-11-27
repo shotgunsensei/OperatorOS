@@ -7160,3 +7160,176 @@ Fresh corrected-source checks pass on both candidates: focused54/54, isolation20
 Independent re-review caught restoration of stale settled quantity after an unsettled reduction. New/increasing local quantities still fail before SDK. With signing unavailable, an otherwise eligible existing positive reduction now performs one bounded read-only subscription lookup (5s, no SDK retry) before any idempotency or DB write. Exact subscription/item identity, complete provider item list, known nonincreasing quantities and no pending update are required. Unknown/read failure returns the fixed503. Zero cancellation remains available without this extra read; configured signing adds no lookup. This also rejects stale local quantities after a provider update followed by local rollback. It does not attest arbitrary concurrent out-of-band provider changes or live storage provenance.
 
 Fresh final-source local verification per target: focused71/71, isolation20/20, security12/12, zero fail/cancel/skip/todo; types, dedicated test types, zero-warning lint and SDK/API build pass. Compiled policy packaging smoke2/2 passes. All seven receipt source hashes were checked against final files. Synthetic tests include stale/pending/rollback quantities, bounded lookup options, wrong/missing/duplicate item identity, incomplete lists, unknown quantities, upstream-detail suppression and valid-binding no-read behavior. No real provider was queried. The narrow SDK retrieve type was extended for existing supported RequestOptions after an initial type failure. Superseded source CI is recorded as canceled/old vector success and is not release evidence. Full replacement-head CI and final independent review remain separate gates.
+
+## 2026-11-27 — John employment portfolio candidate
+
+### Source and scope
+
+- Isolated branch `codex/john-evidence-portfolio` starts from public GitHub
+  `main` at `9d9edc09d1a9bc0284a64e1676b17f96385d98aa`. The fresh checkout
+  was clean before this work. A read-only Replit inquiry reported the same
+  full HEAD and a clean workspace; its truncated deployment logs did not
+  independently establish the currently deployed revision.
+- Rebuilt `/john` as a dedicated server-rendered employment portfolio with
+  native section anchors and disclosures, three evidence-scoped case studies,
+  capabilities, career history, direct contact links, and two substantive PDFs.
+  The earlier shared `/portfolio` component and the three existing role-specific
+  resume PDFs are unchanged.
+- The page identifies the current role as Senior Support Engineer at Xodus
+  Technology Professionals and the independent business role as Owner of
+  Shotgun Ninjas Productions. The public OperatorOS case links immutable source
+  and dated GitHub runs. Private project summaries omit repository names and
+  customer data. The 23.7-billion-token figure remains explicitly self-reported
+  and secondary to engineering evidence; no percentile, independent-skill,
+  production-readiness, or customer-outcome claim is derived from it.
+- Canonical and social metadata now identify `/john`; the existing `noindex,
+  nofollow` policy is retained intentionally. No auth, tenant, provider,
+  database, billing, dependency-lockfile, shared navigation, or release-gate
+  behavior changed.
+
+### Candidate assets
+
+| PDF | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `John_Williams_Systems_and_AI_Resume.pdf` | 50,812 | `b5151d320383d5768eec01141e484b1bc8b93c2e0aa7809ca365adf37be9ce02` |
+| `John_Williams_AI_Engineering_Portfolio.pdf` | 83,985 | `54428fd7eea52e8a0d796998698645351510d00f62c4cf9a682419d73b33318c` |
+
+The files are under `apps/web/public/resumes/`. The resume's visible portfolio
+URL and its two hyperlink annotations use `https://operatoros.net/john`.
+The final PDFs were rendered and inspected during preparation.
+
+### Fresh local verification
+
+Environment: Node 24.22.3, repository-pinned pnpm 10.34.5, Next.js 15.5.29.
+Only the public web application and its SDK build dependency were exercised.
+The production HTTP check started Next on isolated loopback
+`127.0.0.1:3127` with `NODE_ENV=production`, `APP_ENV=test`, an empty
+`DATABASE_URL`, external provider variables stripped by the existing repository
+helper, and `INTERNAL_API_URL=http://127.0.0.1:5001`. No API, database, or external
+provider runtime was started or accessed.
+
+| Command / check | Observed result |
+| --- | --- |
+| `corepack pnpm --filter @operatoros/web... install --frozen-lockfile` | PASS; frozen dependency graph installed without a lockfile change. |
+| `corepack pnpm --dir packages/sdk build` | PASS. The first web-only production build had failed because the SDK production `dist` export had not yet been built; compiling this existing prerequisite resolved that setup failure. |
+| `corepack pnpm --dir apps/web typecheck` | PASS; `tsc --noEmit` exit 0. |
+| `corepack pnpm exec eslint apps/web/src/app/john apps/web/src/components/portfolio/JohnPortfolioPage.tsx apps/web/src/components/portfolio/john-portfolio-content.ts apps/web/e2e/john-portfolio.spec.ts apps/web/playwright.john.config.ts --max-warnings=0` | PASS; exit 0, zero warnings. |
+| `INTERNAL_API_URL=http://127.0.0.1:5001 corepack pnpm --dir apps/web build` | PASS after the SDK prerequisite; all 40 static pages generated, including `/john`. Existing Next build settings skip its redundant lint/types stage; the separate checks above ran explicitly. |
+| Production HTTP assertions through a local `node --input-type=module` harness | PASS 8/8: `/john` HTTP 200; current server-rendered copy; canonical and noindex metadata; section targets; both PDFs HTTP 200 with expected content type, PDF signature, byte count and exact SHA-256; `/john/opengraph-image` HTTP 200 PNG; existing `/portfolio` HTTP 200. |
+| `git diff --check` | PASS. |
+| `corepack pnpm --dir apps/web exec playwright test --config playwright.john.config.ts --list` | Collected the three focused tests; collection is not execution evidence. |
+| `corepack pnpm --dir apps/web exec playwright test --config playwright.john.config.ts` | BLOCKED: three browser-launch failures because the required Chromium executable is absent; zero browser assertions executed. |
+
+The focused browser tests cover recruiter navigation and downloads, keyboard
+skip/disclosure behavior, overflow at 320/390/1440 pixels, and automated WCAG
+2 A/AA and 2.1 AA checks. Their presence does not establish that they pass.
+After the production build, the scoped configuration starts and stops its own
+loopback production Next server and requires no API/database setup.
+
+### Review and delivery boundaries
+
+- Independent source/content review corrected literal-search fallback wording,
+  the label distinguishing check execution from evidence capture, and the
+  Owner title. Career details and public attribution were reviewed against the
+  supplied history and preserved records. Substantive body text is 14–15 pixels
+  with larger lead text; metadata is generally 12–13 pixels. Contrast values
+  were reviewed in source, but automated browser accessibility remains pending.
+- The standard `playwright install chromium` attempt received HTTP 403 from
+  the environment's network restriction. The system Chromium link points to
+  an absent executable; no installed primary-runtime browser was available.
+  No alternate download or access-control workaround was attempted.
+- An actual production-generated HTML/CSS/font snapshot was prepared for
+  review. The connected browser explicitly rejected its data URL because its
+  security policy permits only HTTP/HTTPS navigation. No page screenshot,
+  responsive visual pass, keyboard pass, hydration pass, or accessibility pass
+  is claimed. Visual review requires a permitted hosted preview or browser
+  runtime. The generated Open Graph PNG was separately inspected as an image.
+- This is a locally built candidate. The full aggregate release gate was not
+  run and the existing dated OperatorOS CI cited on the page is not evidence
+  for this new candidate. No remote push, PR, merge, Replit publish, or production
+  change occurred during implementation. Push and deployment remain separate
+  human gates under `AGENTS.md`.
+
+### Hosted preview approval and required portfolio browser coverage
+
+John approved preview followed by publication. PR [142](https://github.com/shotgunsensei/OperatorOS/pull/142)
+was opened from `codex/john-evidence-portfolio` with initial remote head
+`a5734ba3d2cd4e2cffbe010d3e53c554a24991e4`. Normal HTTPS Git push lacked
+executor credentials, so the official GitHub connector published the reviewed
+objects. Every blob and complete tree
+`e4159b4f9868f66109e4e4d0b69e2027452d179f` matched local Codex commit
+`e5b90c44c73fd4d7ed1d92360d86524f9fc8f627`; only commit metadata differed.
+The original local commit and branch were preserved.
+
+Review of the actual release harness found that its explicit browser spec list
+omitted the new portfolio tests. This follow-up adds only
+`e2e/john-portfolio.spec.ts` to that existing required list in
+`scripts/parity/run-browser-tests.mjs`. The normal release browser environment,
+loopback isolation, assertions, zero-skip reporter, and existing gates remain
+active. Page source and both PDF assets are unchanged by this follow-up.
+
+Fresh checks for the harness change:
+
+- `node --check scripts/parity/run-browser-tests.mjs`: PASS.
+- `corepack pnpm exec eslint scripts/parity/run-browser-tests.mjs --max-warnings=0`:
+  PASS, zero warnings.
+- `node --test scripts/parity/quality-gates.test.mjs`: PASS 21/21, zero failed,
+  canceled, skipped, or todo. The initial sparse checkout lacked unchanged
+  source-reference and workflow/integration fixture files, causing 3 fixture
+  failures; materializing those tracked files resolved them without code or
+  assertion changes.
+- Default-config collection with
+  `corepack pnpm --dir apps/web exec playwright test e2e/john-portfolio.spec.ts --list --reporter=line`:
+  three tests collected. The config requires a marked loopback test database
+  declaration even for collection; a synthetic, unused loopback target was
+  supplied and no database connection was made. The line reporter applies only
+  to this listing command because the normal zero-skip reporter correctly
+  treats unexecuted tests as skipped. Actual release execution retains the
+  normal reporter and all required assertions.
+- `git diff --check`: PASS.
+
+The initial remote vector run `46031686737` passed 32/32 with zero failures or
+skips at the earlier head. It is not evidence for this follow-up: replacement
+exact-head release/vector runs and hosted visual review remain required before
+merge. No merge or production publish has occurred at this checkpoint.
+
+### Hosted narrow-viewport correction
+
+Hosted browser review of the pre-fix portfolio found horizontal overflow in a
+320-pixel window with a classic vertical scrollbar: the document's usable
+`clientWidth` was 305 pixels while `scrollWidth` remained 320. The shared
+`html { min-width: 320px }` rule caused the mismatch. The 390-pixel review did
+not overflow. Work/Experience/Contact anchors, evidence disclosure, first-Tab
+skip navigation, and its Enter target worked during that manual review.
+
+This follow-up scopes `min-width: 0` to `html:has()` the portfolio's locally
+hashed `.page` class, without changing the shared global rule. The existing
+narrow-width test now compares `scrollWidth` with
+`document.documentElement.clientWidth`, which accounts for scrollbar space,
+instead of `window.innerWidth`. Text, case evidence, contacts, and PDF bytes are
+unchanged. No CSP or development-runtime security setting changed.
+
+Fresh local verification: the Next web production build passes; focused test
+ESLint and `git diff --check` pass. Inspection of the emitted production CSS
+confirms `html:has(.john-portfolio_page__7dEX8){min-width:0}`; that class is
+present in generated `/john` HTML and absent from `/portfolio`, while the
+shared 320-pixel minimum remains in the emitted global CSS. This is a source
+and build scope check, not a browser viewport pass. Hosted review of this
+correction and its replacement exact-head CI remain pending at this checkpoint.
+
+### Section-label contrast correction
+
+A source contrast review found that the small numbered section labels used
+`#527774` on both the light expertise section and the dark AI-method section.
+Their calculated contrast ratios were 4.379:1 and 2.890:1, below the 4.5:1
+normal-text threshold. The light-section number now uses `#496e6b` (4.994:1
+against the expertise background), and the dark-section number has a scoped
+`#b1c9d2` override (8.267:1). Text, layout, evidence links, PDFs, viewport fix,
+and all browser assertions are unchanged.
+
+The Next web production build passes on this source, and the emitted page CSS
+contains both corrected declarations and the existing portfolio-only root
+minimum-width override. `git diff --check` passes. These ratios are calculations
+from the declared solid foreground/background colors, not a substitute for the
+required automated browser accessibility check or hosted review. Replacement
+exact-head checks remain required before release.
