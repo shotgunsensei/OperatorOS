@@ -75,7 +75,7 @@
 .section { padding-block: 82px; }
 .sectionHeading { max-width: 720px; margin-bottom: 38px; }
 .eyebrow { font-size: 12px; font-weight: 750; letter-spacing: .12em; color: #34635f; margin-bottom: 13px !important; }
-.eyebrow > span { color: #527774; margin-right: 12px; font-variant-numeric: tabular-nums; }
+.eyebrow > span { color: #496e6b; margin-right: 12px; font-variant-numeric: tabular-nums; }
 .sectionHeading h2, .downloadPanel h2 { font-size: clamp(27px, 3.2vw, 38px); font-weight: 650; letter-spacing: -.045em; line-height: 1.25; }
 .sectionLead { margin-top: 17px !important; font-size: 15px; color: var(--muted); line-height: 1.8; max-width: 665px; }
 .featuredCase { display: grid; grid-template-columns: .95fr 1.2fr; background: white; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
@@ -135,6 +135,7 @@
 .careerNote { color: #536a76; font-size: 12px; line-height: 1.8; }
 .approachSection { padding-block: 74px; background: #142d3c; color: #edf3f6; }
 .approachSection .eyebrow { color: var(--mint); }
+.approachSection .eyebrow > span { color: #b1c9d2; }
 .approachSection .sectionLead { color: #b4c7d2; }
 .approachGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; }
 .approachGrid article > span { display: inline-block; color: var(--mint); font-size: 13px; padding-bottom: 13px; border-bottom: 1px solid #56717e; width: 100%; }

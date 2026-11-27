@@ -7316,3 +7316,20 @@ present in generated `/john` HTML and absent from `/portfolio`, while the
 shared 320-pixel minimum remains in the emitted global CSS. This is a source
 and build scope check, not a browser viewport pass. Hosted review of this
 correction and its replacement exact-head CI remain pending at this checkpoint.
+
+### Section-label contrast correction
+
+A source contrast review found that the small numbered section labels used
+`#527774` on both the light expertise section and the dark AI-method section.
+Their calculated contrast ratios were 4.379:1 and 2.890:1, below the 4.5:1
+normal-text threshold. The light-section number now uses `#496e6b` (4.994:1
+against the expertise background), and the dark-section number has a scoped
+`#b1c9d2` override (8.267:1). Text, layout, evidence links, PDFs, viewport fix,
+and all browser assertions are unchanged.
+
+The Next web production build passes on this source, and the emitted page CSS
+contains both corrected declarations and the existing portfolio-only root
+minimum-width override. `git diff --check` passes. These ratios are calculations
+from the declared solid foreground/background colors, not a substitute for the
+required automated browser accessibility check or hosted review. Replacement
+exact-head checks remain required before release.
