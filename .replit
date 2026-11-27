@@ -49,7 +49,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /tmp/operatoros-john-preview/apps/web && env -i PATH=\"$PATH\" HOME=\"$HOME\" NODE_ENV=development INTERNAL_API_URL=http://127.0.0.1:5001 DATABASE_URL= ./node_modules/.bin/next dev --hostname 0.0.0.0 --port 5000"
+args = "cd /tmp/operatoros-john-final-preview/apps/web && env -i PATH=\"$PATH\" HOME=\"$HOME\" NODE_ENV=production APP_ENV=test DATABASE_URL= INTERNAL_API_URL=http://127.0.0.1:5001 NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port 5000"
 waitForPort = 5000
 
 [userenv]
