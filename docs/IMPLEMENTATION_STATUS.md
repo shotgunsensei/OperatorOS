@@ -7249,3 +7249,46 @@ loopback production Next server and requires no API/database setup.
   for this new candidate. No remote push, PR, merge, Replit publish, or production
   change occurred during implementation. Push and deployment remain separate
   human gates under `AGENTS.md`.
+
+### Hosted preview approval and required portfolio browser coverage
+
+John approved preview followed by publication. PR [142](https://github.com/shotgunsensei/OperatorOS/pull/142)
+was opened from `codex/john-evidence-portfolio` with initial remote head
+`a5734ba3d2cd4e2cffbe010d3e53c554a24991e4`. Normal HTTPS Git push lacked
+executor credentials, so the official GitHub connector published the reviewed
+objects. Every blob and complete tree
+`e4159b4f9868f66109e4e4d0b69e2027452d179f` matched local Codex commit
+`e5b90c44c73fd4d7ed1d92360d86524f9fc8f627`; only commit metadata differed.
+The original local commit and branch were preserved.
+
+Review of the actual release harness found that its explicit browser spec list
+omitted the new portfolio tests. This follow-up adds only
+`e2e/john-portfolio.spec.ts` to that existing required list in
+`scripts/parity/run-browser-tests.mjs`. The normal release browser environment,
+loopback isolation, assertions, zero-skip reporter, and existing gates remain
+active. Page source and both PDF assets are unchanged by this follow-up.
+
+Fresh checks for the harness change:
+
+- `node --check scripts/parity/run-browser-tests.mjs`: PASS.
+- `corepack pnpm exec eslint scripts/parity/run-browser-tests.mjs --max-warnings=0`:
+  PASS, zero warnings.
+- `node --test scripts/parity/quality-gates.test.mjs`: PASS 21/21, zero failed,
+  canceled, skipped, or todo. The initial sparse checkout lacked unchanged
+  source-reference and workflow/integration fixture files, causing 3 fixture
+  failures; materializing those tracked files resolved them without code or
+  assertion changes.
+- Default-config collection with
+  `corepack pnpm --dir apps/web exec playwright test e2e/john-portfolio.spec.ts --list --reporter=line`:
+  three tests collected. The config requires a marked loopback test database
+  declaration even for collection; a synthetic, unused loopback target was
+  supplied and no database connection was made. The line reporter applies only
+  to this listing command because the normal zero-skip reporter correctly
+  treats unexecuted tests as skipped. Actual release execution retains the
+  normal reporter and all required assertions.
+- `git diff --check`: PASS.
+
+The initial remote vector run `46031686737` passed 32/32 with zero failures or
+skips at the earlier head. It is not evidence for this follow-up: replacement
+exact-head release/vector runs and hosted visual review remain required before
+merge. No merge or production publish has occurred at this checkpoint.
