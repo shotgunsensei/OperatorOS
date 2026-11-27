@@ -36,7 +36,7 @@ test('portfolio is usable at narrow widths and passes automated accessibility ch
     await page.setViewportSize({ width, height: 900 });
     await page.goto(targetUrl('/john', baseURL));
     await expect(page.getByRole('navigation', { name: 'Portfolio sections' })).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     const findings = await new AxeBuilder({ page }).include('[data-testid="john-portfolio"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(findings.violations).toEqual([]);
   }

@@ -7292,3 +7292,27 @@ The initial remote vector run `46031686737` passed 32/32 with zero failures or
 skips at the earlier head. It is not evidence for this follow-up: replacement
 exact-head release/vector runs and hosted visual review remain required before
 merge. No merge or production publish has occurred at this checkpoint.
+
+### Hosted narrow-viewport correction
+
+Hosted browser review of the pre-fix portfolio found horizontal overflow in a
+320-pixel window with a classic vertical scrollbar: the document's usable
+`clientWidth` was 305 pixels while `scrollWidth` remained 320. The shared
+`html { min-width: 320px }` rule caused the mismatch. The 390-pixel review did
+not overflow. Work/Experience/Contact anchors, evidence disclosure, first-Tab
+skip navigation, and its Enter target worked during that manual review.
+
+This follow-up scopes `min-width: 0` to `html:has()` the portfolio's locally
+hashed `.page` class, without changing the shared global rule. The existing
+narrow-width test now compares `scrollWidth` with
+`document.documentElement.clientWidth`, which accounts for scrollbar space,
+instead of `window.innerWidth`. Text, case evidence, contacts, and PDF bytes are
+unchanged. No CSP or development-runtime security setting changed.
+
+Fresh local verification: the Next web production build passes; focused test
+ESLint and `git diff --check` pass. Inspection of the emitted production CSS
+confirms `html:has(.john-portfolio_page__7dEX8){min-width:0}`; that class is
+present in generated `/john` HTML and absent from `/portfolio`, while the
+shared 320-pixel minimum remains in the emitted global CSS. This is a source
+and build scope check, not a browser viewport pass. Hosted review of this
+correction and its replacement exact-head CI remain pending at this checkpoint.

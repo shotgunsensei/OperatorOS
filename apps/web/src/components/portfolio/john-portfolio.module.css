@@ -1,3 +1,7 @@
+/* This public page can fit the usable viewport below 320px when a desktop
+   scrollbar consumes part of a narrow window. Keep the shared route policy. */
+:global(html):has(.page) { min-width: 0; }
+
 .page {
   --ink: #142d3c;
   --muted: #526571;
